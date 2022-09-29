@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Access-Control-Allow-Origin" content="*" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1637704_4x9bbgulnov.css" />
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+    <title>MiniFun</title>
+    <% if (htmlWebpackPlugin.options.nodeModules) { %>
+        <!-- Add `node_modules/` to global paths so `require` works properly in development -->
+        <script>
+            // require("module").globalPaths.push("<%= htmlWebpackPlugin.options.nodeModules.replace(/\\/g, '\\\\') %>");
+        </script>
+    <% } %>
+</head>
+
+<body style="margin: 0;">
+    <script>
+        global = globalThis;
+    </script>
+    <div id="app"></div>
+    <!-- <% if (!require('process').browser) { %> -->
+        <script>
+            // if (process.env.NODE_ENV !== 'development') window.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
+        </script>
+    <!-- <% } %> -->
+</body>
+
+</html>
