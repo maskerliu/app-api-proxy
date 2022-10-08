@@ -1,7 +1,5 @@
 'use strict'
 
-
-
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
 import os from 'os'
@@ -10,91 +8,56 @@ import { fileURLToPath } from 'url'
 import webpack from 'webpack'
 import WebpackDevServer from 'webpack-dev-server'
 import WebpackHotMiddleware from 'webpack-hot-middleware'
-
+import { BaseConfig } from './webpack.base.config.js'
 import mainConfig from './webpack.main.config.js'
 import rendererConfig from './webpack.renderer.config.js'
 import webConfig from './webpack.web.config.js'
 
-import HtmlWebpackPlugin from 'html-webpack-plugin'
-
-import { BaseConfig } from './webpack.base.config.js'
-
 
 const Run_Mode_DEV = 'development'
-const Run_Mode_PROD = 'production'
-
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-process.env.NODE_ENV = 'development'
-const __DEV__ = true
-const __LOCAL_SERVER__ = await WebpackDevServer.internalIP('v4')
+process.env.NODE_ENV = Run_Mode_DEV
 
 let electronProcess: ChildProcess | null = null
 let manualRestart = false
 let hotMiddleware: any
 
-function logStats(proc: String, data: any) {
-  let log = ''
-
-  log += chalk.yellow(`┏ ${proc} Process ${new Array((19 - proc.length) + 1).join('-')}`)
-  log += '\n\n'
-
-  if (typeof data === 'object') {
-    data.toString({ colors: true, chunks: false }).split(/\r?\n/)
-      .forEach((line: String) => { log += '  ' + line + '\n' })
-  } else {
-    log += `  ${data}\n`
-  }
-
-  log += '\n' + chalk.yellow(`┗ ${new Array(28 + 1).join('-')}`) + '\n'
-  console.log(log)
-}
-
-async function startDevServer(config: BaseConfig, port: number) {
+function startDevServer(config: BaseConfig, port: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     config.mode = Run_Mode_DEV
     const compiler = webpack(config)
 
-    let hotMiddleware = WebpackHotMiddleware(compiler, { log: false, heartbeat: 2500 });
+    const server = new WebpackDevServer({
+      port: port,
+      hot: true,
+      liveReload: true,
+      allowedHosts: "all",
+      client: { logging: 'none' },
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      static: { directory: path.join(dirname, "../src/"), },
+      setupMiddlewares(middlewares, devServer) {
+        devServer.middleware.waitUntilValid(() => { resolve() })
+        return middlewares
+      }
+    }, compiler)
 
-    compiler.hooks.compilation.tap("compilation", compilation => {
-      HtmlWebpackPlugin.getHooks(compilation).afterEmit.tapAsync("html-webpack-plugin-after-emit", (data: any, cb: Function) => {
-        hotMiddleware.publish({ action: "reload" });
-        cb()
-      })
-    })
-
-    compiler.hooks.done.tap("done", stats => { logStats(`${config.target}`, stats) })
-
-    const server = new WebpackDevServer(
-      {
-        port: port,
-        hot: true,
-        liveReload: true,
-        allowedHosts: "all",
-        static: { directory: path.join(dirname, "../"), },
-        setupMiddlewares(middlewares, devServer) {
-          devServer.app.use(hotMiddleware)
-          devServer.middleware.waitUntilValid(() => { resolve() })
-          return middlewares
-        }
-      }, compiler)
-
-    server.start().then(() => resolve())
+    server.start()
+      .then(() => resolve())
       .catch(err => {
-        console.log(`fail to start ${config.target} server`, err)
+        console.error(`fail to start ${config.target} server`, err)
         reject()
       })
   })
 }
 
-async function startMain() {
+function startMain(): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     mainConfig.mode = Run_Mode_DEV
     const compiler = webpack(mainConfig)
     hotMiddleware = WebpackHotMiddleware(compiler, { log: false, heartbeat: 2500 })
     compiler.hooks.watchRun.tapAsync("watch-run", (compilation, done) => {
-      logStats("Main", chalk.white("compiling..."))
+      consoleLog("Main", chalk.white("compiling...\n"))
       hotMiddleware.publish({ action: "compiling" })
       done()
     })
@@ -106,14 +69,14 @@ async function startMain() {
         return
       }
 
-      logStats("Main", stats)
+      consoleLog("Main", stats)
 
       if (electronProcess && electronProcess.kill()) {
         manualRestart = true
 
         if (os.platform() === "darwin") {
           process.kill(electronProcess.pid!)
-          electronProcess = null;
+          electronProcess = null
           startElectron()
           setTimeout(() => { manualRestart = false }, 5000)
         } else {
@@ -135,7 +98,7 @@ async function startMain() {
 function startElectron() {
   let args = [
     '--inspect=5858',
-    '--remote-debugging-port=9223', // add this line
+    '--remote-debugging-port=9223',
     path.join(dirname, '../dist/electron/main.js')
   ]
 
@@ -147,32 +110,29 @@ function startElectron() {
   }
 
   electronProcess = spawn('electron', args)
-
-  electronProcess?.stdout?.on('data', data => {
-    electronLog(data, 'blue')
-  })
-  electronProcess?.stderr?.on('data', data => {
-    electronLog(data, 'red')
-  })
-
-  electronProcess?.on('close', () => {
-    if (!manualRestart) process.exit()
-  })
+  electronProcess.stdout.on('data', data => { consoleLog('Electron', data, 'blue') })
+  electronProcess.stderr.on('data', data => { consoleLog('Electron', data, 'red') })
+  electronProcess.on('close', () => { if (!manualRestart) process.exit() })
 }
 
-function electronLog(data: any, color: any) {
+
+function consoleLog(proc: string, data: any, color?: string) {
   let log = ''
-  data = data.toString().split(/\r?\n/)
-  data.forEach((line: String) => { log += `  ${line}\n` })
-  if (/[0-9A-z]+/.test(log)) {
-    console.log(
-      chalk[color]('┏ Electron -------------------') +
-      '\n\n' +
-      chalk[color](log) +
-      chalk[color]('┗ ----------------------------') +
-      '\n'
-    )
+
+  log += chalk[color ? color : 'yellow'](`┏ ${proc} Process ${new Array(90 - proc.length).join('-')}\n\n`)
+  if (typeof data === 'object') {
+    (proc == 'Electron' ? data.toString() : data.toString({ colors: true, chunks: false }))
+      .split(/\r?\n/).forEach((line: string) => { log += `  ${line}\n` })
+  } else {
+    log += `  ${data}\n`
   }
+
+  if (color) {
+    log = chalk[color](log)
+  }
+
+  log += chalk[color ? color : 'yellow'](`┗ ${new Array(99).join('-')}`) + '\n'
+  console.log(log)
 }
 
 function greeting() {
@@ -190,16 +150,16 @@ function greeting() {
 async function start() {
   greeting()
 
-  const localIPv4 = await WebpackDevServer.internalIP('v4')
-
-  Promise.all([
-    startDevServer(webConfig.init(localIPv4), 9081),
+  try {
+    let localIPv4 = await WebpackDevServer.internalIP('v4')
+    await Promise.all([startDevServer(webConfig.init(localIPv4), 9081),
     startDevServer(rendererConfig.init(localIPv4), 9080),
     startMain()])
-    .then(() => { startElectron() })
-    .catch(err => {
-      console.error(err)
-    })
+
+    startElectron()
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 start()

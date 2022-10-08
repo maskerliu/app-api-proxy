@@ -2,26 +2,24 @@
 
 import { BaseConfig } from './webpack.base.config'
 
-process.env.NODE_ENV = 'production'
+
 
 import chalk from 'chalk'
 import { deleteSync } from 'del'
 import Multispinner from 'multispinner'
 import webpack from 'webpack'
-import mainConfig from './webpack.main.config.bck.js'
+import mainConfig from './webpack.main.config.js'
 import rendererConfig from './webpack.renderer.config.js'
 import webConfig from './webpack.web.config.js'
 
+const Run_Mode_PROD = 'production'
 const doneLog = chalk.bgGreen.white(' DONE ') + ' '
 const errorLog = chalk.bgRed.white(' ERROR ') + ' '
 const okayLog = chalk.bgBlue.white(' OKAY ') + ' '
 
-
-const __DEV__ = false
-
+process.env.NODE_ENV = Run_Mode_PROD
 function run() {
   if (process.env.BUILD_TARGET === 'clean') clean()
-  else if (process.env.BUILD_TARGET === 'web') web()
   else build()
 }
 
@@ -31,17 +29,14 @@ function clean() {
   process.exit()
 }
 
-function build() {
+async function build() {
   greeting()
 
   deleteSync(['dist/electron/*', '!.gitkeep'])
   deleteSync(['dist/web/*', '!.gitkeep'])
 
-  const tasks = ['main', 'renderer', 'web']
-  const spinner = new Multispinner(tasks, {
-    preText: 'building',
-    postText: 'process'
-  })
+  const tasks = [mainConfig.target, rendererConfig.target, webConfig.target]
+  const spinner = new Multispinner(tasks, { preText: 'building', postText: 'process' })
 
   let results = ''
   spinner.on('success', () => {
@@ -51,71 +46,38 @@ function build() {
     process.exit()
   })
 
-  pack(mainConfig).then(result => {
-    results += result + '\n\n'
-    spinner.success('main')
-  }).catch(err => {
-    spinner.error('main')
-    console.log(`\n  ${errorLog}failed to build main process`)
-    console.error(`\n${err}\n`)
-    process.exit(1)
-  })
+  let task = [mainConfig, rendererConfig, webConfig]
 
-  pack(rendererConfig).then(result => {
-    results += result + '\n\n'
-    spinner.success('renderer')
-  }).catch(err => {
-    spinner.error('renderer')
-    console.log(`\n  ${errorLog}failed to build renderer process`)
-    console.error(`\n${err}\n`)
-    process.exit(1)
-  })
-
-  pack(webConfig).then(result => {
-    results += result + '\n\n'
-    spinner.success('web')
-  }).catch(err => {
-    spinner.error('web')
-    console.log(`\n  ${errorLog}failed to build web process`)
-    console.error(`\n${err}\n`)
-    process.exit(1)
-  })
-}
-
-async function pack(c: BaseConfig) {
-
-  let config = await c.init()
-
-  config.mode = 'production'
-  webpack(config, (err: any, stats) => {
-    if (err) {
-      throw err.stack || err
-    } else if (stats.hasErrors()) {
-      let err = ''
-
-      stats.toString({ chunks: false, colors: true })
-        .split(/\r?\n/)
-        .forEach(line => { err += `    ${line}\n` })
-
-      throw err
-    } else {
-      return stats.toString({ chunks: false, colors: true })
+  task.forEach(async (config) => {
+    try {
+      let result = await pack(config)
+      results += result + '\n\n'
+      spinner.success(config.target)
+    } catch (err) {
+      spinner.error(config.target)
+      console.log(`\n  ${errorLog} failed to build ${config.target} process`)
+      console.error(`\n${err}\n`)
+      process.exit(1)
     }
   })
 }
 
-function web() {
-  deleteSync(['dist/web/*', '!.gitkeep'])
-  webConfig.mode = 'production'
-  webpack(webConfig, (err, stats) => {
-    if (err || stats.hasErrors()) console.log(err)
-
-    console.log(stats.toString({
-      chunks: false,
-      colors: true
-    }))
-
-    process.exit()
+function pack(config: BaseConfig): Promise<string> {
+  return new Promise((resolve, reject) => {
+    config.init().mode = Run_Mode_PROD
+    webpack(config, (err, stats) => {
+      if (err) {
+        reject(err.stack || err)
+      } else if (stats.hasErrors()) {
+        let err = ''
+        // stats.toString({ chunks: false, colors: true })
+        //   .split(/\r?\n/)
+        //   .forEach(line => { err += `    ${line}\n` })
+        reject(err)
+      } else {
+        resolve(stats.toString({ chunks: false, colors: true }))
+      }
+    })
   })
 }
 

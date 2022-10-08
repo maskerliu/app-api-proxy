@@ -60,7 +60,8 @@ class LocalServer {
         `http://${this.serverConfig.ip}:9080`,
         `http://${this.serverConfig.ip}:9081`,
         `http://localhost:9080`,
-        `http://localhost:9081`
+        `http://localhost:9081`,
+        `http://localhost:${this.serverConfig.port}`,
       ]
     }, CorsOptions)
     this.httpApp.use(cors(corsOpts))
@@ -75,9 +76,7 @@ class LocalServer {
   private proxyHandler(req: any, resp: Response, next: Function) {
     if (/^\/burying-point\//.test(req.url)) {
       let buf = []
-      req.on('data', (data: any) => {
-        buf.push(data)
-      })
+      req.on('data', (data: any) => { buf.push(data) })
       req.on('end', () => {
         req.rawbody = Buffer.concat(buf)
         proxyService.handleStatRequest(req, resp)
@@ -114,7 +113,7 @@ class LocalServer {
     pushService.bindServer(this.httpServer)
     this.httpServer.listen(
       this.serverConfig.port,
-      this.serverConfig.ip,
+      '0.0.0.0',
       () => console.log(`--启动本地代理Http服务--[${this.serverConfig.port}]`)
     )
   }

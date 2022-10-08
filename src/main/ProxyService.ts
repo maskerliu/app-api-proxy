@@ -20,12 +20,9 @@ class ProxyService {
   constructor() {
     this._sessionId = 0
 
-    axios({
-      url: "https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey",
-      method: "GET",
-    }).then(resp => {
+    axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
       MockKey = resp.data
-    })
+    }).catch(err => { console.error('FetchMockKey', err.cause) })
   }
 
   public getDataProxyServer(uid: string): ProxyPref {

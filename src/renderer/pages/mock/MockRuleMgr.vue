@@ -130,8 +130,6 @@
           <van-cell
             v-for="record in [...curRule.requests.values()]"
             :key="record.url"
-            clickable
-            is-link
             :title="record.url"
             :title-style="{
               fontSize: '0.7rem',
@@ -142,6 +140,8 @@
               display: 'block',
             }"
             @click="curRecord = record"
+            clickable
+            is-link
           >
             <template #label>
               <van-tag :type="record.statusCode == 200 ? 'success' : 'danger'">
@@ -246,5 +246,9 @@
 
 .jsoneditor {
   border: 0;
+}
+
+.ace-jsoneditor{
+  font-size: 0.8rem !important;
 }
 </style>
