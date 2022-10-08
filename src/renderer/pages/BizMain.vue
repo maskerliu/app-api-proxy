@@ -1,5 +1,6 @@
 <template>
   <van-row class="full-row">
+    <div class="drag-bar"></div>
     <router-view class="biz-content"></router-view>
     <van-tabbar route v-model="active">
       <van-tabbar-item replace to="/proxy">
@@ -9,7 +10,7 @@
       </van-tabbar-item>
       <van-tabbar-item replace to="/mockRuleMgr">
         <template #icon>
-          <van-icon class="iconfont icon-lab" size="22" />
+          <van-icon class="iconfont icon-rule" size="22" />
         </template>
       </van-tabbar-item>
       <van-tabbar-item replace to="/lab" dot>
@@ -40,12 +41,6 @@
   height: 100%;
   background: #eee;
   overflow: hidden;
-}
-.drag-bar {
-  width: 100%;
-  padding-top: 26px;
-  -webkit-app-region: drag;
-  background: white;
 }
 
 ::-webkit-scrollbar {

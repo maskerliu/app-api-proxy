@@ -22,9 +22,9 @@ const MockRuleMgr = defineComponent({
   data() {
     return {
       jeOption: {
-        mode: 'preview',
+        mode: 'tree',
         search: false,
-        navigationBar: false,
+        navigationBar: true,
         statusBar: false,
         mainMenuBar: false,
       },
@@ -76,7 +76,7 @@ const MockRuleMgr = defineComponent({
         this.curRule = await getMockRuleDetail(this.curRule._id)
         this.curRule.requests = json2map(this.curRule.jsonRequests)
       } catch (err) {
-        Notify({ message: '未找到对应规则', type: 'warning' })
+        Notify({ message: '未找到对应规则', type: 'warning', duration: 500 })
       }
     },
     onRuleEdit(rule?: MockRule) {
@@ -97,7 +97,7 @@ const MockRuleMgr = defineComponent({
 
         this.showRuleDelete = false
       } catch (err) {
-        Notify({ message: "删除失败", type: "warning" })
+        Notify({ message: "删除失败", type: "warning", duration: 500 })
       }
     },
     onRuleUpload(rule: MockRule) {
@@ -120,8 +120,8 @@ const MockRuleMgr = defineComponent({
         this.curRule.jsonRequests = map2json(this.curRule.requests)
         await saveMockRule(this.curRule, isSnap)
         await this.fetchMockRuleDetail()
-        Notify({ message: '规则更新成功', type: 'success' })
-      } catch (err) { Notify({ message: '规则更新失败', type: 'danger' }) }
+        Notify({ message: '规则更新成功', type: 'success', duration: 500 })
+      } catch (err) { Notify({ message: '规则更新失败', type: 'danger', duration: 500 }) }
       if (isSnap) this.showRuleEdit = false
     },
     onRecordDelete(key: string) {
@@ -142,7 +142,6 @@ const MockRuleMgr = defineComponent({
   watch: {
     record() {
       this.curRecord = this.record
-      console.log(this.curRecord)
     },
     keyword() {
       this.fetchPagedMockRules()

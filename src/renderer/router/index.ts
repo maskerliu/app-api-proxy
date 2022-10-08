@@ -5,6 +5,10 @@ export default createRouter({
   history: createWebHashHistory(),
   routes: [
     {
+      path: '/',
+      redirect: '/proxy'
+    },
+    {
       path: '/info',
       name: 'Info',
       component: require('@/pages/info/EnvInfo').default,

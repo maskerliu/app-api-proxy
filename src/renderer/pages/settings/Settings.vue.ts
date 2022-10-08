@@ -1,15 +1,12 @@
-import { mapActions, mapState } from 'pinia';
-import { defineComponent } from 'vue';
-import { BizType, ClientInfo, IP, MsgPushClient, PushMsg, PushMsgType } from '../../../common/models/DataModels';
-import { useCommonStore } from '../../store';
+import { mapActions, mapState } from 'pinia'
+import { defineComponent } from 'vue'
+import { BizType, ClientInfo, IP, MsgPushClient, PushMsg, PushMsgType } from '../../../common/models/DataModels'
+import { useCommonStore } from '../../store'
 
 type SettingPreference = { key: string, tooltip: string, hasStatus?: boolean, statusKey?: string }
 
 const Settings = defineComponent({
   name: "Settings",
-  mounted() {
-
-  },
   data() {
     return {
       dialogVisible: false,
@@ -30,8 +27,16 @@ const Settings = defineComponent({
   computed: {
     ...mapState(useCommonStore, ['serverConfig', 'clientInfos'])
   },
+  mounted() {
+    console.log(this.serverConfig.ips)
+    this.curServerIp = this.serverConfig.ips
+  },
   methods: {
     ...mapActions(useCommonStore, ['sendMessage']),
+    onSelectIP(ip: IP) {
+      this.curServerIp = ip
+      this.showPopover = false
+    },
     sendBroadcastMsg(): void {
       let msg: PushMsg<any> = {
         type: PushMsgType.TXT,
@@ -40,8 +45,8 @@ const Settings = defineComponent({
           content: this.broadcastMsg
         }
       }
-      this.sendMessage(msg);
-      this.broadcastMsg = "";
+      this.sendMessage(msg)
+      this.broadcastMsg = ""
     },
     sendMsg(): void {
       let msg: PushMsg<any> = {
@@ -52,14 +57,14 @@ const Settings = defineComponent({
           content: this.imMsg
         }
       }
-      this.sendMessage(msg);
-      this.imMsg = "";
+      this.sendMessage(msg)
+      this.imMsg = ""
     },
     showOpMenu(client: ClientInfo): void {
-      this.dialogVisible = true;
-      this.selectClient = client;
+      this.dialogVisible = true
+      this.selectClient = client
     }
   }
-});
+})
 
-export default Settings;
+export default Settings

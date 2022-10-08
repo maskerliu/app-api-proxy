@@ -10,10 +10,9 @@
       <template #reference>
         <van-button plain hairline round>
           <van-icon
-            class="iconfont"
-            class-prefix="icon"
+            class="iconfont icon-debug"
             name="bug"
-            size="25"
+            size="22"
             color="red"
           />
         </van-button>
@@ -31,8 +30,8 @@
   z-index: 10003;
   right: 0;
   top: 70%;
-  width: 2em;
-  height: 2em;
+  width: 2.5em;
+  height: 2.5em;
   background: #e1e1e1aa;
   border-radius: 50%;
   overflow: hidden;

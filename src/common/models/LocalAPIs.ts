@@ -5,7 +5,6 @@ import { BizCode } from "./DataModels"
 
 import { Notify } from 'vant'
 
-axios.defaults.adapter = require("axios/lib/adapters/http")
 axios.defaults.timeout = 10000
 axios.defaults.withCredentials = true
 

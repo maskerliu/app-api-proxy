@@ -3,7 +3,7 @@ import { Server } from "http"
 import { Connection, createServer, Server as SockServer } from "sockjs"
 import { BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient, ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType } from "../common/models/DataModels"
 
-type PushClient = { conn: Connection, uid: String, username: String, connId: string }
+type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
 class PushService {
   public pushClients: Map<String, PushClient> = new Map() // key: uid
@@ -85,8 +85,8 @@ class PushService {
   }
 
   private handleClose(conn: Connection) {
-
-    Object.keys(this.pushClients).forEach(key => {
+    let keys = [...this.pushClients.keys()]
+    keys.forEach(key => {
       if (this.pushClients.get(key).connId == conn.id) { this.pushClients.delete(key) }
     })
 
@@ -94,8 +94,9 @@ class PushService {
   }
 
   private handleError(conn: Connection) {
-    Object.keys(this.pushClients).forEach(key => {
-      if (this.pushClients.get(key).conn.id == conn.id) this.pushClients.delete(key)
+    let keys = [...this.pushClients.keys()]
+    keys.forEach(key => {
+      if (this.pushClients.get(key).connId == conn.id) this.pushClients.delete(key)
     })
 
     this.boardcastClientInfos()

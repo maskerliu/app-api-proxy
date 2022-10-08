@@ -6,18 +6,20 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
+import pkg from '../package.json'
 import { BaseConfig } from './webpack.base.config.js'
 
-const { DefinePlugin, LoaderOptionsPlugin } = webpack
+const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 let dirname = path.dirname(fileURLToPath(import.meta.url)) + '/'
+let whiteListedModules = ['vue']
 
 class WebConfig extends BaseConfig {
+
   devtool: Configuration['devtool'] = 'eval-source-map'
   target: Configuration['target'] = 'web'
   entry: Configuration['entry'] = { web: path.join(dirname, '../src/web/index.ts') }
-  externals: Configuration['externals'] = {}
-  mode: Configuration['mode'] = 'production'
+  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies || {}).filter(d => !whiteListedModules.includes(d))]
 
   module: Configuration['module'] = {
     rules: [
@@ -62,6 +64,7 @@ class WebConfig extends BaseConfig {
 
   plugins: Configuration['plugins'] = [
     new VueLoaderPlugin(),
+    new NoEmitOnErrorsPlugin(),
     new HtmlWebpackPlugin({
       filename: 'index.html',
       template: path.resolve(dirname, '../src/index.ejs'),
@@ -73,13 +76,16 @@ class WebConfig extends BaseConfig {
       nodeModules: false
     }),
     new DefinePlugin({
-      'process.env.IS_WEB': 'true',
+      __IS_WEB__: true,
+      __VUE_OPTIONS_API__: false,
+      __VUE_PROD_DEVTOOLS__: false,
     }),
   ]
 
   output: Configuration['output'] = {
     filename: '[name].js',
-    path: path.join(dirname, '../dist/web')
+    path: path.join(dirname, '../dist/web'),
+    chunkFilename: '[name].[contenthash:10]_chunk.js'
   }
 
   resolve: Configuration['resolve'] = {
@@ -91,44 +97,31 @@ class WebConfig extends BaseConfig {
     extensions: ['.ts', '.js', '.vue', '.json', '.css', '.node']
   }
 
+  optimization: Configuration['optimization'] = {
+    splitChunks: {
+      chunks: 'all',
+    },
+  }
+
   init(localServer: String) {
 
-    if (this.plugins == null) this.plugins = []
+    super.init()
 
-    if (process.env.NODE_ENV == 'production') {
+    if (process.env.NODE_ENV !== 'production') {
+      this.plugins.push(
+        new DefinePlugin({ SERVER_BASE_URL: `'http://${localServer}:8885'` }),
+      )
+    } else {
       this.devtool = false
       this.plugins.push(
         new CopyWebpackPlugin({
-          patterns: [
-            {
-              from: path.join(dirname, '../static/favicon.ico'),
-              to: path.join(dirname, '../dist/web/static/favicon.ico'),
-            }
-          ]
+          patterns: [{
+            from: path.join(dirname, '../static/favicon.ico'),
+            to: path.join(dirname, '../dist/web/static/favicon.ico'),
+          }]
         })
       )
-
-      this.plugins.push(new DefinePlugin({ 'process.env.NODE_ENV': "'production'" }))
       this.plugins.push(new LoaderOptionsPlugin({ minimize: true }))
-    } else {
-
-      this.plugins.push(
-        new DefinePlugin({
-          'process.env.SERVER_BASE_URL': `'http://${localServer}:8885'`
-        }),
-        // new BundleAnalyzerPlugin({
-        //     analyzerMode: 'server',
-        //     analyzerHost: '127.0.0.1',
-        //     analyzerPort: 9088,
-        //     reportFilename: 'report.html',
-        //     defaultSizes: 'parsed',
-        //     openAnalyzer: true,
-        //     generateStatsFile: false,
-        //     statsFilename: 'stats.json',
-        //     statsOptions: null,
-        //     logLevel: 'info'
-        // }),
-      )
     }
 
     return this

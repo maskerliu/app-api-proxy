@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, nativeImage, shell, Tray } from 'electron'
+import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron'
 import path from 'path'
 
 import localServer from "./LocalServer"
@@ -60,11 +60,10 @@ export default class MainApp {
     MainApp.mainWindow.loadURL(MainApp.winURL)
     MainApp.mainWindow.webContents.frameRate = 30
     MainApp.mainWindow.webContents.openDevTools()
-    MainApp.mainWindow.webContents.on('paint', (event, dirty, image) => { })
-
-    MainApp.mainWindow.on('closed', () => {
-      MainApp.onClose()
-    })
+    if (process.env.NODE_ENV !== 'production') {
+      MainApp.mainWindow.webContents.openDevTools()
+    }
+    MainApp.mainWindow.on('closed', () => { MainApp.onClose() })
   }
 
   private static createAppMenu() {
@@ -80,11 +79,13 @@ export default class MainApp {
     // app.commandLine.appendSwitch('disable-software-rasterizer')
     app.on('window-all-closed', MainApp.onWindowAllClosed)
     app.on('activate', () => {
-      if (MainApp.mainWindow == null) MainApp.createMainWindow
+      if (MainApp.mainWindow == null) MainApp.createMainWindow()
     })
     app.on('ready', () => {
-      MainApp.createMainWindow()
-      MainApp.createAppMenu()
+      if (MainApp.mainWindow == null){
+        MainApp.createMainWindow()
+        MainApp.createAppMenu()
+      }
     })
   }
 }

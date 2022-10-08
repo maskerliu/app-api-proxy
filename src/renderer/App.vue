@@ -30,9 +30,16 @@
 .biz-content {
   width: 100%;
   height: calc(100% - 76px);
-  margin: 24px 0 50px 0;
+  margin: 0px 0 50px 0;
   background: #f1f2f6;
-  overflow-y: scroll;
+  overflow-y: hidden;
+}
+
+.drag-bar {
+  width: 100%;
+  height: 26px;
+  -webkit-app-region: drag;
+  background: transparent;
 }
 
 </style>

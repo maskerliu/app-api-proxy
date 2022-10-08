@@ -46,6 +46,6 @@
   height: calc(100vh - 50px);
   margin: 0px 0 50px 0;
   background: #f1f2f6;
-  overflow-y: scroll;
+  overflow-y: hidden;
 }
 </style>
