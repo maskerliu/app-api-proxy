@@ -40,7 +40,7 @@ export default class MainApp {
     MainApp.mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
-      minWidth: 960,
+      minWidth: 1024,
       minHeight: 640,
       useContentSize: true,
       transparent: false,
@@ -59,7 +59,6 @@ export default class MainApp {
 
     MainApp.mainWindow.loadURL(MainApp.winURL)
     MainApp.mainWindow.webContents.frameRate = 30
-    MainApp.mainWindow.webContents.openDevTools()
     if (process.env.NODE_ENV !== 'production') {
       MainApp.mainWindow.webContents.openDevTools()
     }

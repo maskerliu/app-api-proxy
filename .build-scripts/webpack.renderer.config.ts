@@ -11,14 +11,14 @@ import { BaseConfig } from './webpack.base.config.js'
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 let dirname = path.dirname(fileURLToPath(import.meta.url)) + '/'
-let whiteListedModules = ['vue']
 
 class RendererConfig extends BaseConfig {
 
   devtool: Configuration['devtool'] = 'eval-source-map'
   target: Configuration['target'] = 'electron-renderer'
   entry: Configuration['entry'] = { renderer: path.join(dirname, '../src/renderer/index.ts') }
-  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies || {}).filter(d => !whiteListedModules.includes(d))]
+  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies)]
+  optimization: Configuration['optimization'] = {}
 
   module: Configuration['module'] = {
     rules: [
@@ -86,7 +86,7 @@ class RendererConfig extends BaseConfig {
   output: Configuration['output'] = {
     filename: '[name].js',
     library: { type: 'commonjs2' },
-    path: path.join(dirname, '../dist/electron')
+    path: path.join(dirname, '../dist/electron'),
   }
 
   resolve: Configuration['resolve'] = {
@@ -98,8 +98,7 @@ class RendererConfig extends BaseConfig {
     extensions: ['.js', '.ts', '.vue', '.json', '.css']
   }
 
-  init(localServer: string) {
-
+  init(localServer?: string) {
     super.init()
 
     this.node = {
@@ -115,6 +114,30 @@ class RendererConfig extends BaseConfig {
     } else {
       this.devtool = false
       this.plugins.push(new LoaderOptionsPlugin({ minimize: true }))
+      this.output.publicPath = './'
+      this.optimization = {
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            vender: {
+              name: 'vender',
+              test: /[\\/]node_modules[\\/]/,
+              priority: 10,
+              chunks: 'initial'
+            },
+            vant: {
+              name: "vant",
+              priority: 20,
+              test: /[\\/]node_modules[\\/]vant[\\/]/
+            },
+            jsoneditor: {
+              name: 'jsoneditor',
+              test: /[\\/]node_modules[\\/]jsoneditor[\\/]/,
+              priority: 20,
+            }
+          }
+        },
+      }
     }
 
     return this

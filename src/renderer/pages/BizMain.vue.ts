@@ -25,7 +25,7 @@ const BizMain = defineComponent({
     })
   },
   mounted() {
-    this.$router.replace("/settings")
+    this.$router.replace("/proxy")
     this.active = 1
   },
 })

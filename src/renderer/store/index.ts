@@ -4,9 +4,11 @@ import { defineStore } from 'pinia'
 import { ClientInfo, LocalServerConfig, PushMsg } from '../../common/models/DataModels'
 import { getServerConfig, updateBaseDomain, updateClientUID } from '../../common/models/LocalAPIs'
 import { generateUid } from '../common'
+import MsgClient from '../common/MsgClient'
 import PushClient from '../common/PushClient'
 
 let pushClient: PushClient = null
+let msgClient: MsgClient = null
 
 export const useCommonStore = defineStore('Common', {
   state: () => {
@@ -24,6 +26,7 @@ export const useCommonStore = defineStore('Common', {
     async init() {
 
       pushClient = new PushClient()
+      msgClient = new MsgClient()
 
       if (__DEV__) { // dev mode 
         updateBaseDomain(SERVER_BASE_URL)
@@ -53,6 +56,9 @@ export const useCommonStore = defineStore('Common', {
     },
     sendMessage(params: PushMsg<any>) {
       pushClient.send(params)
+    },
+    publishMessage(message: string) {
+      msgClient.sendMsg(message)
     },
     updateServerConfig(config?: LocalServerConfig) {
       let uid = generateUid()

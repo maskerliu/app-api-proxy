@@ -2,7 +2,11 @@
   <van-row class="full-row">
     <van-row
       class="bg-border"
-      style="width: calc(100% - 10px); max-height: 57px; background-color: white"
+      style="
+        width: calc(100% - 10px);
+        max-height: 57px;
+        background-color: white;
+      "
       gutter="20"
       justify="space-between"
       align="center"
@@ -125,24 +129,18 @@
     </van-row>
 
     <van-row style="width: 100%; height: calc(100% - 68px); display: flex">
-      <van-col class="bg-border" style="width: 320px">
+      <van-col class="bg-border" style="width: 300px">
         <van-list v-if="curRule != null && curRule.requests != null">
           <van-cell
             v-for="record in [...curRule.requests.values()]"
             :key="record.url"
-            :title="record.url"
-            :title-style="{
-              fontSize: '0.7rem',
-              overflow: 'hidden',
-              'text-overflow': 'ellipsis',
-              'white-space': 'nowrap',
-              width: '270px',
-              display: 'block',
-            }"
             @click="curRecord = record"
             clickable
             is-link
           >
+            <template #title>
+              <div class="record-snap">{{ record.url }}</div>
+            </template>
             <template #label>
               <van-tag :type="record.statusCode == 200 ? 'success' : 'danger'">
                 [http]{{ record.statusCode }}
@@ -238,17 +236,29 @@
   width: 100%;
 }
 
+.record-snap {
+  border: 1px #ddd dashed;
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 200px;
+  display: block;
+  direction: rtl;
+  padding: 2px 6px;
+}
+
 .json-editor {
-  width: calc(100% - 10px);
-  height: calc(100% - 10px);
-  padding: 5px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  padding: 3px;
 }
 
 .jsoneditor {
   border: 0;
 }
 
-.ace-jsoneditor{
+.ace-jsoneditor {
   font-size: 0.8rem !important;
 }
 </style>

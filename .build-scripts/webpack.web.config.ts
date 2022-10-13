@@ -6,20 +6,21 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 import pkg from '../package.json'
 import { BaseConfig } from './webpack.base.config.js'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 let dirname = path.dirname(fileURLToPath(import.meta.url)) + '/'
-let whiteListedModules = ['vue']
 
 class WebConfig extends BaseConfig {
 
   devtool: Configuration['devtool'] = 'eval-source-map'
   target: Configuration['target'] = 'web'
   entry: Configuration['entry'] = { web: path.join(dirname, '../src/web/index.ts') }
-  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies || {}).filter(d => !whiteListedModules.includes(d))]
+  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies)]
+  optimization: Configuration['optimization'] = {}
 
   module: Configuration['module'] = {
     rules: [
@@ -85,7 +86,6 @@ class WebConfig extends BaseConfig {
   output: Configuration['output'] = {
     filename: '[name].js',
     path: path.join(dirname, '../dist/web'),
-    chunkFilename: '[name].[contenthash:10]_chunk.js'
   }
 
   resolve: Configuration['resolve'] = {
@@ -97,20 +97,12 @@ class WebConfig extends BaseConfig {
     extensions: ['.ts', '.js', '.vue', '.json', '.css', '.node']
   }
 
-  optimization: Configuration['optimization'] = {
-    splitChunks: {
-      chunks: 'all',
-    },
-  }
 
-  init(localServer: String) {
-
+  init(localServer?: String) {
     super.init()
 
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins.push(
-        new DefinePlugin({ SERVER_BASE_URL: `'http://${localServer}:8885'` }),
-      )
+      this.plugins.push(new DefinePlugin({ SERVER_BASE_URL: `'http://${localServer}:8885'` }),)
     } else {
       this.devtool = false
       this.plugins.push(
@@ -119,9 +111,45 @@ class WebConfig extends BaseConfig {
             from: path.join(dirname, '../static/favicon.ico'),
             to: path.join(dirname, '../dist/web/static/favicon.ico'),
           }]
-        })
+        }),
+        new LoaderOptionsPlugin({ minimize: true }),
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'server',
+          analyzerHost: '127.0.0.1',
+          analyzerPort: 9088,
+          reportFilename: 'report.html',
+          defaultSizes: 'parsed',
+          openAnalyzer: true,
+          generateStatsFile: false,
+          statsFilename: 'stats.json',
+          statsOptions: null,
+          logLevel: 'info'
+        }),
       )
-      this.plugins.push(new LoaderOptionsPlugin({ minimize: true }))
+      this.output.publicPath = './'
+      this.optimization = {
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            vender: {
+              name: 'vender',
+              test: /[\\/]node_modules[\\/]/,
+              priority: 10,
+              chunks: 'initial'
+            },
+            vant: {
+              name: "vant",
+              priority: 20,
+              test: /[\\/]node_modules[\\/]vant[\\/]/
+            },
+            jsoneditor: {
+              name: 'jsoneditor',
+              test: /[\\/]node_modules[\\/]jsoneditor[\\/]/,
+              priority: 20,
+            }
+          }
+        },
+      }
     }
 
     return this
