@@ -1,13 +1,10 @@
 'use strict'
 
-import { BaseConfig } from './webpack.base.config'
-
-
-
 import chalk from 'chalk'
 import { deleteSync } from 'del'
 import Multispinner from 'multispinner'
 import webpack from 'webpack'
+import { BaseConfig } from './webpack.base.config'
 import mainConfig from './webpack.main.config.js'
 import rendererConfig from './webpack.renderer.config.js'
 import webConfig from './webpack.web.config.js'
@@ -18,13 +15,17 @@ const errorLog = chalk.bgRed.white(' ERROR ') + ' '
 const okayLog = chalk.bgBlue.white(' OKAY ') + ' '
 
 process.env.NODE_ENV = Run_Mode_PROD
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+
 function run() {
   if (process.env.BUILD_TARGET === 'clean') clean()
+  if (process.env.BUILD_TARGET === 'web') web()
   else build()
 }
 
 function clean() {
   deleteSync(['build/*', '!build/icons', '!build/icons/icon.*'])
+  deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
   console.log(`\n${doneLog}\n`)
   process.exit()
 }
@@ -70,15 +71,27 @@ function pack(config: BaseConfig): Promise<string> {
         reject(err.stack || err)
       } else if (stats.hasErrors()) {
         let err = ''
-        // stats.toString({ chunks: false, colors: true })
-        //   .split(/\r?\n/)
-        //   .forEach(line => { err += `    ${line}\n` })
+        stats.toString({ chunks: false, colors: true })
+          .split(/\r?\n/)
+          .forEach(line => { err += `    ${line}\n` })
         reject(err)
       } else {
         resolve(stats.toString({ chunks: false, colors: true }))
       }
     })
   })
+}
+
+function renderer() {
+  deleteSync(['dist/electron/*', '!.gitkeep'])
+  rendererConfig.init().mode = Run_Mode_PROD
+  pack(rendererConfig)
+}
+
+function web() {
+  deleteSync(['dist/web/*', '!.gitkeep'])
+  webConfig.init().mode = Run_Mode_PROD
+  pack(webConfig)
 }
 
 function greeting() {

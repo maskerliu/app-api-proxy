@@ -28,25 +28,25 @@ const Settings = defineComponent({
     ...mapState(useCommonStore, ['serverConfig', 'clientInfos'])
   },
   mounted() {
-    console.log(this.serverConfig.ips)
-    this.curServerIp = this.serverConfig.ips
+    this.curServerIp = this.serverConfig.ips[0]
   },
   methods: {
-    ...mapActions(useCommonStore, ['sendMessage']),
+    ...mapActions(useCommonStore, ['sendMessage', 'publishMessage']),
     onSelectIP(ip: IP) {
       this.curServerIp = ip
       this.showPopover = false
     },
     sendBroadcastMsg(): void {
-      let msg: PushMsg<any> = {
-        type: PushMsgType.TXT,
-        payload: {
-          type: BizType.IM,
-          content: this.broadcastMsg
-        }
-      }
-      this.sendMessage(msg)
-      this.broadcastMsg = ""
+      this.publishMessage(this.broadcastMsg)
+      // let msg: PushMsg<any> = {
+      //   type: PushMsgType.TXT,
+      //   payload: {
+      //     type: BizType.IM,
+      //     content: this.broadcastMsg
+      //   }
+      // }
+      // this.sendMessage(msg)
+      // this.broadcastMsg = ""
     },
     sendMsg(): void {
       let msg: PushMsg<any> = {

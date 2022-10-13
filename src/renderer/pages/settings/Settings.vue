@@ -1,9 +1,8 @@
 <template>
   <van-row class="full-row" gutter="24" justify="space-around">
     <van-col
-      span="7"
       class="bg-border"
-      style="height: calc(100% - 10px); padding: 0px"
+      style="height: calc(100% - 10px); width: 300px; padding: 0px"
     >
       <div style="font-size: 0.8rem; padding: 10px; color: grey">
         在线Client [{{ clientInfos.length }}]
@@ -49,7 +48,7 @@
       </van-grid>
     </van-col>
 
-    <van-col span="16" class="bg-border">
+    <van-col class="bg-border" style="flex: 1">
       <van-form style="margin-top: 15px; width: 100%" label-align="right" colon>
         <van-cell-group inset>
           <van-field label="网卡选择" label-width="10rem" readonly>
@@ -69,7 +68,14 @@
                   @click="onSelectIP(item)"
                 />
                 <template #reference>
-                  <div style="width: 300px; height: 1rem; padding: 2px; margin-top: -5px;">
+                  <div
+                    style="
+                      width: 300px;
+                      height: 1rem;
+                      padding: 2px;
+                      margin-top: -5px;
+                    "
+                  >
                     {{ curServerIp?.address }}
                   </div>
                 </template>

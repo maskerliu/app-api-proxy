@@ -4,18 +4,14 @@
   "description": "",
   "type": "commonjs",
   "main": "./dist/electron/main.js",
+  "license": "UNLICENSED",
   "scripts": {
-    "build": "cross-env ELECTRON_DISABLE_SECURITY_WARNINGS=true node --loader ts-node/esm --experimental-json-modules --max_old_space_size=9000 ./.build-scripts/builder.ts && electron-builder",
-    "build:dir": "node --loader ts-node/esm --experimental-json-modules ./.build-scripts/builder.ts && electron-builder --dir",
-    "build:clean": "cross-env BUILD_TARGET=clean node --loader ts-node/esm --experimental-json-modules ./.build-scripts/builder.ts",
-    "build:web": "cross-env BUILD_TARGET=web node --loader ts-node/esm --experimental-json-modules ./.build-scripts/builder.ts",
-    "dev": "node --loader ts-node/esm --experimental-json-modules ./.build-scripts/runner.dev.ts",
-    "pack": "pnpm run pack:main && npm run pack:renderer",
-    "pack:main": "cross-env NODE_ENV=production webpack --progress --config ./.build-scripts/webpack.main.config.ts",
-    "pack:renderer": "cross-env NODE_ENV=production webpack --progress --config ./.build-scripts/webpack.renderer.config.ts",
-    "publish": "build --mac -p always",
-    "asar": "node .build-scripts/compress-asar.js",
-    "rebuild": ""
+    "build": "cross-env node --loader ts-node/esm --experimental-json-modules --max_old_space_size=9000 .build-scripts/builder.ts",
+    "build:clean": "cross-env BUILD_TARGET=clean node --loader ts-node/esm --experimental-json-modules .build-scripts/builder.ts",
+    "build:web": "cross-env BUILD_TARGET=web node --loader ts-node/esm --experimental-json-modules .build-scripts/builder.ts",
+    "dev": "node --loader ts-node/esm --experimental-json-modules .build-scripts/runner.dev.ts",
+    "pub": "yarn build && electron-builder",
+    "asar": "node .build-scripts/compress-asar.js"
   },
   "build": {
     "productName": "app-api-proxy",
@@ -44,6 +40,7 @@
     }
   },
   "dependencies": {
+    "aedes": "^0.48.0",
     "body-parser": "^1.20.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -56,6 +53,7 @@
     "sockjs": "^0.3.24"
   },
   "devDependencies": {
+    "mqtt": "^4.3.7",
     "@types/body-parser": "1.19.2",
     "@types/compression": "^1.7.2",
     "@types/express": "^4.17.14",

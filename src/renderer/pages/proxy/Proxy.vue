@@ -129,8 +129,8 @@
   cursor: col-resize;
 }
 .right-panel {
+  flex: 1;
   padding: 0;
-  width: calc(100% - 320px);
   height: 100%;
 }
 
