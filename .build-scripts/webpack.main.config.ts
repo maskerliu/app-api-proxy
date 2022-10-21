@@ -9,7 +9,7 @@ import pkg from '../package.json'
 
 const { DefinePlugin, HotModuleReplacementPlugin, NoEmitOnErrorsPlugin } = webpack
 
-let dirname = path.dirname(fileURLToPath(import.meta.url)) + '/'
+const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class MainConfig extends BaseConfig {
 
@@ -48,6 +48,9 @@ class MainConfig extends BaseConfig {
   ]
 
   resolve: Configuration['resolve'] = {
+    alias: {
+      
+    },
     extensions: ['.js', '.ts', '.json', '.node']
   }
 

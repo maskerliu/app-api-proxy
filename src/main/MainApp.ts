@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron'
 import path from 'path'
 
-import localServer from "./LocalServer"
+import localServer from "./MainServer"
 require("./IPC")
 
 export default class MainApp {

@@ -1,10 +1,11 @@
-import { Request, Response } from "express"
 import { Server } from "http"
 import { Connection, createServer, Server as SockServer } from "sockjs"
-import { BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient, ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType } from "../common/models/DataModels"
+import { BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient, ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType } from "../../common/models"
+import { Service } from "../common/decorators/WebMVC.decorators"
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
+@Service()
 class PushService {
   public pushClients: Map<String, PushClient> = new Map() // key: uid
   private sockjsServer: SockServer
@@ -51,7 +52,7 @@ class PushService {
     }
   }
 
-  public getAllPushClients(req: Request, resp: Response) {
+  public getAllPushClients() {
     let bizResp: BizResponse<Array<MsgPushClient>> = new BizResponse<Array<MsgPushClient>>()
     bizResp.code = BizCode.SUCCESS
     bizResp.data = []
@@ -66,8 +67,7 @@ class PushService {
       })
     })
 
-    resp.json(bizResp)
-    resp.end()
+    return bizResp
   }
 
   private handleMsg(conn: Connection, data: any) {
@@ -167,4 +167,6 @@ class PushService {
 
 }
 
-export default new PushService()
+const pushService = new PushService()
+
+export default pushService

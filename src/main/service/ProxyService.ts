@@ -2,15 +2,22 @@ import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from "axios"
 import { Request, Response } from "express"
 import { IncomingHttpHeaders } from "http"
 import zlib from "zlib"
-import { BizCode, BizResponse, PorxyType, ProxyRequestRecord, ProxyStatRecord } from "../common/models/DataModels"
+import { BizCode, BizResponse, PorxyType, ProxyRequestRecord, ProxyStatRecord } from "../../common/models"
+import { Service } from "../common/decorators/WebMVC.decorators"
 import mockService from "./MockService"
 import pushService from "./PushService"
 
 const JSONBigInt = require("json-bigint")
 let MockKey = null
 
-export type ProxyPref = { server?: string, status: boolean, delay: number }
 
+export type ProxyPref = {
+  dataServer?: string, // 数据代理服务器，可以指向开发自己的
+  status: boolean,
+  delay: number
+}
+
+@Service()
 class ProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
@@ -33,20 +40,16 @@ class ProxyService {
     this.proxyPrefs.set(uid, proxyPref)
   }
 
-  public setProxyDelay(req: Request, resp: Response) {
-    let uid = req.query["uid"] as string
-    let delay = Number.parseInt(req.query["delay"] as string)
 
+  public setProxyDelay(uid: string, delay?: number) {
     this.proxyPrefs.get(uid).delay = delay
-
     let bizResp: BizResponse<string> = { code: BizCode.SUCCESS, data: "success" }
-    resp.json(bizResp)
-    resp.end()
+    return bizResp
   }
 
-  public handleStatRequest(req: any, resp: Response) {
+  public async handleStatRequest(req: any, resp: Response) {
     let data = Buffer.from(req.rawbody)
-    zlib.unzip(data, (err: any, buffer: any) => {
+    zlib.unzip(data, async (err: any, buffer: any) => {
       if (!err) {
         let record: ProxyStatRecord = {
           id: ++this._sessionId,
@@ -54,31 +57,21 @@ class ProxyService {
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
-
-
-        let originHost = req.header("mock-host")
-        if (originHost == null) {
-          originHost = req.header("host")
-        }
-
         pushService.sendProxyMessage(req.header("mock-uid"), record)
+
+        let originHost = req.header("mock-host") != null ? req.header("mock-host") : req.header("host")
         let headers = Object.assign({}, req.headers)
         delete headers["host"]
         delete headers["mock-host"]
         delete headers["mock-uid"]
 
-        let requestUrl = originHost + req.path
         let options = {
-          url: requestUrl,
+          url: originHost + req.path,
           method: req.method,
           headers: headers,
           data: data
         }
-        axios(options).then((resp: any) => {
-          // console.log("stat", requestUrl, resp.status, new Date().getSeconds())
-        }).catch((err: any) => {
-          // console.error("stat", err)
-        })
+        await axios(options)
       } else {
         console.error("stat", err)
       }
@@ -119,16 +112,20 @@ class ProxyService {
     let delay = (this.proxyPrefs.has(uid) && this.proxyPrefs.get(uid).delay) ?
       this.proxyPrefs.get(uid).delay : 0
 
-    let isMock = await mockService.mockRequestData(sessionId, req, resp, startTime, delay)
-    if (!isMock) this.proxyRequestData(sessionId, req, resp, startTime, delay)
+    let bizResp = null
+    try {
+      bizResp = await mockService.mock(sessionId, req.header['mock-uid'], req.url, startTime, delay)
+    } catch (err) {
+      bizResp = await this.proxy(sessionId, req, startTime, delay)
+    } finally {
+      setTimeout(() => {
+        resp.send(bizResp)
+        resp.end()
+      }, delay)
+    }
   }
 
-  private async proxyRequestData(
-    sessionId: number,
-    req: Request,
-    proxyResp: Response,
-    startTime: number,
-    delay: number) {
+  private async proxy(sessionId: number, req: Request, startTime: number, delay: number) {
     let uid = req.header("mock-uid")
     let originHost = req.header("mock-host") ? req.header("mock-host") : req.header("host")
     let headers = Object.assign({}, req.headers)
@@ -147,8 +144,8 @@ class ProxyService {
     let requestUrl = originHost + req.path
     if (this.proxyPrefs.has(uid)
       && this.proxyPrefs.get(uid).status
-      && this.proxyPrefs.get(uid).server != null) {
-      requestUrl = this.proxyPrefs.get(uid).server + req.path
+      && this.proxyPrefs.get(uid).dataServer != null) {
+      requestUrl = this.proxyPrefs.get(uid).dataServer + req.path
     }
 
     let options: AxiosRequestConfig = {
@@ -176,26 +173,24 @@ class ProxyService {
       options["data"] = req.body
     }
 
-    axios(options).then((resp: any) => {
-      setTimeout(() => {
-        let data: ProxyRequestRecord = {
-          id: sessionId,
-          type: PorxyType.REQUEST_END,
-          statusCode: resp.status,
-          responseHeaders: !!resp.headers ? resp.headers : null,
-          responseData: !!resp.data ? JSON.stringify(resp.data) : null,
-          time: new Date().getTime() - startTime,
-          isMock: false,
-        }
-        pushService.sendProxyMessage(uid, data)
-        proxyResp.send(resp.data)
-        proxyResp.end()
-      }, delay)
-    }).catch((err: any) => {
+    let data: ProxyRequestRecord
+    try {
+      let resp: any = await axios(options)
+      data = {
+        id: sessionId,
+        type: PorxyType.REQUEST_END,
+        statusCode: resp.status,
+        responseHeaders: !!resp.headers ? resp.headers : null,
+        responseData: !!resp.data ? JSON.stringify(resp.data) : null,
+        time: new Date().getTime() - startTime,
+        isMock: false,
+      }
+      return resp.data
+    } catch (err: any) {
       console.error("axios", err.code)
       let resp = err.response
       let respData = !!resp ? resp.data : err.message
-      let data: ProxyRequestRecord = {
+      data = {
         id: sessionId,
         type: PorxyType.REQUEST_END,
         statusCode: -100,
@@ -204,11 +199,14 @@ class ProxyService {
         time: new Date().getTime() - startTime,
         isMock: false,
       }
-      pushService.sendProxyMessage(uid, data)
-      proxyResp.send(err.message)
-      proxyResp.end()
-    })
+    } finally {
+      setTimeout(() => {
+        pushService.sendProxyMessage(uid, data)
+      }, delay)
+    }
   }
 }
 
-export default new ProxyService()
+const proxyService = new ProxyService()
+
+export default proxyService

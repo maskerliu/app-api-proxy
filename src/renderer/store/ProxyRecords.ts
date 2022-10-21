@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { reactive, ref, shallowRef } from 'vue'
-import { PorxyType, ProxyRequestRecord, ProxyStatRecord } from "../../common/models/DataModels"
+import { PorxyType, ProxyRequestRecord, ProxyStatRecord } from "../../common/models"
 
 const COLORS: string[] = [
   "#F44336",
@@ -56,7 +56,7 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
           tmpRecord.time = proxyRecord.time
           break
         default:
-          console.log("unsupport record type")
+          console.error("unsupport record type")
       }
     },
     updateFilter() {

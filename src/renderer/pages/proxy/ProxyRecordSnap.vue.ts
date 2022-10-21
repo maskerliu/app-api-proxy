@@ -2,7 +2,7 @@
 import { mapWritableState } from 'pinia'
 import type { PropType } from 'vue'
 import { defineComponent } from 'vue'
-import { ProxyRequestRecord, ProxyStatRecord } from '../../../common/models/DataModels'
+import { ProxyRequestRecord, ProxyStatRecord } from '../../../common/models'
 
 import { useProxyRecordStore } from '../../store/ProxyRecords'
 

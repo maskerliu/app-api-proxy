@@ -1,7 +1,7 @@
-import { BizResponse, LocalServerConfig, MockRule, MsgPushClient } from "./DataModels"
+import { BizResponse, LocalServerConfig, MockRule, MsgPushClient } from "./models"
 
 import axios, { AxiosResponse } from "axios"
-import { BizCode } from "./DataModels"
+import { BizCode } from "./models"
 
 import { Notify } from 'vant'
 

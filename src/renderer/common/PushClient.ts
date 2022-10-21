@@ -1,7 +1,7 @@
 import SockJS from "sockjs-client"
 import { Notify } from "vant"
-import { BizType, CMDType, PushMsg, PushMsgPayload, PushMsgType } from "../../common/models/DataModels"
-import { getAllPushClients } from "../../common/models/LocalAPIs"
+import { BizType, CMDType, PushMsg, PushMsgPayload, PushMsgType } from "../../common/models"
+import { getAllPushClients } from "../../common/remoteApis"
 import { useCommonStore } from '../store'
 import { useProxyRecordStore } from "../store/ProxyRecords"
 

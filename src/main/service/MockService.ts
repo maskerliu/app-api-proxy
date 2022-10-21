@@ -1,13 +1,13 @@
 import { app } from 'electron'
-import { Request, Response } from 'express'
 import path from 'path'
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
-import { BizCode, BizResponse, MockRule, PorxyType, ProxyRequestRecord } from '../common/models/DataModels'
+import { BizCode, BizResponse, MockRule, PorxyType, ProxyRequestRecord } from '../../common/models'
+import { Service } from '../common/decorators/WebMVC.decorators'
+
 import pushService from './PushService'
 
-const JSONBigInt = require('json-bigint')
-
+@Service()
 class MockService {
   private localDB: PouchDB.Database
   private clientMockStatus: Map<string, string> = new Map()
@@ -26,46 +26,31 @@ class MockService {
     }
   }
 
-  public async mockRequestData(sessionId: number, req: Request, resp: Response, startTime: number, delay: number) {
+  public async mock(sessionId: number, uid: string, url: string, startTime: number, delay: number) {
 
-    let uid = req.header('mock-uid')
     if (uid == null || !this.clientMockStatus.has(uid)) {
-      return false
+      throw 'no match mock rule'
     }
+    let ruleId = this.clientMockStatus.get(uid)
+    let rule = await this.localDB.get<MockRule>(ruleId, { attachments: true })
 
-    try {
-      let ruleId = this.clientMockStatus.get(uid)
-      let rule = await this.localDB.get<MockRule>(ruleId, { attachments: true })
+    let record = rule.jsonRequests[url]
+    if (record == null) throw 'no match mock rule'
 
-      let record = rule.jsonRequests[req.url]
-      if (record == null) return false
-
-      setTimeout(() => {
-        let statusCode: number = record.statusCode || 200
-        resp.status(statusCode)
-        resp.json(record.responseData)
-        resp.end()
-
-        let data: ProxyRequestRecord = {
-          id: sessionId,
-          type: PorxyType.REQUEST_END,
-          statusCode: statusCode,
-          headers: !!record.responseHeaders ? record.responseHeaders : null,
-          responseData: !!record.responseData ? JSON.stringify(record.responseData) : null,
-          time: new Date().getTime() - startTime,
-          isMock: true,
-        }
-        pushService.sendProxyMessage(uid, data)
-      }, delay)
-      return true
-    } catch (err) {
-      return false
+    let data: ProxyRequestRecord = {
+      id: sessionId,
+      type: PorxyType.REQUEST_END,
+      statusCode: record.statusCode || 200,
+      headers: !!record.responseHeaders ? record.responseHeaders : null,
+      responseData: !!record.responseData ? JSON.stringify(record.responseData) : null,
+      time: new Date().getTime() - startTime,
+      isMock: true,
     }
+    pushService.sendProxyMessage(uid, data)
+    return record.responseData
   }
 
-  public async searchMockRules(req: Request, resp: Response) {
-    let uid = req.query['uid'] as string
-    let keyword: any = req.query['keyword'] as string
+  async searchMockRules(uid: string, keyword: string) {
     let bizResp = new BizResponse<Array<MockRule>>()
 
     let selector = { _id: { $ne: /_design\/idx/ } }
@@ -77,10 +62,10 @@ class MockService {
       // selector = Object.assign(selector, { name: { $ne: keyword } })
     }
 
-    let findOptions = { selector: selector, limit: 15, fields: ['_id', 'name', 'desc'], }
-    let result = await this.localDB.find(findOptions)
-    let rules = new Array<MockRule>()
     try {
+      let findOptions = { selector: selector, limit: 15, fields: ['_id', 'name', 'desc'], }
+      let result = await this.localDB.find(findOptions)
+      let rules = new Array<MockRule>()
       result.docs.forEach(it => {
         let rule: MockRule = it as unknown as MockRule
         rule.isMock = this.clientMockStatus.has(uid) && this.clientMockStatus.get(uid) == rule._id
@@ -91,14 +76,11 @@ class MockService {
       console.error('searchMockRules', err)
       bizResp = { code: BizCode.ERROR, msg: '服务查询失败' }
     } finally {
-      resp.json(bizResp)
-      resp.end()
+      return bizResp
     }
   }
 
-  public async getMockRuleDetail(req: Request, resp: Response) {
-    let uid = req.query['uid'] as string
-    let ruleId = req.query["ruleId"] as string
+  async getMockRuleDetail(uid: string, ruleId: string) {
     let bizResp = new BizResponse<MockRule>()
 
     try {
@@ -108,17 +90,13 @@ class MockService {
     } catch (err) {
       bizResp = { code: BizCode.ERROR, msg: "err" }
     } finally {
-      resp.json(bizResp);
-      resp.end();
+      return bizResp
     }
   }
 
-  public async saveMockRule(req: Request, resp: Response) {
-    let uid = req.query['uid'] as string
-    let onlySnap: boolean = req.query['onlySnap'] == 'true'
+  async saveMockRule(uid: string, onlySnap: boolean, rule?: MockRule) {
 
     try {
-      let rule: MockRule = JSONBigInt.parse(req.body)
       let isMock = rule.isMock
       if (rule.isMock) {
         this.clientMockStatus.set(uid, rule._id)
@@ -126,19 +104,18 @@ class MockService {
       delete rule.isMock
 
       if (rule._id === null || rule._id === undefined) {
-        await this.insertMockRule(resp, rule, uid, isMock)
+        return await this.insertMockRule(uid, rule, isMock)
       } else {
-        await this.updateMockRule(resp, rule, onlySnap, uid, isMock)
+        return await this.updateMockRule(uid, rule, isMock, onlySnap)
       }
 
     } catch (err) {
       console.error('saveMockRule', err)
-      resp.json({ code: BizCode.ERROR, msg: "err" })
-      resp.end()
+      return { code: BizCode.ERROR, msg: "err" }
     }
   }
 
-  private async insertMockRule(resp: Response, rule: MockRule, uid: string, isMock: boolean) {
+  private async insertMockRule(uid: string, rule: MockRule, isMock: boolean) {
     let bizResp = new BizResponse<string>()
     try {
       let result = await this.localDB.post(rule)
@@ -148,12 +125,11 @@ class MockService {
       console.error('insertMockRule', err)
       bizResp = { code: BizCode.ERROR, msg: "err" }
     } finally {
-      resp.json(bizResp)
-      resp.end()
+      return bizResp
     }
   }
 
-  private async updateMockRule(resp: Response, rule: MockRule, onlySnap: boolean, uid: string, isMock: boolean) {
+  private async updateMockRule(uid: string, rule: MockRule, isMock: boolean, onlySnap: boolean) {
     let bizResp = new BizResponse<string>()
     try {
       let getResult = await this.localDB.get<MockRule>(rule._id)
@@ -166,42 +142,24 @@ class MockService {
       console.error('updateMockRule', err)
       bizResp = { code: BizCode.ERROR, msg: "err" }
     } finally {
-      resp.json(bizResp)
-      resp.end()
+      return bizResp
     }
   }
 
-  public async deleteMockRule(req: Request, resp: Response) {
-    let uid = req.query['uid'] as string
-    let ruleId: any = req.query['ruleId'] as string
+  async deleteMockRule(uid: string, ruleId: string) {
     let bizResp = new BizResponse<string>()
 
     try {
       let mockRule = await this.localDB.get<MockRule>(ruleId)
       let removeResult = await this.localDB.remove(mockRule)
       this.updateMockSettings(uid, ruleId, false)
-      bizResp = removeResult.ok ? { code: BizCode.SUCCESS, data: '成功删除记录' } : { code: BizCode.FAIL, data: 'Mock规则删除失败' }
+      bizResp = removeResult.ok ? { code: BizCode.SUCCESS, data: '成功删除记录' }
+        : { code: BizCode.FAIL, data: 'Mock规则删除失败' }
     } catch (err) {
       console.error('deleteMockRule', err)
       bizResp = { code: BizCode.ERROR, msg: 'err' }
     } finally {
-      resp.json(bizResp)
-      resp.end
-    }
-  }
-
-  public async uploadMockRule(req: Request, resp: Response) {
-    let ruleId: any = req.query['ruleId']
-    let bizResp = new BizResponse<string>()
-    try {
-      await this.localDB.get(ruleId, { attachments: true })
-      bizResp = { code: BizCode.SUCCESS, data: '上传成功' }
-    } catch (err) {
-      console.error('uploadMockRule', err)
-      bizResp = { code: BizCode.ERROR, msg: 'err' }
-    } finally {
-      resp.json(bizResp)
-      resp.end()
+      return bizResp
     }
   }
 
@@ -216,4 +174,6 @@ class MockService {
   }
 }
 
-export default new MockService()
+const mockService = new MockService()
+
+export default mockService
