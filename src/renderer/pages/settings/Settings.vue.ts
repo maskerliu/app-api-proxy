@@ -1,6 +1,6 @@
 import { mapActions, mapState } from 'pinia'
 import { defineComponent } from 'vue'
-import { BizType, ClientInfo, IP, MsgPushClient, PushMsg, PushMsgType } from '../../../common/models/DataModels'
+import { BizType, ClientInfo, IP, MsgPushClient, PushMsg, PushMsgType } from '../../../common/models'
 import { useCommonStore } from '../../store'
 
 type SettingPreference = { key: string, tooltip: string, hasStatus?: boolean, statusKey?: string }

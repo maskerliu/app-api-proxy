@@ -10,7 +10,7 @@ import { BaseConfig } from './webpack.base.config.js'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
-let dirname = path.dirname(fileURLToPath(import.meta.url)) + '/'
+const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class RendererConfig extends BaseConfig {
 
@@ -66,16 +66,6 @@ class RendererConfig extends BaseConfig {
   plugins: Configuration['plugins'] = [
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
-    new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: path.resolve(dirname, '../src/index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true
-      },
-      nodeModules: false
-    }),
     new DefinePlugin({
       __IS_WEB__: false,
       __VUE_OPTIONS_API__: false,
@@ -105,6 +95,17 @@ class RendererConfig extends BaseConfig {
       __dirname: process.env.NODE_ENV !== 'production',
       __filename: process.env.NODE_ENV !== 'production'
     }
+
+    this.plugins.push(new HtmlWebpackPlugin({
+      filename: 'index.html',
+      template: path.resolve(dirname, '../src/index.ejs'),
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true
+      },
+      nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
+    }))
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(

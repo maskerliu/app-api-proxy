@@ -62,7 +62,7 @@
       <div class="division-line"></div>
       <i class="iconfont icon-division division"></i>
     </van-col>
-    
+
     <van-col ref="rightDom" class="right-panel">
       <proxy-request-detail
         :record="records.get(curRecordId)"
@@ -74,31 +74,17 @@
       />
     </van-col>
 
-    <van-dialog
+    <van-popup
       title="扫描二维码访问："
-      :show="showQrCode"
+      v-model:show="showQrCode"
       :show-confirm-button="false"
       :show-cancel-button="false"
     >
-      <qrcode-vue
-        :value="registerUrl"
-        :size="300"
-        center
-        style="margin: 5px"
-      ></qrcode-vue>
-      <div
-        style="
-          width: 200px;
-          color: #777;
-          padding: 5px;
-          font-size: 0.8rem;
-          user-select: text;
-        "
-        @click="click2Reg"
-      >
+      <qrcode-vue :value="registerUrl" :size="300" center style="margin: 5px" />
+      <div class="register-url" @click="click2Reg">
         {{ registerUrl }}
       </div>
-    </van-dialog>
+    </van-popup>
   </van-row>
 </template>
 
@@ -150,5 +136,14 @@
   position: relative;
   top: 50%;
   transform: translateY(-50%);
+}
+
+.register-url {
+  width: 300px;
+  color: #777;
+  padding: 5px;
+  font-size: 0.8rem;
+  user-select: text;
+  word-break: break-all;
 }
 </style>

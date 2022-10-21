@@ -25,7 +25,7 @@ const BizMain = defineComponent({
     })
   },
   mounted() {
-    this.$router.replace("/proxy")
+    this.$router.replace("/mockRuleMgr")
     this.active = 1
   },
 })

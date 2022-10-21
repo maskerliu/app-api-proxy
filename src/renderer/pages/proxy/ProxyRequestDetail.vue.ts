@@ -1,9 +1,9 @@
 // import { clipboard } from 'electron'
 import { mapWritableState } from 'pinia'
 import { defineComponent, PropType } from 'vue'
-import { ProxyRequestRecord } from '../../../common/models/DataModels'
+import { ProxyRequestRecord } from '../../../common/models'
 import { useCommonStore } from '../../store'
-import JsonViewer from './JsonViewer.vue'
+import JsonViewer from '../components/JsonViewer.vue'
 import MockRuleMgr from '../mock/MockRuleMgr.vue'
 
 

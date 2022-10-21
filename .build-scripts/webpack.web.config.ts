@@ -2,6 +2,7 @@
 
 import CopyWebpackPlugin from 'copy-webpack-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
+import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
@@ -12,7 +13,7 @@ import { BaseConfig } from './webpack.base.config.js'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
-let dirname = path.dirname(fileURLToPath(import.meta.url)) + '/'
+const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class WebConfig extends BaseConfig {
 
@@ -66,16 +67,7 @@ class WebConfig extends BaseConfig {
   plugins: Configuration['plugins'] = [
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
-    new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: path.resolve(dirname, '../src/index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true
-      },
-      nodeModules: false
-    }),
+    new NodePolyfillPlugin(),
     new DefinePlugin({
       __IS_WEB__: true,
       __VUE_OPTIONS_API__: false,
@@ -100,6 +92,17 @@ class WebConfig extends BaseConfig {
 
   init(localServer?: String) {
     super.init()
+
+    this.plugins.push(new HtmlWebpackPlugin({
+      filename: 'index.html',
+      template: path.resolve(dirname, '../src/index.ejs'),
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true
+      },
+      nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
+    }))
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(new DefinePlugin({ SERVER_BASE_URL: `'http://${localServer}:8885'` }),)

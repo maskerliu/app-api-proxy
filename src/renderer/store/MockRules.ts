@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { MockRule } from "../../common/models/DataModels"
+import { MockRule } from "../../common/models"
 
 
 export const useMockRuleStore = defineStore('MockRules', {

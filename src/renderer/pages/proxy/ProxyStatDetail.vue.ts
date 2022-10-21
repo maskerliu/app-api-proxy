@@ -1,6 +1,6 @@
 import { mapState } from 'pinia'
 import { defineComponent, PropType } from 'vue'
-import { ProxyStatRecord } from '../../../common/models/DataModels'
+import { ProxyStatRecord } from '../../../common/models'
 import { useCommonStore } from '../../store'
 import { useProxyRecordStore } from '../../store/ProxyRecords'
 

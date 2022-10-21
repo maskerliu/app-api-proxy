@@ -1,16 +1,15 @@
-import JsonEditorVue from 'json-editor-vue3'
+import { mapState } from 'pinia'
 import { Notify } from 'vant'
 import { defineComponent, PropType, ref } from 'vue'
-import { MockRule, ProxyRequestRecord } from '../../../common/models/DataModels'
-import { searchMockRules, getMockRuleDetail, saveMockRule, deleteMockRule } from '../../../common/models/LocalAPIs'
-import { mapState } from 'pinia'
-import { useProxyRecordStore } from '../../store/ProxyRecords'
-import { throttle } from 'throttle-typescript'
+import { MockRule, ProxyRequestRecord } from '../../../common/models'
+import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/remoteApis'
 import { json2map, map2json } from '../../common'
+import { useProxyRecordStore } from '../../store/ProxyRecords'
+import VueJsonEditor from '../components/VueJsonEditor.vue'
 
 const MockRuleMgr = defineComponent({
   components: {
-    JsonEditorVue,
+    VueJsonEditor,
   },
   props: {
     isMock: { type: Boolean, require: false, default: false },
@@ -91,10 +90,8 @@ const MockRuleMgr = defineComponent({
     },
     async onRuleDeleteConfirm() {
       try {
-        console.log(this.curRule._id)
         await deleteMockRule(this.curRule._id)
         this.curRule = new MockRule()
-
         this.showRuleDelete = false
       } catch (err) {
         Notify({ message: "删除失败", type: "warning", duration: 500 })

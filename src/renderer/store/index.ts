@@ -1,14 +1,15 @@
 
 
 import { defineStore } from 'pinia'
-import { ClientInfo, LocalServerConfig, PushMsg } from '../../common/models/DataModels'
-import { getServerConfig, updateBaseDomain, updateClientUID } from '../../common/models/LocalAPIs'
+import { ClientInfo, LocalServerConfig, PushMsg } from '../../common/models'
+import { getServerConfig, updateBaseDomain, updateClientUID } from '../../common/remoteApis'
 import { generateUid } from '../common'
-import MsgClient from '../common/MsgClient'
+import NodeMsgClient from '../common/NodeMsgClient'
+import PahoMsgClient from '../common/PahoMsgClient'
 import PushClient from '../common/PushClient'
 
 let pushClient: PushClient = null
-let msgClient: MsgClient = null
+let msgClient: any = null
 
 export const useCommonStore = defineStore('Common', {
   state: () => {
@@ -26,7 +27,8 @@ export const useCommonStore = defineStore('Common', {
     async init() {
 
       pushClient = new PushClient()
-      msgClient = new MsgClient()
+
+      msgClient = __IS_WEB__ ? new PahoMsgClient() : new NodeMsgClient()
 
       if (__DEV__) { // dev mode 
         updateBaseDomain(SERVER_BASE_URL)
@@ -42,7 +44,7 @@ export const useCommonStore = defineStore('Common', {
         this.serverConfig = await getServerConfig()
         this.updateServerConfig()
       } catch (err) {
-        console.log(err)
+        console.error(err)
       }
     },
     unInit() {

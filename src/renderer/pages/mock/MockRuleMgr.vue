@@ -77,11 +77,10 @@
         </van-popover>
       </van-col>
       <van-col span="12">
-        <van-cell-group inset>
-          <van-field
+        <van-field
             :label="`【${curRule?.name == null ? '规则名' : curRule?.name}】`"
             clickable
-            label-width="15rem"
+            label-width="10rem"
             right-icon="cross"
             @click-right-icon="onRuleSelect(null)"
           >
@@ -114,13 +113,12 @@
               </div>
             </template>
           </van-field>
-        </van-cell-group>
       </van-col>
       <van-col span="2" offset="2">
         <van-button
           plain
           type="primary"
-          size="small"
+          size="mini"
           :loading="isSaving"
           @click="onSave(false)"
           >保存</van-button
@@ -173,11 +171,12 @@
         ></van-button>
       </van-col>
       <van-col class="bg-border" style="flex: 1">
-        <json-editor-vue
+        <vue-json-editor
           class="json-editor"
           v-model="curRecord"
           :options="jeOption"
         />
+
       </van-col>
     </van-row>
 

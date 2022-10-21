@@ -22,9 +22,8 @@
 .bg-border {
   margin: 5px;
   padding: 0;
-  border-radius: 8px;
-  border: 1px solid #e1e1e1;
-  box-shadow: 0px 12px 8px -12px #000;
+  border-radius: 5px;
+  box-shadow: 0px 5px 5px -5px #000;
 }
 
 .biz-content {
