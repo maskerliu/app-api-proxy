@@ -1,23 +1,13 @@
 import { Request, Response } from 'express'
 import { BizCode, BizResponse } from '../common/models'
 import AbstractRouter from './common/AbstractRouter'
-import { Scan, __Controllers, __RouteMap } from './common/decorators/WebMVC.decorators'
+import { Router } from './common/decorators/webmvc.decorators'
 
+import './controller/DefaultController'
+import './test/test/TestController'
 
-@Scan('./controller', './test/test')
-class MainRouter extends AbstractRouter {
-
-  public route(req: Request, resp: Response) {
-    let ctrls: Array<any> = Reflect.has(this, __Controllers) ? Reflect.get(this, __Controllers) : new Array()
-    for (let i = 0; i < ctrls.length; ++i) {
-      let controller = ctrls[i]
-      let routeMap = Reflect.get(controller, __RouteMap) as Map<string, string>
-      if (routeMap.has(req.path)) {
-        Reflect.apply(Reflect.get(controller, routeMap.get(req.path)), controller, [req, resp])
-        break
-      }
-    }
-  }
+@Router()
+export default class MainRouter extends AbstractRouter {
 
   error(req: Request, resp: Response, err: any) {
     // resp.writeHead(400, DEFAULT_HEADER)
@@ -29,5 +19,3 @@ class MainRouter extends AbstractRouter {
     resp.end()
   }
 }
-
-export default new MainRouter()

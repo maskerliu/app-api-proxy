@@ -1,12 +1,12 @@
 import { Server } from "http"
 import { Connection, createServer, Server as SockServer } from "sockjs"
 import { BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient, ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType } from "../../common/models"
-import { Service } from "../common/decorators/WebMVC.decorators"
+import { Service } from "../common/decorators/webmvc.decorators"
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
 @Service()
-class PushService {
+export default class PushService {
   public pushClients: Map<String, PushClient> = new Map() // key: uid
   private sockjsServer: SockServer
 
@@ -164,9 +164,4 @@ class PushService {
       it.conn.write(JSON.stringify(msg))
     })
   }
-
 }
-
-const pushService = new PushService()
-
-export default pushService

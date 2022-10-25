@@ -10,8 +10,8 @@ import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
 
-const Proxy = defineComponent({
-  name: 'BizMain',
+export default defineComponent({
+  name: 'Proxy',
   components: {
     QrcodeVue,
     ProxyRecordSnap,
@@ -37,7 +37,7 @@ const Proxy = defineComponent({
     })
   },
   mounted() {
-    this.active = 1
+
     this.$refs.resizeBar.$el.onmousedown = (e: MouseEvent) => {
       this.clientStartX = e.clientX
       document.onmousemove = (e) => {
@@ -45,7 +45,7 @@ const Proxy = defineComponent({
         return false
       }
 
-      document.onmouseup = function () {
+      document.onmouseup = () => {
         document.onmousemove = null
         document.onmouseup = null
       }
@@ -86,6 +86,11 @@ const Proxy = defineComponent({
     },
   },
   watch: {
+    records() {
+      if (this.$refs.snaplist.$el.top >  20) {
+        this.$refs.snaplist.$el.scrollTo({top: 0, behavior: 'smooth'})
+      }
+    },
     filterKeyword() {
       this.updateFilter()
     },
@@ -103,4 +108,4 @@ const Proxy = defineComponent({
   }
 })
 
-export default Proxy
+// export default Proxy

@@ -3,14 +3,18 @@ import path from 'path'
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
 import { BizCode, BizResponse, MockRule, PorxyType, ProxyRequestRecord } from '../../common/models'
-import { Service } from '../common/decorators/WebMVC.decorators'
+import { Autowired } from '../common/decorators/ioc.decorators'
+import { Service } from '../common/decorators/webmvc.decorators'
 
-import pushService from './PushService'
+import PushService from './PushService'
 
 @Service()
-class MockService {
+export default class MockService {
   private localDB: PouchDB.Database
   private clientMockStatus: Map<string, string> = new Map()
+
+  @Autowired()
+  pushService: PushService
 
   constructor() {
     this.initDB()
@@ -46,7 +50,7 @@ class MockService {
       time: new Date().getTime() - startTime,
       isMock: true,
     }
-    pushService.sendProxyMessage(uid, data)
+    this.pushService.sendProxyMessage(uid, data)
     return record.responseData
   }
 
@@ -173,7 +177,3 @@ class MockService {
     }
   }
 }
-
-const mockService = new MockService()
-
-export default mockService

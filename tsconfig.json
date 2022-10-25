@@ -9,6 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false,
     "moduleResolution": "node",
+    "declaration": true,
     "strictFunctionTypes": false,
     "strictNullChecks": false,
     "suppressExcessPropertyErrors": true,
@@ -18,7 +19,9 @@
     "emitDecoratorMetadata": true,
     "noImplicitThis": false,
     "resolveJsonModule": true,
+    "types": ["reflect-metadata"]
   },
+
   "include": [
     "src/**/*",
   ],

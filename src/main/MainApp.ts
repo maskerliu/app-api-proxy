@@ -17,12 +17,6 @@ export default class MainApp {
     // }
   }
 
-  private static onReady() {
-    MainApp.createMainWindow()
-    MainApp.createAppMenu()
-    localServer.startProxyServer()
-  }
-
   private static onClose() {
     MainApp.mainWindow = null
   }
@@ -78,7 +72,9 @@ export default class MainApp {
     // app.commandLine.appendSwitch('disable-software-rasterizer')
     app.on('window-all-closed', MainApp.onWindowAllClosed)
     app.on('activate', () => {
-      if (MainApp.mainWindow == null) MainApp.createMainWindow()
+      if (MainApp.mainWindow == null) {
+        MainApp.createMainWindow()
+      }
     })
     app.on('ready', () => {
       if (MainApp.mainWindow == null){
@@ -86,5 +82,7 @@ export default class MainApp {
         MainApp.createAppMenu()
       }
     })
+
+    localServer.start()
   }
 }

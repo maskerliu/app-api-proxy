@@ -1,13 +1,19 @@
 import { BizCode, BizResponse, CMDType, LocalServerConfig, PushMsg, PushMsgType } from '../../common/models'
-import { Service } from '../common/decorators/WebMVC.decorators'
+import { Autowired } from '../common/decorators/ioc.decorators'
+import { Service } from '../common/decorators/webmvc.decorators'
 import { getLocalIPs } from '../utils/NetworkUtils'
-
-import proxyService from './ProxyService'
-import pushService from './PushService'
+import ProxyService from './ProxyService'
+import PushService from './PushService'
 
 
 @Service()
-class CommonService {
+export default class CommonService {
+
+  @Autowired()
+  proxyService: ProxyService
+
+  @Autowired()
+  pushService: PushService
 
   serverConfig: LocalServerConfig
 
@@ -31,7 +37,7 @@ class CommonService {
           content: uid
         }
       }
-      pushService.sendMessage(uid, data)
+      this.pushService.sendMessage(uid, data)
     } else {
       bizResp = { code: BizCode.FAIL, message: 'invalid uid' }
     }
@@ -43,11 +49,11 @@ class CommonService {
   }
 
   saveServerConfig(uid: string, config: LocalServerConfig) {
-    proxyService.setDataProxyServer(uid, { dataServer: config.dataServer, status: config.status, delay: 0 })
+    this.proxyService.setDataProxyServer(uid, { dataServer: config.dataServer, status: config.status, delay: 0 })
     this.setServerConfig(config)
     let bizResp: BizResponse<LocalServerConfig> = {
       code: BizCode.SUCCESS,
-      data: Object.assign(this.serverConfig, proxyService.getDataProxyServer(uid))
+      data: Object.assign(this.serverConfig, this.proxyService.getDataProxyServer(uid))
     }
     return bizResp
   }
@@ -56,7 +62,3 @@ class CommonService {
     Object.assign(this.serverConfig, config)
   }
 }
-
-const commonService = new CommonService()
-
-export default commonService
