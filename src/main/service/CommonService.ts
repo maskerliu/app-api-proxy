@@ -1,6 +1,5 @@
+import { Autowired, Service } from 'lynx-express-mvc'
 import { BizCode, BizResponse, CMDType, LocalServerConfig, PushMsg, PushMsgType } from '../../common/models'
-import { Autowired } from '../common/decorators/ioc.decorators'
-import { Service } from '../common/decorators/webmvc.decorators'
 import { getLocalIPs } from '../utils/NetworkUtils'
 import ProxyService from './ProxyService'
 import PushService from './PushService'

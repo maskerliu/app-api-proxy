@@ -1,11 +1,9 @@
 import { app } from 'electron'
+import { Autowired, Service } from 'lynx-express-mvc'
 import path from 'path'
 import PouchDB from 'pouchdb'
 import PouchDBFind from 'pouchdb-find'
 import { BizCode, BizResponse, MockRule, PorxyType, ProxyRequestRecord } from '../../common/models'
-import { Autowired } from '../common/decorators/ioc.decorators'
-import { Service } from '../common/decorators/webmvc.decorators'
-
 import PushService from './PushService'
 
 @Service()

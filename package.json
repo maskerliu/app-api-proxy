@@ -49,7 +49,8 @@
     "pouchdb": "^7.3.0",
     "pouchdb-find": "^7.3.0",
     "sockjs": "^0.3.24",
-    "reflect-metadata":"^0.1.13"
+    "reflect-metadata":"^0.1.13",
+    "lynx-express-mvc": "1.0.5"
   },
   "devDependencies": {
     "mqtt": "^4.3.7",

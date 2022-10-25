@@ -1,14 +1,13 @@
-import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from "axios"
-import { Request, Response } from "express"
-import { IncomingHttpHeaders } from "http"
-import zlib from "zlib"
-import { BizCode, BizResponse, PorxyType, ProxyRequestRecord, ProxyStatRecord } from "../../common/models"
-import { Autowired } from "../common/decorators/ioc.decorators"
-import { Service } from "../common/decorators/webmvc.decorators"
-import MockService from "./MockService"
-import PushService from "./PushService"
+import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from 'axios'
+import { Request, Response } from 'express'
+import { IncomingHttpHeaders } from 'http'
+import { Autowired, Service } from 'lynx-express-mvc'
+import zlib from 'zlib'
+import { BizCode, BizResponse, PorxyType, ProxyRequestRecord, ProxyStatRecord } from '../../common/models'
+import MockService from './MockService'
+import PushService from './PushService'
 
-const JSONBigInt = require("json-bigint")
+const JSONBigInt = require('json-bigint')
 let MockKey = null
 
 
@@ -49,7 +48,7 @@ export default class ProxyService {
 
   public setProxyDelay(uid: string, delay?: number) {
     this.proxyPrefs.get(uid).delay = delay
-    let bizResp: BizResponse<string> = { code: BizCode.SUCCESS, data: "success" }
+    let bizResp: BizResponse<string> = { code: BizCode.SUCCESS, data: 'success' }
     return bizResp
   }
 
@@ -63,13 +62,13 @@ export default class ProxyService {
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
-        this.pushService.sendProxyMessage(req.header("mock-uid"), record)
+        this.pushService.sendProxyMessage(req.header('mock-uid'), record)
 
-        let originHost = req.header("mock-host") != null ? req.header("mock-host") : req.header("host")
+        let originHost = req.header('mock-host') != null ? req.header('mock-host') : req.header('host')
         let headers = Object.assign({}, req.headers)
-        delete headers["host"]
-        delete headers["mock-host"]
-        delete headers["mock-uid"]
+        delete headers['host']
+        delete headers['mock-host']
+        delete headers['mock-uid']
 
         let options = {
           url: originHost + req.path,
@@ -79,14 +78,14 @@ export default class ProxyService {
         }
         await axios(options)
       } else {
-        console.error("stat", err)
+        console.error('stat', err)
       }
     })
     resp.end()
   }
 
   public async handleRequest(req: Request, resp: Response) {
-    let uid = req.header("mock-uid")
+    let uid = req.header('mock-uid')
     // 清理无效配置
     if (!this.pushService.pushClients.has(uid)) this.proxyPrefs.delete(uid)
 
@@ -94,13 +93,13 @@ export default class ProxyService {
     let sessionId = ++this._sessionId
 
     let requestData = null
-    if (req.method === "GET") {
+    if (req.method === 'GET') {
       requestData = !!req.query ? req.query : null
     } else {
       try {
         requestData = !!req.body && Object.keys(req.body).length > 0 ? JSONBigInt.parse(req.body) : null
       } catch (err) {
-        console.error("handleRequest", err)
+        console.error('handleRequest', err)
       }
     }
     let data: ProxyRequestRecord = {
@@ -132,14 +131,14 @@ export default class ProxyService {
   }
 
   private async proxy(sessionId: number, req: Request, startTime: number, delay: number) {
-    let uid = req.header("mock-uid")
-    let originHost = req.header("mock-host") ? req.header("mock-host") : req.header("host")
+    let uid = req.header('mock-uid')
+    let originHost = req.header('mock-host') ? req.header('mock-host') : req.header('host')
     let headers = Object.assign({}, req.headers)
 
-    headers["Mock-Key"] = MockKey
-    delete headers["host"]
-    delete headers["mock-host"]
-    delete headers["mock-uid"]
+    headers['Mock-Key'] = MockKey
+    delete headers['host']
+    delete headers['mock-host']
+    delete headers['mock-uid']
 
     let axiosHeaders = {} as AxiosRequestHeaders
     let keys: keyof IncomingHttpHeaders
@@ -163,7 +162,7 @@ export default class ProxyService {
           try {
             return JSONBigInt.parse(data)
           } catch (err) {
-            console.error("proxyRequestData", err)
+            console.error('proxyRequestData', err)
             console.error(data)
             return null
           }
@@ -172,11 +171,11 @@ export default class ProxyService {
       timeout: ProxyService.PROXY_DEF_TIMEOUT,
     }
 
-    if (JSON.stringify(req.query) !== "{}") {
-      options["params"] = req.query
+    if (JSON.stringify(req.query) !== '{}') {
+      options['params'] = req.query
     }
-    if (JSON.stringify(req.body) !== "{}") {
-      options["data"] = req.body
+    if (JSON.stringify(req.body) !== '{}') {
+      options['data'] = req.body
     }
 
     let data: ProxyRequestRecord
@@ -193,7 +192,7 @@ export default class ProxyService {
       }
       return resp.data
     } catch (err: any) {
-      console.error("axios", err.code)
+      console.error('axios', err.code)
       let resp = err.response
       let respData = !!resp ? resp.data : err.message
       data = {
