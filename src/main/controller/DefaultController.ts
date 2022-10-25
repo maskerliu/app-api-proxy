@@ -1,7 +1,6 @@
 
+import { Autowired, BodyParam, Controller, Get, Post, QueryParam } from 'lynx-express-mvc'
 import { BizCode, BizResponse, CMDType, MockRule, MsgPushClient, PushMsg, PushMsgType } from '../../common/models'
-import { Autowired } from '../common/decorators/ioc.decorators'
-import { BodyParam, Controller, Get, Post, QueryParam } from '../common/decorators/webmvc.decorators'
 import CommonService from '../service/CommonService'
 import MockService from '../service/MockService'
 import ProxyService from '../service/ProxyService'

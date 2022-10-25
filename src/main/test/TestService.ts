@@ -1,5 +1,5 @@
-import { Service } from "../common/decorators/webmvc.decorators";
 
+import { Service } from 'lynx-express-mvc'
 
 @Service()
 export default class TestService {

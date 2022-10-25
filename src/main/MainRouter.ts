@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
+import { Router } from 'lynx-express-mvc'
 import { BizCode, BizResponse } from '../common/models'
 import AbstractRouter from './common/AbstractRouter'
-import { Router } from './common/decorators/webmvc.decorators'
 
 import './controller/DefaultController'
 import './test/test/TestController'

@@ -1,7 +1,10 @@
 import { Server } from "http"
+import { Service } from 'lynx-express-mvc'
 import { Connection, createServer, Server as SockServer } from "sockjs"
-import { BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient, ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType } from "../../common/models"
-import { Service } from "../common/decorators/webmvc.decorators"
+import {
+  BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient,
+  ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType
+} from "../../common/models"
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
