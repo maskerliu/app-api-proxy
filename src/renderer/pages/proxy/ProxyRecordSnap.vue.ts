@@ -7,10 +7,10 @@ import { ProxyRequestRecord, ProxyStatRecord } from '../../../common/models'
 import { useProxyRecordStore } from '../../store/ProxyRecords'
 
 
-const ProxyRecordSnap = defineComponent({
+export default defineComponent({
 
   props: {
-    source: { type: Object as PropType<ProxyRequestRecord | ProxyStatRecord>, required: true }
+    source: { type: Object as PropType<ProxyRequestRecord>, required: true }
   },
   computed: {
     ...mapWritableState(useProxyRecordStore, ['curRecordId'])
@@ -19,5 +19,3 @@ const ProxyRecordSnap = defineComponent({
 
   }
 })
-
-export default ProxyRecordSnap

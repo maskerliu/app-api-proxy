@@ -48,7 +48,8 @@
     "json-bigint": "^1.0.0",
     "pouchdb": "^7.3.0",
     "pouchdb-find": "^7.3.0",
-    "sockjs": "^0.3.24"
+    "sockjs": "^0.3.24",
+    "reflect-metadata":"^0.1.13"
   },
   "devDependencies": {
     "mqtt": "^4.3.7",
@@ -95,7 +96,6 @@
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^4.8.4",
-    "reflect-metadata":"^0.1.13",
     "throttle-typescript": "^1.1.0",
     "url-loader": "^4.1.1",
     "vant": "^3.6.3",

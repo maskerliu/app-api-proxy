@@ -43,19 +43,19 @@
             plain
             size="small"
             type="primary"
-            @click="clearRecords"
+            @click="mockRecord"
             icon="delete-o"
           ></van-button>
         </template>
       </van-field>
 
-      <div class="record-snap-panel">
+      <van-list class="record-snap-panel" ref="snaplist">
         <proxy-record-snap
           :source="records.get(key)"
           v-for="key in [...records.keys()].reverse()"
           :key="key"
         />
-      </div>
+      </van-list>
     </van-col>
 
     <van-col ref="resizeBar" class="resize-bar">

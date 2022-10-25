@@ -49,7 +49,7 @@ class MainConfig extends BaseConfig {
 
   resolve: Configuration['resolve'] = {
     alias: {
-      
+
     },
     extensions: ['.js', '.ts', '.json', '.node']
   }
@@ -65,11 +65,17 @@ class MainConfig extends BaseConfig {
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(
         new HotModuleReplacementPlugin(),
-        new DefinePlugin({ '__static': `'${path.join(dirname, '../static').replace(/\\/g, '\\\\')}'` })
+        new DefinePlugin({ '__static': `'${path.join(dirname, '../static').replace(/\\/g, '\\\\')}'` }),
+        new DefinePlugin({
+          __IS_DEV__: true,
+        }),
       )
     } else {
       this.devtool = false
-      this.plugins.push(new DefinePlugin({ "process.env.NODE_ENV": `'${this.mode}'` }))
+      this.plugins.push(new DefinePlugin({
+        "process.env.NODE_ENV": `'${this.mode}'`,
+        "process.env.Test": 'true'
+      }))
     }
 
     return this
