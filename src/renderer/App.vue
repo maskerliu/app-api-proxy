@@ -2,7 +2,41 @@
   <biz-main v-if="canRender" />
 </template>
 
-<script lang="ts" src="./App.vue.ts"></script>
+<script lang="ts">
+import { mapActions } from "pinia";
+import { defineComponent, PropType } from "vue";
+
+import BizMain from "./pages/BizMain.vue";
+import { useCommonStore } from "./store";
+
+const App = defineComponent({
+  components: {
+    [BizMain.name]: BizMain,
+  },
+  props: {
+    success: { type: String },
+    callback: {
+      type: Function as PropType<() => void>,
+    },
+  },
+  data() {
+    return {
+      canRender: false as boolean,
+    };
+  },
+  computed: {},
+
+  created() {
+    this.canRender = true;
+    this.init();
+  },
+  methods: {
+    ...mapActions(useCommonStore, ["init"]),
+  },
+});
+
+export default App;
+</script>
 
 <style>
 #app {
@@ -40,5 +74,4 @@
   -webkit-app-region: drag;
   background: transparent;
 }
-
 </style>

@@ -1,8 +1,15 @@
-<template>
+<template></template>
 
-  
-</template>
+<script lang="ts">
+import { defineComponent } from "vue";
 
-<script lang="ts" src="./EnvInfo.vue.ts"></script>
+const EnvInfo = defineComponent({
+  name: "EnvInfo",
+  mounted() {},
+  methods: {},
+});
+
+export default EnvInfo;
+</script>
 <style scoped>
 </style>
