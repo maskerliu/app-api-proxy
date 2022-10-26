@@ -27,7 +27,10 @@ class WebConfig extends BaseConfig {
     rules: [
       {
         test: /\.vue$/,
-        loader: 'vue-loader'
+        loader: 'vue-loader',
+        options: {
+          reactivityTransform: true
+        }
       },
       {
         test: /\.less$/,

@@ -8,6 +8,7 @@
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false,
+    "isolatedModules": true,
     "moduleResolution": "node",
     "declaration": true,
     "strictFunctionTypes": false,

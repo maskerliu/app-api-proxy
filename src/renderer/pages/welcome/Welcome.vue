@@ -1,8 +1,15 @@
-<template>
+<template></template>
 
-  
-</template>
+<script lang="ts" >
+import { defineComponent } from "vue";
 
-<script lang="ts" src="./Welcome.vue.ts"></script>
+const Welcome = defineComponent({
+  name: "Welcome",
+  mounted() {},
+  methods: {},
+});
+
+export default Welcome;
+</script>
 <style scoped>
 </style>

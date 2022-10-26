@@ -1,32 +1,19 @@
 <template>
-  <div
-    class="record-snap-item"
-    v-bind:style="{ background: source.isMock ? '#ffeaa755' : 'white' }"
-    @click="curRecordId = source.id"
-  >
+  <div class="record-snap-item" v-bind:style="{ background: source.isMock ? '#ffeaa755' : 'white' }"
+    @click="curRecordId = source.id">
     <span class="item-selected" v-if="curRecordId == source.id"></span>
-    <div
-      class="item-timeline"
-      v-bind:style="{ background: source.timelineColor }"
-    >
-      <br />{{ source.timestamp }}
+    <div class="item-timeline">
+      <div class="item-timeline-dot" v-bind:style="{ background: source.timelineColor }"></div>
     </div>
     <div v-if="source.type == 5020">
       <strong class="request-snap-method">[打点]</strong>
-      <div
-        class="request-snap-url"
-        v-for="(item, idx) in source.statistics.bps.slice(0, 2)"
-        :key="idx"
-      >
-        <span class="stat-snap-pid">{{
-          item.pageId == "" ? item.page : item.pageId
-        }}</span>
-        <strong class="stat-snap-type"
-          >[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong
-        >
-        <span class="stat-snap-eid" v-if="item.event_id != 2001"
-          ><br />{{ item.elementId == "" ? item.arg1 : item.elementId }}</span
-        >
+      <div class="request-snap-url" v-for="(item, idx) in (source as ProxyStatRecord).statistics.bps.slice(0, 2)"
+        :key="idx">
+        <span class="stat-snap-pid"> {{ item.pageId }} </span>
+        <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
+        <span class="stat-snap-eid" v-if="item.event_id != 2001"><br />
+          {{ item.elementId == "" ? item.arg1 : item.elementId }}
+        </span>
       </div>
     </div>
     <div v-else>
@@ -40,57 +27,52 @@
           <b>[HTTP]</b>
           {{ source.statusCode }}
         </van-tag>
-        <van-tag
-          plain
-          :type="
-            parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'
-          "
-          style="margin-left: 5px"
-          v-if="source.responseData != null"
-        >
+        <van-tag plain :type="
+          parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'
+        " style="margin-left: 5px" v-if="source.responseData != null">
           <b>[BIZ]</b>
           {{ source.responseData.code }}
         </van-tag>
-        <span
-          style="margin-left: 5px"
-          v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }"
-          >耗时: {{ source.time ? source.time : "--" }} ms</span
-        >
+        <span style="margin-left: 5px" v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">耗时: {{
+            source.time ? source.time : "--"
+        }} ms</span>
       </div>
-      <van-icon
-        name="arrow"
-        style="
+      <van-icon name="arrow" style="
           position: absolute;
           top: 30px;
           right: 10px;
           font-size: 1.2rem;
           color: grey;
-        "
-      />
+        " />
 
-      <div
-        v-if="source.type != 5012 && source.type != 5020"
-        style="
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          background-color: #dfdfdf88;
-          top: 0;
-        "
-        center
-      >
-        <van-loading
-          color="#0094ff"
-          type="spinner"
-          style="position: absolute; margin-top: 20px; right: 55px"
-        />
+      <div v-if="source.type != 5012 && source.type != 5020" class="request-snap-loading" center>
+        <van-loading size="20" type="spinner" style="position: absolute; margin-top: 25px; right: 40px" />
       </div>
     </div>
     <i class="divider"></i>
   </div>
 </template>
 
-<script lang="ts" src="./ProxyRecordSnap.vue.ts"></script>
+<script lang="ts">
+import { mapWritableState } from "pinia";
+import type { PropType } from "vue";
+import { defineComponent } from "vue";
+import { ProxyRequestRecord, ProxyStatRecord } from "../../../common/models";
+import { useProxyRecordStore } from "../../store/ProxyRecords";
+
+export default defineComponent({
+  props: {
+    source: {
+      type: Object as PropType<ProxyRequestRecord>,
+      required: true,
+    },
+  },
+  computed: {
+    ...mapWritableState(useProxyRecordStore, ["curRecordId"]),
+  },
+  methods: {},
+});
+</script>
 
 <style>
 .record-snap-item {
@@ -101,7 +83,7 @@
 
 .item-selected {
   position: absolute;
-  width: calc(100% - 12px);
+  width: calc(100%);
   height: calc(100% - 1px);
   background: #9191a148;
   left: 10;
@@ -113,12 +95,21 @@
   position: absolute;
   width: 8px;
   height: 100%;
-  left: 0;
+  left: 6px;
   top: 0;
   font-size: 0.5rem;
   font-weight: bold;
-  padding-left: 2px;
+  border-left: 2px dashed #d6d6d6;
   color: white;
+}
+
+.item-timeline-dot {
+  border-radius: 7px;
+  background-color: aquamarine;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  margin-left: -8px;
 }
 
 .divider {
@@ -126,7 +117,7 @@
   bottom: 1px;
   width: 100%;
   height: 1px;
-  background: #ececec;
+  background: #cccccc;
 }
 
 .record-snap-item:hover {
@@ -179,6 +170,16 @@
   margin-top: 10px;
   font-size: 0.6rem;
   font-weight: bold;
+}
+
+.request-snap-loading {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #dfdfdf88;
+  top: 0;
 }
 
 :root {

@@ -1,8 +1,15 @@
-<template>
+<template></template>
 
-  
-</template>
+<script lang="ts">
+import { defineComponent } from "vue";
 
-<script lang="ts" src="./Message.vue.ts"></script>
+const Message = defineComponent({
+  name: "Message",
+  mounted() {},
+  methods: {},
+});
+
+export default Message;
+</script>
 <style scoped>
 </style>

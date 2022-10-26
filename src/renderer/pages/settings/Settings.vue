@@ -51,7 +51,7 @@
     <van-col class="bg-border" style="flex: 1">
       <van-form style="margin-top: 15px; width: 100%" label-align="right" colon>
         <van-cell-group inset>
-          <van-field label="网卡选择" label-width="10rem" readonly>
+          <van-field label="服务地址" label-width="10rem" readonly>
             <template #input>
               <van-popover
                 v-model:show="showPopover"
@@ -92,11 +92,6 @@
             readonly
           />
         </van-cell-group>
-        <div style="margin: 16px">
-          <van-button block plain type="primary" native-type="submit">
-            提交
-          </van-button>
-        </div>
       </van-form>
     </van-col>
 
@@ -129,7 +124,128 @@
   </van-row>
 </template>
 
-<script lang="ts" src="./Settings.vue.ts"></script>
+<script lang="ts">
+import { mapActions, mapState } from "pinia";
+import { defineComponent } from "vue";
+import {
+  BizType,
+  ClientInfo,
+  IP,
+  MsgPushClient,
+  PushMsg,
+  PushMsgType,
+} from "../../../common/models";
+import { useCommonStore } from "../../store";
+
+type SettingPreference = {
+  key: string;
+  tooltip: string;
+  hasStatus?: boolean;
+  statusKey?: string;
+};
+
+class Test {
+  name: string;
+  title: string;
+
+  constructor(name?: string, title?: string) {
+    this.name = name;
+    this.title = title;
+  }
+}
+
+class Hello {
+  test: string;
+
+  constructor(test: string) {
+    this.test = test;
+  }
+}
+
+const Settings = defineComponent({
+  name: "Settings",
+  data() {
+    return {
+      dialogVisible: false,
+      selectClient: null as MsgPushClient,
+      broadcastMsg: null as string,
+      imMsg: null as string,
+      perferences: [
+        { tooltip: "代理Http服务端口", key: "port" },
+        { tooltip: "代理长连服务端口", key: "proxySocketPort" },
+        { tooltip: "API定义服务地址", key: "apiDefineServer" },
+        { tooltip: "埋点规则服务地址", key: "statRuleServer" },
+        {
+          tooltip: "代理数据服务地址",
+          key: "dataProxyServer",
+          hasStatus: true,
+          statusKey: "dataProxyStatus",
+        },
+      ] as Array<SettingPreference>,
+      curServerIp: null as IP,
+      showPopover: false,
+    };
+  },
+  computed: {
+    ...mapState(useCommonStore, ["serverConfig", "clientInfos"]),
+  },
+  mounted() {
+    let test = new Test("chris", "xxxxx");
+    let test2 = new Test("tom", "ooooo");
+    Reflect.set(Test.prototype, "test", new Hello("test"));
+    Reflect.set(Test.prototype, "print", function () {
+      console.log(this.name);
+    });
+    console.log(test["test"]);
+    test["test"].test = "world";
+    Reflect.apply(Reflect.get(Test.prototype, "print"), test, []);
+    console.log(test2["test"]);
+    Reflect.apply(Reflect.get(Test.prototype, "print"), test2, []);
+  },
+  methods: {
+    ...mapActions(useCommonStore, ["sendMessage", "publishMessage"]),
+    onSelectIP(ip: IP) {
+      this.curServerIp = ip;
+      this.showPopover = false;
+    },
+    sendBroadcastMsg(): void {
+      this.publishMessage(this.broadcastMsg);
+      // let msg: PushMsg<any> = {
+      //   type: PushMsgType.TXT,
+      //   payload: {
+      //     type: BizType.IM,
+      //     content: this.broadcastMsg
+      //   }
+      // }
+      // this.sendMessage(msg)
+      // this.broadcastMsg = ""
+    },
+    sendMsg(): void {
+      let msg: PushMsg<any> = {
+        to: this.selectClient.uid,
+        type: PushMsgType.TXT,
+        payload: {
+          type: BizType.IM,
+          content: this.imMsg,
+        },
+      };
+      this.sendMessage(msg);
+      this.imMsg = "";
+    },
+    showOpMenu(client: ClientInfo): void {
+      this.dialogVisible = true;
+      this.selectClient = client;
+    },
+  },
+  watch: {
+    serverConfig() {
+      if (this.serverConfig.ips) this.curServerIp = this.serverConfig.ips[0];
+    },
+  },
+});
+
+export default Settings;
+</script>
 <style scoped>
 .single-line {
   max-width: 80px;

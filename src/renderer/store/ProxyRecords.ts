@@ -22,6 +22,7 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
       filterKeyword: '' as string,
       curRecordId: -1,
       records: new Map() as Map<number, (ProxyRequestRecord | ProxyStatRecord)>,
+      isChanged: 0 // is a random number to identify the records change
     }
   },
   actions: {
@@ -58,6 +59,7 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
         default:
           console.error("unsupport record type")
       }
+      this.isChanged = Math.random()
     },
     updateFilter() {
       [...this.records.keys()].forEach(key => {
@@ -70,26 +72,25 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
       this.curRecordId = -1
     },
     shouldFilter(record: ProxyRequestRecord | ProxyStatRecord): boolean {
-      if (record.type == PorxyType.REQUEST_START || record.type == PorxyType.REQUEST_END) {
-        if (this.proxyTypes.indexOf(String(PorxyType.REQUEST)) == -1) {
-          return true
-        }
+      if (record.type == PorxyType.REQUEST_START ||
+        record.type == PorxyType.REQUEST_END) {
+        return this.proxyTypes.indexOf(String(PorxyType.REQUEST)) == -1
       }
 
-      if (record.type == PorxyType.STATISTICS || record.type == PorxyType.SOCKET) {
-        if (this.proxyTypes.indexOf(String(record.type)) == -1) {
-          return true
-        }
+      if (record.type == PorxyType.STATISTICS ||
+        record.type == PorxyType.SOCKET) {
+        return this.proxyTypes.indexOf(String(record.type)) == -1
       }
 
-      if (record.type !== PorxyType.STATISTICS && this.filterKeyword != null && this.filterKeyword.length > 0) {
-        if ((record as ProxyRequestRecord).url.indexOf(this.filterKeyword) === -1)
-          return true
+      if (record.type !== PorxyType.STATISTICS &&
+        this.filterKeyword != null && this.filterKeyword.length > 0) {
+        return (record as ProxyRequestRecord).url.indexOf(this.filterKeyword) == -1
       }
 
       return false
     },
-    mockRecord() {
+    mockRecord() {    
+      this.isChanged = Math.random()
       let fakeRecord = {
         headers: {
           'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
@@ -114,9 +115,5 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
       }
       this.updateRecord(fakeRecord)
     },
-    mockUpdateRecord() {
-
-    },
-
   }
 })

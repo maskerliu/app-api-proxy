@@ -2,7 +2,7 @@ import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron'
 import path from 'path'
 
 import localServer from "./MainServer"
-require("./IPC")
+import './IPC'
 
 export default class MainApp {
   static mainWindow: BrowserWindow = null
@@ -77,7 +77,7 @@ export default class MainApp {
       }
     })
     app.on('ready', () => {
-      if (MainApp.mainWindow == null){
+      if (MainApp.mainWindow == null) {
         MainApp.createMainWindow()
         MainApp.createAppMenu()
       }

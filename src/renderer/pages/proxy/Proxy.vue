@@ -51,25 +51,25 @@
 
       <van-list class="record-snap-panel" ref="snaplist">
         <proxy-record-snap
-          :source="records.get(key)"
           v-for="key in [...records.keys()].reverse()"
           :key="key"
+          :source="records.get(key)"
         />
       </van-list>
     </van-col>
 
     <van-col ref="resizeBar" class="resize-bar">
       <div class="division-line"></div>
-      <i class="iconfont icon-division division"></i>
+      <i class="iconfont icon-division division" @mousedown.stop.prevent="resizeDown"></i>
     </van-col>
 
     <van-col ref="rightDom" class="right-panel">
       <proxy-request-detail
-        :record="records.get(curRecordId)"
+        :record="records.get(curRecordId) as ProxyRequestRecord"
         v-if="curRecordId != -1 && records.get(curRecordId).type !== 5020"
       />
       <proxy-stat-detail
-        :record="records.get(curRecordId)"
+        :record="records.get(curRecordId) as ProxyStatRecord"
         v-if="curRecordId != -1 && records.get(curRecordId).type == 5020"
       />
     </van-col>
@@ -88,7 +88,123 @@
   </van-row>
 </template>
 
-<script lang="ts" src="./Proxy.vue.ts"></script>
+<script lang="ts" >
+import { mapActions, mapState, mapWritableState } from "pinia";
+import QrcodeVue from "qrcode.vue";
+import { Notify } from "vant";
+import { defineComponent } from "vue";
+import { ProxyRequestRecord, ProxyStatRecord } from "../../../common/models";
+import { mockRegister, setProxyDelay } from "../../../common/remoteApis";
+import { useCommonStore } from "../../store";
+import { useProxyRecordStore } from "../../store/ProxyRecords";
+import ProxyRecordSnap from "./ProxyRecordSnap.vue";
+import ProxyRequestDetail from "./ProxyRequestDetail.vue";
+import ProxyStatDetail from "./ProxyStatDetail.vue";
+
+export default defineComponent({
+  name: "Proxy",
+  components: {
+    QrcodeVue,
+    ProxyRecordSnap,
+    ProxyRequestDetail,
+    ProxyStatDetail,
+  },
+  data() {
+    return {
+      active: 0 as number,
+      navTitle: "" as string,
+      proxyDelay: "0" as string,
+      filterInput: null as string,
+      activeTab: "0" as string,
+      clientStartX: 0,
+    };
+  },
+  created() {
+    this.$router.beforeEach((to: any, from: any) => {
+      this.navTitle = to.name;
+      return true;
+    });
+  },
+  mounted() {
+  },
+  computed: {
+    ...mapState(useCommonStore, ["registerUrl"]),
+    ...mapWritableState(useCommonStore, ["showQrCode"]),
+    ...mapState(useProxyRecordStore, ["records", "isChanged"]),
+    ...mapWritableState(useProxyRecordStore, [
+      "proxyTypes",
+      "filterKeyword",
+      "curRecordId",
+    ]),
+  },
+  methods: {
+    ...mapActions(useProxyRecordStore, [
+      "updateFilter",
+      "clearRecords",
+      "mockRecord",
+    ]),
+    onLeftNavBtnClicked() {
+      if (this.navBar.leftAction != null) {
+        this.navBar.leftAction();
+      } else {
+        this.$router.go(-1);
+      }
+    },
+    resizeDown(e: MouseEvent) {
+      this.clientStartX = e.clientX;
+      document.onmousemove = (e) => {
+        this.moveHandle(e.clientX);
+        return false;
+      };
+
+      document.onmouseup = () => {
+        document.onmousemove = null;
+        document.onmouseup = null;
+      };
+      return false;
+    },
+    moveHandle(curWidth: any) {
+      let changeWidth = curWidth - 85;
+      if (changeWidth < 300) {
+        changeWidth = 300;
+        curWidth = 330;
+      }
+      let remainWidth = this.$refs.container.$el.clientWidth - changeWidth - 20;
+      this.$refs.leftDom.$el.style.width = changeWidth + "px";
+      this.$refs.rightDom.$el.style.width = remainWidth + "px";
+    },
+    onRightNavBtnClicked() {
+      this.navBar.rightAction();
+    },
+    click2Reg() {
+      mockRegister().then((resp) => {
+        this.showQrCode = resp == null;
+      });
+    },
+  },
+  watch: {
+    isChanged() {
+      this.$refs.snaplist.$el.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    filterKeyword() {
+      this.updateFilter();
+    },
+    proxyTypes() {
+      this.updateFilter();
+    },
+    async proxyDelay() {
+      try {
+        await setProxyDelay(Number(this.proxyDelay));
+        Notify({ message: "成功设置延迟", type: "success" });
+      } catch (err) {
+        Notify({ message: "设置延迟失败", type: "danger" });
+      }
+    },
+  },
+});
+
+// export default Proxy
+</script>
 
 <style scoped>
 .left-panel {
@@ -111,9 +227,6 @@
   text-align: center;
 }
 
-.resize-bar:hover {
-  cursor: col-resize;
-}
 .right-panel {
   flex: 1;
   padding: 0;
@@ -136,6 +249,10 @@
   position: relative;
   top: 50%;
   transform: translateY(-50%);
+}
+
+.resize-bar .division:hover {
+  cursor: col-resize;
 }
 
 .register-url {

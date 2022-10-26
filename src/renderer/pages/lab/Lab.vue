@@ -1,8 +1,15 @@
-<template>
+<template></template>
 
-  
-</template>
+<script lang="ts">
+import { defineComponent } from "vue";
 
-<script lang="ts" src="./Lab.vue.ts"></script>
+const Lab = defineComponent({
+  name: "Lab",
+  mounted() {},
+  methods: {},
+});
+
+export default Lab;
+</script>
 <style scoped>
 </style>

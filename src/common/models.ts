@@ -54,7 +54,7 @@ export interface StatisticRecord {
   rule: string
   pageId: string
   elementId: string
-  event_id: string
+  event_id: number
   arg1: string
   arg2: string
   arg3: string
@@ -63,11 +63,11 @@ export interface StatisticRecord {
 }
 
 export interface ProxyRequestRecord {
-  type?: number
-  id?: number
-  _idx?: string // 列表索引
-  method?: string
-  url?: string
+  type: number
+  id: number
+  _idx: string // 列表索引
+  method: string
+  url: string
   statusCode?: number // 请求状态
   timestamp?: number // 请求发起时间
   timelineColor?: string
@@ -79,10 +79,10 @@ export interface ProxyRequestRecord {
   responseData?: any // 响应数据
 }
 
-export interface ProxyStatRecord {
-  type?: number
+export interface ProxyStatRecord extends ProxyRequestRecord {
+  type: number
   id: number
-  _idx?: string
+  _idx: string
   timestamp?: number // 请求发起时间
   timelineColor?: string
   statistics: {
