@@ -12,12 +12,14 @@ import { BaseConfig } from './webpack.base.config.js'
 import mainConfig from './webpack.main.config.js'
 import rendererConfig from './webpack.renderer.config.js'
 import webConfig from './webpack.web.config.js'
-
+import config from '../build.config.json' assert {type: 'json' }
 
 const Run_Mode_DEV = 'development'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.NODE_ENV = Run_Mode_DEV
+
+process.env.BUILD_CONFIG = JSON.stringify({ port: config.port })
 
 let electronProcess: ChildProcess | null = null
 let manualRestart = false
@@ -153,7 +155,7 @@ async function start() {
   try {
     let localIPv4 = await WebpackDevServer.internalIP('v4')
     await Promise.all([startDevServer(webConfig.init(localIPv4), 9081),
-    startDevServer(rendererConfig.init(localIPv4), 9080),
+    startDevServer(rendererConfig.init(), 9080),
     startMain()])
 
     startElectron()

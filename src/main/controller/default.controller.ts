@@ -1,10 +1,11 @@
 
 import { Autowired, BodyParam, Controller, Get, Post, QueryParam } from 'lynx-express-mvc'
-import { BizCode, BizResponse, CMDType, MockRule, MsgPushClient, PushMsg, PushMsgType } from '../../common/models'
-import CommonService from '../service/CommonService'
-import MockService from '../service/MockService'
-import ProxyService from '../service/ProxyService'
-import PushService from '../service/PushService'
+import { BizCode, BizResponse } from '../../common/base.models'
+import { ProxyMock } from '../../common/proxy.models'
+import CommonService from '../service/common.service'
+import MockService from '../service/mock.service'
+import ProxyService from '../service/proxy.service'
+import PushService from '../service/push.service'
 
 @Controller('/appmock')
 export default class DefaultController {
@@ -26,9 +27,9 @@ export default class DefaultController {
     let bizResp: BizResponse<string>
     try {
       if (uid == null) throw 'uid不能为空'
-      let data: PushMsg<any> = {
-        type: PushMsgType.CMD,
-        payload: { type: CMDType.REGISTER, content: uid }
+      let data: ProxyMock.PushMsg<any> = {
+        type: ProxyMock.PushMsgType.CMD,
+        payload: { type: ProxyMock.CMDType.REGISTER, content: uid }
       }
       this.pushService.sendMessage(uid, data)
       bizResp = { code: BizCode.SUCCESS, data: "注册成功" }
@@ -41,12 +42,11 @@ export default class DefaultController {
 
   @Get('/getAllPushClients')
   async getAllPushClients(@QueryParam("uid") uid: string) {
-    let bizResp: BizResponse<Array<MsgPushClient>> = new BizResponse<Array<MsgPushClient>>()
-    bizResp.code = BizCode.SUCCESS
-    bizResp.data = []
+    let bizResp: BizResponse<Array<ProxyMock.MsgPushClient>>
+    let data = []
 
     this.pushService.pushClients.forEach(it => {
-      bizResp.data.push({
+      data.push({
         key: it.conn.id,
         uid: it.uid,
         username: it.username,
@@ -54,6 +54,8 @@ export default class DefaultController {
         port: it.conn.remotePort
       })
     })
+
+    bizResp = { code: BizCode.SUCCESS, data: data }
 
     return bizResp
   }
@@ -81,7 +83,7 @@ export default class DefaultController {
   }
 
   @Post('/saveMockRule')
-  async saveMockRule(@QueryParam('uid') uid: string, @QueryParam('onlySnap') onlySnap: string, @BodyParam() rule: MockRule) {
+  async saveMockRule(@QueryParam('uid') uid: string, @QueryParam('onlySnap') onlySnap: string, @BodyParam() rule: ProxyMock.MockRule) {
     // let rule: MockRule = JSONBigInt.parse(req.body)
     return await this.mockService.saveMockRule(uid, onlySnap == 'true', rule)
   }

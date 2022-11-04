@@ -1,7 +1,5 @@
-import { BizResponse, LocalServerConfig, MockRule, MsgPushClient } from "./models"
-
-import axios, { AxiosResponse } from "axios"
-import { BizCode } from "./models"
+import axios from 'axios'
+import { BizCode, BizResponse } from './base.models'
 
 import { Notify } from 'vant'
 
@@ -57,46 +55,11 @@ export async function post<T>(path: string, baseURL?: string, params?: {}, data?
   }
 }
 
+
 export function updateClientUID(uid: string) {
   clientUID = uid
 }
 
 export function updateBaseDomain(domain: string) {
   BASE_DOMAIN = domain
-}
-
-export function setProxyDelay(delay: number) {
-  return get<string>("/appmock/setProxyDelay", null, { delay })
-}
-
-export function searchMockRules(keyword: string) {
-  return get<Array<MockRule>>("/appmock/searchMockRules", null, { keyword })
-}
-
-export function getMockRuleDetail(ruleId: string) {
-  return get<MockRule>("/appmock/getMockRuleDetail", null, { ruleId })
-}
-
-export function saveMockRule(mockRule: MockRule, onlySnap: boolean) {
-  return post<string>("/appmock/saveMockRule", null, { onlySnap }, mockRule)
-}
-
-export function deleteMockRule(ruleId: string) {
-  return post<string>("/appmock/deleteMockRule", null, { ruleId })
-}
-
-export function getServerConfig() {
-  return get<LocalServerConfig>("/appmock/getServerConfig")
-}
-
-export async function syncServerConfig(config: LocalServerConfig) {
-  return post<LocalServerConfig>("/appmock/saveServerConfig", null, null, config)
-}
-
-export function getAllPushClients() {
-  return post<Array<MsgPushClient>>("/appmock/getAllPushClients")
-}
-
-export function mockRegister() {
-  return post<string>("/appmock/register")
 }

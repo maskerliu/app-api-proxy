@@ -36,7 +36,11 @@ export function map2json(map: Map<any, any>): JSON {
 export function json2map(obj: JSON): Map<any, any> {
   let map = new Map()
   for (let key of Object.keys(obj)) {
-    map.set(key, obj[key]);
+    map.set(key, obj[key])
   }
   return map
+}
+
+export function random(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
 }

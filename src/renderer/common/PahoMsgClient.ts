@@ -1,14 +1,11 @@
-// import { connect, IClientOptions, MqttClient } from 'mqtt'
-import { Notify } from 'vant'
+import Paho from 'paho-mqtt'
+import { IOT } from '../../common/iot.models'
+import { useIOTDeviceStore } from '../store/IOTDevices'
+import MsgClient from './MsgClient'
 
-// import * from 'paho-mqtt'
-const Paho = require('paho-mqtt')
+export default class PahoMsgClient extends MsgClient {
 
-export default class PahoMsgClient {
-
-  client: any
-  option = {
-    host: '228aeef000db461798db0bc8c9c11a8b.s2.eu.hivemq.cloud',
+  private option = {
     port: 8884,
     protocol: 'mqtts',
     username: 'lynx-iot',
@@ -18,41 +15,32 @@ export default class PahoMsgClient {
     timeout: 5000,
   }
 
-  constructor() {
-    this.client = new Paho.Client(this.option.host, this.option.port, 'clientId')
+  constructor(host: string) {
+    super()
+
+    this.client = new Paho.Client(host, this.option.port, 'lynx-iot-nodered-00003')
 
     // set callback handlers
     this.client.onConnectionLost = this.onConnectionLost
-    this.client.onMessageArrived = this.onMessageArrived
+    this.client.onMessageArrived = (msg: any) => { this.handleMsg(msg.topic, msg.payloadString) }
 
     // connect the client
     this.client.connect({
       useSSL: this.option.ssl,
       userName: this.option.username,
-      password: this.option.password,
-      onSuccess: this.subscribe
+      password: this.option.password
     })
   }
 
-  public sendMsg(message: string) {
-    this.client.publish('my/test/web', message)
-    // let message = new Paho.Message('Hello')
-    // message.destinationName = 'my/test/electron'
-    // this.client.send(message)
+  protected isConnected(): boolean {
+    return this.client.isConnected()
   }
 
-  subscribe() {
-    this.client.subscribe('my/test/android')
-  }
-
-  onConnectionLost(response) {
+  onConnectionLost(response: any) {
     if (response.errorCode !== 0) {
-      console.log(`[onConnectionLost]: ${response.errorMessage}`)
+      console.log('[onConnectionLost]:', response)
+      console.log(response.errorMessage)
     }
-  }
-
-  onMessageArrived(message) {
-    console.log('onMessageArrived:' + message.payloadString)
   }
 
 }

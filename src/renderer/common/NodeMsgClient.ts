@@ -1,42 +1,30 @@
 import { connect, IClientOptions, MqttClient } from 'mqtt'
-import { Notify } from 'vant'
+import { IOT } from '../../common/iot.models'
+
+import { useIOTDeviceStore } from '../store/IOTDevices'
+import MsgClient from './MsgClient'
 
 
-export default class NodeMsgClient {
+export default class NodeMsgClient extends MsgClient {
 
-  client: MqttClient
-  options: IClientOptions = {
-    host: '228aeef000db461798db0bc8c9c11a8b.s2.eu.hivemq.cloud',
+  private options: IClientOptions = {
     port: 8883,
     protocol: 'mqtts',
     username: 'lynx-iot',
-    password: '12345678'
+    password: '12345678',
+    clientId: 'lynx-iot-electron'
   }
 
-  constructor() {
+  constructor(host: string) {
+    super()
+
+    this.options.host = host
     this.client = connect(this.options)
-
-    // set callback handlers
-    this.client.on('connect', () => {
-      this.client.subscribe('my/test/android')
-    })
-
     this.client.on('error', (error) => { console.log(error) })
-
-    this.client.on('message', (topic, message) => {
-      Notify({ message: message.toString(), duration: 800 })
-    })
+    this.client.on('message', (topic, message) => { this.handleMsg(topic, message.toString()) })
   }
 
-  public sendMsg(message: string) {
-    this.client.publish('my/test/electron', message)
-    // let message = new Paho.Message('Hello')
-    // message.destinationName = 'my/test/electron'
-    // this.client.send(message)
+  protected isConnected(): boolean {
+    return this.client.connected
   }
-
-  subscribe() {
-    this.client.subscribe('my/test/android')
-  }
-
 }

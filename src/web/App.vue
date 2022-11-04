@@ -3,11 +3,11 @@
 </template>
 
 <script lang="ts">
-import { mapActions } from "pinia";
-import { defineComponent, PropType } from "vue";
+import { mapActions } from 'pinia'
+import { defineComponent, PropType } from 'vue'
 
-import BizMain from "../renderer/pages/BizMain.vue";
-import { useCommonStore } from "../renderer/store";
+import BizMain from '../renderer/pages/BizMain.vue'
+import { useCommonStore } from '../renderer/store'
 
 const App = defineComponent({
   components: {
@@ -22,20 +22,20 @@ const App = defineComponent({
   data() {
     return {
       canRender: false as boolean,
-    };
+    }
   },
   computed: {},
 
   created() {
-    this.canRender = true;
-    this.init();
+    this.canRender = true
+    this.init()
   },
   methods: {
-    ...mapActions(useCommonStore, ["init"]),
+    ...mapActions(useCommonStore, ['init']),
   },
-});
+})
 
-export default App;
+export default App
 </script>
 
 <style>
@@ -43,12 +43,15 @@ export default App;
   width: 5px;
   height: 5px;
 }
+
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.1);
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }

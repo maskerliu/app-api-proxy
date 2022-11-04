@@ -1,6 +1,6 @@
-import { Autowired } from '../../common/decorators/ioc.decorators'
 
-import { Controller, Get, QueryParam } from 'lynx-express-mvc'
+
+import { Controller, Get, QueryParam, Autowired } from 'lynx-express-mvc'
 
 import TestService from '../TestService'
 

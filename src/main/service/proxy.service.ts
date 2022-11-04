@@ -3,9 +3,10 @@ import { Request, Response } from 'express'
 import { IncomingHttpHeaders } from 'http'
 import { Autowired, Service } from 'lynx-express-mvc'
 import zlib from 'zlib'
-import { BizCode, BizResponse, PorxyType, ProxyRequestRecord, ProxyStatRecord } from '../../common/models'
-import MockService from './MockService'
-import PushService from './PushService'
+import { BizCode, BizResponse } from '../../common/base.models'
+import { ProxyMock } from '../../common/proxy.models'
+import MockService from './mock.service'
+import PushService from './push.service'
 
 const JSONBigInt = require('json-bigint')
 let MockKey = null
@@ -56,9 +57,9 @@ export default class ProxyService {
     let data = Buffer.from(req.rawbody)
     zlib.unzip(data, async (err: any, buffer: any) => {
       if (!err) {
-        let record: ProxyStatRecord = {
+        let record: ProxyMock.ProxyStatRecord = {
           id: ++this._sessionId,
-          type: PorxyType.STATISTICS,
+          type: ProxyMock.PorxyType.STATISTICS,
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
@@ -102,9 +103,9 @@ export default class ProxyService {
         console.error('handleRequest', err)
       }
     }
-    let data: ProxyRequestRecord = {
+    let data: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
-      type: PorxyType.REQUEST_START,
+      type: ProxyMock.PorxyType.REQUEST_START,
       url: req.url,
       method: req.method,
       headers: req.headers,
@@ -178,12 +179,12 @@ export default class ProxyService {
       options['data'] = req.body
     }
 
-    let data: ProxyRequestRecord
+    let data: ProxyMock.ProxyRequestRecord
     try {
       let resp: any = await axios(options)
       data = {
         id: sessionId,
-        type: PorxyType.REQUEST_END,
+        type: ProxyMock.PorxyType.REQUEST_END,
         statusCode: resp.status,
         responseHeaders: !!resp.headers ? resp.headers : null,
         responseData: !!resp.data ? JSON.stringify(resp.data) : null,
@@ -192,12 +193,12 @@ export default class ProxyService {
       }
       return resp.data
     } catch (err: any) {
-      console.error('axios', err.code)
+      // console.error('axios', err.code)
       let resp = err.response
       let respData = !!resp ? resp.data : err.message
       data = {
         id: sessionId,
-        type: PorxyType.REQUEST_END,
+        type: ProxyMock.PorxyType.REQUEST_END,
         statusCode: -100,
         headers: !!resp && !!resp.headers ? resp.headers : null,
         responseData: !!resp && !!respData ? JSON.stringify(respData) : JSON.stringify(err),

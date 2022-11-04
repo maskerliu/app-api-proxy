@@ -1,7 +1,11 @@
 <template>
   <van-row class="full-row">
     <div class="drag-bar"></div>
-    <router-view class="biz-content"></router-view>
+    <router-view class="biz-content" v-slot="{ Component, route }">
+      <transition name="fade">
+        <component :is="Component" :key="route.path" />
+      </transition>
+    </router-view>
     <van-tabbar route v-model="active">
       <van-tabbar-item replace to="/proxy">
         <template #icon>
@@ -58,7 +62,7 @@ export default defineComponent({
     })
   },
   mounted() {
-    this.$router.replace("/proxy")
+    this.$router.replace("/lab")
     this.active = 1
   },
 })
@@ -91,4 +95,31 @@ export default defineComponent({
   border-radius: 0;
   background: rgba(0, 0, 0, 0.1);
 }
+
+.fade-enter-active {
+  animation: bounce-in 0.5s ease-in;
+}
+
+.fade-leave-active {
+  animation: bounce-out 0.5s ease-out;
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0.0;
+  }
+  100% {
+    opacity: 1.;
+  }
+}
+
+@keyframes bounce-out {
+  0% {
+    opacity: 1.0;
+  }
+  100% {
+    opacity: 0.0;
+  }
+}
+
 </style>

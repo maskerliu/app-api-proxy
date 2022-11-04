@@ -1,20 +1,10 @@
 <template>
-  <div
-    class="drag-ball"
-    ref="dragBall"
-    @touchstart.stop.prevent="touchstart"
-    @touchmove.stop.prevent="touchmove"
-    @touchend.stop.prevent="touchend"
-  >
+  <div class="drag-ball" ref="dragBall" @touchstart.stop.prevent="touchStart" @touchmove.stop.prevent="touchMove"
+    @touchend.stop.prevent="touchEnd">
     <van-popover v-model:show="showPopover" theme="dark" placement="left">
       <template #reference>
         <van-button plain hairline round>
-          <van-icon
-            class="iconfont icon-debug"
-            name="bug"
-            size="22"
-            color="red"
-          />
+          <van-icon class="iconfont icon-debug" name="bug" size="22" color="red" />
         </van-button>
       </template>
       <div style="width: 500px; height: 300px"></div>
@@ -23,18 +13,18 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref } from 'vue'
 
 const DebugPanel = defineComponent({
-  name: "DebugPanel",
+  name: 'DebugPanel',
   setup() {
-    const showPopover = ref(false);
-    return { showPopover };
+    const showPopover = ref(false)
+    return { showPopover }
   },
   props: {
     value: {
       type: String,
-      default: "debug",
+      default: 'debug',
     },
   },
   data() {
@@ -56,59 +46,59 @@ const DebugPanel = defineComponent({
       positionOld: {},
       startTime: null,
       endTime: null,
-    };
+    }
   },
 
   mounted() {
-    // this.env = this.envs[this.appInfo.env];
+    // this.env = this.envs[this.appInfo.env]
   },
   computed: {
     dragBall() {
-      return this.$refs.dragBall;
+      return this.$refs.dragBall
     },
   },
   methods: {
     toNew() {
-      alert("去新版");
+      alert('去新版')
     },
-    touchstart(e: any) {
+    touchStart(e: any) {
       if (!this.canDrag) {
-        this.startTime = e.timeStamp;
-        this.positionOld = this.getPosition(this.dragBall);
-        this.position = { ...this.positionOld };
+        this.startTime = e.timeStamp
+        this.positionOld = this.getPosition(this.dragBall)
+        this.position = { ...this.positionOld }
         this.inset = {
           left: e.targetTouches[0].clientX - this.positionOld.left,
           top: e.targetTouches[0].clientY - this.positionOld.top,
-        };
-        this.canDrag = true;
+        }
+        this.canDrag = true
       }
     },
-    touchmove(e: any) {
+    touchMove(e: any) {
       if (this.canDrag) {
-        let left = e.targetTouches[0].clientX - this.inset.left;
-        let top = e.targetTouches[0].clientY - this.inset.top;
+        let left = e.targetTouches[0].clientX - this.inset.left
+        let top = e.targetTouches[0].clientY - this.inset.top
         if (left < 0) {
-          left = 0;
+          left = 0
         } else if (left > window.innerWidth - this.dragBall.offsetWidth) {
-          left = window.innerWidth - this.dragBall.offsetWidth;
+          left = window.innerWidth - this.dragBall.offsetWidth
         }
         if (top < 0) {
-          top = 0;
+          top = 0
         } else if (top > window.innerHeight - this.dragBall.offsetHeight) {
-          top = window.innerHeight - this.dragBall.offsetHeight;
+          top = window.innerHeight - this.dragBall.offsetHeight
         }
-        this.dragBall.style.left = left + "px";
-        this.dragBall.style.top = top + "px";
+        this.dragBall.style.left = left + 'px'
+        this.dragBall.style.top = top + 'px'
         this.move = {
           x: left - this.positionOld.left,
           y: top - this.positionOld.top,
-        };
-        this.position = { left, top };
+        }
+        this.position = { left, top }
       }
     },
-    touchend(e) {
+    touchEnd(e: any) {
       if (this.canDrag) {
-        this.endTime = e.timeStamp;
+        this.endTime = e.timeStamp
         if (
           this.endTime - this.startTime > 400 ||
           Math.abs(this.move.x) > 2 ||
@@ -120,34 +110,34 @@ const DebugPanel = defineComponent({
             window.innerWidth / 2
           ) {
             this.dragBall.style.left =
-              window.innerWidth - this.dragBall.offsetWidth + "px";
+              window.innerWidth - this.dragBall.offsetWidth + 'px'
           } else {
-            this.dragBall.style.left = 0 + "px";
+            this.dragBall.style.left = 0 + 'px'
           }
         } else {
-          this.$emit("click");
+          this.$emit('click')
         }
-        this.inset = {};
-        this.move = {};
-        this.position = {};
-        this.canDrag = false;
+        this.inset = {}
+        this.move = {}
+        this.position = {}
+        this.canDrag = false
       }
     },
     getPosition(source: any) {
-      let left = source.offsetLeft; //获取元素相对于其父元素的left值var left
-      let top = source.offsetTop;
-      let current = source.offsetParent; // 取得元素的offsetParent // 一直循环直到根元素
+      let left = source.offsetLeft //获取元素相对于其父元素的left值var left
+      let top = source.offsetTop
+      let current = source.offsetParent // 取得元素的offsetParent // 一直循环直到根元素
       while (current != null) {
-        left += current.offsetLeft;
-        top += current.offsetTop;
-        current = current.offsetParent;
+        left += current.offsetLeft
+        top += current.offsetTop
+        current = current.offsetParent
       }
-      return { left: left, top: top };
+      return { left: left, top: top }
     },
   },
-});
+})
 
-export default DebugPanel;
+export default DebugPanel
 </script>
 
 <style scoped>

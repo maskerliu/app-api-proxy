@@ -1,80 +1,77 @@
 <template>
   <van-list style="padding: 5px;">
-    <van-cell v-for="(item, idx) in record.statistics.bps" :key="idx" :title="item.pageId"
-    :label="item.elementId"
-    :value="item.args" />
+    <van-cell v-for="(item, idx) in record.statistics.bps" :key="idx" :title="item.pageId" :label="item.elementId"
+      :value="item.args" />
   </van-list>
 </template>
 
 <script lang="ts">
-import { mapState } from "pinia";
-import { defineComponent, PropType } from "vue";
-import { ProxyStatRecord } from "../../../common/models";
-import { useCommonStore } from "../../store";
-import { useProxyRecordStore } from "../../store/ProxyRecords";
+import { mapState } from 'pinia'
+import { defineComponent, PropType } from 'vue'
+import { ProxyMock } from '../../../common/proxy.models'
+import { useCommonStore } from '../../store'
+import { useProxyRecordStore } from '../../store/ProxyRecords'
 
-type SateRule = { desc: string; rule: string[]; ruleDesc: string };
+type SateRule = { desc: string, rule: string[], ruleDesc: string }
 
 const ProxyStatDetail = defineComponent({
   props: {
-    record: { type: Object as PropType<ProxyStatRecord> },
+    record: { type: Object as PropType<ProxyMock.ProxyStatRecord> },
   },
   mounted() {
-    this.rows = [];
+    this.rows = []
     if (this.record.statistics.bps.length == 1) {
-      this.onClicked(this.record.statistics.bps[0], 0);
+      this.onClicked(this.record.statistics.bps[0], 0)
     }
   },
   computed: {
     ...mapState(useProxyRecordStore, []),
-    ...mapState(useCommonStore, ["serverConfig"]),
+    ...mapState(useCommonStore, ['serverConfig']),
   },
   data() {
     return {
       statRule: null as SateRule,
       curStat: null as any,
       rows: [],
-    };
+    }
   },
   methods: {
     tableRowClassName({ row, rowIndex }) {
-      return this.rows[rowIndex] == null
-        ? "normal-row"
-        : this.rows[rowIndex].rowClassName;
+      return this.rows[rowIndex] == null ? 'normal-row' : this.rows[rowIndex].rowClassName
     },
 
     onClicked(row: any, index: number) { },
 
     argsVailidate(rule: string[]): boolean {
-      if (this.curStat.args.length == 0) return true;
+      if (this.curStat.args.length == 0) return true
 
-      let tmp: string[] = this.curStat.args.split(",");
-      let args: Map<string, string> = new Map<string, string>();
+      let tmp: string[] = this.curStat.args.split(',')
+      let args: Map<string, string> = new Map<string, string>()
       for (let pair of tmp) {
-        let keyvalue = pair.split("=");
-        args.set(keyvalue[0], keyvalue[1]);
+        let keyvalue = pair.split('=')
+        args.set(keyvalue[0], keyvalue[1])
       }
 
-      let validate = true;
+      let validate = true
       for (let ruleKey of rule) {
         if (!args.has(ruleKey.trim()) || args.get(ruleKey.trim()) == null) {
-          validate = false;
+          validate = false
         }
       }
-      return validate;
+      return validate
     },
   },
   watch: {
     record() {
       if (this.record.statistics.bps.length == 1) {
-        this.onClicked(this.record.statistics.bps[0], 0);
+        this.onClicked(this.record.statistics.bps[0], 0)
       }
-      this.statRule = null;
+      this.statRule = null
     },
   },
-});
+})
 
-export default ProxyStatDetail;
+export default ProxyStatDetail
 </script>
 
 <style>

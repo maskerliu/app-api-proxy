@@ -1,6 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
-
 export default createRouter({
   history: createWebHashHistory(),
   routes: [
@@ -9,39 +8,34 @@ export default createRouter({
       redirect: '/proxy'
     },
     {
-      path: '/info',
-      name: 'Info',
-      component: require('@/pages/info/EnvInfo').default,
-    },
-    {
       path: '/welcome',
       name: 'Welcome',
-      component: require('@/pages/welcome/Welcome').default,
+      component: require('../pages/welcome/Welcome.vue').default
     },
     {
       path: '/proxy',
       name: 'Proxy',
-      component: require('@/pages/proxy/Proxy').default,
+      component: require('../pages/proxy/Proxy.vue').default
     },
     {
       path: '/mockRuleMgr',
       name: 'MockRuleMgr',
-      component: require('@/pages/mock/MockRuleMgr').default,
+      component: require('../pages/mock/MockRuleMgr.vue').default
     },
     {
       path: '/lab',
       name: 'Lab',
-      component: require('@/pages/lab/Lab').default,
+      component: require('../pages/lab/Lab.vue').default
     },
     {
       path: '/message',
       name: 'Message',
-      component: require('@/pages/message/Message').default,
+      component: require('../pages/message/Message.vue').default
     },
     {
       path: '/settings',
       name: 'Settings',
-      component: require('@/pages/settings/Settings').default,
+      component: require('../pages/settings/Settings.vue').default
     }
   ],
 })

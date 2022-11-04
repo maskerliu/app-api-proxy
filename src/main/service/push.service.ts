@@ -1,10 +1,8 @@
 import { Server } from "http"
 import { Service } from 'lynx-express-mvc'
 import { Connection, createServer, Server as SockServer } from "sockjs"
-import {
-  BizCode, BizResponse, BizType, ClientInfo, CMDType, MsgPushClient,
-  ProxyRequestRecord, ProxyStatRecord, PushMsg, PushMsgType
-} from "../../common/models"
+import { BizCode, BizResponse } from '../../common/base.models'
+import { ProxyMock } from '../../common/proxy.models'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
@@ -35,18 +33,18 @@ export default class PushService {
     this.sockjsServer
   }
 
-  public sendMessage(clientUid: String, data: PushMsg<any>) {
+  public sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>) {
     if (this.pushClients.has(clientUid)) {
       this.pushClients.get(clientUid).conn.write(JSON.stringify(data))
     }
   }
 
-  public sendProxyMessage(clientUid: String, data: ProxyRequestRecord | ProxyStatRecord) {
+  public sendProxyMessage(clientUid: String, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
 
-    let pushMsg: PushMsg<ProxyRequestRecord | ProxyStatRecord> = {
-      type: PushMsgType.TXT,
+    let pushMsg: ProxyMock.PushMsg<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> = {
+      type: ProxyMock.PushMsgType.TXT,
       payload: {
-        type: BizType.Proxy,
+        type: ProxyMock.BizType.Proxy,
         content: data
       }
     }
@@ -56,7 +54,7 @@ export default class PushService {
   }
 
   public getAllPushClients() {
-    let bizResp: BizResponse<Array<MsgPushClient>> = new BizResponse<Array<MsgPushClient>>()
+    let bizResp: BizResponse<Array<ProxyMock.MsgPushClient>>
     bizResp.code = BizCode.SUCCESS
     bizResp.data = []
 
@@ -74,13 +72,13 @@ export default class PushService {
   }
 
   private handleMsg(conn: Connection, data: any) {
-    let msg: PushMsg<any> = JSON.parse(data)
+    let msg: ProxyMock.PushMsg<any> = JSON.parse(data)
     switch (msg.type) {
-      case PushMsgType.CMD: {
+      case ProxyMock.PushMsgType.CMD: {
         this.handleCMD(conn, msg)
         break
       }
-      case PushMsgType.TXT: {
+      case ProxyMock.PushMsgType.TXT: {
         this.handleTXT(conn, msg)
         break
       }
@@ -105,9 +103,9 @@ export default class PushService {
     this.boardcastClientInfos()
   }
 
-  private handleCMD(conn: Connection, msg: PushMsg<any>) {
+  private handleCMD(conn: Connection, msg: ProxyMock.PushMsg<any>) {
     switch (msg.payload.type) {
-      case CMDType.REGISTER:
+      case ProxyMock.CMDType.REGISTER:
         let client: PushClient = {
           conn: conn,
           uid: msg.payload.content.uid,
@@ -117,18 +115,18 @@ export default class PushService {
         this.pushClients.set(client.uid, client)
         this.boardcastClientInfos()
         break
-      case CMDType.RECONNECT:
+      case ProxyMock.CMDType.RECONNECT:
         break
-      case CMDType.KICKDOWN:
+      case ProxyMock.CMDType.KICKDOWN:
         if (this.pushClients.has(msg.to))
           this.pushClients.get(msg.to).conn.write(JSON.stringify(msg))
         break
     }
   }
 
-  private handleTXT(conn: any, msg: PushMsg<any>) {
+  private handleTXT(conn: any, msg: ProxyMock.PushMsg<any>) {
     switch (msg.payload.type) {
-      case BizType.IM: {
+      case ProxyMock.BizType.IM: {
         if (msg.to == null) { // boardcast to everyone
           this.pushClients.forEach(it => {
             if (it.uid != msg.from) it.conn.write(JSON.stringify(msg))
@@ -142,7 +140,7 @@ export default class PushService {
   }
 
   private boardcastClientInfos() {
-    let data: Array<ClientInfo> = []
+    let data: Array<ProxyMock.ClientInfo> = []
 
     this.pushClients.forEach(it => {
       data.push({
@@ -154,12 +152,12 @@ export default class PushService {
       })
     })
 
-    let msg: PushMsg<Array<ClientInfo>> = {
-      type: PushMsgType.TXT,
+    let msg: ProxyMock.PushMsg<Array<ProxyMock.ClientInfo>> = {
+      type: ProxyMock.PushMsgType.TXT,
     }
 
     msg.payload = {
-      type: BizType.ClientInfos,
+      type: ProxyMock.BizType.ClientInfos,
       content: data
     }
 
