@@ -1,10 +1,11 @@
 import { Request, Response } from 'express'
 import { Router } from 'lynx-express-mvc'
-import { BizCode, BizResponse } from '../common/models'
+import { BizCode, BizResponse } from '../common/base.models'
 import AbstractRouter from './common/AbstractRouter'
 
-import './controller/DefaultController'
+import './controller/default.controller'
 import './test/test/TestController'
+import './controller/iot.controller'
 
 @Router()
 export default class MainRouter extends AbstractRouter {

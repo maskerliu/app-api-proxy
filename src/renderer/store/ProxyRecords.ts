@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
-import { reactive, ref, shallowRef } from 'vue'
-import { PorxyType, ProxyRequestRecord, ProxyStatRecord } from "../../common/models"
+import {ProxyMock } from "../../common/proxy.models"
+
+
+
+
 
 const COLORS: string[] = [
   "#F44336",
@@ -18,20 +21,20 @@ const COLORS: string[] = [
 export const useProxyRecordStore = defineStore('ProxyRecords', {
   state: () => {
     return {
-      proxyTypes: [String(PorxyType.REQUEST)],
+      proxyTypes: [String(ProxyMock.PorxyType.REQUEST)],
       filterKeyword: '' as string,
       curRecordId: -1,
-      records: new Map() as Map<number, (ProxyRequestRecord | ProxyStatRecord)>,
+      records: new Map() as Map<number, (ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord)>,
       isChanged: 0 // is a random number to identify the records change
     }
   },
   actions: {
-    updateRecord(record: ProxyRequestRecord | ProxyStatRecord) {
+    updateRecord(record: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
       if (this.shouldFilter(record)) return
 
       switch (record.type) {
-        case PorxyType.REQUEST_START:
-        case PorxyType.STATISTICS:
+        case ProxyMock.PorxyType.REQUEST_START:
+        case ProxyMock.PorxyType.STATISTICS:
           if (this.records.size > 40) {
             let keys = [...this.records.keys()]
             for (let i = 0; i < 10; ++i) {
@@ -45,10 +48,10 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
           this.records.set(record.id, record)
           if (!this.records.has(this.curRecordId)) this.curRecordId = -1
           break
-        case PorxyType.REQUEST_END:
+        case ProxyMock.PorxyType.REQUEST_END:
           if (!this.records.has(record.id)) { return }
-          let proxyRecord = record as ProxyRequestRecord
-          let tmpRecord = this.records.get(record.id) as ProxyRequestRecord
+          let proxyRecord = record as ProxyMock.ProxyRequestRecord
+          let tmpRecord = this.records.get(record.id) as ProxyMock.ProxyRequestRecord
           tmpRecord.isMock = proxyRecord.isMock
           tmpRecord.type = proxyRecord.type
           tmpRecord.responseHeaders = proxyRecord.responseHeaders
@@ -71,20 +74,20 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
       this.records.clear()
       this.curRecordId = -1
     },
-    shouldFilter(record: ProxyRequestRecord | ProxyStatRecord): boolean {
-      if (record.type == PorxyType.REQUEST_START ||
-        record.type == PorxyType.REQUEST_END) {
-        return this.proxyTypes.indexOf(String(PorxyType.REQUEST)) == -1
+    shouldFilter(record: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): boolean {
+      if (record.type == ProxyMock.PorxyType.REQUEST_START ||
+        record.type == ProxyMock.PorxyType.REQUEST_END) {
+        return this.proxyTypes.indexOf(String(ProxyMock.PorxyType.REQUEST)) == -1
       }
 
-      if (record.type == PorxyType.STATISTICS ||
-        record.type == PorxyType.SOCKET) {
+      if (record.type == ProxyMock.PorxyType.STATISTICS ||
+        record.type == ProxyMock.PorxyType.SOCKET) {
         return this.proxyTypes.indexOf(String(record.type)) == -1
       }
 
-      if (record.type !== PorxyType.STATISTICS &&
+      if (record.type !== ProxyMock.PorxyType.STATISTICS &&
         this.filterKeyword != null && this.filterKeyword.length > 0) {
-        return (record as ProxyRequestRecord).url.indexOf(this.filterKeyword) == -1
+        return (record as ProxyMock.ProxyRequestRecord).url.indexOf(this.filterKeyword) == -1
       }
 
       return false

@@ -7,8 +7,8 @@
     </div>
     <div v-if="source.type == 5020">
       <strong class="request-snap-method">[打点]</strong>
-      <div class="request-snap-url" v-for="(item, idx) in (source as ProxyStatRecord).statistics.bps.slice(0, 2)"
-        :key="idx">
+      <div class="request-snap-url"
+        v-for="(item, idx) in (source as ProxyMock.ProxyStatRecord).statistics.bps.slice(0, 2)" :key="idx">
         <span class="stat-snap-pid"> {{ item.pageId }} </span>
         <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
         <span class="stat-snap-eid" v-if="item.event_id != 2001"><br />
@@ -54,24 +54,24 @@
 </template>
 
 <script lang="ts">
-import { mapWritableState } from "pinia";
-import type { PropType } from "vue";
-import { defineComponent } from "vue";
-import { ProxyRequestRecord, ProxyStatRecord } from "../../../common/models";
-import { useProxyRecordStore } from "../../store/ProxyRecords";
+import { mapWritableState } from 'pinia'
+import type { PropType } from 'vue'
+import { defineComponent } from 'vue'
+import { ProxyMock } from '../../../common/proxy.models'
+import { useProxyRecordStore } from '../../store/ProxyRecords'
 
 export default defineComponent({
   props: {
     source: {
-      type: Object as PropType<ProxyRequestRecord>,
+      type: Object as PropType<ProxyMock.ProxyRequestRecord>,
       required: true,
     },
   },
   computed: {
-    ...mapWritableState(useProxyRecordStore, ["curRecordId"]),
+    ...mapWritableState(useProxyRecordStore, ['curRecordId']),
   },
   methods: {},
-});
+})
 </script>
 
 <style>

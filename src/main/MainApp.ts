@@ -53,7 +53,7 @@ export default class MainApp {
 
     MainApp.mainWindow.loadURL(MainApp.winURL)
     MainApp.mainWindow.webContents.frameRate = 30
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'development') {
       MainApp.mainWindow.webContents.openDevTools()
     }
     MainApp.mainWindow.on('closed', () => { MainApp.onClose() })

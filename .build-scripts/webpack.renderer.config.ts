@@ -5,20 +5,22 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
-import pkg from '../package.json'
+import config from '../build.config.json' assert { type: "json" }
+import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config.js'
+
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
+let whiteListedModules = ['mqtt', 'axios']
+
 class RendererConfig extends BaseConfig {
 
-  devtool: Configuration['devtool'] = 'eval-source-map'
   target: Configuration['target'] = 'electron-renderer'
   entry: Configuration['entry'] = { renderer: path.join(dirname, '../src/renderer/index.ts') }
-  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies)]
-  optimization: Configuration['optimization'] = {}
+  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
 
   module: Configuration['module'] = {
     rules: [
@@ -91,7 +93,36 @@ class RendererConfig extends BaseConfig {
     extensions: ['.js', '.ts', '.vue', '.json', '.css']
   }
 
-  init(localServer?: string) {
+  optimization: Configuration['optimization'] = {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vender: {
+          name: 'vender',
+          test: /[\\/]node_modules[\\/]/,
+          priority: 10,
+          chunks: 'initial'
+        },
+        vant: {
+          name: "vant",
+          priority: 20,
+          test: /[\\/]node_modules[\\/]vant[\\/]/
+        },
+        jsoneditor: {
+          name: 'jsoneditor',
+          test: /[\\/]node_modules[\\/]jsoneditor[\\/]/,
+          priority: 20,
+        },
+        echarts: {
+          name: 'echarts',
+          test: /[\\/]node_modules[\\/]echarts[\\/]/,
+          priority: 20,
+        }
+      }
+    },
+  }
+
+  init() {
     super.init()
 
     this.node = {
@@ -99,49 +130,27 @@ class RendererConfig extends BaseConfig {
       __filename: process.env.NODE_ENV !== 'production'
     }
 
-    this.plugins.push(new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: path.resolve(dirname, '../src/index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true
-      },
-      nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
-    }))
+    this.plugins.push(
+      new HtmlWebpackPlugin({
+        filename: 'index.html',
+        template: path.resolve(dirname, '../src/index.ejs'),
+        minify: {
+          collapseWhitespace: true,
+          removeAttributeQuotes: true,
+          removeComments: true
+        },
+        nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
+      }),
+      new DefinePlugin({ SERVER_BASE_URL: `'http://localhost:${config.port}'` }),
+    )
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(
-        new DefinePlugin({ SERVER_BASE_URL: `'http://${localServer}:8885'` }),
         new DefinePlugin({ '__static': `'${path.join(dirname, '../static').replace(/\\/g, '\\\\')}'` }),
       )
     } else {
-      this.devtool = false
       this.plugins.push(new LoaderOptionsPlugin({ minimize: true }))
       this.output.publicPath = './'
-      this.optimization = {
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vender: {
-              name: 'vender',
-              test: /[\\/]node_modules[\\/]/,
-              priority: 10,
-              chunks: 'initial'
-            },
-            vant: {
-              name: "vant",
-              priority: 20,
-              test: /[\\/]node_modules[\\/]vant[\\/]/
-            },
-            jsoneditor: {
-              name: 'jsoneditor',
-              test: /[\\/]node_modules[\\/]jsoneditor[\\/]/,
-              priority: 20,
-            }
-          }
-        },
-      }
     }
 
     return this

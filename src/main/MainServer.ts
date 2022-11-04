@@ -8,9 +8,13 @@ import { Autowired, Component } from 'lynx-express-mvc'
 import path from 'path'
 
 import MainRouter from './MainRouter'
-import CommonService from './service/CommonService'
-import ProxyService from './service/ProxyService'
-import PushService from './service/PushService'
+import CommonService from './service/common.service'
+import IOTDeviceMgrService from './service/iot.deviceMgr.service'
+import ProxyService from './service/proxy.service'
+import PushService from './service/push.service'
+
+
+import si from 'systeminformation'
 
 const CorsOptions = {
   credentials: true,
@@ -34,7 +38,14 @@ class LocalServer {
   @Autowired()
   pushService: PushService
 
-  public start() {
+  @Autowired()
+  iotDeviceMgrService: IOTDeviceMgrService
+
+  public async start() {
+
+   let info = await si.baseboard()
+   console.log(info)
+
     this.mainRouter.init()
     this.initHttpServer()
 

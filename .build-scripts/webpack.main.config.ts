@@ -2,10 +2,11 @@
 
 import path from 'path'
 import { fileURLToPath } from 'url'
-import webpack, { Configuration, } from 'webpack'
+import webpack, { Configuration } from 'webpack'
 import { BaseConfig } from './webpack.base.config.js'
 
-import pkg from '../package.json'
+import config from '../build.config.json' assert { type: "json" }
+import pkg from '../package.json' assert { type: "json" }
 
 const { DefinePlugin, HotModuleReplacementPlugin, NoEmitOnErrorsPlugin } = webpack
 
@@ -13,7 +14,6 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class MainConfig extends BaseConfig {
 
-  devtool: Configuration['devtool'] = 'source-map'
   target: Configuration['target'] = 'electron-main'
   entry: Configuration['entry'] = { main: path.join(dirname, '../src/main/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies)]
@@ -62,20 +62,13 @@ class MainConfig extends BaseConfig {
       __filename: process.env.NODE_ENV !== 'production'
     }
 
+    this.plugins.push(new DefinePlugin({
+      'process.env.NODE_ENV': `"${this.mode}"`,
+      'process.env.BUILD_CONFIG': `'${JSON.stringify({ port: config.port })}'`
+    }))
+
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins.push(
-        new HotModuleReplacementPlugin(),
-        new DefinePlugin({ '__static': `'${path.join(dirname, '../static').replace(/\\/g, '\\\\')}'` }),
-        new DefinePlugin({
-          __IS_DEV__: true,
-        }),
-      )
-    } else {
-      this.devtool = false
-      this.plugins.push(new DefinePlugin({
-        "process.env.NODE_ENV": `'${this.mode}'`,
-        "process.env.Test": 'true'
-      }))
+      this.plugins.push(new HotModuleReplacementPlugin())
     }
 
     return this

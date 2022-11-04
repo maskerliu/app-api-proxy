@@ -1,9 +1,11 @@
 import { Autowired, Service } from 'lynx-express-mvc'
-import { BizCode, BizResponse, CMDType, LocalServerConfig, PushMsg, PushMsgType } from '../../common/models'
+import { BizCode, BizResponse, LocalServerConfig } from '../../common/base.models'
+import { ProxyMock } from '../../common/proxy.models'
 import { getLocalIPs } from '../utils/NetworkUtils'
-import ProxyService from './ProxyService'
-import PushService from './PushService'
+import ProxyService from './proxy.service'
+import PushService from './push.service'
 
+import { Lynx_Mqtt_Broker } from '../common/Const'
 
 @Service()
 export default class CommonService {
@@ -17,10 +19,12 @@ export default class CommonService {
   serverConfig: LocalServerConfig
 
   constructor() {
+    let config = JSON.parse(process.env.BUILD_CONFIG)
     this.serverConfig = {
       ip: getLocalIPs()[0].address,
-      port: 8885,
-      ips: getLocalIPs()
+      port: config.port,
+      ips: getLocalIPs(),
+      mqttBroker: Lynx_Mqtt_Broker
     }
   }
 
@@ -29,10 +33,10 @@ export default class CommonService {
     if (uid != null) {
       bizResp = { code: BizCode.SUCCESS, data: '注册成功' }
 
-      let data: PushMsg<any> = {
-        type: PushMsgType.CMD,
+      let data: ProxyMock.PushMsg<any> = {
+        type: ProxyMock.PushMsgType.CMD,
         payload: {
-          type: CMDType.REGISTER,
+          type: ProxyMock.CMDType.REGISTER,
           content: uid
         }
       }

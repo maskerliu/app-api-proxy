@@ -3,11 +3,11 @@
 </template>
 
 <script lang="ts">
-import { mapActions } from "pinia";
-import { defineComponent, PropType } from "vue";
+import { mapActions } from 'pinia'
+import { defineComponent, PropType } from 'vue'
 
-import BizMain from "./pages/BizMain.vue";
-import { useCommonStore } from "./store";
+import BizMain from './pages/BizMain.vue'
+import { useCommonStore } from './store'
 
 const App = defineComponent({
   components: {
@@ -22,20 +22,20 @@ const App = defineComponent({
   data() {
     return {
       canRender: false as boolean,
-    };
+    }
   },
   computed: {},
 
   created() {
-    this.canRender = true;
-    this.init();
+    this.canRender = true
+    this.init()
   },
   methods: {
-    ...mapActions(useCommonStore, ["init"]),
+    ...mapActions(useCommonStore, ['init']),
   },
-});
+})
 
-export default App;
+export default App
 </script>
 
 <style>

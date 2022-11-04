@@ -20,9 +20,10 @@
     "emitDecoratorMetadata": true,
     "noImplicitThis": false,
     "resolveJsonModule": true,
-    "types": ["reflect-metadata"]
+    "types": [
+      "reflect-metadata"
+    ]
   },
-
   "include": [
     "src/**/*",
   ],
