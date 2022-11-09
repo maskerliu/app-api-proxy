@@ -11,27 +11,28 @@
       <van-button style="margin: 0 5px" plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
     </div>
     <div class="inspector-row" style="margin-top: 70px; padding-bottom: 15px">
-      <h3>{{$t('proxy.requestHeader')}}</h3>
+      <h3>{{ $t('proxy.requestHeader') }}</h3>
       <json-viewer style="margin-top: 40px" :closed="true" :data="record.headers == null ? {} : record.headers">
       </json-viewer>
     </div>
     <div class="inspector-row" style="padding-bottom: 15px">
-      <h3>{{$t('proxy.requestParam')}}</h3>
+      <h3>{{ $t('proxy.requestParams') }}</h3>
       <json-viewer style="margin-top: 40px" :data="record.requestData == null ? {} : record.requestData"></json-viewer>
     </div>
     <div class="inspector-row" style="padding-bottom: 15px">
-      <h3>{{$t('proxy.responseHeader')}}</h3>
+      <h3>{{ $t('proxy.responseHeader') }}</h3>
       <json-viewer style="margin-top: 40px" :closed="true"
         :data="record.responseHeaders == null ? {} : record.responseHeaders"></json-viewer>
     </div>
     <div class="inspector-row" style="height: calc(100% - 65px)" ref="respDataDiv">
-      <h3>{{$t('proxy.responseBody')}}</h3>
-      <json-viewer style="margin-top: 50px; height: calc(100% - 105px)" :data="record.responseData" :deep="5">
+      <h3>{{ $t('proxy.responseBody') }}</h3>
+      <json-viewer style="margin-top: 50px; height: calc(100% - 105px)"
+        :data="record.responseData == null ? {} : record.responseData" :deep="5">
       </json-viewer>
     </div>
 
-    <van-popup v-model:show="showAddMockRule" :style="{ width: '90%', padding: '10px' }">
-      <mock-rule-mgr style="width: 100%; height: calc(100% - 120px); display: flex" :record="record" />
+    <van-popup v-model:show="showAddMockRule" :style="{ width: '90%', height: '90vh', padding: '0' }">
+      <mock-rule-mgr style="display: flex" :record="record" />
     </van-popup>
 
     <van-dialog title="预览" :show="showPreview" top="100px" align="center">
@@ -44,98 +45,88 @@
   </div>
 </template>
 
-<script lang="ts" >
-import { defineAsyncComponent, PropType } from 'vue'
-import { defineComponent } from 'vue'
-import { ProxyMock } from '../../../common/proxy.models'
-import JsonViewer from '../components/JsonViewer.vue'
+<script lang="ts" setup>
+import { defineAsyncComponent, onMounted, PropType, ref, watch } from 'vue';
+import { ProxyMock } from '../../../common/proxy.models';
+import JsonViewer from '../components/JsonViewer.vue';
 
 const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
 const VIDEO_RGX = new RegExp('(.mp4)$')
 const IMG_RGX = new RegExp('(.jpg|.jpeg|.png|.JPG|.gif|.GIF|.webp)$')
 
-const ProxyRequestDetail = defineComponent({
-  components: {
-    JsonViewer,
-    MockRuleMgr: defineAsyncComponent(() => import('../mock/MockRuleMgr.vue'))
-  },
-  props: {
-    record: { type: Object as PropType<ProxyMock.ProxyRequestRecord> },
-  },
-  computed: {},
-  data() {
-    return {
-      apiDesc: null as string,
-      curImgSrc: null as string,
-      curAudioSrc: null as string,
-      audioPlayer: null as any,
-      curVideoSrc: null as string,
-      showPreview: false,
-      showAddMockRule: false,
-    }
-  },
-  mounted() {
-    this.audioPlayer = document.getElementById('audioPlayer')
-  },
-  methods: {
-    onItemClick(item: string) {
-      let canShow = false
-      if (!!AUDIO_RGX.test(item)) {
-        this.curAudioSrc = item
-        this.curImgSrc = null
-        canShow = true
-      } else if (!!IMG_RGX.test(item)) {
-        this.curAudioSrc = null
-        this.curImgSrc = item
-        canShow = true
-      } else if (!!VIDEO_RGX.test(item)) {
-        this.curVideoSrc = item
-        canShow = true
-      }
-      this.showPreview = canShow
-    },
-    closeImgPreview() {
-      this.showPreview = false
-      this.curImgSrc = null
-      this.curAudioSrc = null
-      if (this.audioPlayer != null) {
-        this.audioPlayer.pause()
-      }
-    },
-    copyLink() {
-      // clipboard.writeText(this.record.url)
-    },
-    addToMockRule() {
-      this.showAddMockRule = true
-    },
-    updated() {
-      this.$refs.inspectorPanel.scrollTop = 0
-      this.$nextTick(() => {
-        this.$refs.inspectorPanel.scrollTop =
-          this.$refs.respDataDiv.getBoundingClientRect().top
-      })
-    },
-  },
+const MockRuleMgr = defineAsyncComponent(() => import('../mock/MockRuleMgr.vue'))
 
-  watch: {
-    showPreview() {
-      if (!this.showPreview) {
-        if (this.audioPlayer != null) {
-          this.audioPlayer.pause()
-        }
-        this.curImgSrc = null
-        this.curAudioSrc = null
-        this.curVideoSrc = null
-      }
-    },
-  },
+defineProps({
+  record: { type: Object as PropType<ProxyMock.ProxyRequestRecord> },
 })
 
-export default ProxyRequestDetail
+const apiDesc = ref<string>(null)
+const curImgSrc = ref<string>(null)
+const curAudioSrc = ref<string>(null)
+const audioPlayer = ref(null)
+const curVideoSrc = ref<string>(null)
+const showPreview = ref(false)
+const showAddMockRule = ref(false)
+
+onMounted(() => {
+
+})
+
+watch(showPreview, () => {
+  if (!showPreview.value) {
+    if (audioPlayer != null) {
+      audioPlayer.pause()
+    }
+    curImgSrc.value = null
+    curAudioSrc.value = null
+    curVideoSrc.value = null
+  }
+})
+
+function onItemClick(item: string) {
+  let canShow = false
+  if (!!AUDIO_RGX.test(item)) {
+    this.curAudioSrc = item
+    this.curImgSrc = null
+    canShow = true
+  } else if (!!IMG_RGX.test(item)) {
+    this.curAudioSrc = null
+    this.curImgSrc = item
+    canShow = true
+  } else if (!!VIDEO_RGX.test(item)) {
+    this.curVideoSrc = item
+    canShow = true
+  }
+  this.showPreview = canShow
+}
+
+function closeImgPreview() {
+  this.showPreview = false
+  this.curImgSrc = null
+  this.curAudioSrc = null
+  if (this.audioPlayer != null) {
+    this.audioPlayer.pause()
+  }
+}
+
+function copyLink() {
+  // clipboard.writeText(this.record.url)
+}
+
+function addToMockRule() {
+  showAddMockRule.value = true
+}
+
+function updated() {
+  this.$refs.inspectorPanel.scrollTop = 0
+  this.$nextTick(() => {
+    this.$refs.inspectorPanel.scrollTop =
+      this.$refs.respDataDiv.getBoundingClientRect().top
+  })
+}
 </script>
 
 <style>
-
 .inspector-panel {
   position: relative;
   height: calc(100% - 10px);

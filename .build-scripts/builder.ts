@@ -36,8 +36,8 @@ async function build() {
   deleteSync(['dist/electron/*', '!.gitkeep'])
   deleteSync(['dist/web/*', '!.gitkeep'])
 
-  const tasks = [mainConfig.target, rendererConfig.target, webConfig.target]
-  const spinner = new Multispinner(tasks, { preText: 'building', postText: 'process' })
+  const spinner = new Multispinner([mainConfig.name, renderer.name, webConfig.name],
+    { preText: 'building', postText: 'process' })
 
   let results = ''
   spinner.on('success', () => {
@@ -47,15 +47,15 @@ async function build() {
     process.exit()
   })
 
-  let task = [mainConfig, rendererConfig, webConfig]
+  let tasks = [mainConfig, rendererConfig, webConfig]
 
-  task.forEach(async (config) => {
+  tasks.forEach(async (config) => {
     try {
       let result = await pack(config)
       results += result + '\n\n'
-      spinner.success(config.target)
+      spinner.success(config.name)
     } catch (err) {
-      spinner.error(config.target)
+      spinner.error(config.name)
       console.log(`\n  ${errorLog} failed to build ${config.target} process`)
       console.error(`\n${err}\n`)
       process.exit(1)

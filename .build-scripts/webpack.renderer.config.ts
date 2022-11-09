@@ -1,6 +1,7 @@
 'use strict'
 
 import HtmlWebpackPlugin from 'html-webpack-plugin'
+import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
@@ -14,11 +15,12 @@ const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-let whiteListedModules = ['mqtt', 'axios']
+let whiteListedModules = ['axios']
 
 class RendererConfig extends BaseConfig {
 
-  target: Configuration['target'] = 'electron-renderer'
+  name: Configuration['name'] = 'renderer'
+  // target: Configuration['target'] = 'electron-renderer'
   entry: Configuration['entry'] = { renderer: path.join(dirname, '../src/renderer/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
 
@@ -48,6 +50,10 @@ class RendererConfig extends BaseConfig {
         }
       },
       {
+        test: /\.wasm$/,
+        type: "asset/inline",
+      },
+      {
         test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
         loader: 'url-loader',
         options: {
@@ -66,11 +72,15 @@ class RendererConfig extends BaseConfig {
     ]
   }
 
-  node: Configuration['node'] = {}
+  experiments: Configuration['experiments'] = {
+    asyncWebAssembly: true,
+    syncWebAssembly: true
+  }
 
   plugins: Configuration['plugins'] = [
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
+    new NodePolyfillPlugin(),
     new DefinePlugin({
       __IS_WEB__: false,
       __VUE_OPTIONS_API__: false,
@@ -80,15 +90,14 @@ class RendererConfig extends BaseConfig {
 
   output: Configuration['output'] = {
     filename: '[name].js',
-    library: { type: 'commonjs2' },
+    // library: { type: 'commonjs2' },
     path: path.join(dirname, '../dist/electron'),
   }
 
   resolve: Configuration['resolve'] = {
     alias: {
       '@': path.join(dirname, '../src/renderer'),
-      'vue$': 'vue/dist/vue.esm-browser.js',
-      'vuex': 'vuex/dist/vuex.esm-browser.js',
+      // 'vue$': 'vue/dist/vue.runtime.esm-browser.js',
     },
     extensions: ['.js', '.ts', '.vue', '.json', '.css']
   }
@@ -108,11 +117,6 @@ class RendererConfig extends BaseConfig {
           priority: 20,
           test: /[\\/]node_modules[\\/]vant[\\/]/
         },
-        jsoneditor: {
-          name: 'jsoneditor',
-          test: /[\\/]node_modules[\\/]jsoneditor[\\/]/,
-          priority: 20,
-        },
         echarts: {
           name: 'echarts',
           test: /[\\/]node_modules[\\/]echarts[\\/]/,
@@ -122,12 +126,12 @@ class RendererConfig extends BaseConfig {
     },
   }
 
-  init() {
+  init(localServer?: string) {
     super.init()
 
     this.node = {
-      __dirname: process.env.NODE_ENV !== 'production',
-      __filename: process.env.NODE_ENV !== 'production'
+      // __dirname: process.env.NODE_ENV !== 'production',
+      // __filename: process.env.NODE_ENV !== 'production'
     }
 
     this.plugins.push(
@@ -141,7 +145,7 @@ class RendererConfig extends BaseConfig {
         },
         nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
       }),
-      new DefinePlugin({ SERVER_BASE_URL: `'http://localhost:${config.port}'` }),
+      new DefinePlugin({ SERVER_BASE_URL: `'${config.protocol}://localhost:${config.port}'`, PROTOCOL: `'${config.protocol}'` }),
     )
 
     if (process.env.NODE_ENV !== 'production') {

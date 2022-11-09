@@ -28,6 +28,11 @@ export default createRouter({
       component: require('../pages/lab/Lab.vue').default
     },
     {
+      path: '/fun',
+      name: 'Fun',
+      component: require('../pages/fun/FunHome.vue').default
+    },
+    {
       path: '/message',
       name: 'Message',
       component: require('../pages/message/Message.vue').default

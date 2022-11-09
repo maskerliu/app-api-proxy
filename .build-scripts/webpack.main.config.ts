@@ -1,5 +1,5 @@
 'use strict'
-
+import CopyWebpackPlugin from 'copy-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack, { Configuration } from 'webpack'
@@ -14,8 +14,12 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class MainConfig extends BaseConfig {
 
+  name: Configuration['name'] = 'main'
   target: Configuration['target'] = 'electron-main'
-  entry: Configuration['entry'] = { main: path.join(dirname, '../src/main/index.ts') }
+  entry: Configuration['entry'] = {
+    main: path.join(dirname, '../src/main/index.ts'),
+    preload: path.join(dirname, '../src/main/Preload.ts')
+  }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies)]
 
   module: Configuration['module'] = {
@@ -51,7 +55,7 @@ class MainConfig extends BaseConfig {
     alias: {
 
     },
-    extensions: ['.js', '.ts', '.json', '.node']
+    extensions: ['.ts', '.js', '.json', '.node']
   }
 
   init() {
@@ -64,11 +68,22 @@ class MainConfig extends BaseConfig {
 
     this.plugins.push(new DefinePlugin({
       'process.env.NODE_ENV': `"${this.mode}"`,
-      'process.env.BUILD_CONFIG': `'${JSON.stringify({ port: config.port })}'`
+      'process.env.BUILD_CONFIG': `'${JSON.stringify(config)}'`
     }))
+
+    this.plugins.push(
+      new CopyWebpackPlugin({
+        patterns: [{
+          from: path.join(dirname, '../cert/**/*'),
+          to: path.join(dirname, '../dist/electron/'),
+        }]
+      }),
+    )
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(new HotModuleReplacementPlugin())
+    } else {
+
     }
 
     return this

@@ -1,8 +1,18 @@
-declare let __DEV__: boolean
+export interface IElectronAPI {
+  openFile: (...args: any) => Promise<void>,
+  openGame: (...args: any) => Promise<void>
+}
 
-declare let __VUE_OPTIONS_API__: boolean
 
+declare global {
+  let __DEV__: boolean
+  let __VUE_OPTIONS_API__: boolean
 
-declare let SERVER_BASE_URL: string
+  interface Window {
+    electronAPI: IElectronAPI
+  }
 
-declare let __IS_WEB__: boolean
+  let __IS_WEB__: boolean
+  let PROTOCOL: string
+  let SERVER_BASE_URL: string
+}

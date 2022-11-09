@@ -1,7 +1,5 @@
-import { connect, IClientOptions, MqttClient } from 'mqtt'
-import { IOT } from '../../common/iot.models'
+import { connect, IClientOptions } from 'mqtt'
 
-import { useIOTDeviceStore } from '../store/IOTDevices'
 import MsgClient from './MsgClient'
 
 

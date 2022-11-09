@@ -2,7 +2,7 @@
   <van-row class="full-row" gutter="24" justify="space-around" style="overflow-y: auto">
     <van-col class="bg-border" style="height: calc(100% - 10px); width: 300px; padding: 0px">
       <div style="font-size: 0.8rem; padding: 10px; color: grey">
-        {{ $t('settings.boardcast.onlineClient') }} [{{ clientInfos.length }}]
+        {{ $t('settings.boardcast.onlineClient') }} [{{ commonStore.clientInfos.length }}]
       </div>
       <van-field :placeholder="$t('settings.boardcast.placeholder')" v-model="broadcastMsg">
         <template #left-icon>
@@ -20,7 +20,7 @@
           overflow-y: auto;
           overflow-x: hidden;
         ">
-        <van-grid-item v-for="item in clientInfos" :key="item.key" @click="showOpMenu(item)" badge="9"
+        <van-grid-item v-for="item in commonStore.clientInfos" :key="item.key" @click="showOpMenu(item)" badge="9"
           style="max-height: 80px">
           <template #text>
             <div class="single-line">{{ item.uid }}</div>
@@ -32,15 +32,15 @@
       </van-grid>
     </van-col>
 
-    <van-col  style="flex: 1; min-width: 375px; padding: 0;">
+    <van-col style="flex: 1; min-width: 375px; padding: 0;">
       <van-form style="margin-top: 15px; width: 100%" label-align="right" colon>
         <van-cell-group inset>
           <van-field :label="$t('settings.server')" label-width="10rem" readonly>
             <template #input>
               <van-popover v-model:show="showPopover" placement="bottom-start" style="width: 300px"
-                v-if="serverConfig.ips">
-                <van-cell v-for="(item, idx) in serverConfig.ips" :key="idx" :title="item.name" :value="item.address"
-                  clickable is-link @click="onSelectIP(item)" />
+                v-if="commonStore.serverConfig.ips">
+                <van-cell v-for="(item, idx) in commonStore.serverConfig.ips" :key="idx" :title="item.name"
+                  :value="item.address" clickable is-link @click="onSelectIP(item)" />
                 <template #reference>
                   <div style="
                       width: 300px;
@@ -56,7 +56,7 @@
           </van-field>
 
           <van-field :label="item.tooltip" label-width="10rem" v-for="(item, idx) in perferences" :key="idx"
-            :model-value="serverConfig[item.key]" readonly />
+            :model-value="commonStore.serverConfig[item.key]" readonly />
         </van-cell-group>
       </van-form>
     </van-col>
@@ -77,12 +77,13 @@
   </van-row>
 </template>
 
-<script lang="ts">
-import { mapActions, mapState } from 'pinia'
-import { defineComponent } from 'vue'
+<script lang="ts" setup>
+import { onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { IP } from '../../../common/base.models'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
+
 
 type SettingPreference = {
   key: string
@@ -109,94 +110,87 @@ class Hello {
   }
 }
 
-const Settings = defineComponent({
-  name: 'Settings',
-  data() {
-    return {
-      dialogVisible: false,
-      selectClient: null as ProxyMock.MsgPushClient,
-      broadcastMsg: null as string,
-      imMsg: null as string,
-      perferences: [
-        { tooltip: this.$t('settings.port'), key: 'port' },
-        { tooltip: this.$t('settings.proxySocketPort'), key: 'proxySocketPort' },
-        { tooltip: this.$t('settings.apiDefineServer'), key: 'apiDefineServer' },
-        { tooltip: this.$t('settings.statRuleServer'), key: 'statRuleServer' },
-        {
-          tooltip: this.$t('settings.dataProxyServer'),
-          key: 'dataProxyServer',
-          hasStatus: true,
-          statusKey: 'dataProxyStatus',
-        },
-        {
-          tooltip: this.$t('settings.mqttBroker'),
-          key: 'mqttBroker',
-        },
-      ] as Array<SettingPreference>,
-      curServerIp: null as IP,
-      showPopover: false,
-    }
+const { t } = useI18n()
+const commonStore = useCommonStore()
+const dialogVisible = ref(false)
+const selectClient = ref<ProxyMock.ClientInfo>(null)
+const broadcastMsg = ref('')
+const imMsg = ref('')
+const curServerIp = ref<IP>(null)
+const showPopover = ref(false)
+
+let perferences = [
+  { tooltip: t('settings.port'), key: 'port' },
+  { tooltip: t('settings.proxySocketPort'), key: 'proxySocketPort' },
+  { tooltip: t('settings.apiDefineServer'), key: 'apiDefineServer' },
+  { tooltip: t('settings.statRuleServer'), key: 'statRuleServer' },
+  {
+    tooltip: t('settings.dataProxyServer'),
+    key: 'dataProxyServer',
+    hasStatus: true,
+    statusKey: 'dataProxyStatus',
   },
-  computed: {
-    ...mapState(useCommonStore, ['serverConfig', 'clientInfos']),
+  {
+    tooltip: t('settings.mqttBroker'),
+    key: 'mqttBroker',
   },
-  mounted() {
-    if (this.serverConfig.ips) this.curServerIp = this.serverConfig.ips[0]
-    let test = new Test('chris', 'xxxxx')
-    let test2 = new Test('tom', 'ooooo')
-    Reflect.set(Test.prototype, 'test', new Hello('test'))
-    Reflect.set(Test.prototype, 'print', function () {
-      console.log(this.name)
-    })
-    console.log(test['test'])
-    test['test'].test = 'world'
-    Reflect.apply(Reflect.get(Test.prototype, 'print'), test, [])
-    console.log(test2['test'])
-    Reflect.apply(Reflect.get(Test.prototype, 'print'), test2, [])
-  },
-  methods: {
-    ...mapActions(useCommonStore, ['sendMessage', 'publishMessage']),
-    onSelectIP(ip: IP) {
-      this.curServerIp = ip
-      this.showPopover = false
-    },
-    sendBroadcastMsg(): void {
-      this.publishMessage(this.broadcastMsg)
-      // let msg: PushMsg<any> = {
-      //   type: PushMsgType.TXT,
-      //   payload: {
-      //     type: BizType.IM,
-      //     content: this.broadcastMsg
-      //   }
-      // }
-      // this.sendMessage(msg)
-      // this.broadcastMsg = ''
-    },
-    sendMsg(): void {
-      let msg: ProxyMock.PushMsg<any> = {
-        to: this.selectClient.uid,
-        type: ProxyMock.PushMsgType.TXT,
-        payload: {
-          type: ProxyMock.BizType.IM,
-          content: this.imMsg,
-        },
-      }
-      this.sendMessage(msg)
-      this.imMsg = ''
-    },
-    showOpMenu(client: ProxyMock.ClientInfo): void {
-      this.dialogVisible = true
-      this.selectClient = client
-    },
-  },
-  watch: {
-    serverConfig() {
-      if (this.serverConfig.ips) this.curServerIp = this.serverConfig.ips[0]
-    },
-  },
+] as Array<SettingPreference>
+
+onMounted(() => {
+  if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
+
+  let test = new Test('chris', 'xxxxx')
+  let test2 = new Test('tom', 'ooooo')
+  Reflect.set(Test.prototype, 'test', new Hello('test'))
+  Reflect.set(Test.prototype, 'print', function () {
+    console.log(this.name)
+  })
+  console.log(test['test'])
+  test['test'].test = 'world'
+  Reflect.apply(Reflect.get(Test.prototype, 'print'), test, [])
+  console.log(test2['test'])
+  Reflect.apply(Reflect.get(Test.prototype, 'print'), test2, [])
 })
 
-export default Settings
+watch(() => commonStore.serverConfig, () => {
+  if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
+})
+
+function onSelectIP(ip: IP) {
+  curServerIp.value = ip
+  showPopover.value = false
+}
+
+function sendBroadcastMsg(): void {
+  commonStore.publishMessage(this.broadcastMsg)
+  // let msg: PushMsg<any> = {
+  //   type: PushMsgType.TXT,
+  //   payload: {
+  //     type: BizType.IM,
+  //     content: this.broadcastMsg
+  //   }
+  // }
+  // this.sendMessage(msg)
+  // this.broadcastMsg = ''
+}
+
+function sendMsg(): void {
+  let msg: ProxyMock.PushMsg<any> = {
+    to: this.selectClient.uid,
+    type: ProxyMock.PushMsgType.TXT,
+    payload: {
+      type: ProxyMock.BizType.IM,
+      content: imMsg.value,
+    },
+  }
+  commonStore.sendMessage(msg)
+  imMsg.value = null
+}
+
+function showOpMenu(client: ProxyMock.ClientInfo): void {
+  dialogVisible.value = true
+  selectClient.value = client
+}
 </script>
 <style scoped>
 .single-line {

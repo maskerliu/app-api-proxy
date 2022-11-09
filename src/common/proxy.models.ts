@@ -47,15 +47,11 @@ export namespace ProxyMock {
     desc: string
     isMock?: boolean = false
     requests: Map<string, ProxyRequestRecord> = new Map()
-    jsonRequests: {}
+    jsonRequests: JSON 
   }
 
-  export interface MsgPushClient {
-    key: string
-    uid: string
+  export interface MsgPushClient extends ClientInfo {
     username: string
-    ip: string // client ip
-    port: number // client port
     conn?: Connection
   }
 

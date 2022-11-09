@@ -1,17 +1,48 @@
-
 export default {
-  proxy : {
+  common:{
+    done: '确定',
+    cancel: '取消',
+    delete: '删除',
+    save: '保存',
+    searchPlaceholder: '请输入搜索关键词'
+  },
+  proxy: {
     setDelay: '延时时长',
-    filterPlaceholder:'筛选关键字',
+    filterPlaceholder: '筛选关键字',
     scanQrCode: '扫描二维码访问：',
     requestHeader: '请求头',
     requestParams: '请求参数',
-    responeHeader: '响应头',
+    responseHeader: '响应头',
     responseBody: '响应数据',
     preview: '预览'
   },
   mock: {
-
+    rule: {
+      title: '规则详情',
+      name: '规则名',
+      desc: '规则描述',
+      delete: {
+        title: '警告⚠️',
+        confirm: '确定要删除规则[ {rule} ]吗?'
+      },
+    },
+    record: {
+      delete: {
+        title: '警告⚠️',
+        confirm: '确认要删除这条请求数据？'
+      },
+    }
+  },
+  iot: {
+    device :{
+      name: '设备名',
+      address: '地址',
+      delete: {
+        title: '警告❗️',
+        confirm: '确定要从系统中移除【{deviceId}】这台设备吗？',
+        confirm1: '设备移除后，设备上的数据将在系统中无法收集，请谨慎操作！！！'
+      }
+    }
   },
   settings: {
     server: '服务地址',

@@ -1,4 +1,11 @@
 export default {
+  common: {
+    done: 'Done',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    save: 'Save',
+    searchPlaceholder: 'keyword for search'
+  },
   proxy: {
     setDelay: 'requst delay',
     filterPlaceholder: 'filter with keyword',
@@ -10,7 +17,32 @@ export default {
     preview: 'Preview'
   },
   mock: {
-    searchKeyword: 'rule name'
+    rule: {
+      title: 'Mock Rule Info',
+      name: 'Rule Name',
+      desc: 'Rule Desc',
+      delete: {
+        title: 'Warning',
+        confirm: 'are you sure to delete rule[ {rule} ]?'
+      },
+    },
+    record: {
+      delete: {
+        title: 'Warning',
+        confirm: 'are you sure to delete this record?'
+      },
+    }
+  },
+  iot: {
+    device: {
+      name: 'Name',
+      address: 'Address',
+      delete: {
+        title: 'Warning',
+        confirm: 'Are you sure to remove the device [{deviceId}]？',
+        confirm1: 'After remove from system, the data of device will not collect, please be careful to do this！！！'
+      }
+    }
   },
   settings: {
     server: 'Server',

@@ -1,3 +1,4 @@
 {
-  "port": 8884
+  "port": 8884,
+  "protocol": "http"
 }
