@@ -16,10 +16,11 @@ const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-let whiteListedModules = ['mqtt', 'axios']
+let whiteListedModules = ['axios']
 
 class WebConfig extends BaseConfig {
 
+  name: Configuration['name'] = 'web'
   target: Configuration['target'] = 'web'
   entry: Configuration['entry'] = { web: path.join(dirname, '../src/web/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
@@ -51,6 +52,10 @@ class WebConfig extends BaseConfig {
         }
       },
       {
+        test: /\.wasm$/,
+        type: "asset/inline",
+      },
+      {
         test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
         loader: 'url-loader',
         options: {
@@ -67,6 +72,11 @@ class WebConfig extends BaseConfig {
         }
       }
     ]
+  }
+
+  experiments: Configuration['experiments'] = {
+    // asyncWebAssembly: true,
+    // syncWebAssembly: true
   }
 
   plugins: Configuration['plugins'] = [
@@ -88,8 +98,7 @@ class WebConfig extends BaseConfig {
   resolve: Configuration['resolve'] = {
     alias: {
       '@': path.join(dirname, '../src/renderer'),
-      'vue$': 'vue/dist/vue.esm-browser.js',
-      'vuex': 'vuex/dist/vuex.esm-browser.js',
+      // 'vue$': 'vue/dist/vue.esm-browser.js',
     },
     extensions: ['.ts', '.js', '.vue', '.json', '.css', '.node']
   }
@@ -109,11 +118,6 @@ class WebConfig extends BaseConfig {
           priority: 20,
           test: /[\\/]node_modules[\\/]vant[\\/]/
         },
-        jsoneditor: {
-          name: 'jsoneditor',
-          test: /[\\/]node_modules[\\/]jsoneditor[\\/]/,
-          priority: 20,
-        },
         echarts: {
           name: 'echarts',
           test: /[\\/]node_modules[\\/]echarts[\\/]/,
@@ -126,32 +130,38 @@ class WebConfig extends BaseConfig {
   init(localServer?: String) {
     super.init()
 
-    this.plugins.push(new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: path.resolve(dirname, '../src/index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true
-      },
-      nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
-    }))
+    this.plugins.push(
+      new HtmlWebpackPlugin({
+        filename: 'index.html',
+        template: path.resolve(dirname, '../src/index.ejs'),
+        minify: {
+          collapseWhitespace: true,
+          removeAttributeQuotes: true,
+          removeComments: true
+        },
+        nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
+      }),
+      new DefinePlugin({ PROTOCOL: `'${config.protocol}'` })
+    )
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(
-        new DefinePlugin({ SERVER_BASE_URL: `'http://${localServer}:${config.port}'` }),
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'server',
-          analyzerHost: '127.0.0.1',
-          analyzerPort: 9088,
-          reportFilename: 'report.html',
-          defaultSizes: 'parsed',
-          openAnalyzer: true,
-          generateStatsFile: false,
-          statsFilename: 'stats.json',
-          statsOptions: null,
-          logLevel: 'info'
+        new DefinePlugin({
+          SERVER_BASE_URL: `'${config.protocol}://${localServer}:${config.port}'`,
+          PROTOCL: config.protocol
         }),
+        // new BundleAnalyzerPlugin({
+        //   analyzerMode: 'server',
+        //   analyzerHost: '127.0.0.1',
+        //   analyzerPort: 9088,
+        //   reportFilename: 'report.html',
+        //   defaultSizes: 'parsed',
+        //   openAnalyzer: true,
+        //   generateStatsFile: false,
+        //   statsFilename: 'stats.json',
+        //   statsOptions: null,
+        //   logLevel: 'info'
+        // }),
       )
     } else {
       this.plugins.push(
@@ -159,13 +169,18 @@ class WebConfig extends BaseConfig {
           patterns: [{
             from: path.join(dirname, '../static/favicon.ico'),
             to: path.join(dirname, '../dist/web/static/favicon.ico'),
+          },
+          {
+            context: path.join(dirname, '../node_modules/@ffmpeg/core/dist/'),
+            from: '**/*',
+            to: path.join(dirname, '../dist/web/static/')
           }]
         }),
         new LoaderOptionsPlugin({ minimize: true }),
       )
       this.output.publicPath = './'
     }
-    
+
     return this
   }
 }

@@ -22,6 +22,11 @@
           <van-icon class="iconfont icon-lab" size="22" />
         </template>
       </van-tabbar-item>
+      <van-tabbar-item replace to="/fun">
+        <template #icon>
+          <van-icon class="iconfont icon-glove" size="22" />
+        </template>
+      </van-tabbar-item>
       <van-tabbar-item replace to="/message" badge="5">
         <template #icon>
           <van-icon class="iconfont icon-msg-read" size="22" />
@@ -37,39 +42,33 @@
   </van-row>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue'
-import DebugPanel from './components/DebugPanel.vue'
+<script lang="ts" setup>
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import DebugPanel from './components/DebugPanel.vue';
 
-export default defineComponent({
-  name: "BizMain",
-  components: {
-    DebugPanel
-  },
-  setup() {
+const active = ref(0)
 
-  },
-  data() {
-    return {
-      active: 0,
-      navTitle: "",
-    }
-  },
-  created() {
-    this.$router.beforeEach((to: any, from: any) => {
-      this.navTitle = to.name
-      return true
-    })
-  },
-  mounted() {
-    this.$router.replace("/lab")
-    this.active = 1
-  },
+onMounted(() => {
+  useRouter().beforeEach((to: any, from: any) => {
+    return true
+  })
+
+  useRouter().replace("/mockRuleMgr")
+  active.value = 1
 })
 
 </script>
 
 <style>
+
+:root {
+  --van-dialog-border-radius: 4px;
+  --van-tag-font-size: 0.5rem;
+  --van-tag-padding: 2px 5px;
+  --van-tag-border-radius: 4px;
+}
+
 .full-row {
   width: 100%;
   height: 100%;
@@ -82,6 +81,7 @@ export default defineComponent({
   height: 4px;
   scrollbar-arrow-color: red;
 }
+
 ::-webkit-scrollbar-thumb {
   border-radius: 5px;
   box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.1);
@@ -89,6 +89,7 @@ export default defineComponent({
   background: rgba(0, 0, 0, 0.2);
   scrollbar-arrow-color: red;
 }
+
 ::-webkit-scrollbar-track {
   box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
   -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
@@ -108,6 +109,7 @@ export default defineComponent({
   0% {
     opacity: 0.0;
   }
+
   100% {
     opacity: 1.;
   }
@@ -117,9 +119,9 @@ export default defineComponent({
   0% {
     opacity: 1.0;
   }
+
   100% {
     opacity: 0.0;
   }
 }
-
 </style>

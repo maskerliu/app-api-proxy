@@ -1,12 +1,11 @@
-import { defineStore } from 'pinia';
-import { IOT } from '../../common/iot.models';
-
+import { defineStore } from 'pinia'
+import { IOT } from '../../common/iot.models'
 
 export const useIOTDeviceStore = defineStore('IOTDevices', {
   state: () => {
     return {
       xAxisLabel: [],
-      temperature: 0,
+      temperature: 0 as Number,
       humidityData: [],
       speedData: [],
       electricData: [],

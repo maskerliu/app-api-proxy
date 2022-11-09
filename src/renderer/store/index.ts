@@ -8,7 +8,6 @@ import { getServerConfig } from '../../common/proxy.api'
 import { ProxyMock } from '../../common/proxy.models'
 import { generateUid } from '../common'
 import MsgClient from '../common/MsgClient'
-import NodeMsgClient from '../common/NodeMsgClient'
 import PahoMsgClient from '../common/PahoMsgClient'
 import PushClient from '../common/PushClient'
 
@@ -37,8 +36,7 @@ export const useCommonStore = defineStore('Common', {
       try {
         this.serverConfig = await getServerConfig()
         this.updateServerConfig()
-        msgClient = __IS_WEB__ ? new PahoMsgClient(this.serverConfig.mqttBroker) :
-          new NodeMsgClient(this.serverConfig.mqttBroker)
+        msgClient = new PahoMsgClient(this.serverConfig.mqttBroker)
       } catch (err) {
         console.error(err)
       }
@@ -77,9 +75,9 @@ export const useCommonStore = defineStore('Common', {
       this.serverConfig = config ? config : this.serverConfig
       updateClientUID(uid)
 
-      updateBaseDomain(`http://${this.serverConfig.ip}:${this.serverConfig.port}`)
-      this.registerUrl = `http://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${uid}`
-      pushClient.start(`http://${this.serverConfig.ip}:${this.serverConfig.port}`, uid)
+      updateBaseDomain(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`)
+      this.registerUrl = `${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${uid}`
+      pushClient.start(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`, uid)
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {
       this.clientInfos = [...clientInfos]

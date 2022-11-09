@@ -2,24 +2,28 @@
 
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
+import express from 'express'
+import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack from 'webpack'
 import WebpackDevServer from 'webpack-dev-server'
 import WebpackHotMiddleware from 'webpack-hot-middleware'
+import buildConfig from '../build.config.json' assert { type: 'json' }
 import { BaseConfig } from './webpack.base.config.js'
 import mainConfig from './webpack.main.config.js'
 import rendererConfig from './webpack.renderer.config.js'
 import webConfig from './webpack.web.config.js'
-import config from '../build.config.json' assert {type: 'json' }
 
 const Run_Mode_DEV = 'development'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.NODE_ENV = Run_Mode_DEV
 
-process.env.BUILD_CONFIG = JSON.stringify({ port: config.port })
+process.env.BUILD_CONFIG = JSON.stringify(buildConfig)
+
+console.log(process.env.PROTOCOL)
 
 let electronProcess: ChildProcess | null = null
 let manualRestart = false
@@ -30,19 +34,34 @@ function startDevServer(config: BaseConfig, port: number): Promise<void> {
     config.mode = Run_Mode_DEV
     const compiler = webpack(config)
 
-    const server = new WebpackDevServer({
+    let serverConfig: WebpackDevServer.Configuration = {
       port: port,
       hot: true,
       liveReload: true,
       allowedHosts: "all",
       client: { logging: 'none' },
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      static: { directory: path.join(dirname, "../src/"), },
+      static: { directory: path.join(dirname, '../src/'), },
       setupMiddlewares(middlewares, devServer) {
+        devServer.app.use('/node_modules/', express.static(path.resolve(dirname, '../node_modules')))
+        devServer.app.use((_, res, next) => {
+          res.setHeader('Access-Control-Allow-Origin', '*')
+          res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
+          res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
+          next()
+        })
         devServer.middleware.waitUntilValid(() => { resolve() })
         return middlewares
       }
-    }, compiler)
+    }
+
+    if (buildConfig.protocol == 'https') {
+      serverConfig.https = {
+        key: fs.readFileSync('cert/private.key'),
+        cert: fs.readFileSync('cert/mydomain.crt')
+      }
+    }
+
+    const server = new WebpackDevServer(serverConfig, compiler)
 
     server.start()
       .then(() => resolve())
@@ -101,6 +120,9 @@ function startElectron() {
   let args = [
     '--inspect=5858',
     '--remote-debugging-port=9223',
+    '--experimental-worker',
+    '--experimental-wasm-threads',
+    '--experimental-wasm-bulk-memory',
     path.join(dirname, '../dist/electron/main.js')
   ]
 
@@ -155,7 +177,7 @@ async function start() {
   try {
     let localIPv4 = await WebpackDevServer.internalIP('v4')
     await Promise.all([startDevServer(webConfig.init(localIPv4), 9081),
-    startDevServer(rendererConfig.init(), 9080),
+    startDevServer(rendererConfig.init(localIPv4), 9080),
     startMain()])
 
     startElectron()

@@ -12,132 +12,99 @@
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import { defineComponent, ref } from 'vue'
 
-const DebugPanel = defineComponent({
-  name: 'DebugPanel',
-  setup() {
-    const showPopover = ref(false)
-    return { showPopover }
-  },
-  props: {
-    value: {
-      type: String,
-      default: 'debug',
-    },
-  },
-  data() {
-    return {
-      canDrag: false,
-      // 偏移
-      inset: {
-        left: 0,
-        top: 0,
-      },
-      // 移动
-      move: {},
-      // 位置
-      position: {
-        left: 0,
-        top: 0,
-      },
-      // 初始位置
-      positionOld: {},
-      startTime: null,
-      endTime: null,
+const dragBall = ref()
+const showPopover = ref(false)
+const canDrag = ref(false)
+
+let inset = { left: 0, top: 0, }
+let move = { x: 0, y: 0 } // 移动
+let position = { left: 0, top: 0, } // 位置
+let positionOld = { left: 0, top: 0 } // 初始位置 
+let startTime = 0
+let endTime = 0
+
+function toNew() {
+  alert('去新版')
+}
+
+function touchStart(e: any) {
+  if (!canDrag.value) {
+    startTime = e.timeStamp
+    console.log(dragBall.value)
+    positionOld = getPosition(dragBall.value)
+    position = { ...positionOld }
+    inset = {
+      left: e.targetTouches[0].clientX - positionOld.left,
+      top: e.targetTouches[0].clientY - positionOld.top,
     }
-  },
+    canDrag.value = true
+  }
+}
 
-  mounted() {
-    // this.env = this.envs[this.appInfo.env]
-  },
-  computed: {
-    dragBall() {
-      return this.$refs.dragBall
-    },
-  },
-  methods: {
-    toNew() {
-      alert('去新版')
-    },
-    touchStart(e: any) {
-      if (!this.canDrag) {
-        this.startTime = e.timeStamp
-        this.positionOld = this.getPosition(this.dragBall)
-        this.position = { ...this.positionOld }
-        this.inset = {
-          left: e.targetTouches[0].clientX - this.positionOld.left,
-          top: e.targetTouches[0].clientY - this.positionOld.top,
-        }
-        this.canDrag = true
+function touchMove(e: any) {
+  if (canDrag.value) {
+    let left = e.targetTouches[0].clientX - inset.left
+    let top = e.targetTouches[0].clientY - inset.top
+    if (left < 0) {
+      left = 0
+    } else if (left > window.innerWidth - dragBall.value.offsetWidth) {
+      left = window.innerWidth - dragBall.value.offsetWidth
+    }
+    if (top < 0) {
+      top = 0
+    } else if (top > window.innerHeight - dragBall.value.offsetHeight) {
+      top = window.innerHeight - dragBall.value.offsetHeight
+    }
+    dragBall.value.style.left = left + 'px'
+    dragBall.value.style.top = top + 'px'
+    move = {
+      x: left - positionOld.left,
+      y: top - positionOld.top,
+    }
+    position = { left, top }
+  }
+}
+function touchEnd(e: TouchEvent) {
+  if (canDrag.value) {
+    endTime = e.timeStamp
+    if (
+      endTime - startTime > 400 ||
+      Math.abs(move.x) > 2 ||
+      Math.abs(move.y) > 2
+    ) {
+      // 非单击事件
+      if (position.left + dragBall.value.offsetWidth / 2 > window.innerWidth / 2) {
+        dragBall.value.style.left =
+          window.innerWidth - dragBall.value.offsetWidth + 'px'
+      } else {
+        dragBall.value.style.left = 0 + 'px'
       }
-    },
-    touchMove(e: any) {
-      if (this.canDrag) {
-        let left = e.targetTouches[0].clientX - this.inset.left
-        let top = e.targetTouches[0].clientY - this.inset.top
-        if (left < 0) {
-          left = 0
-        } else if (left > window.innerWidth - this.dragBall.offsetWidth) {
-          left = window.innerWidth - this.dragBall.offsetWidth
-        }
-        if (top < 0) {
-          top = 0
-        } else if (top > window.innerHeight - this.dragBall.offsetHeight) {
-          top = window.innerHeight - this.dragBall.offsetHeight
-        }
-        this.dragBall.style.left = left + 'px'
-        this.dragBall.style.top = top + 'px'
-        this.move = {
-          x: left - this.positionOld.left,
-          y: top - this.positionOld.top,
-        }
-        this.position = { left, top }
-      }
-    },
-    touchEnd(e: any) {
-      if (this.canDrag) {
-        this.endTime = e.timeStamp
-        if (
-          this.endTime - this.startTime > 400 ||
-          Math.abs(this.move.x) > 2 ||
-          Math.abs(this.move.y) > 2
-        ) {
-          // 非单击事件
-          if (
-            this.position.left + this.dragBall.offsetWidth / 2 >
-            window.innerWidth / 2
-          ) {
-            this.dragBall.style.left =
-              window.innerWidth - this.dragBall.offsetWidth + 'px'
-          } else {
-            this.dragBall.style.left = 0 + 'px'
-          }
-        } else {
-          this.$emit('click')
-        }
-        this.inset = {}
-        this.move = {}
-        this.position = {}
-        this.canDrag = false
-      }
-    },
-    getPosition(source: any) {
-      let left = source.offsetLeft //获取元素相对于其父元素的left值var left
-      let top = source.offsetTop
-      let current = source.offsetParent // 取得元素的offsetParent // 一直循环直到根元素
-      while (current != null) {
-        left += current.offsetLeft
-        top += current.offsetTop
-        current = current.offsetParent
-      }
-      return { left: left, top: top }
-    },
-  },
-})
+    } else {
+      this.$emit('click')
+    }
 
-export default DebugPanel
+    inset = { left: 0, top: 0 }
+    move = { x: 0, y: 0 }
+    position = { left: 0, top: 0 }
+    canDrag.value = false
+  }
+}
+
+function getPosition(source: any) {
+  let left = source.offsetLeft //获取元素相对于其父元素的left值var left
+  let top = source.offsetTop
+  let current = source.offsetParent // 取得元素的offsetParent // 一直循环直到根元素
+  while (current != null) {
+    left += current.offsetLeft
+    top += current.offsetTop
+    current = current.offsetParent
+  }
+  return { left: left, top: top }
+}
+
 </script>
 
 <style scoped>

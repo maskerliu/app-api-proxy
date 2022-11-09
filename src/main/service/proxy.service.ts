@@ -35,6 +35,7 @@ export default class ProxyService {
 
     axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
       MockKey = resp.data
+      console.log(MockKey)
     }).catch(err => { console.error('FetchMockKey', err.cause) })
   }
 
@@ -160,13 +161,7 @@ export default class ProxyService {
       headers: axiosHeaders,
       transformResponse: [
         (data: any) => {
-          try {
-            return JSONBigInt.parse(data)
-          } catch (err) {
-            console.error('proxyRequestData', err)
-            console.error(data)
-            return null
-          }
+          return JSONBigInt.parse(data)
         },
       ],
       timeout: ProxyService.PROXY_DEF_TIMEOUT,

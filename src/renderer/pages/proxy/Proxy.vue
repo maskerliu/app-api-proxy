@@ -1,7 +1,7 @@
 <template>
   <van-row ref="container" class="full-row">
     <van-col ref="leftDom" class="bg-border left-panel">
-      <van-checkbox-group size="mini" v-model="proxyTypes" direction="horizontal"
+      <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
         style="width: 100%; padding: 5px 5px; boder: 1px solid grey">
         <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
           <i class="iconfont icon-api" style="font-weight: blod" />
@@ -12,7 +12,8 @@
         <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
           <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
         </van-checkbox>
-        <van-icon class="iconfont icon-qrcode" style="font-size: 1.9rem; margin: 6px" @click="showQrCode = true" />
+        <van-icon class="iconfont icon-qrcode" style="font-size: 1.9rem; margin: 6px"
+          @click="commonStore.showQrCode = true" />
       </van-checkbox-group>
 
       <van-field v-model="proxyDelay" type="number" right-icon="warning-o">
@@ -21,15 +22,17 @@
         </template>
       </van-field>
 
-      <van-field left-icon="filter-o" v-model="filterKeyword" :placeholder="$t('proxy.filterPlaceholder')" clearable
-        center style="margin-top: 10px">
+      <van-field v-model="recordStore.filterKeyword" :placeholder="$t('common.searchPlaceholder')" clearable center
+        left-icon="filter-o" style="margin-top: 10px">
         <template #button>
-          <van-button plain size="small" type="primary" @click="mockRecord" icon="delete-o"></van-button>
+          <van-button plain size="small" type="primary" @click="recordStore.mockRecord" icon="delete-o">
+          </van-button>
         </template>
       </van-field>
 
       <van-list class="record-snap-panel" ref="snaplist">
-        <proxy-record-snap v-for="key in [...records.keys()].reverse()" :key="key" :source="records.get(key)" />
+        <proxy-record-snap v-for="key in [...recordStore.records.keys()].reverse()" :key="key"
+          :source="recordStore.records.get(key)" />
       </van-list>
     </van-col>
 
@@ -39,27 +42,27 @@
     </van-col>
 
     <van-col ref="rightDom" class="right-panel">
-      <proxy-request-detail :record="records.get(curRecordId) as ProxyMock.ProxyRequestRecord"
-        v-if="curRecordId != -1 && records.get(curRecordId).type !== 5020" />
-      <proxy-stat-detail :record="records.get(curRecordId) as ProxyMock.ProxyStatRecord"
-        v-if="curRecordId != -1 && records.get(curRecordId).type == 5020" />
+      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyRequestRecord"
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
+      <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyStatRecord"
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
     </van-col>
 
-    <van-popup :title="$t('proxy.scanQrCode')" v-model:show="showQrCode" :show-confirm-button="false"
+    <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" :show-confirm-button="false"
       :show-cancel-button="false">
-      <qrcode-vue :value="registerUrl" :size="300" center style="margin: 5px" />
+      <qrcode-vue :value="commonStore.registerUrl" :size="300" center style="margin: 5px" />
       <div class="register-url" @click="click2Reg">
-        {{ registerUrl }}
+        {{ commonStore.registerUrl }}
       </div>
     </van-popup>
   </van-row>
 </template>
 
-<script lang="ts" >
+<script lang="ts" setup>
 import { mapActions, mapState, mapWritableState } from 'pinia'
 import QrcodeVue from 'qrcode.vue'
 import { Notify } from 'vant'
-import { defineComponent } from 'vue'
+import { defineComponent, onMounted, ref, VNode, watch } from 'vue'
 import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
@@ -68,109 +71,73 @@ import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
 
-export default defineComponent({
-  name: 'Proxy',
-  components: {
-    QrcodeVue,
-    ProxyRecordSnap,
-    ProxyRequestDetail,
-    ProxyStatDetail,
-  },
-  data() {
-    return {
-      active: 0 as number,
-      navTitle: '' as string,
-      proxyDelay: '0' as string,
-      filterInput: null as string,
-      activeTab: '0' as string,
-      clientStartX: 0,
-    }
-  },
-  created() {
-    this.$router.beforeEach((to: any, from: any) => {
-      this.navTitle = to.name
-      return true
-    })
-  },
-  mounted() {
-  },
-  computed: {
-    ...mapState(useCommonStore, ['registerUrl']),
-    ...mapWritableState(useCommonStore, ['showQrCode']),
-    ...mapState(useProxyRecordStore, ['records', 'isChanged']),
-    ...mapWritableState(useProxyRecordStore, [
-      'proxyTypes',
-      'filterKeyword',
-      'curRecordId',
-    ]),
-  },
-  methods: {
-    ...mapActions(useProxyRecordStore, [
-      'updateFilter',
-      'clearRecords',
-      'mockRecord',
-    ]),
-    onLeftNavBtnClicked() {
-      if (this.navBar.leftAction != null) {
-        this.navBar.leftAction()
-      } else {
-        this.$router.go(-1)
-      }
-    },
-    resizeDown(e: MouseEvent) {
-      this.clientStartX = e.clientX
-      document.onmousemove = (e) => {
-        this.moveHandle(e.clientX)
-        return false
-      }
+const proxyDelay = ref('0')
+// let clientStartX = 0
 
-      document.onmouseup = () => {
-        document.onmousemove = null
-        document.onmouseup = null
-      }
-      return false
-    },
-    moveHandle(curWidth: any) {
-      let changeWidth = curWidth - 85
-      if (changeWidth < 300) {
-        changeWidth = 300
-        curWidth = 330
-      }
-      let remainWidth = this.$refs.container.$el.clientWidth - changeWidth - 20
-      this.$refs.leftDom.$el.style.width = changeWidth + 'px'
-      this.$refs.rightDom.$el.style.width = remainWidth + 'px'
-    },
-    onRightNavBtnClicked() {
-      this.navBar.rightAction()
-    },
-    click2Reg() {
-      mockRegister().then((resp) => {
-        this.showQrCode = resp == null
-      })
-    },
-  },
-  watch: {
-    isChanged() {
-      this.$refs.snaplist.$el.scrollTo({ top: 0, behavior: 'smooth' })
-    },
-    filterKeyword() {
-      this.updateFilter()
-    },
-    proxyTypes() {
-      this.updateFilter()
-    },
-    async proxyDelay() {
-      try {
-        await setProxyDelay(Number(this.proxyDelay))
-        Notify({ message: '成功设置延迟', type: 'success' })
-      } catch (err) {
-        Notify({ message: '设置延迟失败', type: 'danger' })
-      }
-    },
-  },
+const container = ref()
+const leftDom = ref()
+const rightDom = ref()
+const snaplist = ref()
+
+const commonStore = useCommonStore()
+const recordStore = useProxyRecordStore()
+
+onMounted(() => {
+
 })
 
-// export default Proxy
+watch(() => recordStore.isChanged, () => {
+  snaplist.value.$el.scrollTo({ top: 0, behavior: 'smooth' })
+})
+
+watch(() => recordStore.filterKeyword, () => {
+  recordStore.updateFilter()
+})
+
+watch(() => recordStore.proxyTypes, () => {
+  recordStore.updateFilter()
+})
+
+watch(proxyDelay, async () => {
+  try {
+    await setProxyDelay(Number(proxyDelay))
+    Notify({ message: '成功设置延迟', type: 'success' })
+  } catch (err) {
+    Notify({ message: '设置延迟失败', type: 'danger' })
+  }
+})
+
+function resizeDown(e: MouseEvent) {
+  // clientStartX = e.clientX
+  document.onmousemove = (e) => {
+    moveHandle(e.clientX)
+    return false
+  }
+
+  document.onmouseup = () => {
+    document.onmousemove = null
+    document.onmouseup = null
+  }
+  return false
+}
+
+function moveHandle(curWidth: any) {
+  let changeWidth = curWidth - 85
+  if (changeWidth < 300) {
+    changeWidth = 300
+    curWidth = 330
+  }
+  let remainWidth = container.value.$el.clientWidth - changeWidth - 20
+  leftDom.value.$el.style.width = changeWidth + 'px'
+  rightDom.value.$el.style.width = remainWidth + 'px'
+}
+
+function click2Reg() {
+  mockRegister().then((resp) => {
+    commonStore.showQrCode = resp == null
+  })
+}
+
 </script>
 
 <style scoped>

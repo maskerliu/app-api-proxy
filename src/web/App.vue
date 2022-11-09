@@ -2,40 +2,18 @@
   <biz-main v-if="canRender" />
 </template>
 
-<script lang="ts">
-import { mapActions } from 'pinia'
-import { defineComponent, PropType } from 'vue'
+<script lang="ts" setup>
+import { onMounted, ref } from 'vue';
 
-import BizMain from '../renderer/pages/BizMain.vue'
-import { useCommonStore } from '../renderer/store'
+import BizMain from '../renderer/pages/BizMain.vue';
+import { useCommonStore } from '../renderer/store';
 
-const App = defineComponent({
-  components: {
-    [BizMain.name]: BizMain,
-  },
-  props: {
-    success: { type: String },
-    callback: {
-      type: Function as PropType<() => void>,
-    },
-  },
-  data() {
-    return {
-      canRender: false as boolean,
-    }
-  },
-  computed: {},
+const canRender = ref(true)
 
-  created() {
-    this.canRender = true
-    this.init()
-  },
-  methods: {
-    ...mapActions(useCommonStore, ['init']),
-  },
+onMounted(() => {
+  canRender.value = true
+  useCommonStore().init()
 })
-
-export default App
 </script>
 
 <style>
@@ -80,7 +58,8 @@ export default App
 
 .biz-content {
   width: 100%;
-  height: calc(100vh - 50px);
+  min-width: 375px;
+  height: calc(100% - 50px);
   margin: 0px 0 50px 0;
   background: #f1f2f6;
   overflow-y: hidden;

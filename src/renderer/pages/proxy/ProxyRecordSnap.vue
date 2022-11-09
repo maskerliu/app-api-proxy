@@ -1,7 +1,7 @@
 <template>
   <div class="record-snap-item" v-bind:style="{ background: source.isMock ? '#ffeaa755' : 'white' }"
-    @click="curRecordId = source.id">
-    <span class="item-selected" v-if="curRecordId == source.id"></span>
+    @click="recordStore.curRecordId = source.id">
+    <span class="item-selected" v-if="recordStore.curRecordId == source.id"></span>
     <div class="item-timeline">
       <div class="item-timeline-dot" v-bind:style="{ background: source.timelineColor }"></div>
     </div>
@@ -34,7 +34,7 @@
           {{ source.responseData.code }}
         </van-tag>
         <span style="margin-left: 5px" v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">耗时: {{
-            source.time ? source.time : "--"
+        source.time ? source.time : "--"
         }} ms</span>
       </div>
       <van-icon name="arrow" style="
@@ -53,28 +53,23 @@
   </div>
 </template>
 
-<script lang="ts">
-import { mapWritableState } from 'pinia'
-import type { PropType } from 'vue'
-import { defineComponent } from 'vue'
-import { ProxyMock } from '../../../common/proxy.models'
-import { useProxyRecordStore } from '../../store/ProxyRecords'
+<script lang="ts" setup>
+import type { PropType } from 'vue';
+import { ProxyMock } from '../../../common/proxy.models';
+import { useProxyRecordStore } from '../../store/ProxyRecords';
 
-export default defineComponent({
-  props: {
-    source: {
-      type: Object as PropType<ProxyMock.ProxyRequestRecord>,
-      required: true,
-    },
+defineProps({
+  source: {
+    type: Object as PropType<ProxyMock.ProxyRequestRecord>,
+    required: true,
   },
-  computed: {
-    ...mapWritableState(useProxyRecordStore, ['curRecordId']),
-  },
-  methods: {},
 })
+
+const recordStore = useProxyRecordStore()
+
 </script>
 
-<style>
+<style scoped>
 .record-snap-item {
   position: relative;
   height: 50px;
@@ -182,8 +177,4 @@ export default defineComponent({
   top: 0;
 }
 
-:root {
-  --van-tag-font-size: 0.6rem;
-  --van-tag-padding: 2px 5px;
-}
 </style>

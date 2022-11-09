@@ -1,14 +1,16 @@
-import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron'
+import { app, BrowserWindow, Menu, nativeImage, session, Tray } from 'electron'
 import path from 'path'
 
-import localServer from "./MainServer"
 import './IPC'
+import localServer from "./MainServer"
+
+const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
 
 export default class MainApp {
   static mainWindow: BrowserWindow = null
 
   static appTray: Tray = null
-  static winURL: string = process.env.NODE_ENV === 'development' ? `http://localhost:9080` : `file://${__dirname}/index.html`
+  static winURL: string = process.env.NODE_ENV === 'development' ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
   static trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, '../../static') : path.join(__dirname, './static')
 
   private static onWindowAllClosed() {
@@ -41,22 +43,27 @@ export default class MainApp {
       frame: true,
       resizable: true,
       icon: icon,
+      show: false,
       titleBarStyle: 'hidden',
+
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        webSecurity: false,
-        offscreen: false,
-        enableRemoteModule: false,
+        devTools: process.env.NODE_ENV == 'development',
+        sandbox: false,
+        preload: path.join(__dirname, 'preload.js')
       },
     })
 
     MainApp.mainWindow.loadURL(MainApp.winURL)
     MainApp.mainWindow.webContents.frameRate = 30
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV == 'development') {
       MainApp.mainWindow.webContents.openDevTools()
     }
     MainApp.mainWindow.on('closed', () => { MainApp.onClose() })
+
+    MainApp.mainWindow.on('ready-to-show', () => {
+      MainApp.mainWindow.show()
+      MainApp.mainWindow.focus()
+    })
   }
 
   private static createAppMenu() {
@@ -68,6 +75,7 @@ export default class MainApp {
       app.disableHardwareAcceleration()
     }
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
+    app.commandLine.appendSwitch('ignore-certificate-errors')
     // app.commandLine.appendSwitch('disable-gpu')
     // app.commandLine.appendSwitch('disable-software-rasterizer')
     app.on('window-all-closed', MainApp.onWindowAllClosed)
@@ -77,6 +85,30 @@ export default class MainApp {
       }
     })
     app.on('ready', () => {
+      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        if (details.url.indexOf('.amap.com') !== -1
+          || details.url.indexOf('alicdn.com') !== -1) {
+          callback({
+            responseHeaders: {
+              ...details.responseHeaders,
+              'Cross-Origin-Opener-Policy': 'same-origin',
+              'Cross-Origin-Resource-Policy': 'cross-origin'
+            },
+          })
+        } else {
+          callback({
+            responseHeaders: {
+              ...details.responseHeaders,
+              'Cross-Origin-Opener-Policy': 'same-origin',
+              'Cross-Origin-Embedder-Policy': 'require-corp',
+            }
+          })
+        }
+      })
+
+
+      import('./IPC')
+
       if (MainApp.mainWindow == null) {
         MainApp.createMainWindow()
         MainApp.createAppMenu()

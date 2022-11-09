@@ -1,8 +1,5 @@
 import { defineStore } from 'pinia'
-import {ProxyMock } from "../../common/proxy.models"
-
-
-
+import { ProxyMock } from '../../common/proxy.models'
 
 
 const COLORS: string[] = [
@@ -22,7 +19,7 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
   state: () => {
     return {
       proxyTypes: [String(ProxyMock.PorxyType.REQUEST)],
-      filterKeyword: '' as string,
+      filterKeyword: '' as string | number,
       curRecordId: -1,
       records: new Map() as Map<number, (ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord)>,
       isChanged: 0 // is a random number to identify the records change
@@ -92,8 +89,8 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
 
       return false
     },
-    mockRecord() {    
-      this.isChanged = Math.random()
+    mockRecord() {
+      this.isChanged = Number(Math.random())
       let fakeRecord = {
         headers: {
           'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',

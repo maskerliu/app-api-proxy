@@ -21,7 +21,7 @@ export default class MockService {
 
   private async initDB() {
     PouchDB.plugin(PouchDBFind)
-    this.localDB = new PouchDB(path.join(app.getPath('userData'), 'MockRuleDB'))
+    this.localDB = new PouchDB(path.join(app.getPath('userData'), 'Mock.Rules'))
     try {
       await this.localDB.createIndex({ index: { fields: ['name'] }, })
     } catch (err) {
