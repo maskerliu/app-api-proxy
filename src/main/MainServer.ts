@@ -2,12 +2,12 @@
 import bodyParser from 'body-parser'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
+import { app } from 'electron'
 import express, { Application, Response } from 'express'
-// import { createServer, Server } from 'http'
-// import { createServer, Server } from 'https'
+import fs from 'fs'
+import fileUpload from 'express-fileupload'
 import { Autowired, Component } from 'lynx-express-mvc'
 import path from 'path'
-import fs from 'fs'
 
 import MainRouter from './MainRouter'
 import CommonService from './service/common.service'
@@ -80,11 +80,22 @@ class LocalServer {
         }
       }
     }))
+
+    this.httpApp.use('/_res', express.static(path.join(app.getPath('userData'), './static'), {
+      setHeaders: (res, path: string, stat: any) => {
+        res.header('Cross-Origin-Opener-Policy', 'same-origin')
+        res.header('Cross-Origin-Resource-Policy', 'cross-origin')
+        res.header('Access-Control-Allow-Origin', '*')
+      }
+    }))
+
+
     this.httpApp.use(cors(this.corsOpt))
     this.httpApp.use(compression())
-    this.httpApp.use(bodyParser.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
-    this.httpApp.use(bodyParser.text({ type: 'application/json', limit: '50mb' }))
-    this.httpApp.use(bodyParser.json())
+    this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
+    this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
+    this.httpApp.use(express.json())
+    this.httpApp.use(fileUpload())
     this.httpApp.all('*', (req: any, resp: Response) => { this.handleRequest(req, resp) })
   }
 

@@ -2,8 +2,11 @@
   <div ref="aceEditor"></div>
 </template>
 <script lang="ts" setup>
-import ace from 'brace';
-import { nextTick, onMounted, ref, watch } from 'vue';
+import ace from 'brace'
+import 'brace/mode/javascript'
+import 'brace/mode/json'
+import 'brace/theme/monokai'
+import { nextTick, onMounted, ref, watch } from 'vue'
 
 
 const props = defineProps({
@@ -24,13 +27,13 @@ const props = defineProps({
     default: 'javascript'
   },
   options: Object,
-  codeContent: String,
+  content: String,
   editor: Object
 })
 const aceEditor = ref()
-const emit = defineEmits(['update:editor', 'update:codeContent', 'change'])
+const emit = defineEmits(['update:editor', 'update:content', 'change'])
 
-let _editor = null
+let _editor: ace.Editor = null
 
 onMounted(() => {
   /**
@@ -39,25 +42,25 @@ onMounted(() => {
     */
   _editor = ace.edit(aceEditor.value)
   _editor.$blockScrolling = Infinity
-  _editor.setTheme(`ace/theme/${props.theme}`)
+  // _editor.setTheme(`ace/theme/${props.theme}`)
   _editor.session.setMode(`ace/mode/${props.lang}`)
   _editor.setOptions(props.options)
-  _editor.setFontSize(13)
+  _editor.setFontSize('12px')
   _editor.getSession().setTabSize(2)
-  _editor.insert(props.codeContent)
+  _editor.insert(props.content)
 
   // mirror local editor with global editor
   emit("update:editor", _editor)
 
   _editor.on('change', () => {
     const content = _editor.getValue()
-    emit('update:codeContent', content)
+    emit('update:content', content)
   })
 })
 
-watch(() => props.codeContent, () => {
-  if (props.codeContent != _editor.getValue()) {
-    _editor.setValue(props.codeContent)
+watch(() => props.content, () => {
+  if (props.content != _editor.getValue()) {
+    _editor.setValue(props.content)
     nextTick(() => _editor.navigateFileEnd())
   }
 

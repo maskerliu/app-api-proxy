@@ -8,7 +8,7 @@
     <div v-if="source.type == 5020">
       <strong class="request-snap-method">[打点]</strong>
       <div class="request-snap-url"
-        v-for="(item, idx) in (source as ProxyMock.ProxyStatRecord).statistics.bps.slice(0, 2)" :key="idx">
+        v-for="(item, idx) in (source as ProxyMock.ProxyStatRecord).statistics.bps.slice(0, 2)">
         <span class="stat-snap-pid"> {{ item.pageId }} </span>
         <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
         <span class="stat-snap-eid" v-if="item.event_id != 2001"><br />

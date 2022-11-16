@@ -42,7 +42,7 @@ export namespace ProxyMock {
 
   export class MockRule {
     _id: string
-    _rev?: string
+    _rev: string
     name: string
     desc: string
     isMock?: boolean = false

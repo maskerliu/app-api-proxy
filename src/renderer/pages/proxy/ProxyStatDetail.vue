@@ -1,6 +1,6 @@
 <template>
   <van-list style="padding: 5px;">
-    <van-cell v-for="(item, idx) in record.statistics.bps" :key="idx" :title="item.pageId" :label="item.elementId"
+    <van-cell v-for="(item, idx) in record.statistics.bps" :title="item.pageId" :label="item.elementId"
       :value="item.args" />
   </van-list>
 </template>

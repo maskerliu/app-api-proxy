@@ -1,6 +1,5 @@
 
 import { Autowired, BodyParam, Controller, Get, Post, QueryParam } from 'lynx-express-mvc'
-import { BizCode, BizResponse } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 import CommonService from '../service/common.service'
 import MockService from '../service/mock.service'
@@ -24,25 +23,17 @@ export default class DefaultController {
 
   @Post('/register')
   async register(@QueryParam("uid") uid: string) {
-    let bizResp: BizResponse<string>
-    try {
-      if (uid == null) throw 'uid不能为空'
-      let data: ProxyMock.PushMsg<any> = {
-        type: ProxyMock.PushMsgType.CMD,
-        payload: { type: ProxyMock.CMDType.REGISTER, content: uid }
-      }
-      this.pushService.sendMessage(uid, data)
-      bizResp = { code: BizCode.SUCCESS, data: "注册成功" }
-    } catch (err: any) {
-      bizResp = { code: BizCode.ERROR, message: err }
-    } finally {
-      return bizResp
+    if (uid == null) throw 'uid不能为空'
+    let data: ProxyMock.PushMsg<any> = {
+      type: ProxyMock.PushMsgType.CMD,
+      payload: { type: ProxyMock.CMDType.REGISTER, content: uid }
     }
+    this.pushService.sendMessage(uid, data)
+    return '注册成功'
   }
 
   @Get('/getAllPushClients')
   async getAllPushClients(@QueryParam("uid") uid: string) {
-    let bizResp: BizResponse<Array<ProxyMock.MsgPushClient>>
     let data = []
 
     this.pushService.pushClients.forEach(it => {
@@ -55,13 +46,11 @@ export default class DefaultController {
       })
     })
 
-    bizResp = { code: BizCode.SUCCESS, data: data }
-
-    return bizResp
+    return data
   }
 
   @Get('/getServerConfig')
-  async getServerConfig() {
+  async getServerConfig(@QueryParam('uid') uid: string) {
     return this.commonService.getServerConfig()
   }
 

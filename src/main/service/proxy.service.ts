@@ -3,7 +3,6 @@ import { Request, Response } from 'express'
 import { IncomingHttpHeaders } from 'http'
 import { Autowired, Service } from 'lynx-express-mvc'
 import zlib from 'zlib'
-import { BizCode, BizResponse } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 import MockService from './mock.service'
 import PushService from './push.service'
@@ -50,8 +49,7 @@ export default class ProxyService {
 
   public setProxyDelay(uid: string, delay?: number) {
     this.proxyPrefs.get(uid).delay = delay
-    let bizResp: BizResponse<string> = { code: BizCode.SUCCESS, data: 'success' }
-    return bizResp
+    return 'success'
   }
 
   public async handleStatRequest(req: any, resp: Response) {

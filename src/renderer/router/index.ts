@@ -18,19 +18,38 @@ export default createRouter({
       component: require('../pages/proxy/Proxy.vue').default
     },
     {
-      path: '/mockRuleMgr',
-      name: 'MockRuleMgr',
-      component: require('../pages/mock/MockRuleMgr.vue').default
-    },
-    {
       path: '/lab',
       name: 'Lab',
-      component: require('../pages/lab/Lab.vue').default
+      redirect: '/lab/iot',
+      children: [
+        {
+          path: 'iot',
+          name: 'IOTDeviceMgr',
+          component: require('../pages/lab/IOTMgr.vue').default
+        }
+      ]
     },
     {
       path: '/fun',
       name: 'Fun',
-      component: require('../pages/fun/FunHome.vue').default
+      redirect: '/fun/gameLobby',
+      children: [
+         {
+          path: 'gameLobby',
+          name: 'GameLobby',
+          component: require('../pages/fun/GameLobby.vue').default,
+        },
+        {
+          path: 'videoLab',
+          name: 'VideoLab',
+          component: require('../pages/fun/VideoLab.vue').default,
+        }
+      ]
+    },
+    {
+      path: '/fun/video',
+      name: 'VideoLab',
+      component: require('../pages/fun/GameLobby.vue').default
     },
     {
       path: '/message',

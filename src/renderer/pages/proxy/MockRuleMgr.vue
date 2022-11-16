@@ -1,6 +1,6 @@
 <template>
   <van-row class="full-row">
-    <van-row class="bg-border" gutter="20" justify="start" align="center" style="
+    <van-row class="bg-border" justify="start" align="center" style="
         width: calc(100% - 10px);
         background-color: white;
       ">
@@ -8,8 +8,8 @@
         <van-popover :show="showSearchResult" placement="bottom-start" trigger="manual" :overlay="true"
           :close-on-click-overlay="true" @click-overlay="onRuleSelect(null)">
           <van-list class="search-result" style="width: 300px;">
-            <van-cell class="rule-snap-item" is-link v-for="(rule, idx) in rules" :key="idx" :title="rule.name"
-              :label="rule.desc" @click="onRuleSelect(rule)">
+            <van-cell class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name" :label="rule.desc"
+              @click="onRuleSelect(rule)">
               <template #value>
                 <div style="margin-top: 0">
                   <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
@@ -33,7 +33,8 @@
         </van-popover>
       </van-col>
       <van-col span="12" style="min-width: 310px; padding: 0">
-        <van-cell :title="`【${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}】`">
+        <van-cell :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
+          :label="curRule?.desc == null ? $t('mock.rule.desc') : curRule.desc">
           <template #value>
             <div align="center">
               <van-icon class="iconfont icon-edit" size="18" style="color: #3498db" @click="onRuleEdit(curRule)" />
@@ -44,9 +45,6 @@
               <van-switch size="14" v-model="curRule.isMock" style="margin-left: 10px"
                 @change="onMockSwitchChanged(curRule)" />
             </div>
-          </template>
-          <template #label>
-
           </template>
           <template #right-icon>
             <van-icon class="iconfont icon-cancel" size="20" style="color: red;" @click="onRuleSelect(null)" />
@@ -63,8 +61,8 @@
     <van-row style="width: 100%; height: calc(100% - 63px); display: flex">
       <van-col class="bg-border" style="width: 300px">
         <van-list v-if="curRule != null && curRule.requests != null">
-          <van-cell v-for="record in [...curRule.requests.values()]" :key="record.url" @click="onRecordSelected(record)"
-            clickable is-link>
+          <van-cell v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
+            is-link>
             <template #title>
               <div class="record-snap">{{ record.url }}</div>
             </template>
@@ -83,13 +81,11 @@
         </van-list>
       </van-col>
       <van-col style="padding-top: 50px">
-        <van-button type="primary" size="mini" icon="exchange" @click="addRule"></van-button>
+        <van-button type="primary" size="mini" icon="exchange" @click="addRecord"></van-button>
       </van-col>
       <van-col class="bg-border" style="flex: 1">
-        <!-- <vue-json-editor class="json-editor" v-model="curRecord" :options="jeOption" /> -->
-        <!-- <v-ace-editor class="json-editor" v-model:value="content" lang="json"></v-ace-editor> -->
-        <!-- <ace-editor class="json-editor" v-model:codeContent="content" lang="json"></ace-editor> -->
-        <vue-ace-editor class="json-editor" v-model:codeContent="content" lang="json" :options="aceOptions" theme="monokai"></vue-ace-editor>
+        <vue-ace-editor class="json-editor" v-model:content="content" lang="json" :options="aceOptions" theme="monokai">
+        </vue-ace-editor>
       </van-col>
     </van-row>
 
@@ -117,17 +113,10 @@
 <script lang="ts" setup>
 import { Notify } from 'vant'
 import { onMounted, PropType, ref, watch } from 'vue'
-import { VAceEditor } from 'vue3-ace-editor'
-import AceEditor from 'ace-editor-vue3'
 import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { json2map, map2json } from '../../common'
-import { useProxyRecordStore } from '../../store/ProxyRecords'
-
 import VueAceEditor from '../components/VueAceEditor.vue'
-import 'brace/mode/javascript'
-import 'brace/mode/json'
-import 'brace/theme/monokai'
 
 const props = defineProps({
   isMock: { type: Boolean, require: false, default: false },
@@ -138,10 +127,9 @@ const props = defineProps({
   },
 })
 
-const recordStore = useProxyRecordStore()
 const keyword = ref<string>(null)
 const showSearchResult = ref(false)
-const rules = ref([])
+const rules = ref<Array<ProxyMock.MockRule>>(null)
 const curRecord = ref<ProxyMock.ProxyRequestRecord>(null)
 const curRecordKey = ref<string>(null)
 const showRuleEdit = ref(false)
@@ -150,27 +138,20 @@ const showRecordEdit = ref(false)
 const showRecordDelete = ref(false)
 const isSaving = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
-const content = ref<string>('hello world')
+const content = ref<string>('')
 
-let jeOption = {
-  mode: 'tree',
-  search: false,
-  navigationBar: true,
-  statusBar: false,
-  mainMenuBar: false,
-}
 
 let aceOptions = { "showPrintMargin": false }
 
 onMounted(() => {
   curRule.value = new ProxyMock.MockRule()
   curRecord.value = props.record
-  content.value = JSON.stringify(curRecord.value)
+  content.value = JSON.stringify(curRecord.value, null, '\t')
 })
 
 watch(() => props.record, () => {
   curRecord.value = props.record
-  content.value = JSON.stringify(curRecord.value)
+  content.value = JSON.stringify(curRecord.value, null, '\t')
 })
 
 watch(() => keyword, () => {
@@ -186,17 +167,24 @@ async function fetchPagedMockRules() {
   }
 }
 
-function addRule() {
+function addRecord() {
   if (curRecord.value == null) return
   if (curRule.value == null) curRule.value = new ProxyMock.MockRule()
   if (curRule.value.requests == null) curRule.value.requests = new Map()
+
+  curRecord.value = JSON.parse(content.value)
   curRule.value.requests.set(curRecord.value.url, curRecord.value)
 }
 
 function onRuleSelect(rule: ProxyMock.MockRule) {
-  curRule.value = rule == null ? new ProxyMock.MockRule() : rule
+  if (rule != null) {
+    curRule.value = rule
+    fetchMockRuleDetail()
+  } else {
+    curRule.value = new ProxyMock.MockRule()
+    content.value = ''
+  }
   showSearchResult.value = false
-  fetchMockRuleDetail()
 }
 
 async function fetchMockRuleDetail() {
@@ -262,9 +250,9 @@ async function onSave(isSnap: boolean) {
 
 function onRecordSelected(record: ProxyMock.ProxyRequestRecord) {
   curRecord.value = record
-  
+
   content.value = JSON.stringify(curRecord.value, null, '\t')
-  console.log(content.value)
+  // console.log(content.value)
 }
 
 function onRecordDelete(key: string) {
@@ -274,7 +262,7 @@ function onRecordDelete(key: string) {
 
 function onRecordDeleteCancel() {
   curRecord.value = null
-  content.value = null
+  content.value = ''
   curRecordKey.value = null
   showRecordDelete.value = false
 }
@@ -282,7 +270,7 @@ function onRecordDeleteCancel() {
 function onRecordDeleteConfirm() {
   curRule.value.requests.delete(curRecordKey.value)
   curRecord.value = null
-  content.value = null
+  content.value = ''
   showRecordDelete.value = false
 }
 </script>

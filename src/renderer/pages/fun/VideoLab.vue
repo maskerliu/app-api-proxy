@@ -1,7 +1,7 @@
 <template>
   <van-row class="full-row">
     <h3>Record video from webcam and transcode to mp4 (x264) and play!</h3>
-    <van-row :gutter="20" class="full-row" style="height: 300px;">
+    <van-row class="full-row" style="height: 300px;">
       <van-col span="6">
         <video ref="webcam" width="320" height="240" :srcObject="stream" autoplay></video>
         <van-button id="record" :loading="isLoading" @click="onRecordClicked">{{ isRecording ? 'Stop' : 'Start' }}

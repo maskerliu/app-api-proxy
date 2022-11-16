@@ -9,8 +9,8 @@ export namespace IOT {
   }
 
   export interface IOTDevice {
-    _id?: string,
-    _rev?: string,
+    _id: string,
+    _rev: string,
     deviceId: string,
     status?: DeviceStatus,
     address?: string,

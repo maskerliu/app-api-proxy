@@ -4,6 +4,7 @@ export default {
     cancel: 'Cancel',
     delete: 'Delete',
     save: 'Save',
+    upload: 'Upload',
     searchPlaceholder: 'keyword for search'
   },
   proxy: {
@@ -45,17 +46,36 @@ export default {
     }
   },
   settings: {
-    server: 'Server',
-    port: 'Server Port',
-    proxySocketPort: 'Socket Port',
-    apiDefineServer: 'API Define Server',
-    statRuleServer: 'Stat Rule Server',
-    dataProxyServer: 'Data Proxy Server',
-    mqttBroker: 'MQTT Broker',
+    sys: {
+      title: 'System Info',
+      server: 'Server',
+      port: 'Server Port',
+      proxySocketPort: 'Socket Port',
+      apiDefineServer: 'API Define Server',
+      statRuleServer: 'Stat Rule Server',
+      dataProxyServer: 'Data Proxy Server',
+      mqttBroker: 'MQTT Broker',
+    },
     boardcast: {
       onlineClient: 'Online Client',
       placeholder: 'please enter message',
       btnSend: 'Send'
+    },
+    games: {
+      title: 'Game Bundle Manager',
+      upload: 'Upload Game',
+      name: 'Name',
+      author: 'Author',
+      version: 'Version',
+      desc: 'Description',
+      icon: 'Icon',
+      snap: 'Previews',
+      res: 'Game Bundle'
+    },
+    resources: {
+      title: 'Manage Remote Static Resources',
+      upload: 'Upload File',
+      manage: 'Remote Resource Manage'
     }
   }
 }

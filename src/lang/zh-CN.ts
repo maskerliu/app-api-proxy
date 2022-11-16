@@ -1,9 +1,10 @@
 export default {
-  common:{
+  common: {
     done: '确定',
     cancel: '取消',
     delete: '删除',
     save: '保存',
+    upload: '上传',
     searchPlaceholder: '请输入搜索关键词'
   },
   proxy: {
@@ -34,7 +35,7 @@ export default {
     }
   },
   iot: {
-    device :{
+    device: {
       name: '设备名',
       address: '地址',
       delete: {
@@ -45,17 +46,36 @@ export default {
     }
   },
   settings: {
-    server: '服务地址',
-    port: '代理Http服务端口',
-    proxySocketPort: '代理长连服务端口',
-    apiDefineServer: 'API定义服务地址',
-    statRuleServer: '埋点规则服务地址',
-    dataProxyServer: '代理数据服务地址',
-    mqttBroker: 'MQTT服务地址',
+    sys: {
+      title: '系统信息',
+      server: '服务地址',
+      port: '代理Http服务端口',
+      proxySocketPort: '代理长连服务端口',
+      apiDefineServer: 'API定义服务地址',
+      statRuleServer: '埋点规则服务地址',
+      dataProxyServer: '代理数据服务地址',
+      mqttBroker: 'MQTT服务地址',
+    },
     boardcast: {
       onlineClient: '在线Client',
       placeholder: '请输入内容',
       btnSend: '发送'
+    },
+    games: {
+      title: '游戏资源管理',
+      upload: '上传游戏',
+      name: '游戏名',
+      author: '厂商',
+      version: '版本',
+      desc: '简介',
+      icon: '图标',
+      snap: '预览图',
+      res: '资源包'
+    },
+    resources: {
+      title: '静态资源管理',
+      upload: '上传文件',
+      manage: '远程资源管理'
     }
   }
 }

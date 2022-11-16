@@ -1,5 +1,5 @@
 import { Autowired, Service } from 'lynx-express-mvc'
-import { BizCode, BizResponse, LocalServerConfig } from '../../common/base.models'
+import { LocalServerConfig } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 import { getLocalIPs } from '../utils/NetworkUtils'
 import ProxyService from './proxy.service'
@@ -29,10 +29,7 @@ export default class CommonService {
   }
 
   public register(uid: string) {
-    let bizResp: BizResponse<string>
     if (uid != null) {
-      bizResp = { code: BizCode.SUCCESS, data: '注册成功' }
-
       let data: ProxyMock.PushMsg<any> = {
         type: ProxyMock.PushMsgType.CMD,
         payload: {
@@ -41,24 +38,20 @@ export default class CommonService {
         }
       }
       this.pushService.sendMessage(uid, data)
+      return '注册成功'
     } else {
-      bizResp = { code: BizCode.FAIL, message: 'invalid uid' }
+      throw 'invalid uid'
     }
-    return bizResp
   }
 
   getServerConfig() {
-    return { code: BizCode.SUCCESS, data: this.serverConfig }
+    return this.serverConfig
   }
 
   saveServerConfig(uid: string, config: LocalServerConfig) {
     this.proxyService.setDataProxyServer(uid, { dataServer: config.dataServer, status: config.status, delay: 0 })
     this.setServerConfig(config)
-    let bizResp: BizResponse<LocalServerConfig> = {
-      code: BizCode.SUCCESS,
-      data: Object.assign(this.serverConfig, this.proxyService.getDataProxyServer(uid))
-    }
-    return bizResp
+    return Object.assign(this.serverConfig, this.proxyService.getDataProxyServer(uid))
   }
 
   private setServerConfig(config: LocalServerConfig) {
