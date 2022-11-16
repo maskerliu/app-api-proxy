@@ -31,10 +31,6 @@
       </json-viewer>
     </div>
 
-    <van-popup v-model:show="showAddMockRule" :style="{ width: '90%', height: '90vh', padding: '0' }">
-      <mock-rule-mgr style="display: flex" :record="record" />
-    </van-popup>
-
     <van-dialog title="预览" :show="showPreview" top="100px" align="center">
       <img style="max-width: 100%; max-height: 60vh; border-radius: 8px" :src="curImgSrc" v-show="!!curImgSrc" />
       <audio id="audioPlayer" style="width: 100%; max-width: 100%; max-height: 60vh" :src="curAudioSrc" controls="true"
@@ -46,31 +42,26 @@
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent, onMounted, PropType, ref, watch } from 'vue';
+import { onMounted, PropType, ref, watch } from 'vue';
 import { ProxyMock } from '../../../common/proxy.models';
+import { useProxyRecordStore } from '../../store/ProxyRecords';
 import JsonViewer from '../components/JsonViewer.vue';
 
 const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
 const VIDEO_RGX = new RegExp('(.mp4)$')
 const IMG_RGX = new RegExp('(.jpg|.jpeg|.png|.JPG|.gif|.GIF|.webp)$')
 
-const MockRuleMgr = defineAsyncComponent(() => import('../mock/MockRuleMgr.vue'))
-
 defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord> },
 })
 
+const recordStore = useProxyRecordStore()
 const apiDesc = ref<string>(null)
 const curImgSrc = ref<string>(null)
 const curAudioSrc = ref<string>(null)
 const audioPlayer = ref(null)
 const curVideoSrc = ref<string>(null)
 const showPreview = ref(false)
-const showAddMockRule = ref(false)
-
-onMounted(() => {
-
-})
 
 watch(showPreview, () => {
   if (!showPreview.value) {
@@ -114,7 +105,7 @@ function copyLink() {
 }
 
 function addToMockRule() {
-  showAddMockRule.value = true
+  recordStore.showMockRuleMgr = true
 }
 
 function updated() {

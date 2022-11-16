@@ -37,11 +37,10 @@
         </p>
         <div v-if="!innerclosed && length" class="json-body">
           <template v-for="(item, index) in items">
-            <json-viewer v-if="item.isJSON" :closed="isClose(templateDeep + 1)" :key="index" :data="item.value"
-              :jsonKey="item.key" :currentDeep="templateDeep + 1" :deep="deep" :theme="theme" :fontSize="fontSize"
-              :lineHeight="lineHeight" :iconColor="iconColors" :isLast="index === items.length - 1"
-              :hasSiblings="item.hasSiblings" />
-            <p class="json-item" v-else :key="index + ''">
+            <json-viewer v-if="item.isJSON" :closed="isClose(templateDeep + 1)" :data="item.value" :jsonKey="item.key"
+              :currentDeep="templateDeep + 1" :deep="deep" :theme="theme" :fontSize="fontSize" :lineHeight="lineHeight"
+              :iconColor="iconColors" :isLast="index === items.length - 1" :hasSiblings="item.hasSiblings" />
+            <p class="json-item" v-else>
               <span class="json-key">
                 {{ isArray ? "" : '"' + item.key + '":' }}
               </span>

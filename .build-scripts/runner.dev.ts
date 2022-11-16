@@ -23,8 +23,6 @@ process.env.NODE_ENV = Run_Mode_DEV
 
 process.env.BUILD_CONFIG = JSON.stringify(buildConfig)
 
-console.log(process.env.PROTOCOL)
-
 let electronProcess: ChildProcess | null = null
 let manualRestart = false
 let hotMiddleware: any

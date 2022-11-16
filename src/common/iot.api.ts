@@ -1,5 +1,5 @@
-import { get, post } from './base.api';
-import { IOT } from './iot.models';
+import { get, post } from './base.api'
+import { IOT } from './iot.models'
 
 
 export function searchDevices(keyword: string) {

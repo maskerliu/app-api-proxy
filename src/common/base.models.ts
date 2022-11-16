@@ -1,13 +1,12 @@
 export enum BizCode {
   SUCCESS = 8000,
-  FAIL = 8010,
-  ERROR = 9000,
+  FAIL = 4000,
+  ERROR = 1000,
 }
 
 export interface BizResponse<T> {
   code: number
   msg?: string
-  message?: string
   data?: T
 }
 

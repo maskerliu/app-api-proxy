@@ -6,6 +6,7 @@ import AbstractRouter from './common/AbstractRouter'
 import './controller/default.controller'
 import './test/test/TestController'
 import './controller/iot.controller'
+import './controller/fun.controller'
 
 @Router()
 export default class MainRouter extends AbstractRouter {

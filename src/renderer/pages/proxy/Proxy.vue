@@ -12,6 +12,8 @@
         <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
           <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
         </van-checkbox>
+        <van-icon class="iconfont icon-rule" style="font-size: 1.9rem; margin: 6px"
+          @click="recordStore.showMockRuleMgr = true" />
         <van-icon class="iconfont icon-qrcode" style="font-size: 1.9rem; margin: 6px"
           @click="commonStore.showQrCode = true" />
       </van-checkbox-group>
@@ -31,7 +33,7 @@
       </van-field>
 
       <van-list class="record-snap-panel" ref="snaplist">
-        <proxy-record-snap v-for="key in [...recordStore.records.keys()].reverse()" :key="key"
+        <proxy-record-snap v-for="key in [...recordStore.records.keys()].reverse()"
           :source="recordStore.records.get(key)" />
       </van-list>
     </van-col>
@@ -48,6 +50,10 @@
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
     </van-col>
 
+    <van-popup v-model:show="recordStore.showMockRuleMgr" :style="{ width: '90%', height: '90vh', padding: '0' }">
+      <mock-rule-mgr style="display: flex" :record="recordStore.records.get(recordStore.curRecordId)" />
+    </van-popup>
+
     <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" :show-confirm-button="false"
       :show-cancel-button="false">
       <qrcode-vue :value="commonStore.registerUrl" :size="300" center style="margin: 5px" />
@@ -62,7 +68,7 @@
 import { mapActions, mapState, mapWritableState } from 'pinia'
 import QrcodeVue from 'qrcode.vue'
 import { Notify } from 'vant'
-import { defineComponent, onMounted, ref, VNode, watch } from 'vue'
+import { defineComponent,defineAsyncComponent, onMounted, ref, VNode, watch } from 'vue'
 import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
@@ -71,6 +77,7 @@ import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
 
+const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
 // let clientStartX = 0
 

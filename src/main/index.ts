@@ -10,4 +10,7 @@ if (process.env.NODE_ENV !== 'development') {
 
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
-MainApp.start()
+
+let mainApp = new MainApp()
+
+mainApp.startApp()

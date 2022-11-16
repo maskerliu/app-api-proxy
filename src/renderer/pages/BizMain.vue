@@ -12,11 +12,6 @@
           <van-icon class="iconfont icon-mock" size="22" />
         </template>
       </van-tabbar-item>
-      <van-tabbar-item replace to="/mockRuleMgr">
-        <template #icon>
-          <van-icon class="iconfont icon-rule" size="22" />
-        </template>
-      </van-tabbar-item>
       <van-tabbar-item replace to="/lab" dot>
         <template #icon>
           <van-icon class="iconfont icon-lab" size="22" />
@@ -54,7 +49,7 @@ onMounted(() => {
     return true
   })
 
-  useRouter().replace("/mockRuleMgr")
+  useRouter().replace("/settings")
   active.value = 1
 })
 
@@ -64,9 +59,9 @@ onMounted(() => {
 
 :root {
   --van-dialog-border-radius: 4px;
-  --van-tag-font-size: 0.5rem;
+  --van-tag-font-size: 0.6rem;
   --van-tag-padding: 2px 5px;
-  --van-tag-border-radius: 4px;
+  --van-tag-border-radius: 5px;
 }
 
 .full-row {

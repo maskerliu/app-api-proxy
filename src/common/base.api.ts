@@ -9,13 +9,15 @@ axios.defaults.withCredentials = true
 let clientUID: string = null
 let BASE_DOMAIN: string = null
 
-export async function get<T>(path: string, baseURL?: string, params?: {}) {
 
+async function request<T>(method: string, path: string, baseURL?: string, headers?: any, params?: {}, data?: any) {
   const resp = await axios.request<BizResponse<T>>({
     baseURL: baseURL ? baseURL : BASE_DOMAIN,
     url: path,
-    method: "GET",
-    params: Object.assign({ uid: clientUID }, params)
+    method: method,
+    params: Object.assign({ uid: clientUID }, params),
+    data: data,
+    headers: headers
   })
 
   let bizResp = resp.data
@@ -33,26 +35,16 @@ export async function get<T>(path: string, baseURL?: string, params?: {}) {
   }
 }
 
-export async function post<T>(path: string, baseURL?: string, params?: {}, data?: any) {
-  const resp = await axios.post<BizResponse<T>>(path, data, {
-    baseURL: baseURL ? baseURL : BASE_DOMAIN,
-    params: Object.assign({ uid: clientUID }, params),
-  })
+export async function get<T>(path: string, baseURL?: string, params?: {}) {
+  return request<T>('GET', path, baseURL, null, params)
+}
 
-  let bizResp = resp.data
-  switch (bizResp.code) {
-    case BizCode.SUCCESS: {
-      return bizResp.data
-    }
-    case BizCode.FAIL:
-      Notify({ message: bizResp.msg, type: "warning" })
-      return Promise.reject(bizResp.msg)
-    case BizCode.ERROR:
-      Notify({ message: bizResp.msg, type: "danger" })
-      return Promise.reject(bizResp.msg)
-    default:
-      return Promise.reject("未知错误")
-  }
+export async function post<T>(path: string, baseURL?: string, params?: {}, data?: any) {
+  return request<T>('POST', path, baseURL, { 'Content-Type': 'application/json' }, params, data)
+}
+
+export async function formPost<T>(path: string, baseURL?: string, params?: {}, data?: FormData) {
+  return request<T>('POST', path, baseURL, { 'Content-Type': 'multipart/form-data' }, params, data)
 }
 
 
