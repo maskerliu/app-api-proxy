@@ -147,7 +147,7 @@ class WebConfig extends BaseConfig {
     if (process.env.NODE_ENV !== 'production') {
       this.plugins?.push(
         new DefinePlugin({
-          SERVER_BASE_URL: `'${config.protocol}://${localServer}:${config.port}'`,
+          SERVER_BASE_URL: config.domain ? `'${config.domain}'` : `'${config.protocol}://${localServer}:${config.port}'`,
           PROTOCL: config.protocol
         }),
         // new BundleAnalyzerPlugin({

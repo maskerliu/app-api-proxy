@@ -6,7 +6,7 @@
   "main": "./dist/electron/main.cjs",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "node --loader ts-node/esm --experimental-json-modules --max_old_space_size=2500 .build-scripts/builder.ts",
+    "build": "node --loader ts-node/esm --experimental-json-modules --max_old_space_size=3500 .build-scripts/builder.ts",
     "build:clean": "cross-env BUILD_TARGET=clean  node --loader ts-node/esm --experimental-json-modules .build-scripts/builder.ts",
     "build:web": "cross-env BUILD_TARGET=web node --loader ts-node/esm --experimental-json-modules .build-scripts/builder.ts",
     "dev": "node --experimental-worker --loader ts-node/esm --experimental-json-modules .build-scripts/runner.dev.ts",

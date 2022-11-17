@@ -67,6 +67,9 @@ class LocalServer {
       `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:${this.commonService.serverConfig.port}`,
       `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9080`,
       `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9081`,
+      'https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-8884.preview.app.github.dev/',
+      'https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-9080.preview.app.github.dev/',
+      'https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-9081.preview.app.github.dev/'
     ]
 
     this.httpApp.use(express.static(path.resolve(__dirname, '../web'), {

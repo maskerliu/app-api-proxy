@@ -75,9 +75,14 @@ export const useCommonStore = defineStore('Common', {
       this.serverConfig = config ? config : this.serverConfig
       updateClientUID(uid)
 
-      updateBaseDomain(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`)
-      this.registerUrl = `${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${uid}`
-      pushClient.start(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`, uid)
+      if (!__IS_WEB__) {
+        updateBaseDomain(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`)
+        this.registerUrl = `${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${uid}`
+        pushClient.start(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`, uid)
+      } else {
+        this.registerUrl = `${SERVER_BASE_URL}/appmock/register?uid=${uid}`
+        pushClient.start(SERVER_BASE_URL, uid)
+      }
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {
       this.clientInfos = [...clientInfos]
