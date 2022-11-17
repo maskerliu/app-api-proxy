@@ -1,10 +1,9 @@
-import { app } from 'electron'
 import { Repository } from 'lynx-express-mvc'
 import { ProxyMock } from '../../common/proxy.models'
+import { USER_DATA_DIR } from '../common/Const'
 import BaseRepo from './base.repo'
 
-
-@Repository(app.getPath('userData') + '/biz_storage', 'Mock.Rules', ['name'])
+@Repository(USER_DATA_DIR + '/biz_storage', 'Mock.Rules', ['name'])
 export default class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
   public async save(rule: ProxyMock.MockRule, onlySnap: boolean) {

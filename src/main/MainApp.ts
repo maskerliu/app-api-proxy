@@ -5,6 +5,7 @@ import {
 import fs from 'fs'
 import path from 'path'
 import { Fun } from '../common/fun.models'
+import { USER_DATA_DIR } from './common/Const'
 
 import localServer from './MainServer'
 
@@ -21,6 +22,14 @@ export default class MainApp {
   private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, '../../static') : path.join(__dirname, './static')
 
   public startApp() {
+
+    if (process.platform == 'linux') {
+      this.initAppEnv()
+      localServer.start()
+      return
+    }
+
+
     if (process.platform === 'win32') {
       app.disableHardwareAcceleration()
     }
@@ -107,8 +116,7 @@ export default class MainApp {
   }
 
   private initAppEnv() {
-    let userDataPath = app.getPath('userData')
-    let resPath = path.join(userDataPath, './static')
+    let resPath = path.join(USER_DATA_DIR, './static')
     fs.access(resPath, (err) => {
       if (err) {
         fs.mkdir(resPath, (err) => {
@@ -116,7 +124,7 @@ export default class MainApp {
         })
       }
     })
-    let dbPath = path.join(userDataPath, './biz_storage')
+    let dbPath = path.join(USER_DATA_DIR, './biz_storage')
     fs.access(dbPath, (err) => {
       if (err) {
         fs.mkdir(dbPath, (err) => {
@@ -180,7 +188,7 @@ export default class MainApp {
       this.gameWindow = new BrowserWindow(winOpt)
       this.gameWindow.webContents.frameRate = 30
 
-      if ( process.env.NODE_ENV == 'development') {
+      if (process.env.NODE_ENV == 'development') {
         this.gameWindow.webContents.openDevTools()
       }
 
@@ -204,14 +212,9 @@ export default class MainApp {
         this.gameWindow.show()
         this.gameWindow.focus()
       })
-
-
     }
 
     this.gameWindow.loadURL(game.url)
-
-
-
   }
 
 

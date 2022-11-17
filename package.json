@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "./dist/electron/main.js",
+  "main": "./dist/electron/main.cjs",
   "license": "UNLICENSED",
   "scripts": {
     "build": "node --loader ts-node/esm --experimental-json-modules --max_old_space_size=9000 .build-scripts/builder.ts",
@@ -48,10 +48,18 @@
       ]
     },
     "win": {
-      "icon": "build/icons/icon.ico"
+      "icon": "build/icons/icon.ico",
+      "electronLanguages": [
+        "zh_CN",
+        "en"
+      ]
     },
     "linux": {
-      "icon": "build/icons"
+      "icon": "build/icons",
+      "electronLanguages": [
+        "zh_CN",
+        "en"
+      ]
     }
   },
   "dependencies": {

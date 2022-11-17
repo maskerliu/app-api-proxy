@@ -1,16 +1,16 @@
 import { UploadedFile } from 'express-fileupload'
+import fs from 'fs'
 import { Autowired, Service } from 'lynx-express-mvc'
 import path from 'path'
-import fs from 'fs'
 import { Fun } from '../../common/fun.models'
+import { USER_DATA_DIR } from '../common/Const'
 import GameRepo from '../repository/game.repo'
-import { app } from 'electron'
 
 
 @Service()
 export default class FunService {
 
-  baseDir = app.getPath('userData') + '/static/games'
+  baseDir = USER_DATA_DIR + '/static/games'
 
   @Autowired()
   gameRepo: GameRepo

@@ -16,6 +16,7 @@ import ProxyService from './service/proxy.service'
 import PushService from './service/push.service'
 
 import si from 'systeminformation'
+import { USER_DATA_DIR } from './common/Const'
 
 @Component()
 class LocalServer {
@@ -81,7 +82,7 @@ class LocalServer {
       }
     }))
 
-    this.httpApp.use('/_res', express.static(path.join(app.getPath('userData'), './static'), {
+    this.httpApp.use('/_res', express.static(path.join(USER_DATA_DIR, './static'), {
       setHeaders: (res, path: string, stat: any) => {
         res.header('Cross-Origin-Opener-Policy', 'same-origin')
         res.header('Cross-Origin-Resource-Policy', 'cross-origin')
@@ -143,4 +144,4 @@ class LocalServer {
 const localServer: any = new LocalServer()
 localServer.init()
 
-export default localServer
+export default localServer as LocalServer
