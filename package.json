@@ -2,16 +2,17 @@
   "name": "app-api-proxy",
   "version": "1.0.0",
   "description": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "./dist/electron/main.js",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "cross-env node --loader ts-node/esm --experimental-json-modules --max_old_space_size=9000 .build-scripts/builder.ts",
+    "build": "node --loader ts-node/esm --experimental-json-modules --max_old_space_size=9000 .build-scripts/builder.ts",
     "build:clean": "cross-env BUILD_TARGET=clean  node --loader ts-node/esm --experimental-json-modules .build-scripts/builder.ts",
     "build:web": "cross-env BUILD_TARGET=web node --loader ts-node/esm --experimental-json-modules .build-scripts/builder.ts",
-    "dev": "cross-env PROTOCOL=https node --experimental-worker --loader ts-node/esm --experimental-json-modules .build-scripts/runner.dev.ts",
+    "dev": "node --experimental-worker --loader ts-node/esm --experimental-json-modules .build-scripts/runner.dev.ts",
     "pub": "yarn build && electron-builder",
-    "asar": "node .build-scripts/compress-asar.js"
+    "asar": "node .build-scripts/compress-asar.js",
+    "test": "node --loader ts-node/esm .build-scripts/index.ts"
   },
   "build": {
     "productName": "app-api-proxy",
@@ -89,7 +90,7 @@
     "@vue/compiler-sfc": "^3.2.40",
     "adm-zip": "^0.5.9",
     "axios": "^1.1.3",
-    "chalk": "^5.0.1",
+    "chalk": "^5.1.2",
     "copy-webpack-plugin": "^11.0.0",
     "cross-env": "^7.0.3",
     "css-loader": "^6.7.1",

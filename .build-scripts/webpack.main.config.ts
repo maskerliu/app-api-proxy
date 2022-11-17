@@ -42,7 +42,7 @@ class MainConfig extends BaseConfig {
   node: Configuration['node'] = {}
 
   output: Configuration['output'] = {
-    filename: '[name].js',
+    filename: '[name].cjs',
     library: { type: 'commonjs2' },
     path: path.join(dirname, '../dist/electron')
   }
@@ -66,12 +66,12 @@ class MainConfig extends BaseConfig {
       __filename: process.env.NODE_ENV !== 'production'
     }
 
-    this.plugins.push(new DefinePlugin({
+    this.plugins?.push(new DefinePlugin({
       'process.env.NODE_ENV': `"${this.mode}"`,
       'process.env.BUILD_CONFIG': `'${JSON.stringify(config)}'`
     }))
 
-    this.plugins.push(
+    this.plugins?.push(
       new CopyWebpackPlugin({
         patterns: [{
           from: path.join(dirname, '../cert/**/*'),
@@ -81,7 +81,7 @@ class MainConfig extends BaseConfig {
     )
 
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins.push(new HotModuleReplacementPlugin())
+      this.plugins?.push(new HotModuleReplacementPlugin())
     } else {
 
     }
