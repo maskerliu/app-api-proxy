@@ -4,6 +4,7 @@
 > 原工程[app-mock-desktop](https://github.com/maskerliu/app-mock-desktop) 现在废弃了。
 > 欢迎大家试用
 
+> [预览](https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-8884.preview.app.github.dev/#/settings)
 
 
 > 这是一个集成了vue3+vant+pinia的electron项目模版工程，webpack5驱动构建，最终应用程序的生成使用了electron-builder。

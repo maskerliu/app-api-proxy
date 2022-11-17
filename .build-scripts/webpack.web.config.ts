@@ -144,6 +144,10 @@ class WebConfig extends BaseConfig {
       new DefinePlugin({ PROTOCOL: `'${config.protocol}'` })
     )
 
+    if (config.domain != null) {
+      this.plugins.push(new DefinePlugin({ SERVER_BASE_URL: `'${config.domain}'` }))
+    }
+
     if (process.env.NODE_ENV !== 'production') {
       this.plugins?.push(
         new DefinePlugin({
