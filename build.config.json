@@ -1,4 +1,5 @@
 {
   "port": 8884,
-  "protocol": "http"
+  "protocol": "http",
+  "domain": "https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-8884.preview.app.github.dev"
 }
