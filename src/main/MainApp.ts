@@ -83,7 +83,7 @@ export default class MainApp {
       webPreferences: {
         devTools: process.env.NODE_ENV == 'development',
         sandbox: false,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.cjs')
       },
     }
 
@@ -173,7 +173,7 @@ export default class MainApp {
         webPreferences: {
           devTools: process.env.NODE_ENV == 'development',
           sandbox: false,
-          preload: path.join(__dirname, 'preload.js')
+          preload: path.join(__dirname, 'preload.cjs')
         },
       }
 

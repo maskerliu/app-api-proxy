@@ -2,38 +2,38 @@
   "compilerOptions": {
     "module": "ESNext",
     "target": "ESNext",
-    "strict": true,
-    "noEmitOnError": true,
-    "jsx": "preserve",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "noEmitOnError": true,
     "noImplicitAny": false,
-    "isolatedModules": true,
-    "moduleResolution": "node",
-    "declaration": true,
+    "noImplicitThis": false,
+    "strict": true,
     "strictFunctionTypes": false,
     "strictNullChecks": false,
+    "strictPropertyInitialization": false,
     "suppressExcessPropertyErrors": true,
-    "sourceMap": true,
-    "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "noImplicitThis": false,
     "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "types": [
       "reflect-metadata"
-    ]
+    ],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
   },
   "include": [
     "src/**/*",
+    ".build-scripts/**/*",
+    "test/**/*"
   ],
   "exclude": [
     "node_modules"
   ],
-  "paths": {
-    "@": [
-      "./src/*"
-    ],
-  },
-  "compileOnSave": true,
 }

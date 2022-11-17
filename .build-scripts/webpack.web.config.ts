@@ -130,7 +130,7 @@ class WebConfig extends BaseConfig {
   init(localServer?: String) {
     super.init()
 
-    this.plugins.push(
+    this.plugins?.push(
       new HtmlWebpackPlugin({
         filename: 'index.html',
         template: path.resolve(dirname, '../src/index.ejs'),
@@ -145,7 +145,7 @@ class WebConfig extends BaseConfig {
     )
 
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins.push(
+      this.plugins?.push(
         new DefinePlugin({
           SERVER_BASE_URL: `'${config.protocol}://${localServer}:${config.port}'`,
           PROTOCL: config.protocol
@@ -164,7 +164,7 @@ class WebConfig extends BaseConfig {
         // }),
       )
     } else {
-      this.plugins.push(
+      this.plugins?.push(
         new CopyWebpackPlugin({
           patterns: [{
             from: path.join(dirname, '../static/favicon.ico'),
@@ -178,7 +178,7 @@ class WebConfig extends BaseConfig {
         }),
         new LoaderOptionsPlugin({ minimize: true }),
       )
-      this.output.publicPath = './'
+      this.output!.publicPath = './'
     }
 
     return this

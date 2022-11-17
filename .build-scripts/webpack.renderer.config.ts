@@ -134,7 +134,7 @@ class RendererConfig extends BaseConfig {
       // __filename: process.env.NODE_ENV !== 'production'
     }
 
-    this.plugins.push(
+    this.plugins?.push(
       new HtmlWebpackPlugin({
         filename: 'index.html',
         template: path.resolve(dirname, '../src/index.ejs'),
@@ -149,12 +149,12 @@ class RendererConfig extends BaseConfig {
     )
 
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins.push(
+      this.plugins?.push(
         new DefinePlugin({ '__static': `'${path.join(dirname, '../static').replace(/\\/g, '\\\\')}'` }),
       )
     } else {
-      this.plugins.push(new LoaderOptionsPlugin({ minimize: true }))
-      this.output.publicPath = './'
+      this.plugins?.push(new LoaderOptionsPlugin({ minimize: true }))
+      this.output!.publicPath = './'
     }
 
     return this

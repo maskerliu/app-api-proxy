@@ -1,5 +1,3 @@
-'use strict'
-
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
 import express from 'express'
@@ -40,14 +38,14 @@ function startDevServer(config: BaseConfig, port: number): Promise<void> {
       client: { logging: 'none' },
       static: { directory: path.join(dirname, '../src/'), },
       setupMiddlewares(middlewares, devServer) {
-        devServer.app.use('/node_modules/', express.static(path.resolve(dirname, '../node_modules')))
-        devServer.app.use((_, res, next) => {
+        devServer.app?.use('/node_modules/', express.static(path.resolve(dirname, '../node_modules')))
+        devServer.app?.use((_, res, next) => {
           res.setHeader('Access-Control-Allow-Origin', '*')
           res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
           res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
           next()
         })
-        devServer.middleware.waitUntilValid(() => { resolve() })
+        devServer.middleware?.waitUntilValid(() => { resolve() })
         return middlewares
       }
     }
@@ -121,7 +119,7 @@ function startElectron() {
     '--experimental-worker',
     '--experimental-wasm-threads',
     '--experimental-wasm-bulk-memory',
-    path.join(dirname, '../dist/electron/main.js')
+    path.join(dirname, '../dist/electron/main.cjs')
   ]
 
   // detect yarn or npm and process commandline args accordingly
@@ -132,8 +130,8 @@ function startElectron() {
   }
 
   electronProcess = spawn('electron', args)
-  electronProcess.stdout.on('data', data => { consoleLog('Electron', data, 'blue') })
-  electronProcess.stderr.on('data', data => { consoleLog('Electron', data, 'red') })
+  electronProcess.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })
+  electronProcess.stderr?.on('data', data => { consoleLog('Electron', data, 'red') })
   electronProcess.on('close', () => { if (!manualRestart) process.exit() })
 }
 
