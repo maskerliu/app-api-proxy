@@ -115,12 +115,14 @@ function startMain(): Promise<void> {
 function startElectron() {
   let args = [
     '--inspect=5858',
-    '--remote-debugging-port=9223',
     '--experimental-worker',
     '--experimental-wasm-threads',
-    '--experimental-wasm-bulk-memory',
     path.join(dirname, '../dist/electron/main.cjs')
   ]
+
+  if (process.platform !== 'linux') {
+    args.push('--remote-debugging-port=9223', '--experimental-wasm-bulk-memory')
+  }
 
   // detect yarn or npm and process commandline args accordingly
   if (process.env.npm_execpath?.endsWith('yarn.js')) {
