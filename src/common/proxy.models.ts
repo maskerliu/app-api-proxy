@@ -47,7 +47,7 @@ export namespace ProxyMock {
     desc: string
     isMock?: boolean = false
     requests: Map<string, ProxyRequestRecord> = new Map()
-    jsonRequests: JSON 
+    jsonRequests: JSON
   }
 
   export interface MsgPushClient extends ClientInfo {
@@ -60,6 +60,7 @@ export namespace ProxyMock {
     uid: string
     ip: string
     port: number
+    username?: string
   }
 
   export enum PushMsgType {

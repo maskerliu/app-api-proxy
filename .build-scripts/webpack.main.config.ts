@@ -1,4 +1,5 @@
 'use strict'
+
 import CopyWebpackPlugin from 'copy-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'

@@ -1,4 +1,4 @@
-import { createI18n } from 'vue-i18n'
+import { createI18n, useI18n } from 'vue-i18n'
 
 import zh_CN from './zh-CN'
 import en from './en'
@@ -15,4 +15,8 @@ const i18n = createI18n({
   messages
 })
 
+const { t, tm } = i18n.global
+
+export const $t = t
+export const $tm = tm
 export default i18n // 将i18n暴露出去，在main.js中引入挂载

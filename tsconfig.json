@@ -1,27 +1,30 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
     "target": "ESNext",
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "composite": false,
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false,
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "noEmitOnError": true,
     "noImplicitAny": false,
     "noImplicitThis": false,
+    "resolveJsonModule": true,
     "strict": true,
     "strictFunctionTypes": false,
     "strictNullChecks": false,
     "strictPropertyInitialization": false,
-    "suppressExcessPropertyErrors": true,
+    "suppressExcessPropertyErrors": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "resolveJsonModule": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "skipLibCheck": true,
     "types": [
-      "reflect-metadata"
+      "reflect-metadata",
+      "vue-18n"
     ],
     "lib": [
       "ESNext",
@@ -36,4 +39,5 @@
   "exclude": [
     "node_modules"
   ],
+  
 }

@@ -5,8 +5,7 @@ import AbstractRouter from './common/AbstractRouter'
 
 import './controller/default.controller'
 import './test/test/TestController'
-import './controller/iot.controller'
-import './controller/fun.controller'
+
 
 @Router()
 export default class MainRouter extends AbstractRouter {
@@ -15,7 +14,7 @@ export default class MainRouter extends AbstractRouter {
     // resp.writeHead(400, DEFAULT_HEADER)
     let bizResp: BizResponse<string> = {
       code: BizCode.ERROR,
-      message: err.message
+      msg: err.message
     }
     resp.json(bizResp)
     resp.end()

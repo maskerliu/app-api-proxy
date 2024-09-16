@@ -1,3 +1,4 @@
+
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
 import express from 'express'
@@ -10,9 +11,9 @@ import WebpackDevServer from 'webpack-dev-server'
 import WebpackHotMiddleware from 'webpack-hot-middleware'
 import buildConfig from '../build.config.json' assert { type: 'json' }
 import { BaseConfig } from './webpack.base.config.js'
-import mainConfig from './webpack.main.config.js'
-import rendererConfig from './webpack.renderer.config.js'
-import webConfig from './webpack.web.config.js'
+import mainConfig from './webpack.main.config'
+import rendererConfig from './webpack.renderer.config'
+import webConfig from './webpack.web.config'
 
 const Run_Mode_DEV = 'development'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -131,7 +132,10 @@ function startElectron() {
     args = args.concat(process.argv.slice(2))
   }
 
-  electronProcess = spawn('electron', args)
+  electronProcess = spawn('electron', args, {
+    stdio: 'inherit',
+    shell: process.platform === 'win32'
+  })
   electronProcess.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })
   electronProcess.stderr?.on('data', data => { consoleLog('Electron', data, 'red') })
   electronProcess.on('close', () => { if (!manualRestart) process.exit() })

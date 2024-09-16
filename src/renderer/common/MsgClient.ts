@@ -1,16 +1,15 @@
 import { IOT } from '../../common/iot.models'
-import { useIOTDeviceStore } from '../store/IOTDevices'
 
 export default abstract class MsgClient {
 
-  protected deviceStore: any
+  // protected deviceStore: any
   protected client: any
   protected curTopic: string
   protected curSubDevice: string
 
 
   constructor() {
-    this.deviceStore = useIOTDeviceStore()
+    
   }
 
   // abstract subscribe(deviceId: string): void
@@ -57,7 +56,7 @@ export default abstract class MsgClient {
       let msg = JSON.parse(message) as IOT.IOTMsg
       switch (msg.type) {
         case IOT.MsgType.DATA:
-          this.deviceStore.updateDeviceData(msg.from, msg.data)
+          // this.deviceStore.updateDeviceData(msg.from, msg.data)
           break
         case IOT.MsgType.REGISTER:
 

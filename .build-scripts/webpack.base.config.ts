@@ -1,3 +1,4 @@
+'use strict'
 
 import webpack, { Configuration } from 'webpack'
 

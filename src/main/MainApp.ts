@@ -4,7 +4,6 @@ import {
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { Fun } from '../common/fun.models'
 import { USER_DATA_DIR } from './common/Const'
 
 import localServer from './MainServer'
@@ -88,7 +87,7 @@ export default class MainApp {
       resizable: true,
       icon: icon,
       show: false,
-      titleBarStyle: 'hidden',
+      titleBarStyle: process.platform==='win32'? 'default':'hidden',
       webPreferences: {
         devTools: process.env.NODE_ENV == 'development',
         sandbox: false,
@@ -159,63 +158,9 @@ export default class MainApp {
 
   private initIPCService() {
     ipcMain.handle('openGame', (envent: IpcMainEvent, args?: any) => {
-      this.createGameWindow(args[0])
+      // this.createGameWindow(args[0])
     })
 
   }
-
-  private createGameWindow(game: Fun.GameItem) {
-
-    if (this.gameWindow == null) {
-      let winOpt: BrowserWindowConstructorOptions = {
-        width: 390,
-        height: 844,
-        parent: this.mainWindow,
-        useContentSize: true,
-        transparent: false,
-        frame: true,
-        resizable: false,
-        icon: nativeImage.createFromDataURL(game.icon),
-        show: false,
-        titleBarStyle: 'default',
-        webPreferences: {
-          devTools: process.env.NODE_ENV == 'development',
-          sandbox: false,
-          preload: path.join(__dirname, 'preload.cjs')
-        },
-      }
-
-      this.gameWindow = new BrowserWindow(winOpt)
-      this.gameWindow.webContents.frameRate = 30
-
-      if (process.env.NODE_ENV == 'development') {
-        this.gameWindow.webContents.openDevTools()
-      }
-
-
-      this.gameWindow.webContents.on('dom-ready', () => {
-        const folderPath = process.env.NODE_ENV !== 'development'
-          ? path.join(__dirname, './static')
-          : path.join(__dirname, '../../static')
-
-        this.gameWindow.webContents.executeJavaScript(
-          fs.readFileSync(path.join(folderPath, 'YppJSBridge.js')).toString(),
-        )
-      })
-
-      this.gameWindow.on('closed', () => {
-        this.gameWindow.destroy()
-        this.gameWindow = null
-      })
-
-      this.gameWindow.on('ready-to-show', () => {
-        this.gameWindow.show()
-        this.gameWindow.focus()
-      })
-    }
-
-    this.gameWindow.loadURL(game.url)
-  }
-
 
 }

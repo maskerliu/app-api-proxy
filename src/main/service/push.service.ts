@@ -12,7 +12,7 @@ export default class PushService {
   private sockjsServer: SockServer
 
   constructor() {
-    this.sockjsServer = createServer({ prefix: '/echo', transports: 'websocket' })
+    this.sockjsServer = createServer({ prefix: '/echo', websocket: true })
     this.sockjsServer.on('connection', (conn: any) => {
       conn.on('data', (data: any) => { this.handleMsg(conn, data) })
       conn.on('close', () => { this.handleClose(conn) })

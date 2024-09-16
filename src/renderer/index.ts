@@ -15,3 +15,4 @@ app.use(router)
 app.use(pinia)
 app.use(vant)
 app.mount('#app')
+

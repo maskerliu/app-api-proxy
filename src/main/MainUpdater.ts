@@ -1,4 +1,4 @@
-import { MacUpdater } from 'electron-updater'
+// import { MacUpdater } from 'electron-updater'
 // Or NsisUpdater, AppImageUpdater
 
 export default class AppUpdater {
