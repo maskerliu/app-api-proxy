@@ -17,11 +17,6 @@
           <van-icon class="iconfont icon-lab" size="22" />
         </template>
       </van-tabbar-item>
-      <van-tabbar-item replace to="/fun">
-        <template #icon>
-          <van-icon class="iconfont icon-glove" size="22" />
-        </template>
-      </van-tabbar-item>
       <van-tabbar-item replace to="/message" badge="5">
         <template #icon>
           <van-icon class="iconfont icon-msg-read" size="22" />
@@ -49,10 +44,13 @@ onMounted(() => {
     return true
   })
 
-  useRouter().replace("/settings")
+  useRouter().replace("/proxy")
   active.value = 1
 })
 
+import { getCurrentInstance } from "vue"
+const appContext = getCurrentInstance()
+console.log(appContext)
 </script>
 
 <style>

@@ -10,7 +10,6 @@ import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config.js'
 
-
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))

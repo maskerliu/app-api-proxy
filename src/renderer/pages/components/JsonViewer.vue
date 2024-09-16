@@ -64,7 +64,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { computed, defineComponent, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
   fontSize: { type: Number, require: false, default: 12 },

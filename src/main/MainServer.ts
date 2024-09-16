@@ -11,7 +11,6 @@ import path from 'path'
 
 import MainRouter from './MainRouter'
 import CommonService from './service/common.service'
-import IOTDeviceMgrService from './service/iot.deviceMgr.service'
 import ProxyService from './service/proxy.service'
 import PushService from './service/push.service'
 
@@ -36,9 +35,6 @@ class LocalServer {
 
   @Autowired()
   pushService: PushService
-
-  @Autowired()
-  iotDeviceMgrService: IOTDeviceMgrService
 
   private corsOpt: CorsOptions = {
     credentials: true,
@@ -67,9 +63,6 @@ class LocalServer {
       `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:${this.commonService.serverConfig.port}`,
       `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9080`,
       `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9081`,
-      'https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-8884.preview.app.github.dev',
-      'https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-9080.preview.app.github.dev',
-      'https://maskerliu-turbo-palm-tree-jrjxv9xq6gfqpgv-9081.preview.app.github.dev'
     ]
 
     this.httpApp.use(express.static(path.resolve(__dirname, '../web'), {
@@ -106,7 +99,7 @@ class LocalServer {
   private async startHttpServer() {
     let HTTP: any
     let baseDir = process.env.NODE_ENV == 'development' ? '' : __dirname + '/'
-    console.log(this.buildConfig, baseDir)
+    // console.log(this.buildConfig, baseDir)
     if (this.buildConfig.protocol == 'https') {
       HTTP = await import('https')
       var key = fs.readFileSync(baseDir + 'cert/private.key')

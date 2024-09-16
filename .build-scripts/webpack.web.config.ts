@@ -7,7 +7,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
+// import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config.js'
@@ -21,6 +21,7 @@ let whiteListedModules = ['axios']
 class WebConfig extends BaseConfig {
 
   name: Configuration['name'] = 'web'
+  devtool: Configuration['devtool'] = 'cheap-module-source-map'
   target: Configuration['target'] = 'web'
   entry: Configuration['entry'] = { web: path.join(dirname, '../src/web/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
@@ -28,6 +29,10 @@ class WebConfig extends BaseConfig {
 
   module: Configuration['module'] = {
     rules: [
+      {
+        test: /\.ts/,
+        loader: 'source-map-loader'
+      },
       {
         test: /\.vue$/,
         loader: 'vue-loader',
@@ -44,7 +49,7 @@ class WebConfig extends BaseConfig {
         use: ['vue-style-loader', 'css-loader']
       },
       {
-        test: /\.tsx?$/,
+        test: /\.ts?$/,
         loader: 'ts-loader',
         exclude: /node_modules/,
         options: {
@@ -87,6 +92,7 @@ class WebConfig extends BaseConfig {
       __IS_WEB__: true,
       __VUE_OPTIONS_API__: false,
       __VUE_PROD_DEVTOOLS__: false,
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false
     }),
   ]
 

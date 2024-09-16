@@ -20,36 +20,7 @@ export default createRouter({
     {
       path: '/lab',
       name: 'Lab',
-      redirect: '/lab/iot',
-      children: [
-        {
-          path: 'iot',
-          name: 'IOTDeviceMgr',
-          component: require('../pages/lab/IOTMgr.vue').default
-        }
-      ]
-    },
-    {
-      path: '/fun',
-      name: 'Fun',
-      redirect: '/fun/gameLobby',
-      children: [
-         {
-          path: 'gameLobby',
-          name: 'GameLobby',
-          component: require('../pages/fun/GameLobby.vue').default,
-        },
-        {
-          path: 'videoLab',
-          name: 'VideoLab',
-          component: require('../pages/fun/VideoLab.vue').default,
-        }
-      ]
-    },
-    {
-      path: '/fun/video',
-      name: 'VideoLab',
-      component: require('../pages/fun/GameLobby.vue').default
+      component: require('../pages/lab/Lab.vue').default
     },
     {
       path: '/message',

@@ -2,9 +2,9 @@
   <van-row ref="container" class="full-row">
     <van-col ref="leftDom" class="bg-border left-panel">
       <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
-        style="width: 100%; padding: 5px 5px; boder: 1px solid grey">
+        style="width: 100%; padding: 5px 5px; ">
         <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
-          <i class="iconfont icon-api" style="font-weight: blod" />
+          <i class="iconfont icon-api" style="font-weight: blod"></i>
         </van-checkbox>
         <van-checkbox shape="square" name="5020" style="padding: 5px 10px">
           <van-icon class="iconfont icon-maidian" style="font-weight: blod" />
@@ -12,9 +12,9 @@
         <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
           <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
         </van-checkbox>
-        <van-icon class="iconfont icon-rule" style="font-size: 1.9rem; margin: 6px"
+        <van-icon class="iconfont icon-rule" style="font-size: 1.4rem; margin: 6px; color: gray"
           @click="recordStore.showMockRuleMgr = true" />
-        <van-icon class="iconfont icon-qrcode" style="font-size: 1.9rem; margin: 6px"
+        <van-icon class="iconfont icon-qrcode" style="font-size: 1.4rem; margin: 6px; color: gray"
           @click="commonStore.showQrCode = true" />
       </van-checkbox-group>
 
@@ -65,10 +65,9 @@
 </template>
 
 <script lang="ts" setup>
-import { mapActions, mapState, mapWritableState } from 'pinia'
 import QrcodeVue from 'qrcode.vue'
 import { Notify } from 'vant'
-import { defineComponent,defineAsyncComponent, onMounted, ref, VNode, watch } from 'vue'
+import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
@@ -150,7 +149,7 @@ function click2Reg() {
 <style scoped>
 .left-panel {
   margin: 5px;
-  min-width: 300px;
+  min-width: 320px;
   height: calc(100% - 10px);
 }
 

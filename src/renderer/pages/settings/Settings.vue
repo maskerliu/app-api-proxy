@@ -5,7 +5,6 @@
     <van-col style="flex: 1; min-width: 375px; padding: 15px 0; height: 100%; overflow-y: auto;">
       <van-form style="margin-top: 15px; width: 100%" label-align="right" colon>
         <sys-info />
-        <game-bundle-mgr />
         <local-resource-mgr />
       </van-form>
     </van-col>
@@ -16,7 +15,6 @@
 import { onMounted } from 'vue'
 
 import ClientMgr from './ClientMgr.vue'
-import GameBundleMgr from './GameBundleMgr.vue'
 import LocalResourceMgr from './LocalResourceMgr.vue'
 import SysInfo from './SysInfo.vue'
 

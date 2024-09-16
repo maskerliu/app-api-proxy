@@ -1,3 +1,4 @@
+
 export interface IElectronAPI {
   openFile: (...args: any) => Promise<void>,
   openGame: (...args: any) => Promise<void>
@@ -16,3 +17,9 @@ declare global {
   let PROTOCOL: string
   let SERVER_BASE_URL: string
 }
+
+// declare module "@vue/runtime-core" {
+// 	export interface ComponentCustomProperties {
+// 		$t: (key: string, ...args: any[]) => string;
+// 	}
+// }

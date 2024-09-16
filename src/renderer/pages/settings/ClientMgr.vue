@@ -42,32 +42,33 @@
   </van-col>
 </template>
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { ProxyMock } from '../../../common/proxy.models'
-import { useCommonStore } from '../../store'
+import { ref } from 'vue';
+import { ProxyMock } from '../../../common/proxy.models';
+import { $t } from '../../../lang';
+import { useCommonStore } from '../../store';
 
 const commonStore = useCommonStore()
 const dialogVisible = ref(false)
-const selectClient = ref<ProxyMock.ClientInfo>(null)
+const selectClient = ref<ProxyMock.ClientInfo>()
 const broadcastMsg = ref('')
 const imMsg = ref('')
 
 function sendBroadcastMsg(): void {
-  commonStore.publishMessage(this.broadcastMsg)
-  // let msg: PushMsg<any> = {
-  //   type: PushMsgType.TXT,
-  //   payload: {
-  //     type: BizType.IM,
-  //     content: this.broadcastMsg
-  //   }
-  // }
-  // this.sendMessage(msg)
-  // this.broadcastMsg = ''
+  commonStore.publishMessage(broadcastMsg.value)
+  let msg: ProxyMock.PushMsg<any> = {
+    type: ProxyMock.PushMsgType.TXT,
+    payload: {
+      type: ProxyMock.BizType.IM,
+      content: broadcastMsg.value
+    }
+  }
+  commonStore.sendMessage(msg)
+  broadcastMsg.value = ''
 }
 
 function sendMsg(): void {
   let msg: ProxyMock.PushMsg<any> = {
-    to: this.selectClient.uid,
+    to: selectClient.value.uid,
     type: ProxyMock.PushMsgType.TXT,
     payload: {
       type: ProxyMock.BizType.IM,
