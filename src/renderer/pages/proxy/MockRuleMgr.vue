@@ -1,17 +1,15 @@
 <template>
   <van-row class="full-row">
-    <van-row class="bg-border" justify="start" align="center" style="
-        width: calc(100% - 10px);
-        background-color: white;
-      ">
+    <van-row class="bg-border" justify="start" align="center"
+      style=" width: calc(100% - 10px);  background-color: white;  ">
       <van-col style="background: white; width: 375px">
         <van-popover :show="showSearchResult" placement="bottom-start" trigger="manual" :overlay="true"
           :close-on-click-overlay="true" @click-overlay="onRuleSelect(null)">
           <van-list class="search-result" style="width: 300px;">
-            <van-cell class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name" :label="rule.desc"
-              @click="onRuleSelect(rule)">
+            <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
+              :label="rule.desc" @click="onRuleSelect(rule)">
               <template #value>
-                <div style="margin-top: 0">
+                <div>
                   <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
                     @click="onRuleEdit(rule)" />
                   <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
@@ -33,27 +31,28 @@
         </van-popover>
       </van-col>
       <van-col span="12" style="min-width: 310px; padding: 0">
-        <van-cell :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
+        <van-cell center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
           :label="curRule?.desc == null ? $t('mock.rule.desc') : curRule.desc">
           <template #value>
-            <div align="center">
+            <div>
               <van-icon class="iconfont icon-edit" size="18" style="color: #3498db" @click="onRuleEdit(curRule)" />
               <van-icon class="iconfont icon-delete" size="18" style="color: red; margin-left: 10px"
                 @click="onRuleDelete(curRule)" />
               <van-icon class="iconfont icon-upload" size="18" style="color: red; margin-left: 10px"
                 @click="onRuleUpload(curRule)" />
-              <van-switch size="14" v-model="curRule.isMock" style="margin-left: 10px"
+              <van-switch size="14" v-model="curRule.isMock" style="margin-left: 10px;"
                 @change="onMockSwitchChanged(curRule)" />
             </div>
           </template>
           <template #right-icon>
-            <van-icon class="iconfont icon-cancel" size="20" style="color: red;" @click="onRuleSelect(null)" />
+            <van-icon class="iconfont icon-cancel" size="20" style="color: red; margin-top: -2px;"
+              @click="onRuleSelect(null)" />
           </template>
         </van-cell>
       </van-col>
       <van-col style="min-width: 30px; padding: 0" align="center">
         <van-button plain type="primary" size="small" :loading="isSaving" @click="onSave(false)">{{ $t('common.save')
-        }}
+          }}
         </van-button>
       </van-col>
     </van-row>
@@ -111,7 +110,7 @@
 </template>
 
 <script lang="ts" setup>
-import { Notify } from 'vant'
+import { showNotify } from 'vant'
 import { onMounted, PropType, ref, watch } from 'vue'
 import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
@@ -163,7 +162,7 @@ async function fetchPagedMockRules() {
     rules.value = await searchMockRules(keyword.value)
     showSearchResult.value = rules.value != null && rules.value.length > 0
   } catch (err) {
-    Notify({ message: '未找到匹配的规则', type: 'danger' })
+    showNotify({ message: '未找到匹配的规则', type: 'danger' })
   }
 }
 
@@ -194,7 +193,7 @@ async function fetchMockRuleDetail() {
     curRule.value = await getMockRuleDetail(curRule.value._id)
     curRule.value.requests = json2map(curRule.value.jsonRequests)
   } catch (err) {
-    Notify({ message: '未找到对应规则', type: 'warning', duration: 500 })
+    showNotify({ message: '未找到对应规则', type: 'warning', duration: 500 })
   }
 }
 
@@ -216,7 +215,7 @@ async function onRuleDeleteConfirm() {
     curRule.value = new ProxyMock.MockRule()
     showRuleDelete.value = false
   } catch (err) {
-    Notify({ message: '删除失败', type: 'warning', duration: 500 })
+    showNotify({ message: '删除失败', type: 'warning', duration: 500 })
   }
 }
 
@@ -241,9 +240,9 @@ async function onSave(isSnap: boolean) {
     curRule.value.jsonRequests = map2json(curRule.value.requests)
     await saveMockRule(curRule.value, isSnap)
     await fetchMockRuleDetail()
-    Notify({ message: '规则更新成功', type: 'success', duration: 500 })
+    showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
   } catch (err) {
-    Notify({ message: '规则更新失败', type: 'danger', duration: 500 })
+    showNotify({ message: '规则更新失败', type: 'danger', duration: 500 })
   }
   if (isSnap) showRuleEdit.value = false
 }

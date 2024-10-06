@@ -48,9 +48,9 @@ onMounted(() => {
   active.value = 1
 })
 
-import { getCurrentInstance } from "vue"
-const appContext = getCurrentInstance()
-console.log(appContext)
+// import { getCurrentInstance } from "vue"
+// const appContext = getCurrentInstance()
+// console.log(appContext)
 </script>
 
 <style>

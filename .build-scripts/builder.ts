@@ -24,7 +24,7 @@ function run() {
 }
 
 function clean() {
-  deleteSync(['build/*', '!build/icons', '!build/icons/icon.*'])
+  deleteSync(['build/**/*'])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
   console.log(`\n${doneLog}\n`)
   process.exit()
@@ -32,9 +32,8 @@ function clean() {
 
 async function build() {
   greeting()
-
-  deleteSync(['dist/electron/*', '!.gitkeep'])
-  deleteSync(['dist/web/*', '!.gitkeep'])
+  deleteSync(['build/**/*'])
+  deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
 
   const spinner = new Multispinner([mainConfig.name, renderer.name, webConfig.name],
     { preText: 'building', postText: 'process' })

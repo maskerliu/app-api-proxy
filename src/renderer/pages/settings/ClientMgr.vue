@@ -26,7 +26,7 @@
       </van-grid-item>
     </van-grid>
 
-    <van-popup class="bg-border" v-model:show="dialogVisible" closeable close-icon="close">
+    <van-popup round v-model:show="dialogVisible" closeable close-icon="close">
       <van-form style="width: 450px; margin: 15px">
         <van-field label="client id" :model-value="selectClient.uid" readonly />
         <van-field label="client key" :model-value="selectClient.key" readonly />
@@ -44,7 +44,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { ProxyMock } from '../../../common/proxy.models';
-import { $t } from '../../../lang';
+// import { $t } from '../../../lang';
 import { useCommonStore } from '../../store';
 
 const commonStore = useCommonStore()

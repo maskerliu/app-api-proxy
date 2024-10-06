@@ -1,6 +1,6 @@
 import {
   app, BrowserView, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, IpcMainEvent,
-  Menu, nativeImage, session, Tray
+  Menu, nativeImage, nativeTheme, session, Tray
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -18,7 +18,8 @@ export default class MainApp {
 
   private appTray: Tray = null
   private winURL: string = process.env.NODE_ENV === 'development' ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
-  private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, '../../static') : path.join(__dirname, './static')
+  private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, './icons') : path.join(__dirname, './static')
+  private trayIconName: string = process.platform === 'win32' ? "icon.ico" : "icon.icns"
 
   public startApp() {
 
@@ -48,7 +49,8 @@ export default class MainApp {
       }
     })
 
-    app.on('ready', () => {
+
+    app.whenReady().then(() => {
       this.initSessionConfig()
       this.initIPCService()
 
@@ -63,7 +65,19 @@ export default class MainApp {
   }
 
   private createAppMenu() {
-    Menu.setApplicationMenu(null)
+    let tray = new Tray(`${this.trayFloder}/${this.trayIconName}`)
+    const contextMenu = Menu.buildFromTemplate([
+      { label: '用例管理', },
+      { label: '设置', },
+      {
+        label: '退出', click: () => {
+          app.quit()
+        }
+      }
+    ])
+    tray.setToolTip('AppApiProxy')
+    tray.setContextMenu(contextMenu)
+    // Menu.setApplicationMenu(null)
   }
 
   private createMainWindow() {
@@ -73,10 +87,10 @@ export default class MainApp {
       return
     }
 
-    let icon = nativeImage.createFromPath(path.join(this.trayFloder, 'icon_tray.png'))
     Menu.setApplicationMenu(null)
 
     let winOpt: BrowserWindowConstructorOptions = {
+      title: "AppApiProxy",
       width: 1200,
       height: 800,
       minWidth: 1024,
@@ -85,11 +99,11 @@ export default class MainApp {
       transparent: false,
       frame: true,
       resizable: true,
-      icon: icon,
+      icon: nativeImage.createFromPath(path.join(this.trayFloder, this.trayIconName)),
       show: false,
-      titleBarStyle: process.platform==='win32'? 'default':'hidden',
+      titleBarStyle: process.platform === 'win32' ? 'default' : 'hidden',
       webPreferences: {
-        devTools: process.env.NODE_ENV == 'development',
+        // devTools: process.env.NODE_ENV == 'development',
         sandbox: false,
         preload: path.join(__dirname, 'preload.cjs')
       },
@@ -161,6 +175,13 @@ export default class MainApp {
       // this.createGameWindow(args[0])
     })
 
+  }
+
+  private registerThemeChanged() {
+
+    nativeTheme.on("updated", ()=>{
+      
+    })
   }
 
 }

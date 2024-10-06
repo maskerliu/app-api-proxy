@@ -1,11 +1,9 @@
 
-import bodyParser from 'body-parser'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
-import { app } from 'electron'
 import express, { Application, Response } from 'express'
-import fs from 'fs'
 import fileUpload from 'express-fileupload'
+import fs from 'fs'
 import { Autowired, Component } from 'lynx-express-mvc'
 import path from 'path'
 
@@ -40,6 +38,9 @@ class LocalServer {
     credentials: true,
     optionsSuccessStatus: 200,
   }
+
+  public init() {}
+
   public async start() {
 
     let info = await si.baseboard()
@@ -56,6 +57,7 @@ class LocalServer {
 
   private initHttpServer() {
     this.httpApp = express()
+    console.log("server ip", this.commonService.serverConfig.ip)
     this.corsOpt.origin = [
       `${this.buildConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
       `${this.buildConfig.protocol}://localhost:9080`,

@@ -40,7 +40,10 @@ class MainConfig extends BaseConfig {
     ]
   }
 
-  node: Configuration['node'] = {}
+  node: Configuration['node'] = {
+    __dirname: true,
+    __filename: true
+  }
 
   output: Configuration['output'] = {
     filename: '[name].cjs',
@@ -75,8 +78,14 @@ class MainConfig extends BaseConfig {
     this.plugins?.push(
       new CopyWebpackPlugin({
         patterns: [{
-          from: path.join(dirname, '../cert/**/*'),
+          from: path.join(dirname, '../cert'),
           to: path.join(dirname, '../dist/electron/'),
+        }]
+      }),
+      new CopyWebpackPlugin({
+        patterns: [{
+          from: path.join(dirname, '../icons'),
+          to: path.join(dirname, '../build/icons/'),
         }]
       }),
     )
