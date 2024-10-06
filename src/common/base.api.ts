@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { BizCode, BizResponse } from './base.models'
 
-import { Notify } from 'vant'
+import { showNotify } from 'vant'
 
 axios.defaults.timeout = 10000
 axios.defaults.withCredentials = true
@@ -25,10 +25,10 @@ async function request<T>(method: string, path: string, baseURL?: string, header
     case BizCode.SUCCESS:
       return bizResp.data
     case BizCode.FAIL:
-      Notify({ message: bizResp.msg, type: "warning" })
+      showNotify({ message: bizResp.msg, type: "warning" })
       return Promise.reject(bizResp.msg)
     case BizCode.ERROR:
-      Notify({ message: bizResp.msg, type: "danger" })
+      showNotify({ message: bizResp.msg, type: "danger" })
       return Promise.reject(bizResp.msg)
     default:
       break
@@ -53,5 +53,6 @@ export function updateClientUID(uid: string) {
 }
 
 export function updateBaseDomain(domain: string) {
+  console.log(domain)
   BASE_DOMAIN = domain
 }

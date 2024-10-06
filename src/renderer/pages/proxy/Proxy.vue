@@ -50,11 +50,11 @@
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
     </van-col>
 
-    <van-popup v-model:show="recordStore.showMockRuleMgr" :style="{ width: '90%', height: '90vh', padding: '0' }">
+    <van-popup round v-model:show="recordStore.showMockRuleMgr" :style="{ width: '90%', height: '90vh', padding: '0' }">
       <mock-rule-mgr style="display: flex" :record="recordStore.records.get(recordStore.curRecordId)" />
     </van-popup>
 
-    <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" :show-confirm-button="false"
+    <van-popup round :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" :show-confirm-button="false"
       :show-cancel-button="false">
       <qrcode-vue :value="commonStore.registerUrl" :size="300" center style="margin: 5px" />
       <div class="register-url" @click="click2Reg">
@@ -66,7 +66,7 @@
 
 <script lang="ts" setup>
 import QrcodeVue from 'qrcode.vue'
-import { Notify } from 'vant'
+import { showNotify } from 'vant'
 import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
@@ -107,9 +107,9 @@ watch(() => recordStore.proxyTypes, () => {
 watch(proxyDelay, async () => {
   try {
     await setProxyDelay(Number(proxyDelay))
-    Notify({ message: '成功设置延迟', type: 'success' })
+    showNotify({ message: '成功设置延迟', type: 'success' })
   } catch (err) {
-    Notify({ message: '设置延迟失败', type: 'danger' })
+    showNotify({ message: '设置延迟失败', type: 'danger' })
   }
 })
 

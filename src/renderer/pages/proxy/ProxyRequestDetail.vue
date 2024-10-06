@@ -1,6 +1,6 @@
 <template>
   <div class="inspector-panel bg-border" ref="inspectorPanel">
-    <div class="request-path">
+    <div class="inspector-row request-path">
       <span class="request-url">
         <b>[Path] </b> {{ record.url }}<br />
         <span style="font-size: 0.7rem; font-weight: normal">
@@ -10,42 +10,61 @@
       <van-button style="margin: 0 5px" plain size="small" type="success" icon="description" @click="copyLink" />
       <van-button style="margin: 0 5px" plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
     </div>
-    <div class="inspector-row" style="margin-top: 70px; padding-bottom: 15px">
+    <div class="inspector-row" style="margin-top: 70px; padding-bottom: 5px">
       <h3>{{ $t('proxy.requestHeader') }}</h3>
-      <json-viewer style="margin-top: 40px" :closed="true" :data="record.headers == null ? {} : record.headers">
-      </json-viewer>
+      <!-- <json-viewer style="margin-top: 50px" :closed="true" :data="record.headers == null ? {} : record.headers">
+      </json-viewer> -->
+      <vue-json-pretty :show-icon="true" theme="light" :deep="0" style="margin-top: 50px; padding: 0 15px;"
+        :data="record.requestData == null ? {} : record.requestData" />
     </div>
-    <div class="inspector-row" style="padding-bottom: 15px">
+    <div class="inspector-row" style="padding-bottom: 15x">
       <h3>{{ $t('proxy.requestParams') }}</h3>
-      <json-viewer style="margin-top: 40px" :data="record.requestData == null ? {} : record.requestData"></json-viewer>
+      <!-- <json-viewer style="margin-top: 50px" :data="record.requestData == null ? {} : record.requestData"></json-viewer> -->
+      <vue-json-pretty :show-icon="true" theme="light" :deep="0" style="margin-top: 50px; padding: 0 15px;"
+        :data="record.requestData == null ? {} : record.requestData" />
+
     </div>
-    <div class="inspector-row" style="padding-bottom: 15px">
+    <div class="inspector-row" style="padding-bottom: 5px">
       <h3>{{ $t('proxy.responseHeader') }}</h3>
-      <json-viewer style="margin-top: 40px" :closed="true"
-        :data="record.responseHeaders == null ? {} : record.responseHeaders"></json-viewer>
+      <!-- <json-viewer style="margin-top: 50px" :closed="true"
+        :data="record.responseHeaders == null ? {} : record.responseHeaders"></json-viewer> -->
+      <vue-json-pretty :show-icon="true" theme="light" :deep="0" style="margin-top: 50px; padding: 0 15px;"
+        :data="record.responseHeaders == null ? {} : record.responseHeaders" />
     </div>
     <div class="inspector-row" style="height: calc(100% - 65px)" ref="respDataDiv">
       <h3>{{ $t('proxy.responseBody') }}</h3>
-      <json-viewer style="margin-top: 50px; height: calc(100% - 105px)"
+      <!-- <json-viewer style="margin-top: 50px; height: calc(100% - 105px)"
         :data="record.responseData == null ? {} : record.responseData" :deep="5">
-      </json-viewer>
+      </json-viewer> -->
+      <vue-json-pretty :show-icon="true" theme="light" :show-line-number="true"
+        style="margin-top: 50px; padding: 0 15px; height: calc(100% - 105px)"
+        :data="record.responseData == null ? {} : record.responseData">
+
+        <template #renderNodeValue="{ node, defaultValue }">
+          <template v-if="typeof node.content === 'string' && node.content.startsWith('https://')">
+            <a :href="node.content" target="_blank">{{ node.content }}</a>
+          </template>
+          <template v-else>{{ defaultValue }}</template>
+        </template>
+      </vue-json-pretty>
     </div>
 
-    <van-dialog title="预览" :show="showPreview" top="100px" align="center">
+    <van-dialog title="预览" :show="showPreview" top="100px">
       <img style="max-width: 100%; max-height: 60vh; border-radius: 8px" :src="curImgSrc" v-show="!!curImgSrc" />
       <audio id="audioPlayer" style="width: 100%; max-width: 100%; max-height: 60vh" :src="curAudioSrc" controls="true"
-        v-show="!!curAudioSrc" />
+        v-show="!!curAudioSrc"></audio>
       <video style="max-width: 100%; max-height: 60vh; object-fit: contain" :src="curVideoSrc" v-show="!!curVideoSrc"
-        controls="true" />
+        controls="true"></video>
     </van-dialog>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, PropType, ref, watch } from 'vue';
+import { PropType, ref, watch } from 'vue';
+import VueJsonPretty from 'vue-json-pretty';
+import 'vue-json-pretty/lib/styles.css';
 import { ProxyMock } from '../../../common/proxy.models';
 import { useProxyRecordStore } from '../../store/ProxyRecords';
-import JsonViewer from '../components/JsonViewer.vue';
 
 const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
 const VIDEO_RGX = new RegExp('(.mp4)$')
@@ -66,7 +85,7 @@ const showPreview = ref(false)
 watch(showPreview, () => {
   if (!showPreview.value) {
     if (audioPlayer != null) {
-      audioPlayer.pause()
+      // audioPlayer.pause()
     }
     curImgSrc.value = null
     curAudioSrc.value = null
@@ -77,26 +96,26 @@ watch(showPreview, () => {
 function onItemClick(item: string) {
   let canShow = false
   if (!!AUDIO_RGX.test(item)) {
-    this.curAudioSrc = item
-    this.curImgSrc = null
+    curAudioSrc.value = item
+    curImgSrc.value = null
     canShow = true
   } else if (!!IMG_RGX.test(item)) {
-    this.curAudioSrc = null
-    this.curImgSrc = item
+    curAudioSrc.value = null
+    curImgSrc.value = item
     canShow = true
   } else if (!!VIDEO_RGX.test(item)) {
-    this.curVideoSrc = item
+    curVideoSrc.value = item
     canShow = true
   }
-  this.showPreview = canShow
+  showPreview.value = canShow
 }
 
 function closeImgPreview() {
-  this.showPreview = false
-  this.curImgSrc = null
-  this.curAudioSrc = null
-  if (this.audioPlayer != null) {
-    this.audioPlayer.pause()
+  showPreview.value = false
+  curImgSrc.value = null
+  curAudioSrc.value = null
+  if (audioPlayer != null) {
+    // audioPlayer.pause()
   }
 }
 
@@ -118,6 +137,11 @@ function updated() {
 </script>
 
 <style>
+a {
+  color: rgb(31, 187, 166);
+  text-decoration: underline;
+}
+
 .inspector-panel {
   position: relative;
   height: calc(100% - 10px);
@@ -157,7 +181,7 @@ function updated() {
   position: fixed;
   z-index: 100;
   height: 50px;
-  width: calc(100vw - 340px);
+  width: calc(100% - 360px);
   align-items: center;
   border: 0;
   border-radius: 0px;

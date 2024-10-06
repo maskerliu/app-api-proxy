@@ -1,5 +1,5 @@
 import SockJS from 'sockjs-client'
-import { Notify } from 'vant'
+import { showNotify } from 'vant'
 import { getAllPushClients } from '../../common/proxy.api'
 import { ProxyMock } from '../../common/proxy.models'
 import { useCommonStore } from '../store'
@@ -63,7 +63,7 @@ export default class PushClient {
         break
       }
       default:
-        Notify({ message: 'unhandled code:' + msg.type, type: 'warning' })
+        showNotify({ message: 'unhandled code:' + msg.type, type: 'warning' })
     }
   }
 
@@ -71,10 +71,10 @@ export default class PushClient {
     switch (msg.type) {
       case ProxyMock.CMDType.REGISTER:
         this.commonStore.updateShowQrCode(false)
-        Notify({ message: '设备[' + msg.content + ']注册成功', type: 'success' })
+        showNotify({ message: '设备[' + msg.content + ']注册成功', type: 'success' })
         break
       case ProxyMock.CMDType.KICKDOWN:
-        Notify({ message: '被踢下线', type: 'danger' })
+        showNotify({ message: '被踢下线', type: 'danger' })
         window.close()
         break
     }
@@ -87,7 +87,7 @@ export default class PushClient {
         break
       }
       case ProxyMock.BizType.IM: {
-        Notify({ message: msg.content, type: 'success' })
+        showNotify({ message: msg.content, type: 'success' })
         break
       }
       case ProxyMock.BizType.ClientInfos: {

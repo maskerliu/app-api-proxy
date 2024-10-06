@@ -29,6 +29,7 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  filter: invert(0.0);
 }
 
 .bg-border {

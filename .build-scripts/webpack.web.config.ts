@@ -150,16 +150,13 @@ class WebConfig extends BaseConfig {
       new DefinePlugin({ PROTOCOL: `'${config.protocol}'` })
     )
 
-    if (config.domain != null) {
-      this.plugins.push(new DefinePlugin({ SERVER_BASE_URL: `'${config.domain}'` }))
-    }
+    this.plugins.push(new DefinePlugin({
+      SERVER_BASE_URL: config.domain ? `'${config.domain}'` : `'${config.protocol}://${localServer}:${config.port}'`,
+      PROTOCL: config.protocol
+    }))
 
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins?.push(
-        new DefinePlugin({
-          SERVER_BASE_URL: config.domain ? `'${config.domain}'` : `'${config.protocol}://${localServer}:${config.port}'`,
-          PROTOCL: config.protocol
-        }),
+      this.plugins.push(
         // new BundleAnalyzerPlugin({
         //   analyzerMode: 'server',
         //   analyzerHost: '127.0.0.1',
@@ -179,11 +176,6 @@ class WebConfig extends BaseConfig {
           patterns: [{
             from: path.join(dirname, '../static/favicon.ico'),
             to: path.join(dirname, '../dist/web/static/favicon.ico'),
-          },
-          {
-            context: path.join(dirname, '../node_modules/@ffmpeg/core/dist/'),
-            from: '**/*',
-            to: path.join(dirname, '../dist/web/static/')
           }]
         }),
         new LoaderOptionsPlugin({ minimize: true }),

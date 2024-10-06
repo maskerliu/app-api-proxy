@@ -105,7 +105,13 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
         isMock: false,
         method: "POST",
         requestData: null,
-        responseData: { code: '8000', msg: 'SUCCESS' + new Date().getMilliseconds(), success: true, result: {}, tid: '0712ed382aff47e4877b5f55fce0832f' },
+        responseData: {
+          code: '8000', msg: 'SUCCESS' + new Date().getMilliseconds(), success: true, result: {
+            snap: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
+            video: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
+            audio: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg'
+          }, tid: '0712ed382aff47e4877b5f55fce0832f'
+        },
         responseHeaders: { 'content- length': '2157', 'content- type': 'application/json;charset=UTF-8', date: 'Tue, 20 Sep 2022 09:27:05 GMT' },
         statusCode: 200,
         time: 406 + new Date().getMilliseconds(),

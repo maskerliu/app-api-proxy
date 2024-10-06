@@ -51,12 +51,12 @@ function startDevServer(config: BaseConfig, port: number): Promise<void> {
       }
     }
 
-    if (buildConfig.protocol == 'https') {
-      serverConfig.https = {
-        key: fs.readFileSync('cert/private.key'),
-        cert: fs.readFileSync('cert/mydomain.crt')
-      }
-    }
+    // if (buildConfig.protocol == 'https') {
+    //   serverConfig.https = {
+    //     key: fs.readFileSync('cert/private.key'),
+    //     cert: fs.readFileSync('cert/mydomain.crt')
+    //   }
+    // }
 
     const server = new WebpackDevServer(serverConfig, compiler)
 
@@ -74,7 +74,7 @@ function startMain(): Promise<void> {
     mainConfig.mode = Run_Mode_DEV
     const compiler = webpack(mainConfig)
     hotMiddleware = WebpackHotMiddleware(compiler, { log: false, heartbeat: 2500 })
-    compiler.hooks.watchRun.tapAsync("watch-run", (compilation, done) => {
+    compiler.hooks.watchRun.tapAsync("watch-run", (_, done) => {
       consoleLog("Main", chalk.white("compiling...\n"))
       hotMiddleware.publish({ action: "compiling" })
       done()

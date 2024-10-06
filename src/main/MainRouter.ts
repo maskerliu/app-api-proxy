@@ -4,7 +4,6 @@ import { BizCode, BizResponse } from '../common/base.models'
 import AbstractRouter from './common/AbstractRouter'
 
 import './controller/default.controller'
-import './test/test/TestController'
 
 
 @Router()
