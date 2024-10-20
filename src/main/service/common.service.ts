@@ -1,22 +1,18 @@
-import { Autowired, Service } from 'lynx-express-mvc'
+import { Injectable, Inject } from '@nestjs/common'
+import { ProxyService, PushService } from '.'
 import { LocalServerConfig } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
-import { getLocalIPs } from '../utils/NetworkUtils'
-import ProxyService from './proxy.service'
-import PushService from './push.service'
-
 import { Lynx_Mqtt_Broker } from '../common/Const'
+import { getLocalIPs } from '../utils/NetworkUtils'
 
-@Service()
-export default class CommonService {
+@Injectable()
+export class CommonService {
 
-  @Autowired()
-  proxyService: ProxyService
+  @Inject()
+  private readonly proxyService: ProxyService
 
-  @Autowired()
-  pushService: PushService
-
-  serverConfig: LocalServerConfig
+  @Inject()
+  private readonly pushService: PushService
 
   constructor() {
     let config = JSON.parse(process.env.BUILD_CONFIG)
@@ -27,6 +23,8 @@ export default class CommonService {
       mqttBroker: Lynx_Mqtt_Broker
     }
   }
+
+  serverConfig: LocalServerConfig
 
   public register(uid: string) {
     if (uid != null) {

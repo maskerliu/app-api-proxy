@@ -10,6 +10,57 @@ export interface BizResponse<T> {
   data?: T
 }
 
+/**
+ * @public
+ */
+export class BizFail {
+  code: BizCode
+  msg: string
+
+  constructor(code: number, msg: string) {
+    if (code < BizCode.FAIL || code > 5000) throw 'biz code must between 4000~5000'
+    this.code = code
+    this.msg = msg
+  }
+}
+
+/**
+ * @public
+ */
+export interface UserDevice {
+  os: string, // 操作系统
+  version: string, // 系统版本
+  brand: string, // 品牌
+  model: string, // 型号
+}
+
+/**
+ * @public
+ */
+export enum UserNetwork {
+  UNKNOWN,
+  Ethernet, // 有线
+  WIFI, // 无线
+  G2, // 2G
+  G3, // 3G
+  G4, // 4G
+  G5, // 5G
+}
+/**
+ * @public
+ */
+export interface BizContext {
+  token?: string,
+  uid?: string, // 用户ID
+  did: string, // 设备ID
+  ua: string, // UserAgent example: mapi/1.0 (Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)
+  network: UserNetwork,
+  deviceInfo: UserDevice,
+  appId: string,
+  version: string, // app version
+  channel: string // app channel
+}
+
 export interface Paged<T> {
   data: Array<T>
   page: any

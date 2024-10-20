@@ -1,28 +1,20 @@
-
-import { Autowired, BodyParam, Controller, Get, Post, QueryParam } from 'lynx-express-mvc'
+import { Body, Controller, Get, Post } from '@nestjs/common'
+import { Param } from '@nestjs/common/decorators'
 import { ProxyMock } from '../../common/proxy.models'
-import CommonService from '../service/common.service'
-import MockService from '../service/mock.service'
-import ProxyService from '../service/proxy.service'
-import PushService from '../service/push.service'
+import { CommonService, MockService, ProxyService, PushService } from '../service'
 
 @Controller('/appmock')
 export default class DefaultController {
 
-  @Autowired()
-  commonService: CommonService
+  constructor(
+    private readonly commonService: CommonService,
+    private readonly mockService: MockService,
+    private readonly proxyService: ProxyService,
+    private readonly pushService: PushService
+  ) { }
 
-  @Autowired()
-  mockService: MockService
-
-  @Autowired()
-  proxyService: ProxyService
-
-  @Autowired()
-  pushService: PushService
-
-  @Post('/register')
-  async register(@QueryParam("uid") uid: string) {
+  @Post('register')
+  async register(@Param("uid") uid: string) {
     if (uid == null) throw 'uid不能为空'
     let data: ProxyMock.PushMsg<any> = {
       type: ProxyMock.PushMsgType.CMD,
@@ -32,8 +24,8 @@ export default class DefaultController {
     return '注册成功'
   }
 
-  @Get('/getAllPushClients')
-  async getAllPushClients(@QueryParam("uid") uid: string) {
+  @Get('getAllPushClients')
+  async getAllPushClients(@Param("uid") uid: string) {
     let data = []
 
     this.pushService.pushClients.forEach(it => {
@@ -49,36 +41,36 @@ export default class DefaultController {
     return data
   }
 
-  @Get('/getServerConfig')
-  async getServerConfig(@QueryParam('uid') uid: string) {
+  @Get('getServerConfig')
+  async getServerConfig(@Param('uid') uid: string) {
     return this.commonService.getServerConfig()
   }
 
-  @Get('/setProxyDelay')
-  async setProxyDelay(@QueryParam('uid') uid: string, @QueryParam('delay') delay: number) {
+  @Get('setProxyDelay')
+  async setProxyDelay(@Param('uid') uid: string, @Param('delay') delay: number) {
     // let uid = req.query["uid"] as string
     // let delay = Number.parseInt(req.query["delay"] as string)
     return this.proxyService.setProxyDelay(uid, delay)
   }
 
-  @Get('/searchMockRules')
-  async searchMockRules(@QueryParam('uid') uid: string, @QueryParam('keyword') keyword: string) {
+  @Get('searchMockRules')
+  async searchMockRules(@Param('uid') uid: string, @Param('keyword') keyword: string) {
     return this.mockService.searchMockRules(uid, keyword)
   }
 
-  @Get('/getMockRuleDetail')
-  async getMockRuleDetail(@QueryParam('uid') uid: string, @QueryParam('ruleId') ruleId: string) {
+  @Get('getMockRuleDetail')
+  async getMockRuleDetail(@Param('uid') uid: string, @Param('ruleId') ruleId: string) {
     return await this.mockService.getMockRuleDetail(uid, ruleId)
   }
 
-  @Post('/saveMockRule')
-  async saveMockRule(@QueryParam('uid') uid: string, @QueryParam('onlySnap') onlySnap: string, @BodyParam() rule: ProxyMock.MockRule) {
+  @Post('saveMockRule')
+  async saveMockRule(@Param('uid') uid: string, @Param('onlySnap') onlySnap: string, @Body() rule: ProxyMock.MockRule) {
     // let rule: MockRule = JSONBigInt.parse(req.body)
     return await this.mockService.saveMockRule(uid, onlySnap == 'true', rule)
   }
 
-  @Get('/deleteMockRule')
-  async deleteMockRule(@QueryParam('uid') uid: string, @QueryParam('ruleId') ruleId: string) {
+  @Get('deleteMockRule')
+  async deleteMockRule(@Param('uid') uid: string, @Param('ruleId') ruleId: string) {
     return await this.mockService.deleteMockRule(uid, ruleId)
   }
 

@@ -1,16 +1,14 @@
 import {
-  app, BrowserView, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, IpcMainEvent,
-  Menu, nativeImage, nativeTheme, session, Tray
+  app, BrowserWindow, BrowserWindowConstructorOptions,
+  ipcMain, IpcMainEvent, Menu, nativeImage, nativeTheme, session, Tray
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { USER_DATA_DIR } from './common/Const'
-
-import localServer from './MainServer'
+import { MainServer } from './MainServer'
 
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
-
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
@@ -21,14 +19,15 @@ export default class MainApp {
   private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, './icons') : path.join(__dirname, './static')
   private trayIconName: string = process.platform === 'win32' ? "icon.ico" : "icon.icns"
 
+  private mainServer: MainServer = new MainServer()
+
   public startApp() {
 
     if (process.platform == 'linux') {
       this.initAppEnv()
-      localServer.start()
+      this.mainServer.start()
       return
     }
-
 
     if (process.platform === 'win32') {
       app.disableHardwareAcceleration()
@@ -61,7 +60,7 @@ export default class MainApp {
     })
 
     this.initAppEnv()
-    localServer.start()
+    this.mainServer.start()
   }
 
   private createAppMenu() {
@@ -179,8 +178,8 @@ export default class MainApp {
 
   private registerThemeChanged() {
 
-    nativeTheme.on("updated", ()=>{
-      
+    nativeTheme.on("updated", () => {
+
     })
   }
 

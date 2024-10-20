@@ -1,52 +1,47 @@
 
+import { NestFactory } from '@nestjs/core'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Response } from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
-import { Autowired, Component } from 'lynx-express-mvc'
 import path from 'path'
-
-import MainRouter from './MainRouter'
-import CommonService from './service/common.service'
-import ProxyService from './service/proxy.service'
-import PushService from './service/push.service'
-
 import si from 'systeminformation'
 import { USER_DATA_DIR } from './common/Const'
+import { CommonService, ProxyService, PushService } from './service'
 
-@Component()
-class LocalServer {
+import { MainModule } from './MainModule'
+import { INestApplication } from '@nestjs/common'
+
+export class MainServer {
   private buildConfig = JSON.parse(process.env.BUILD_CONFIG)
 
+  private app: INestApplication
   private httpServer: any
   private httpApp: Application
 
-  @Autowired()
-  mainRouter: MainRouter
+  // constructor(
+  //   private readonly commonService: CommonService,
+  //   private readonly proxyService: ProxyService,
+  //   private readonly pushService: PushService
+  // ) {
+  // }
 
-  @Autowired()
-  commonService: CommonService
-
-  @Autowired()
-  proxyService: ProxyService
-
-  @Autowired()
-  pushService: PushService
+  async bootstrap() {
+    this.app = await NestFactory.create(MainModule)
+    // await app.listen(process.env.PORT ?? 3000)
+  }
 
   private corsOpt: CorsOptions = {
     credentials: true,
     optionsSuccessStatus: 200,
   }
 
-  public init() {}
-
   public async start() {
 
     let info = await si.baseboard()
     console.log(info)
 
-    this.mainRouter.init()
     this.initHttpServer()
 
     if (this.httpServer != null) {
@@ -57,14 +52,15 @@ class LocalServer {
 
   private initHttpServer() {
     this.httpApp = express()
-    console.log("server ip", this.commonService.serverConfig.ip)
+
+    console.log("server ip", this.app.get(CommonService).serverConfig.ip)
     this.corsOpt.origin = [
-      `${this.buildConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
+      `${this.buildConfig.protocol}://localhost:${this.app.get(CommonService).serverConfig.port}`,
       `${this.buildConfig.protocol}://localhost:9080`,
       `${this.buildConfig.protocol}://localhost:9081`,
-      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:${this.commonService.serverConfig.port}`,
-      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9080`,
-      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9081`,
+      `${this.buildConfig.protocol}://${this.app.get(CommonService).serverConfig.ip}:${this.app.get(CommonService).serverConfig.port}`,
+      `${this.buildConfig.protocol}://${this.app.get(CommonService).serverConfig.ip}:9080`,
+      `${this.buildConfig.protocol}://${this.app.get(CommonService).serverConfig.ip}:9081`,
     ]
 
     this.httpApp.use(express.static(path.resolve(__dirname, '../web'), {
@@ -111,14 +107,13 @@ class LocalServer {
     } else {
       HTTP = await import('http')
       this.httpServer = HTTP.createServer(this.httpApp)
-      this.pushService.bindServer(this.httpServer)
+      this.app.get(PushService).bindServer(this.httpServer)
     }
-
-    this.pushService.bindServer(this.httpServer)
+    this.app.get(PushService).bindServer(this.httpServer)
     this.httpServer.listen(
-      this.commonService.serverConfig.port,
+      this.app.get(CommonService).serverConfig.port,
       '0.0.0.0',
-      () => console.log(`--启动本地代理Http服务--[${this.commonService.serverConfig.port}]`)
+      () => console.log(`--启动本地代理Http服务--[${this.app.get(CommonService).serverConfig.port}]`)
     )
   }
 
@@ -128,18 +123,11 @@ class LocalServer {
       req.on('data', (data: any) => { buf.push(data) })
       req.on('end', () => {
         req.rawbody = Buffer.concat(buf)
-        this.proxyService.handleStatRequest(req, resp)
+        this.app.get(ProxyService).handleStatRequest(req, resp)
       })
-    } else if (this.mainRouter.route(req, resp)) {
-      return
     } else {
-      this.proxyService.handleRequest(req, resp)
+      this.app.get(ProxyService).handleRequest(req, resp)
     }
   }
 
 }
-
-const localServer: any = new LocalServer()
-localServer.init()
-
-export default localServer as LocalServer

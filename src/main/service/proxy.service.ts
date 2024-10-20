@@ -1,11 +1,10 @@
+import { Inject, Injectable } from '@nestjs/common'
 import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from 'axios'
 import { Request, Response } from 'express'
 import { IncomingHttpHeaders } from 'http'
-import { Autowired, Service } from 'lynx-express-mvc'
 import zlib from 'zlib'
+import { MockService, PushService } from '.'
 import { ProxyMock } from '../../common/proxy.models'
-import MockService from './mock.service'
-import PushService from './push.service'
 
 const JSONBigInt = require('json-bigint')
 let MockKey = null
@@ -17,17 +16,17 @@ export type ProxyPref = {
   delay: number
 }
 
-@Service()
-export default class ProxyService {
+@Injectable()
+export class ProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
   private proxyPrefs: Map<string, ProxyPref> = new Map()
 
-  @Autowired()
-  mockService: MockService
+  @Inject()
+  private readonly mockService: MockService
 
-  @Autowired()
-  pushService: PushService
+  @Inject()
+  private readonly pushService: PushService
 
   constructor() {
     this._sessionId = 0
