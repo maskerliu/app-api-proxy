@@ -1,13 +1,13 @@
-import { Server } from "http"
-import { Service } from 'lynx-express-mvc'
-import { Connection, createServer, Server as SockServer } from "sockjs"
+import { Injectable } from '@nestjs/common'
+import { Server } from 'http'
+import { Connection, createServer, Server as SockServer } from 'sockjs'
 import { BizCode, BizResponse } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
-@Service()
-export default class PushService {
+@Injectable()
+export class PushService {
   public pushClients: Map<String, PushClient> = new Map() // key: uid
   private sockjsServer: SockServer
 

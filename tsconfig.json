@@ -9,6 +9,7 @@
     "declarationMap": false,
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "incremental": true,
     "noEmitOnError": true,
     "noImplicitAny": false,
     "noImplicitThis": false,
@@ -33,6 +34,7 @@
   },
   "include": [
     "src/**/*",
+    "src/**/*.vue",
     ".build-scripts/**/*",
     "test/**/*"
   ],

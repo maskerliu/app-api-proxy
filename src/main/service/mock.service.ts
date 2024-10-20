@@ -1,19 +1,18 @@
-import { Autowired, Service } from 'lynx-express-mvc'
+import { Inject, Injectable } from '@nestjs/common'
+import { PushService } from '.'
 import { ProxyMock } from '../../common/proxy.models'
-import MockRepo from '../repository/mock.repo'
-import PushService from './push.service'
+import { MockRepo } from '../repository/mock.repo'
 
-@Service()
-export default class MockService {
+@Injectable()
+export class MockService {
+
+  @Inject()
+  private readonly pushService: PushService
+
+  @Inject()
+  private readonly mockRepo: MockRepo
 
   private clientMockStatus: Map<string, string> = new Map()
-
-  @Autowired()
-  pushService: PushService
-
-  @Autowired()
-  mockRepo: MockRepo
-
 
   public async mock(sessionId: number, uid: string, url: string, startTime: number, delay: number) {
 
