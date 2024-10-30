@@ -4,7 +4,7 @@ import CopyWebpackPlugin from 'copy-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack, { Configuration } from 'webpack'
-import { BaseConfig } from './webpack.base.config.js'
+import { BaseConfig } from './webpack.base.config'
 
 import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
@@ -15,6 +15,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class MainConfig extends BaseConfig {
 
+  devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
   name: Configuration['name'] = 'main'
   target: Configuration['target'] = 'electron-main'
   entry: Configuration['entry'] = {
@@ -25,6 +26,10 @@ class MainConfig extends BaseConfig {
 
   module: Configuration['module'] = {
     rules: [
+      {
+        test: /\.ts/,
+        loader: 'source-map-loader'
+      },
       {
         test: /\.ts$/,
         loader: 'ts-loader',
@@ -41,8 +46,8 @@ class MainConfig extends BaseConfig {
   }
 
   node: Configuration['node'] = {
-    __dirname: true,
-    __filename: true
+    __dirname: false,
+    __filename: false
   }
 
   output: Configuration['output'] = {
@@ -57,7 +62,7 @@ class MainConfig extends BaseConfig {
 
   resolve: Configuration['resolve'] = {
     alias: {
-
+      './': path.join(dirname, '../src/main'),
     },
     extensions: ['.ts', '.js', '.json', '.node']
   }
@@ -66,8 +71,8 @@ class MainConfig extends BaseConfig {
     super.init()
 
     this.node = {
-      __dirname: process.env.NODE_ENV !== 'production',
-      __filename: process.env.NODE_ENV !== 'production'
+      // __dirname: process.env.NODE_ENV !== 'production',
+      // __filename: process.env.NODE_ENV !== 'production'
     }
 
     this.plugins?.push(new DefinePlugin({

@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { USER_DATA_DIR } from './common/Const'
 import { MainServer } from './MainServer'
+import { error } from 'console'
 
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
@@ -16,16 +17,24 @@ export default class MainApp {
 
   private appTray: Tray = null
   private winURL: string = process.env.NODE_ENV === 'development' ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
-  private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, './icons') : path.join(__dirname, './static')
+  private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, '../../build/icons') : path.join(__dirname, './static')
   private trayIconName: string = process.platform === 'win32' ? "icon.ico" : "icon.icns"
 
   private mainServer: MainServer = new MainServer()
 
-  public startApp() {
+  constructor() {
+    this.mainServer.bootstrap()
+  }
 
+  public startApp() {
     if (process.platform == 'linux') {
       this.initAppEnv()
-      this.mainServer.start()
+      try {
+        this.mainServer.start()
+      } catch (error) {
+        console.error(error)
+      }
+
       return
     }
 
@@ -60,7 +69,11 @@ export default class MainApp {
     })
 
     this.initAppEnv()
-    this.mainServer.start()
+    try {
+      this.mainServer.start()
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   private createAppMenu() {

@@ -10,7 +10,7 @@ import webpack, { Configuration } from 'webpack'
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
-import { BaseConfig } from './webpack.base.config.js'
+import { BaseConfig } from './webpack.base.config'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
@@ -25,13 +25,14 @@ class WebConfig extends BaseConfig {
   target: Configuration['target'] = 'web'
   entry: Configuration['entry'] = { web: path.join(dirname, '../src/web/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
-
+  ignoreWarnings = [/Failed to parse source map/]
 
   module: Configuration['module'] = {
     rules: [
       {
         test: /\.ts/,
-        loader: 'source-map-loader'
+        enforce: 'pre',
+        use: ['source-map-loader']
       },
       {
         test: /\.vue$/,

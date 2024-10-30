@@ -8,7 +8,7 @@ import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
 import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
-import { BaseConfig } from './webpack.base.config.js'
+import { BaseConfig } from './webpack.base.config'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
@@ -17,7 +17,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 let whiteListedModules = ['axios']
 
 class RendererConfig extends BaseConfig {
-
+  devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
   name: Configuration['name'] = 'renderer'
   // target: Configuration['target'] = 'electron-renderer'
   entry: Configuration['entry'] = { renderer: path.join(dirname, '../src/renderer/index.ts') }
@@ -86,14 +86,12 @@ class RendererConfig extends BaseConfig {
 
   output: Configuration['output'] = {
     filename: '[name].js',
-    // library: { type: 'commonjs2' },
     path: path.join(dirname, '../dist/electron'),
   }
 
   resolve: Configuration['resolve'] = {
     alias: {
       '@': path.join(dirname, '../src/renderer'),
-      // 'vue$': 'vue/dist/vue.runtime.esm-browser.js',
     },
     extensions: ['.js', '.ts', '.vue', '.json', '.css']
   }

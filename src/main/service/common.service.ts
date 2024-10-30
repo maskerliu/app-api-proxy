@@ -1,18 +1,27 @@
-import { Injectable, Inject } from '@nestjs/common'
-import { ProxyService, PushService } from '.'
+import { inject, injectable } from "inversify"
+import "reflect-metadata"
 import { LocalServerConfig } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
-import { Lynx_Mqtt_Broker } from '../common/Const'
+import { IocTypes, Lynx_Mqtt_Broker } from '../common/Const'
 import { getLocalIPs } from '../utils/NetworkUtils'
+import { ProxyPref, ProxyService } from "./proxy.service"
+import { PushService } from './push.service'
 
-@Injectable()
-export class CommonService {
+export interface ICommonService {
+  register(uid: string): string
 
-  @Inject()
-  private readonly proxyService: ProxyService
+  getServerConfig(): LocalServerConfig
 
-  @Inject()
-  private readonly pushService: PushService
+  saveServerConfig(uid: string, config: LocalServerConfig): "" | (LocalServerConfig & ProxyPref)
+}
+
+@injectable()
+export class CommonService implements ICommonService {
+
+  @inject(IocTypes.ProxyService)
+  private proxyService: ProxyService
+  @inject(IocTypes.PushService)
+  private pushService: PushService
 
   constructor() {
     let config = JSON.parse(process.env.BUILD_CONFIG)
@@ -47,6 +56,10 @@ export class CommonService {
   }
 
   saveServerConfig(uid: string, config: LocalServerConfig) {
+    if (this.proxyService == null) {
+      console.log(`proxyService is null ${this.proxyService}`)
+      return ""
+    }
     this.proxyService.setDataProxyServer(uid, { dataServer: config.dataServer, status: config.status, delay: 0 })
     this.setServerConfig(config)
     return Object.assign(this.serverConfig, this.proxyService.getDataProxyServer(uid))

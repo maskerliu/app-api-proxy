@@ -1,13 +1,23 @@
-import { Injectable } from '@nestjs/common'
 import { Server } from 'http'
+import { injectable } from 'inversify'
+import "reflect-metadata"
 import { Connection, createServer, Server as SockServer } from 'sockjs'
 import { BizCode, BizResponse } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
-@Injectable()
-export class PushService {
+export interface IPushService {
+  bindServer(httpServer: Server): void
+  closeWebSocketServer(callback: any): void
+  sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>): void
+  sendProxyMessage(clientUid: String, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): void
+  getAllPushClients(): BizResponse<ProxyMock.MsgPushClient[]>
+}
+
+
+@injectable()
+export class PushService implements IPushService {
   public pushClients: Map<String, PushClient> = new Map() // key: uid
   private sockjsServer: SockServer
 

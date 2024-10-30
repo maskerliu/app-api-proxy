@@ -22,7 +22,7 @@ process.env.NODE_ENV = Run_Mode_DEV
 
 process.env.BUILD_CONFIG = JSON.stringify(buildConfig)
 
-let electronProcess: ChildProcess | null = null
+let electronProc: ChildProcess | null = null
 let manualRestart = false
 let hotMiddleware: any
 
@@ -89,20 +89,20 @@ function startMain(): Promise<void> {
 
       consoleLog("Main", stats)
 
-      if (electronProcess && electronProcess.kill()) {
+      if (electronProc && electronProc.kill()) {
         manualRestart = true
 
         if (os.platform() === "darwin") {
-          process.kill(electronProcess.pid!)
-          electronProcess = null
+          process.kill(electronProc.pid!)
+          electronProc = null
           startElectron()
           setTimeout(() => { manualRestart = false }, 5000)
         } else {
-          const pid = electronProcess.pid
+          const pid = electronProc.pid
           exec(`TASKKILL /F /IM electron.exe`, (err, data) => {
             if (err) console.log(err)
             else console.log("kill pid: " + pid + " success!")
-            electronProcess = null
+            electronProc = null
             startElectron()
             manualRestart = false
           })
@@ -115,9 +115,11 @@ function startMain(): Promise<void> {
 
 function startElectron() {
   let args = [
+    '--trace-warnings',
     '--inspect=5858',
     '--experimental-worker',
     '--experimental-wasm-threads',
+    '--unhandled-rejections=strict',
     path.join(dirname, '../dist/electron/main.cjs')
   ]
 
@@ -132,13 +134,13 @@ function startElectron() {
     args = args.concat(process.argv.slice(2))
   }
 
-  electronProcess = spawn('electron', args, {
-    stdio: 'inherit',
+  electronProc = spawn('electron', args, {
+    stdio: [0, 'pipe', 'pipe'],
     shell: process.platform === 'win32'
   })
-  electronProcess.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })
-  electronProcess.stderr?.on('data', data => { consoleLog('Electron', data, 'red') })
-  electronProcess.on('close', () => { if (!manualRestart) process.exit() })
+  electronProc.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })
+  electronProc.stderr?.on('data', data => { consoleLog('Electron', data, 'red') })
+  electronProc.on('close', () => { if (!manualRestart) process.exit() })
 }
 
 
@@ -146,6 +148,7 @@ function consoleLog(proc: string, data: any, color?: string) {
   let log = ''
 
   log += chalk[color ? color : 'yellow'](`┏ ${proc} Process ${new Array(90 - proc.length).join('-')}\n\n`)
+
   if (typeof data === 'object') {
     (proc == 'Electron' ? data.toString() : data.toString({ colors: true, chunks: false }))
       .split(/\r?\n/).forEach((line: string) => { log += `  ${line}\n` })
@@ -178,9 +181,11 @@ async function start() {
 
   try {
     let localIPv4 = await WebpackDevServer.internalIP('v4')
-    await Promise.all([startDevServer(webConfig.init(localIPv4), 9081),
-    startDevServer(rendererConfig.init(localIPv4), 9080),
-    startMain()])
+    await Promise.all([
+      startDevServer(webConfig.init(localIPv4), 9081),
+      startDevServer(rendererConfig.init(localIPv4), 9080),
+      startMain()
+    ])
 
     startElectron()
   } catch (err) {
