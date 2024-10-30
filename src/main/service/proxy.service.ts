@@ -1,10 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common'
 import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from 'axios'
 import { Request, Response } from 'express'
 import { IncomingHttpHeaders } from 'http'
+import { inject, injectable } from 'inversify'
+import "reflect-metadata"
 import zlib from 'zlib'
-import { MockService, PushService } from '.'
 import { ProxyMock } from '../../common/proxy.models'
+import { IocTypes } from '../common/Const'
+import { MockService } from './mock.service'
+import { PushService } from './push.service'
 
 const JSONBigInt = require('json-bigint')
 let MockKey = null
@@ -16,25 +19,33 @@ export type ProxyPref = {
   delay: number
 }
 
-@Injectable()
-export class ProxyService {
+export interface IProxyService {
+  getDataProxyServer(uid: string): ProxyPref
+  setDataProxyServer(uid: string, proxyPref: ProxyPref): void
+  setProxyDelay(uid: string, delay?: number): void
+  handleStatRequest(req: any, resp: Response): Promise<void>
+  handleRequest(req: Request, resp: Response): Promise<void>
+}
+
+@injectable()
+export class ProxyService implements IProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
   private proxyPrefs: Map<string, ProxyPref> = new Map()
 
-  @Inject()
+  @inject(IocTypes.MocksService)
   private readonly mockService: MockService
 
-  @Inject()
+  @inject(IocTypes.PushService)
   private readonly pushService: PushService
 
   constructor() {
     this._sessionId = 0
 
-    axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
-      MockKey = resp.data
-      console.log(MockKey)
-    }).catch(err => { console.error('FetchMockKey', err.cause) })
+    // axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
+    //   MockKey = resp.data
+    //   console.log(MockKey)
+    // }).catch(err => { console.error('FetchMockKey', err.cause) })
   }
 
   public getDataProxyServer(uid: string): ProxyPref {

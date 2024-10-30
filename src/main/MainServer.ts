@@ -1,35 +1,39 @@
 
-import { NestFactory } from '@nestjs/core'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Response } from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
+import { Container } from 'inversify'
 import path from 'path'
 import si from 'systeminformation'
-import { USER_DATA_DIR } from './common/Const'
-import { CommonService, ProxyService, PushService } from './service'
-
-import { MainModule } from './MainModule'
-import { INestApplication } from '@nestjs/common'
-
+import { IocTypes, USER_DATA_DIR } from './common/Const'
+import { IMockRepo, MockRepo } from './repository/mock.repo'
+import { AppMockRouter } from './router/AppMockRouter'
+import { CommonService, ICommonService } from './service/common.service'
+import { IMockService, MockService } from './service/mock.service'
+import { IProxyService, ProxyService } from './service/proxy.service'
+import { IPushService, PushService } from './service/push.service'
+import { bizContainer } from './IocContainer'
 export class MainServer {
+
+  private iocContainer = new Container()
+
   private buildConfig = JSON.parse(process.env.BUILD_CONFIG)
 
-  private app: INestApplication
   private httpServer: any
   private httpApp: Application
 
-  // constructor(
-  //   private readonly commonService: CommonService,
-  //   private readonly proxyService: ProxyService,
-  //   private readonly pushService: PushService
-  // ) {
-  // }
+  private commonService: CommonService
+  private proxyService: ProxyService
+  private pushService: PushService
 
-  async bootstrap() {
-    this.app = await NestFactory.create(MainModule)
-    // await app.listen(process.env.PORT ?? 3000)
+  bootstrap() {
+
+    // console.log("hello", bizContainer.get<CommonService>(IocTypes.CommonService))
+    this.commonService = bizContainer.get<CommonService>(IocTypes.CommonService)
+    this.pushService = bizContainer.get<PushService>(IocTypes.PushService)
+    this.proxyService = bizContainer.get<ProxyService>(IocTypes.ProxyService)
   }
 
   private corsOpt: CorsOptions = {
@@ -38,9 +42,11 @@ export class MainServer {
   }
 
   public async start() {
+    try {
+      let info = await si.baseboard()
+      console.log(info)
+    } catch (err) { console.error(err) }
 
-    let info = await si.baseboard()
-    console.log(info)
 
     this.initHttpServer()
 
@@ -53,14 +59,14 @@ export class MainServer {
   private initHttpServer() {
     this.httpApp = express()
 
-    console.log("server ip", this.app.get(CommonService).serverConfig.ip)
+    console.log("server ip", this.commonService.serverConfig.ip)
     this.corsOpt.origin = [
-      `${this.buildConfig.protocol}://localhost:${this.app.get(CommonService).serverConfig.port}`,
+      `${this.buildConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
       `${this.buildConfig.protocol}://localhost:9080`,
       `${this.buildConfig.protocol}://localhost:9081`,
-      `${this.buildConfig.protocol}://${this.app.get(CommonService).serverConfig.ip}:${this.app.get(CommonService).serverConfig.port}`,
-      `${this.buildConfig.protocol}://${this.app.get(CommonService).serverConfig.ip}:9080`,
-      `${this.buildConfig.protocol}://${this.app.get(CommonService).serverConfig.ip}:9081`,
+      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:${this.commonService.serverConfig.port}`,
+      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9080`,
+      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9081`,
     ]
 
     this.httpApp.use(express.static(path.resolve(__dirname, '../web'), {
@@ -91,7 +97,12 @@ export class MainServer {
     this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
     this.httpApp.use(express.json())
     this.httpApp.use(fileUpload())
-    this.httpApp.all('*', (req: any, resp: Response) => { this.handleRequest(req, resp) })
+
+    this.httpApp.use("/_appmock/*", new AppMockRouter().router)
+
+    this.httpApp.use("*", (req: any, resp: Response) => {
+      this.proxyService.handleStatRequest(req, resp)
+    })
   }
 
   private async startHttpServer() {
@@ -107,27 +118,25 @@ export class MainServer {
     } else {
       HTTP = await import('http')
       this.httpServer = HTTP.createServer(this.httpApp)
-      this.app.get(PushService).bindServer(this.httpServer)
     }
-    this.app.get(PushService).bindServer(this.httpServer)
+    this.pushService.bindServer(this.httpServer)
     this.httpServer.listen(
-      this.app.get(CommonService).serverConfig.port,
+      this.commonService.serverConfig.port,
       '0.0.0.0',
-      () => console.log(`--启动本地代理Http服务--[${this.app.get(CommonService).serverConfig.port}]`)
+      () => console.log(`--启动本地代理Http服务--[${this.commonService.serverConfig.port}]`)
     )
   }
 
-  private handleRequest(req: any, resp: Response) {
-    if (/^\/burying-point\//.test(req.path)) {
-      let buf = []
-      req.on('data', (data: any) => { buf.push(data) })
-      req.on('end', () => {
-        req.rawbody = Buffer.concat(buf)
-        this.app.get(ProxyService).handleStatRequest(req, resp)
-      })
-    } else {
-      this.app.get(ProxyService).handleRequest(req, resp)
-    }
+  private handleRequest() {
+
+    // this.httpApp.all("/^\/burying-point\//", (req: any, resp: Response) => {
+    //   let buf = []
+    //   req.on('data', (data: any) => { buf.push(data) })
+    //   req.on('end', () => {
+    //     req.rawbody = Buffer.concat(buf)
+    //     this.app.get(ProxyService).handleStatRequest(req, resp)
+    //   })
+    // })
   }
 
 }

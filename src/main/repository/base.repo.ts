@@ -1,6 +1,8 @@
 
+import { injectable } from 'inversify'
 import 'pouchdb-node'
 
+@injectable()
 export default class BaseRepo<T extends PouchDB.Core.RemoveDocument> {
 
   protected pouchdb: PouchDB.Database

@@ -24,8 +24,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": [
-      "reflect-metadata",
-      "vue-18n"
+      "reflect-metadata"
     ],
     "lib": [
       "ESNext",

@@ -6,11 +6,9 @@ import { LocalServerConfig } from '../../common/base.models'
 import { getServerConfig } from '../../common/proxy.api'
 import { ProxyMock } from '../../common/proxy.models'
 import { generateUid } from '../common'
-import MsgClient from '../common/MsgClient'
 import PushClient from '../common/PushClient'
 
 let pushClient: PushClient = null
-let msgClient: MsgClient = null
 
 export const useCommonStore = defineStore('Common', {
   state: () => {

@@ -1,15 +1,31 @@
-import { Inject, Injectable } from '@nestjs/common'
-import { PushService } from '.'
+import { inject, injectable } from "inversify"
+import { PushService } from './push.service'
 import { ProxyMock } from '../../common/proxy.models'
 import { MockRepo } from '../repository/mock.repo'
+import "reflect-metadata"
+import { IocTypes } from "../common/Const"
 
-@Injectable()
-export class MockService {
+export interface IMockService {
+  mock(sessionId: number, uid: string, url: string, startTime: number, delay: number): Promise<any>
 
-  @Inject()
+  searchMockRules(uid: string, keyword: string): Promise<ProxyMock.MockRule[]>
+
+  getMockRuleDetail(uid: string, ruleId: string): Promise<ProxyMock.MockRule>
+
+  saveMockRule(uid: string, onlySnap: boolean, rule?: ProxyMock.MockRule): Promise<string>
+
+  deleteMockRule(uid: string, ruleId: string): Promise<string>
+
+}
+
+
+@injectable()
+export class MockService implements IMockService {
+
+  @inject(IocTypes.PushService)
   private readonly pushService: PushService
 
-  @Inject()
+  @inject(IocTypes.MockRepo)
   private readonly mockRepo: MockRepo
 
   private clientMockStatus: Map<string, string> = new Map()
