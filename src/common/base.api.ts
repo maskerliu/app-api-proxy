@@ -28,6 +28,7 @@ async function request<T>(method: string, path: string, baseURL?: string, header
       showNotify({ message: bizResp.msg, type: "warning" })
       return Promise.reject(bizResp.msg)
     case BizCode.ERROR:
+    console.log(resp.data)
       showNotify({ message: bizResp.msg, type: "danger" })
       return Promise.reject(bizResp.msg)
     default:
@@ -53,6 +54,5 @@ export function updateClientUID(uid: string) {
 }
 
 export function updateBaseDomain(domain: string) {
-  console.log(domain)
   BASE_DOMAIN = domain
 }

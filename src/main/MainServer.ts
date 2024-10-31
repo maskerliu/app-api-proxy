@@ -4,36 +4,32 @@ import cors, { CorsOptions } from 'cors'
 import express, { Application, Response } from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
-import { Container } from 'inversify'
 import path from 'path'
 import si from 'systeminformation'
 import { IocTypes, USER_DATA_DIR } from './common/Const'
-import { IMockRepo, MockRepo } from './repository/mock.repo'
-import { AppMockRouter } from './router/AppMockRouter'
-import { CommonService, ICommonService } from './service/common.service'
-import { IMockService, MockService } from './service/mock.service'
-import { IProxyService, ProxyService } from './service/proxy.service'
-import { IPushService, PushService } from './service/push.service'
 import { bizContainer } from './IocContainer'
-export class MainServer {
+import { AppMockRouter } from './router/AppMockRouter'
+import { CommonService } from './service/common.service'
+import { ProxyService } from './service/proxy.service'
+import { PushService } from './service/push.service'
 
-  private iocContainer = new Container()
+export class MainServer {
 
   private buildConfig = JSON.parse(process.env.BUILD_CONFIG)
 
   private httpServer: any
   private httpApp: Application
 
+  private appmockRouter: AppMockRouter
   private commonService: CommonService
   private proxyService: ProxyService
   private pushService: PushService
 
   bootstrap() {
-
-    // console.log("hello", bizContainer.get<CommonService>(IocTypes.CommonService))
-    this.commonService = bizContainer.get<CommonService>(IocTypes.CommonService)
-    this.pushService = bizContainer.get<PushService>(IocTypes.PushService)
-    this.proxyService = bizContainer.get<ProxyService>(IocTypes.ProxyService)
+    this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
+    this.commonService = bizContainer.get(IocTypes.CommonService)
+    this.pushService = bizContainer.get(IocTypes.PushService)
+    this.proxyService = bizContainer.get(IocTypes.ProxyService)
   }
 
   private corsOpt: CorsOptions = {
@@ -42,10 +38,10 @@ export class MainServer {
   }
 
   public async start() {
-    try {
-      let info = await si.baseboard()
-      console.log(info)
-    } catch (err) { console.error(err) }
+    // try {
+    //   let info = await si.baseboard()
+    //   console.log(info)
+    // } catch (err) { console.error(err) }
 
 
     this.initHttpServer()
@@ -58,8 +54,6 @@ export class MainServer {
 
   private initHttpServer() {
     this.httpApp = express()
-
-    console.log("server ip", this.commonService.serverConfig.ip)
     this.corsOpt.origin = [
       `${this.buildConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
       `${this.buildConfig.protocol}://localhost:9080`,
@@ -98,11 +92,9 @@ export class MainServer {
     this.httpApp.use(express.json())
     this.httpApp.use(fileUpload())
 
-    this.httpApp.use("/_appmock/*", new AppMockRouter().router)
+    this.httpApp.use("/appmock",this.appmockRouter.router)
 
-    this.httpApp.use("*", (req: any, resp: Response) => {
-      this.proxyService.handleStatRequest(req, resp)
-    })
+    this.httpApp.all('*', (req: any, resp: Response) => { this.handleRequest(req, resp) })
   }
 
   private async startHttpServer() {
@@ -127,16 +119,18 @@ export class MainServer {
     )
   }
 
-  private handleRequest() {
-
-    // this.httpApp.all("/^\/burying-point\//", (req: any, resp: Response) => {
-    //   let buf = []
-    //   req.on('data', (data: any) => { buf.push(data) })
-    //   req.on('end', () => {
-    //     req.rawbody = Buffer.concat(buf)
-    //     this.app.get(ProxyService).handleStatRequest(req, resp)
-    //   })
-    // })
+  private handleRequest(req: any, resp: Response) {
+    if (/^\/appmock\//.test(req.path)) return
+    if (/^\/burying-point\//.test(req.path)) {
+      let buf = []
+      req.on('data', (data: any) => { buf.push(data) })
+      req.on('end', () => {
+        req.rawbody = Buffer.concat(buf)
+        this.proxyService.handleStatRequest(req, resp)
+      })
+    } else {
+      this.proxyService.handleRequest(req, resp)
+    }
   }
 
 }

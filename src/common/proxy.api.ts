@@ -4,7 +4,7 @@ import { ProxyMock } from './proxy.models'
 
 
 export function setProxyDelay(delay: number) {
-  return get<string>('/appmock/setProxyDelay', null, { delay })
+  return post<string>('/appmock/setProxyDelay', null, { delay })
 }
 
 export function searchMockRules(keyword: string) {
@@ -32,7 +32,7 @@ export async function syncServerConfig(config: LocalServerConfig) {
 }
 
 export function getAllPushClients() {
-  return post<Array<ProxyMock.MsgPushClient>>('/appmock/getAllPushClients')
+  return get<Array<ProxyMock.MsgPushClient>>('/appmock/getAllPushClients')
 }
 
 export function mockRegister() {

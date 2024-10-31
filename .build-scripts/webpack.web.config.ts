@@ -43,7 +43,7 @@ class WebConfig extends BaseConfig {
       },
       {
         test: /\.css$/,
-        use: ['css-loader']
+        use: ['vue-style-loader', 'css-loader']
       },
       {
         test: /\.ts?$/,

@@ -18,17 +18,21 @@
           @click="commonStore.showQrCode = true" />
       </van-checkbox-group>
 
-      <van-field v-model="proxyDelay" type="number" right-icon="warning-o">
+      <van-field v-model="proxyDelay" type="number" left-icon="filter-o">
         <template #label>
           <van-icon class="iconfont icon-delay" />
+        </template>
+        <template #button>
+          <van-button plain size="small" type="primary" @click="saveProxyDelay">
+            <van-icon class="iconfont icon-cloud-sync" style="font-size: 16px;"/>
+          </van-button>
         </template>
       </van-field>
 
       <van-field v-model="recordStore.filterKeyword" :placeholder="$t('common.searchPlaceholder')" clearable center
         left-icon="filter-o" style="margin-top: 10px">
         <template #button>
-          <van-button plain size="small" type="primary" @click="recordStore.mockRecord" icon="delete-o">
-          </van-button>
+          <van-button plain size="small" type="primary" @click="recordStore.mockRecord" icon="delete-o" />
         </template>
       </van-field>
 
@@ -104,14 +108,23 @@ watch(() => recordStore.proxyTypes, () => {
   recordStore.updateFilter()
 })
 
-watch(proxyDelay, async () => {
+// watch(proxyDelay, async () => {
+//   try {
+//     await setProxyDelay(Number(proxyDelay.value))
+//     showNotify({ message: '成功设置延迟', type: 'success' })
+//   } catch (err) {
+//     showNotify({ message: '设置延迟失败', type: 'danger' })
+//   }
+// })
+
+async function saveProxyDelay() {
   try {
-    await setProxyDelay(Number(proxyDelay))
+    await setProxyDelay(Number(proxyDelay.value))
     showNotify({ message: '成功设置延迟', type: 'success' })
   } catch (err) {
     showNotify({ message: '设置延迟失败', type: 'danger' })
   }
-})
+}
 
 function resizeDown(e: MouseEvent) {
   // clientStartX = e.clientX

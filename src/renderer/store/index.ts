@@ -1,5 +1,3 @@
-
-
 import { defineStore } from 'pinia'
 import { updateBaseDomain, updateClientUID } from '../../common/base.api'
 import { LocalServerConfig } from '../../common/base.models'
@@ -32,7 +30,6 @@ export const useCommonStore = defineStore('Common', {
       try {
         this.serverConfig = await getServerConfig()
         this.updateServerConfig()
-        // msgClient = new PahoMsgClient(this.serverConfig.mqttBroker)
       } catch (err) {
         console.error(err)
       }
@@ -59,7 +56,7 @@ export const useCommonStore = defineStore('Common', {
         this.registerUrl = `${SERVER_BASE_URL}/appmock/register?uid=${uid}`
         pushClient.start(SERVER_BASE_URL, uid)
       } else {
-        updateBaseDomain(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`)
+        // updateBaseDomain(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`)
         this.registerUrl = `${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${uid}`
         pushClient.start(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`, uid)
       }

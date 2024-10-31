@@ -2,7 +2,6 @@
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
 import express from 'express'
-import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -58,12 +57,22 @@ function startDevServer(config: BaseConfig, port: number): Promise<void> {
     //   }
     // }
 
+    compiler.watch({}, (err, stats) => {
+      if (err) {
+        console.log(config.name, err, 'red')
+        reject()
+        return
+      }
+
+      // console.log(config.name, stats)
+    })
+
     const server = new WebpackDevServer(serverConfig, compiler)
 
     server.start()
       .then(() => resolve())
       .catch(err => {
-        console.error(`fail to start ${config.target} server`, err)
+        console.log(config.name, chalk.redBright(`fail to start ${config.target} server`, err))
         reject()
       })
   })
@@ -75,19 +84,18 @@ function startMain(): Promise<void> {
     const compiler = webpack(mainConfig)
     hotMiddleware = WebpackHotMiddleware(compiler, { log: false, heartbeat: 2500 })
     compiler.hooks.watchRun.tapAsync("watch-run", (_, done) => {
-      consoleLog("Main", chalk.white("compiling...\n"))
       hotMiddleware.publish({ action: "compiling" })
       done()
     })
 
     compiler.watch({}, (err, stats) => {
       if (err) {
-        console.log(err)
+        console.log("Main", err, 'red')
         reject()
         return
       }
 
-      consoleLog("Main", stats)
+      // console.log("Main", stats)
 
       if (electronProc && electronProc.kill()) {
         manualRestart = true
@@ -101,7 +109,7 @@ function startMain(): Promise<void> {
           const pid = electronProc.pid
           exec(`TASKKILL /F /IM electron.exe`, (err, data) => {
             if (err) console.log(err)
-            else console.log("kill pid: " + pid + " success!")
+            else console.log(chalk['green']("kill pid: " + pid + " success!"))
             electronProc = null
             startElectron()
             manualRestart = false
@@ -114,6 +122,7 @@ function startMain(): Promise<void> {
 }
 
 function startElectron() {
+  
   let args = [
     '--trace-warnings',
     '--inspect=5858',
@@ -135,7 +144,7 @@ function startElectron() {
   }
 
   electronProc = spawn('electron', args, {
-    stdio: [0, 'pipe', 'pipe'],
+    stdio:  ['inherit', 'inherit', 'inherit'],
     shell: process.platform === 'win32'
   })
   electronProc.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })
@@ -143,24 +152,24 @@ function startElectron() {
   electronProc.on('close', () => { if (!manualRestart) process.exit() })
 }
 
-
 function consoleLog(proc: string, data: any, color?: string) {
   let log = ''
-
-  log += chalk[color ? color : 'yellow'](`┏ ${proc} Process ${new Array(90 - proc.length).join('-')}\n\n`)
-
+  log += chalk[color ? color : 'yellow'](`┏ ${proc} Process ${new Array(process.stdout.columns - 12 - proc.length).join('-')} ┓\n\n`)
   if (typeof data === 'object') {
     (proc == 'Electron' ? data.toString() : data.toString({ colors: true, chunks: false }))
-      .split(/\r?\n/).forEach((line: string) => { log += `  ${line}\n` })
+      .split(/\r?\n/).forEach((line: string) => {
+        // line = line.replace(/(.{})/g, '$1\n')
+        log += ` ${line}\n`
+      })
   } else {
-    log += `  ${data}\n`
+    log += `${data}\n`
   }
 
   if (color) {
     log = chalk[color](log)
   }
 
-  log += chalk[color ? color : 'yellow'](`┗ ${new Array(99).join('-')}`) + '\n'
+  log += chalk[color ? color : 'yellow'](`┗ ${new Array(process.stdout.columns - 3).join('-')} ┛`) + '\n'
   console.log(log)
 }
 
@@ -180,7 +189,7 @@ async function start() {
   greeting()
 
   try {
-    let localIPv4 = await WebpackDevServer.internalIP('v4')
+    let localIPv4 = WebpackDevServer.internalIPSync('v4')
     await Promise.all([
       startDevServer(webConfig.init(localIPv4), 9081),
       startDevServer(rendererConfig.init(localIPv4), 9080),

@@ -31,7 +31,7 @@ export interface IProxyService {
 export class ProxyService implements IProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
-  private proxyPrefs: Map<string, ProxyPref> = new Map()
+  private proxyPrefs: Map<string, ProxyPref>
 
   @inject(IocTypes.MocksService)
   private readonly mockService: MockService
@@ -41,7 +41,7 @@ export class ProxyService implements IProxyService {
 
   constructor() {
     this._sessionId = 0
-
+    this.proxyPrefs = new Map()
     // axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
     //   MockKey = resp.data
     //   console.log(MockKey)
@@ -58,7 +58,12 @@ export class ProxyService implements IProxyService {
 
 
   public setProxyDelay(uid: string, delay?: number) {
-    this.proxyPrefs.get(uid).delay = delay
+    console.log(this.proxyPrefs)
+    if (this.proxyPrefs.has(uid))
+      this.proxyPrefs.get(uid).delay = delay
+    else {
+      this.proxyPrefs.set(uid, { delay, status: false })
+    }
     return 'success'
   }
 
