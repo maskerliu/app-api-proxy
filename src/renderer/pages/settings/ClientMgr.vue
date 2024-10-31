@@ -44,7 +44,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { ProxyMock } from '../../../common/proxy.models';
-// import { $t } from '../../../lang';
 import { useCommonStore } from '../../store';
 
 const commonStore = useCommonStore()

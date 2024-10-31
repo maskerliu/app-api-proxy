@@ -3,7 +3,7 @@ import "reflect-metadata"
 import { LocalServerConfig } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 import { IocTypes, Lynx_Mqtt_Broker } from '../common/Const'
-import { getLocalIPs } from '../utils/NetworkUtils'
+import { findIp, getLocalIPs } from '../utils/NetworkUtils'
 import { ProxyPref, ProxyService } from "./proxy.service"
 import { PushService } from './push.service'
 
@@ -26,7 +26,8 @@ export class CommonService implements ICommonService {
   constructor() {
     let config = JSON.parse(process.env.BUILD_CONFIG)
     this.serverConfig = {
-      ip: getLocalIPs()[0].address,
+      // ip: getLocalIPs()[0].address,
+      ip: findIp('v4'),
       port: config.port,
       ips: getLocalIPs(),
       mqttBroker: Lynx_Mqtt_Broker

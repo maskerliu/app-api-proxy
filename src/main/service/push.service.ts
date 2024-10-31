@@ -12,7 +12,7 @@ export interface IPushService {
   closeWebSocketServer(callback: any): void
   sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>): void
   sendProxyMessage(clientUid: String, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): void
-  getAllPushClients(): BizResponse<ProxyMock.MsgPushClient[]>
+  getAllPushClients(): ProxyMock.MsgPushClient[]
 }
 
 
@@ -64,12 +64,9 @@ export class PushService implements IPushService {
   }
 
   public getAllPushClients() {
-    let bizResp: BizResponse<Array<ProxyMock.MsgPushClient>>
-    bizResp.code = BizCode.SUCCESS
-    bizResp.data = []
-
+    let result: ProxyMock.MsgPushClient[] = []
     this.pushClients.forEach(it => {
-      bizResp.data.push({
+      result.push({
         key: it.conn.id,
         uid: it.uid,
         username: it.username,
@@ -78,7 +75,7 @@ export class PushService implements IPushService {
       })
     })
 
-    return bizResp
+    return result
   }
 
   private handleMsg(conn: Connection, data: any) {

@@ -15,7 +15,8 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 class MainConfig extends BaseConfig {
 
-  devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
+  // devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
+  devtool: Configuration['devtool'] = false
   name: Configuration['name'] = 'main'
   target: Configuration['target'] = 'electron-main'
   entry: Configuration['entry'] = {
