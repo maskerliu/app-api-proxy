@@ -5,7 +5,8 @@ export default {
     delete: '删除',
     save: '保存',
     upload: '上传',
-    searchPlaceholder: '请输入搜索关键词'
+    searchPlaceholder: '请输入搜索关键词',
+    searchNoMatch: '未找到符合的规则'
   },
   proxy: {
     setDelay: '延时时长',

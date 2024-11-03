@@ -1,80 +1,81 @@
 <template>
-  <van-row class="full-row">
-    <van-row class="bg-border" justify="start" align="center"
-      style=" width: calc(100% - 10px);  background-color: white;  ">
-      <van-col style="background: white; width: 375px">
-        <van-popover :show="showSearchResult" placement="bottom-start" trigger="manual" :overlay="true"
-          :close-on-click-overlay="true" @click-overlay="onRuleSelect(null)">
-          <van-list class="search-result" style="width: 300px;">
-            <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
-              :label="rule.desc" @click="onRuleSelect(rule)">
-              <template #value>
-                <div>
-                  <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
-                    @click="onRuleEdit(rule)" />
-                  <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
-                    @click="onRuleDelete(rule)" />
-                  <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
-                    @click="onRuleUpload(rule)" />
-                </div>
-              </template>
-            </van-cell>
-          </van-list>
-          <template #reference>
-            <van-search :clearable="false" show-action v-model="keyword" @focus="fetchPagedMockRules"
-              :placeholder="$t('common.searchPlaceholder')" style="width: 280px">
-              <template #action>
-                <van-icon plain type="primary" name="plus" size="mini" @click="onRuleEdit(null)" />
-              </template>
-            </van-search>
-          </template>
-        </van-popover>
+  <van-row style="width: 80vw; min-width: 375px; height: 100vh; overflow: hidden;">
+    <van-row class="bg-border" justify="start" style="width: calc(100% - 10px);">
+      <van-col style="min-width: 348px; flex-shrink: 0; flex-grow: 1;">
+        <van-collapse accordion v-model="activeSearchResult">
+          <van-collapse-item name="0" :disabled="true" :is-link="false">
+            <template #title>
+              <van-search show-action :clearable="false" v-model="keyword" :placeholder="$t('common.searchPlaceholder')">
+                <template #action>
+                  <van-icon plain type="primary" name="plus" size="mini" @click="onRuleEdit(null)" />
+                </template>
+              </van-search>
+            </template>
+
+            <van-list class="search-result" :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
+              <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
+                :label="rule.desc" @click="onRuleSelect(rule)">
+                <template #value>
+                  <div>
+                    <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
+                      @click="onRuleEdit(rule)" />
+                    <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
+                      @click="onRuleDelete(rule)" />
+                    <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
+                      @click="onSave(false)" />
+                  </div>
+                </template>
+              </van-cell>
+            </van-list>
+          </van-collapse-item>
+        </van-collapse>
       </van-col>
-      <van-col span="12" style="min-width: 310px; padding: 0">
-        <van-cell center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
+      <van-col style="min-width: 347px; flex-shrink: 0; flex-grow: 1;">
+        <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
           :label="curRule?.desc == null ? $t('mock.rule.desc') : curRule.desc">
+          <template #icon v-if="curRule._id != null">
+            <van-icon class="iconfont icon-cancel" size="20" style="color: red; margin-right: 10px;"
+              @click="onRuleSelect(null)" />
+          </template>
           <template #value>
-            <div>
-              <van-icon class="iconfont icon-edit" size="18" style="color: #3498db" @click="onRuleEdit(curRule)" />
-              <van-icon class="iconfont icon-delete" size="18" style="color: red; margin-left: 10px"
-                @click="onRuleDelete(curRule)" />
-              <van-icon class="iconfont icon-upload" size="18" style="color: red; margin-left: 10px"
-                @click="onRuleUpload(curRule)" />
-              <van-switch size="14" v-model="curRule.isMock" style="margin-left: 10px;"
-                @change="onMockSwitchChanged(curRule)" />
-            </div>
+            <van-button plain type="primary" size="small" @click="onRuleEdit(curRule)" :disabled="curRule._id == null">
+              <van-icon class="iconfont icon-edit" size="18" />
+            </van-button>
+            <van-button plain type="danger" size="small" @click="onRuleDelete(curRule)" :disabled="curRule._id == null"
+              style="margin-left: 10px;">
+              <van-icon class="iconfont icon-delete" size="18" style="color: red;" />
+            </van-button>
+            <van-button plain type="primary" size="small" @click="onRuleUpload(curRule)" :disabled="curRule._id == null"
+              style="margin-left: 10px;">
+              <van-icon class="iconfont icon-cloud-sync" size="18" />
+            </van-button>
           </template>
           <template #right-icon>
-            <van-icon class="iconfont icon-cancel" size="20" style="color: red; margin-top: -2px;"
-              @click="onRuleSelect(null)" />
+            <van-switch v-model="curRule.isMock" style="margin-left: 10px;" @change="onMockSwitchChanged(curRule)"
+              :disabled="curRule._id == null" />
           </template>
         </van-cell>
       </van-col>
-      <van-col style="min-width: 30px; padding: 0" align="center">
-        <van-button plain type="primary" size="small" :loading="isSaving" @click="onSave(false)">{{ $t('common.save')
-          }}
-        </van-button>
-      </van-col>
     </van-row>
-
-    <van-row style="width: 100%; height: calc(100% - 63px); display: flex">
-      <van-col class="bg-border" style="width: 300px">
+    <van-row style="width: 100%; height: calc(100% - 76px); display: flex">
+      <van-col class="bg-border" style="width: 300px; height: calc(100% - 10px);">
         <van-list v-if="curRule != null && curRule.requests != null">
-          <van-cell v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
+          <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
             is-link>
             <template #title>
               <div class="record-snap">{{ record.url }}</div>
             </template>
             <template #label>
-              <van-tag :type="record.statusCode == 200 ? 'success' : 'danger'">
+              <van-tag plain mark :type="record.statusCode == 200 ? 'success' : 'danger'">
                 [http]{{ record.statusCode }}
               </van-tag>
-              <van-tag style="margin-left: 5px" :type="record.responseData?.code == 8000 ? 'success' : 'danger'">
+              <van-tag plain mark style="margin-left: 5px"
+                :type="record.responseData?.code == 8000 ? 'success' : 'danger'">
                 [biz]{{ record.responseData?.code }}
               </van-tag>
             </template>
             <template #right-icon>
-              <van-button plain type="danger" size="small" icon="delete-o" @click="onRecordDelete(record.url)" />
+              <van-button plain type="danger" size="mini" icon="delete-o" @click="onRecordDelete(record.url)" />
             </template>
           </van-cell>
         </van-list>
@@ -82,9 +83,9 @@
       <van-col style="padding-top: 50px">
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord"></van-button>
       </van-col>
-      <van-col class="bg-border" style="flex: 1">
-        <vue-ace-editor class="json-editor" v-model:content="content" lang="json" :options="aceOptions" theme="monokai">
-        </vue-ace-editor>
+      <van-col style="height: calc(100% - 10px); flex: 1; overflow: auto;">
+        <vue-json-pretty class="json-editor" :showIcon="true" :editable="true" :showLineNumber="true" style="font-size: 0.7rem;"
+          :showDoubleQuotes="false" :data="curRecord" />
       </van-col>
     </van-row>
 
@@ -112,10 +113,10 @@
 <script lang="ts" setup>
 import { showNotify } from 'vant'
 import { onMounted, PropType, ref, watch } from 'vue'
+import VueJsonPretty from 'vue-json-pretty'
 import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { json2map, map2json } from '../../common'
-import VueAceEditor from '../components/VueAceEditor.vue'
 
 const props = defineProps({
   isMock: { type: Boolean, require: false, default: false },
@@ -126,21 +127,16 @@ const props = defineProps({
   },
 })
 
-const keyword = ref<string>(null)
-const showSearchResult = ref(false)
+const keyword = ref<string>('')
+const activeSearchResult = ref<string>('-1')
 const rules = ref<Array<ProxyMock.MockRule>>(null)
 const curRecord = ref<ProxyMock.ProxyRequestRecord>(null)
 const curRecordKey = ref<string>(null)
 const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
-const showRecordEdit = ref(false)
 const showRecordDelete = ref(false)
-const isSaving = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const content = ref<string>('')
-
-
-let aceOptions = { "showPrintMargin": false }
 
 onMounted(() => {
   curRule.value = new ProxyMock.MockRule()
@@ -153,14 +149,19 @@ watch(() => props.record, () => {
   content.value = JSON.stringify(curRecord.value, null, '\t')
 })
 
-watch(() => keyword, () => {
+watch(() => keyword.value, () => {
+  console.log(keyword.value)
+  if (keyword.value == '') {
+    activeSearchResult.value = '-1'
+    return
+  }
   fetchPagedMockRules()
+  activeSearchResult.value = '0'
 })
 
 async function fetchPagedMockRules() {
   try {
     rules.value = await searchMockRules(keyword.value)
-    showSearchResult.value = rules.value != null && rules.value.length > 0
   } catch (err) {
     showNotify({ message: '未找到匹配的规则', type: 'danger' })
   }
@@ -183,7 +184,8 @@ function onRuleSelect(rule: ProxyMock.MockRule) {
     curRule.value = new ProxyMock.MockRule()
     content.value = ''
   }
-  showSearchResult.value = false
+  keyword.value = ''
+  activeSearchResult.value = '-1'
 }
 
 async function fetchMockRuleDetail() {
@@ -198,7 +200,6 @@ async function fetchMockRuleDetail() {
 }
 
 function onRuleEdit(rule?: ProxyMock.MockRule) {
-  showSearchResult.value = false
   curRule.value = rule == null ? new ProxyMock.MockRule() : rule
   showRuleEdit.value = true
 }
@@ -231,14 +232,14 @@ function onMockSwitchChanged(rule: ProxyMock.MockRule) {
 async function onSave(isSnap: boolean) {
   if (curRule.value == null) return
 
-  if (curRule.value.name == null) {
+  if (curRule.value._id == null) {
     showRuleEdit.value = true
     return
   }
 
   try {
     curRule.value.jsonRequests = map2json(curRule.value.requests)
-    await saveMockRule(curRule.value, isSnap)
+    curRule.value._id = await saveMockRule(curRule.value, isSnap)
     await fetchMockRuleDetail()
     showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
   } catch (err) {
@@ -276,9 +277,10 @@ function onRecordDeleteConfirm() {
 
 <style scoped>
 .search-result {
-  width: 280px;
-  height: 500px;
+  min-width: 200px;
+  height: 50vh;
   background: white;
+  overflow-y: scroll;
 }
 
 .rule-snap-item {
@@ -298,12 +300,7 @@ function onRecordDeleteConfirm() {
 }
 
 .json-editor {
-  width: calc(100% - 6px);
-  height: calc(100% - 6px);
-  padding: 3px;
+  font-size: 0.8rem;
 }
 
-.jsoneditor {
-  border: 0;
-}
 </style>

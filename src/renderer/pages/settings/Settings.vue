@@ -1,14 +1,10 @@
 <template>
-  <van-row class="full-row" justify="space-around" style="overflow-y: auto">
-    <client-mgr />
-
-    <van-col style="flex: 1; min-width: 375px; padding: 15px 0; height: 100%; overflow-y: auto;">
-      <van-form style="margin-top: 15px; width: 100%" label-align="right" colon>
-        <sys-info />
-        <local-resource-mgr />
-      </van-form>
-    </van-col>
-  </van-row>
+  <van-form class="full-row" style="width: 80vw; min-width: 375px; height: 100vh; padding:0; overflow-y: scroll;"
+    label-align="right" colon>
+    <sys-info />
+    <local-resource-mgr />
+    <client-mgr style="margin-bottom: 20px;" />
+  </van-form>
 </template>
 
 <script lang="ts" setup>

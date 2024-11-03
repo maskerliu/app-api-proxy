@@ -38,12 +38,6 @@ export class MainServer {
   }
 
   public async start() {
-    // try {
-    //   let info = await si.baseboard()
-    //   console.log(info)
-    // } catch (err) { console.error(err) }
-
-
     this.initHttpServer()
 
     if (this.httpServer != null) {

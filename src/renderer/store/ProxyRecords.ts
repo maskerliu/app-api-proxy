@@ -102,17 +102,29 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
           'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
         },
         id: 277 + new Date().getMilliseconds(),
-        isMock: false,
+        isMock: true,
         method: "POST",
         requestData: null,
         responseData: {
           code: '8000', msg: 'SUCCESS' + new Date().getMilliseconds(), success: true, result: {
+            'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
+            'x-user-lang': 'zh_CN',
+            'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStr…PCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+            'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
+            'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
+            test: {
+              'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
+              'x-user-lang': 'zh_CN',
+              'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStr…PCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+              'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
+              'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
+            },
             snap: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
             video: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
             audio: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg'
           }, tid: '0712ed382aff47e4877b5f55fce0832f'
         },
-        responseHeaders: { 'content- length': '2157', 'content- type': 'application/json;charset=UTF-8', date: 'Tue, 20 Sep 2022 09:27:05 GMT' },
+        responseHeaders: { 'content-length': '2157', 'content-type': 'application/json;charset=UTF-8', date: 'Tue, 20 Sep 2022 09:27:05 GMT' },
         statusCode: 200,
         time: 406 + new Date().getMilliseconds(),
         timelineColor: "#FF9800",

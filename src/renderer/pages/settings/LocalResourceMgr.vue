@@ -1,8 +1,5 @@
 <template>
   <van-cell-group inset :title="$t('settings.resources.title')">
-    <van-cell>
-
-    </van-cell>
     <van-field name="uploader" :label="$t('settings.resources.manage')" label-width="10rem">
       <template #input>
         <van-uploader multiple accept="*" />

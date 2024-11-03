@@ -5,7 +5,8 @@ export default {
     delete: 'Delete',
     save: 'Save',
     upload: 'Upload',
-    searchPlaceholder: 'keyword for search'
+    searchPlaceholder: 'keyword for search',
+    searchNoMatch: 'no match rule found'
   },
   proxy: {
     setDelay: 'requst delay',
