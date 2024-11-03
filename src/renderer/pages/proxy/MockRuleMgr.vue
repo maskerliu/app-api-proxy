@@ -5,7 +5,8 @@
         <van-collapse accordion v-model="activeSearchResult">
           <van-collapse-item name="0" :disabled="true" :is-link="false">
             <template #title>
-              <van-search show-action :clearable="false" v-model="keyword" :placeholder="$t('common.searchPlaceholder')">
+              <van-search show-action :clearable="false" v-model="keyword"
+                :placeholder="$t('common.searchPlaceholder')">
                 <template #action>
                   <van-icon plain type="primary" name="plus" size="mini" @click="onRuleEdit(null)" />
                 </template>
@@ -45,7 +46,7 @@
               style="margin-left: 10px;">
               <van-icon class="iconfont icon-delete" size="18" style="color: red;" />
             </van-button>
-            <van-button plain type="primary" size="small" @click="onRuleUpload(curRule)" :disabled="curRule._id == null"
+            <van-button plain type="primary" size="small" @click="onSave(false)" :disabled="curRule._id == null"
               style="margin-left: 10px;">
               <van-icon class="iconfont icon-cloud-sync" size="18" />
             </van-button>
@@ -81,11 +82,11 @@
         </van-list>
       </van-col>
       <van-col style="padding-top: 50px">
-        <van-button type="primary" size="mini" icon="exchange" @click="addRecord"></van-button>
+        <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
       <van-col style="height: calc(100% - 10px); flex: 1; overflow: auto;">
-        <vue-json-pretty class="json-editor" :showIcon="true" :editable="true" :showLineNumber="true" style="font-size: 0.7rem;"
-          :showDoubleQuotes="false" :data="curRecord" />
+        <vue-json-pretty class="json-editor" :showIcon="true" :editable="true" :showLineNumber="true"
+          style="font-size: 0.7rem;" :showDoubleQuotes="false" :data="curRecord" />
       </van-col>
     </van-row>
 
@@ -181,7 +182,10 @@ function onRuleSelect(rule: ProxyMock.MockRule) {
     curRule.value = rule
     fetchMockRuleDetail()
   } else {
+    let requests = curRule.value.requests
     curRule.value = new ProxyMock.MockRule()
+    curRule.value.requests
+    curRule.value.requests = requests
     content.value = ''
   }
   keyword.value = ''
@@ -230,12 +234,8 @@ function onMockSwitchChanged(rule: ProxyMock.MockRule) {
 }
 
 async function onSave(isSnap: boolean) {
-  if (curRule.value == null) return
-
-  if (curRule.value._id == null) {
-    showRuleEdit.value = true
-    return
-  }
+  console.log(curRule.value)
+  if (curRule.value == null || curRule.value._id==null) return
 
   try {
     curRule.value.jsonRequests = map2json(curRule.value.requests)
@@ -302,5 +302,4 @@ function onRecordDeleteConfirm() {
 .json-editor {
   font-size: 0.8rem;
 }
-
 </style>

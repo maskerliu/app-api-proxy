@@ -94,7 +94,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.1.0",
     "sockjs": "^0.3.24",
-    "systeminformation": "^5.12.11"
+    "systeminformation": "^5.12.11",
+    "tcp-port-used": "^1.0.2"
   },
   "devDependencies": {
     "@types/compression": "^1.7.5",
@@ -110,6 +111,7 @@
     "@types/sockjs": "0.3.36",
     "@types/sockjs-client": "^1.5.4",
     "@types/source-map-support": "^0.5.10",
+    "@types/tcp-port-used": "^1.0.4",
     "@types/webpack-bundle-analyzer": "^4.7.0",
     "@types/webpack-hot-middleware": "2.25.9",
     "@vant/touch-emulator": "^1.4.0",

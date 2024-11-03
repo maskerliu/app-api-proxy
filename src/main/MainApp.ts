@@ -1,21 +1,17 @@
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions,
-  ipcMain, IpcMainEvent, Menu, nativeImage, nativeTheme, session, Tray
+  ipcMain, IpcMainEvent, ipcRenderer, Menu, nativeImage, nativeTheme, session, Tray
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { USER_DATA_DIR } from './common/Const'
 import { MainServer } from './MainServer'
-import { error } from 'console'
 
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
-  private gameWindow: BrowserWindow = null
-
-  private appTray: Tray = null
   private winURL: string = process.env.NODE_ENV === 'development' ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
   private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, '../../build/icons') : path.join(__dirname, './static')
   private trayIconName: string = process.platform === 'win32' ? "icon.ico" : "icon.icns"
@@ -27,23 +23,12 @@ export default class MainApp {
   }
 
   public startApp() {
-    if (process.platform == 'linux') {
-      this.initAppEnv()
-      try {
-        this.mainServer.start()
-      } catch (error) {
-        console.error(error)
-      }
-
-      return
-    }
-
     if (process.platform === 'win32') {
       app.disableHardwareAcceleration()
     }
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
-    // app.commandLine.appendSwitch('disable-gpu')
+    app.commandLine.appendSwitch('disable-gpu')
     // app.commandLine.appendSwitch('disable-software-rasterizer')
     app.on('window-all-closed', () => {
       // if (process.platform.toString() !== 'drawin') {
@@ -56,7 +41,6 @@ export default class MainApp {
         this.createMainWindow()
       }
     })
-
 
     app.whenReady().then(() => {
       this.initSessionConfig()
@@ -79,17 +63,32 @@ export default class MainApp {
   private createAppMenu() {
     let tray = new Tray(`${this.trayFloder}/${this.trayIconName}`)
     const contextMenu = Menu.buildFromTemplate([
-      { label: '用例管理', },
-      { label: '设置', },
+      {
+        label: '用例管理', click: () => {
+          this.mainWindow.webContents.send('openMockRuleMgr', 1)
+        }
+      },
+      {
+        label: '设置', click: () => {
+          this.mainWindow.webContents.send('openSettings', 1)
+        }
+      },
       {
         label: '退出', click: () => {
+          this.mainServer.stop()
           app.quit()
         }
       }
     ])
+
+    tray.on('click', () => {
+      if (this.mainWindow == null) {
+        this.createMainWindow()
+      }
+    })
+    
     tray.setToolTip('AppApiProxy')
     tray.setContextMenu(contextMenu)
-    // Menu.setApplicationMenu(null)
   }
 
   private createMainWindow() {
@@ -116,6 +115,7 @@ export default class MainApp {
       titleBarStyle: process.platform === 'win32' ? 'default' : 'hidden',
       webPreferences: {
         // devTools: process.env.NODE_ENV == 'development',
+        nodeIntegration: true,
         sandbox: false,
         preload: path.join(__dirname, 'preload.cjs')
       },
@@ -130,6 +130,7 @@ export default class MainApp {
     }
 
     this.mainWindow.on('closed', () => {
+      this.mainServer.stop()
       this.mainWindow.destroy()
       this.mainWindow = null
     })
@@ -186,7 +187,6 @@ export default class MainApp {
     ipcMain.handle('openGame', (envent: IpcMainEvent, args?: any) => {
       // this.createGameWindow(args[0])
     })
-
   }
 
   private registerThemeChanged() {

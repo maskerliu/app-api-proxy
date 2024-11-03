@@ -6,8 +6,8 @@ import "reflect-metadata"
 import zlib from 'zlib'
 import { ProxyMock } from '../../common/proxy.models'
 import { IocTypes } from '../common/Const'
-import { MockService } from './mock.service'
-import { PushService } from './push.service'
+import { IMockService } from './mock.service'
+import { IPushService } from './push.service'
 
 const JSONBigInt = require('json-bigint')
 let MockKey = null
@@ -34,10 +34,10 @@ export class ProxyService implements IProxyService {
   private proxyPrefs: Map<string, ProxyPref>
 
   @inject(IocTypes.MocksService)
-  private readonly mockService: MockService
+  private readonly mockService: IMockService
 
   @inject(IocTypes.PushService)
-  private readonly pushService: PushService
+  private readonly pushService: IPushService
 
   constructor() {
     this._sessionId = 0
@@ -102,7 +102,7 @@ export class ProxyService implements IProxyService {
   public async handleRequest(req: Request, resp: Response) {
     let uid = req.header('mock-uid')
     // 清理无效配置
-    if (!this.pushService.pushClients.has(uid)) this.proxyPrefs.delete(uid)
+    if (!this.pushService.hasProxy(uid)) this.proxyPrefs.delete(uid)
 
     let startTime = new Date().getTime()
     let sessionId = ++this._sessionId

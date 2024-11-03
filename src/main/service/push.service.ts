@@ -2,7 +2,6 @@ import { Server } from 'http'
 import { injectable } from 'inversify'
 import "reflect-metadata"
 import { Connection, createServer, Server as SockServer } from 'sockjs'
-import { BizCode, BizResponse } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
@@ -12,16 +11,17 @@ export interface IPushService {
   closeWebSocketServer(callback: any): void
   sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>): void
   sendProxyMessage(clientUid: String, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): void
+  hasProxy(uid: string): boolean
   getAllPushClients(): ProxyMock.MsgPushClient[]
 }
 
-
 @injectable()
 export class PushService implements IPushService {
-  public pushClients: Map<String, PushClient> = new Map() // key: uid
+  pushClients: Map<String, PushClient>
   private sockjsServer: SockServer
 
   constructor() {
+    this.pushClients = new Map()
     this.sockjsServer = createServer({ prefix: '/echo', websocket: true })
     this.sockjsServer.on('connection', (conn: any) => {
       conn.on('data', (data: any) => { this.handleMsg(conn, data) })
@@ -63,11 +63,15 @@ export class PushService implements IPushService {
     }
   }
 
+  public hasProxy(uid: string): boolean {
+    return this.pushClients.has(uid)
+  }
+
   public getAllPushClients() {
     let result: ProxyMock.MsgPushClient[] = []
     this.pushClients.forEach(it => {
       result.push({
-        key: it.conn.id,
+        connId: it.conn.id,
         uid: it.uid,
         username: it.username,
         ip: it.conn.remoteAddress,
@@ -75,6 +79,7 @@ export class PushService implements IPushService {
       })
     })
 
+    console.log('hello', this.pushClients)
     return result
   }
 
@@ -90,6 +95,8 @@ export class PushService implements IPushService {
         break
       }
     }
+
+    console.log("test", this.pushClients)
   }
 
   private handleClose(conn: Connection) {
@@ -151,7 +158,7 @@ export class PushService implements IPushService {
 
     this.pushClients.forEach(it => {
       data.push({
-        key: it.conn.id,
+        connId: it.conn.id,
         uid: it.uid,
         username: it.username,
         ip: it.conn.remoteAddress,

@@ -13,8 +13,7 @@ export const useCommonStore = defineStore('Common', {
     return {
       showQrCode: false,
       registerUrl: '',
-      serverConfig: {} as LocalServerConfig,
-      clientInfos: [] as Array<ProxyMock.ClientInfo>
+      serverConfig: {} as LocalServerConfig
     }
   },
   actions: {

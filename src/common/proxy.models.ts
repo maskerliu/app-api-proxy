@@ -56,7 +56,7 @@ export namespace ProxyMock {
   }
 
   export interface ClientInfo {
-    key: string
+    connId: string
     uid: string
     ip: string
     port: number

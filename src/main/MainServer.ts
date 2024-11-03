@@ -1,17 +1,14 @@
-
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Response } from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import path from 'path'
-import si from 'systeminformation'
+import tcpPortUsed from 'tcp-port-used'
 import { IocTypes, USER_DATA_DIR } from './common/Const'
 import { bizContainer } from './IocContainer'
 import { AppMockRouter } from './router/AppMockRouter'
-import { CommonService } from './service/common.service'
-import { ProxyService } from './service/proxy.service'
-import { PushService } from './service/push.service'
+import { ICommonService, IProxyService, IPushService } from './service'
 
 export class MainServer {
 
@@ -21,9 +18,9 @@ export class MainServer {
   private httpApp: Application
 
   private appmockRouter: AppMockRouter
-  private commonService: CommonService
-  private proxyService: ProxyService
-  private pushService: PushService
+  private commonService: ICommonService
+  private proxyService: IProxyService
+  private pushService: IPushService
 
   bootstrap() {
     this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
@@ -38,12 +35,20 @@ export class MainServer {
   }
 
   public async start() {
+
+    let portUsed = await tcpPortUsed.check(this.commonService.serverConfig.port, '127.0.0.1')
+    console.group("port used", portUsed)
+
     this.initHttpServer()
 
     if (this.httpServer != null) {
       this.httpServer.close(() => { this.httpServer = null })
     }
     this.startHttpServer()
+  }
+
+  public async stop() {
+    this.httpServer.close()
   }
 
   private initHttpServer() {
@@ -86,7 +91,7 @@ export class MainServer {
     this.httpApp.use(express.json())
     this.httpApp.use(fileUpload())
 
-    this.httpApp.use("/appmock",this.appmockRouter.router)
+    this.httpApp.use("/appmock", this.appmockRouter.router)
 
     this.httpApp.all('*', (req: any, resp: Response) => { this.handleRequest(req, resp) })
   }
