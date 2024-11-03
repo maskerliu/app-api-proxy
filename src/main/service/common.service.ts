@@ -4,10 +4,12 @@ import { LocalServerConfig } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
 import { IocTypes, Lynx_Mqtt_Broker } from '../common/Const'
 import { findIp, getLocalIPs } from '../utils/NetworkUtils'
-import { ProxyPref, ProxyService } from "./proxy.service"
-import { PushService } from './push.service'
+import { IProxyService, ProxyPref } from './proxy.service'
+import { IPushService } from './push.service'
 
 export interface ICommonService {
+  serverConfig: LocalServerConfig
+
   register(uid: string): string
 
   getServerConfig(): LocalServerConfig
@@ -19,9 +21,9 @@ export interface ICommonService {
 export class CommonService implements ICommonService {
 
   @inject(IocTypes.ProxyService)
-  private proxyService: ProxyService
+  private proxyService: IProxyService
   @inject(IocTypes.PushService)
-  private pushService: PushService
+  private pushService: IPushService
 
   constructor() {
     let config = JSON.parse(process.env.BUILD_CONFIG)

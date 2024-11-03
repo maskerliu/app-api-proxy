@@ -45,10 +45,6 @@ export default class PushClient {
       }
     }
     this.send(msg)
-
-    getAllPushClients().then(result => {
-      this.commonStore.updateClientInfos(result)
-    }).catch(err => { })
   }
 
   private handleMsg(data: any): void {

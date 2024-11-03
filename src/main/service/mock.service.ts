@@ -1,11 +1,12 @@
 import { inject, injectable } from "inversify"
-import { PushService } from './push.service'
-import { ProxyMock } from '../../common/proxy.models'
-import { MockRepo } from '../repository/mock.repo'
 import "reflect-metadata"
+import { ProxyMock } from '../../common/proxy.models'
 import { IocTypes } from "../common/Const"
+import { IMockRepo } from '../repository/mock.repo'
+import { IPushService } from './push.service'
 
 export interface IMockService {
+
   mock(sessionId: number, uid: string, url: string, startTime: number, delay: number): Promise<any>
 
   searchMockRules(uid: string, keyword: string): Promise<ProxyMock.MockRule[]>
@@ -23,10 +24,10 @@ export interface IMockService {
 export class MockService implements IMockService {
 
   @inject(IocTypes.PushService)
-  private readonly pushService: PushService
+  private readonly pushService: IPushService
 
   @inject(IocTypes.MockRepo)
-  private readonly mockRepo: MockRepo
+  private readonly mockRepo: IMockRepo
 
   private clientMockStatus: Map<string, string> = new Map()
 

@@ -5,10 +5,7 @@ import 'reflect-metadata'
 import { BizCode, BizFail, BizResponse } from "../../common/base.models"
 import { ProxyMock } from "../../common/proxy.models"
 import { IocTypes } from "../common/Const"
-import { CommonService } from '../service/common.service'
-import { MockService } from '../service/mock.service'
-import { ProxyService } from '../service/proxy.service'
-import { PushService } from '../service/push.service'
+import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
 
 @injectable()
 export class AppMockRouter {
@@ -16,13 +13,13 @@ export class AppMockRouter {
   router: Router
 
   @inject(IocTypes.CommonService)
-  private commonService: CommonService
+  private commonService: ICommonService
   @inject(IocTypes.PushService)
-  private pushService: PushService
+  private pushService: IPushService
   @inject(IocTypes.MocksService)
-  private mockService: MockService
+  private mockService: IMockService
   @inject(IocTypes.ProxyService)
-  private proxyService: ProxyService
+  private proxyService: IProxyService
 
   constructor() {
     this.router = express.Router()
@@ -61,7 +58,7 @@ export class AppMockRouter {
     this.router.post("/saveMockRule", (req: Request, resp: Response) => {
       let uid: string = req.query["uid"] as string
       let onlySnap: string = req.query["onlySnap"] as string
-      let rule: ProxyMock.MockRule=this.parseBody(req, 'rule')
+      let rule: ProxyMock.MockRule = this.parseBody(req, 'rule')
       this.route(req, resp, this.mockService.saveMockRule, this.mockService, [uid, onlySnap == 'true', rule])
     })
 
@@ -96,7 +93,7 @@ export class AppMockRouter {
 
   private parseBody(req: Request, name: string) {
     let contentType = req.headers['content-type']
-    let body:any
+    let body: any
     if (contentType.indexOf('multipart/form-data') !== -1) {
       try {
         body = JSONBig.parse(req.body[name]) // try parse as JSON object

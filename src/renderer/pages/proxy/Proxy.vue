@@ -12,10 +12,10 @@
         <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
           <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
         </van-checkbox>
-        <van-icon class="iconfont icon-rule" style="font-size: 1.4rem; margin: 6px; color: gray"
-          @click="recordStore.showMockRuleMgr = true" />
         <van-icon class="iconfont icon-qrcode" style="font-size: 1.4rem; margin: 6px; color: gray"
           @click="commonStore.showQrCode = true" />
+        <van-icon class="iconfont icon-rule" style="font-size: 1.4rem; margin: 6px; color: gray"
+          @click="recordStore.showMockRuleMgr = true" />
         <van-icon class="iconfont icon-setting" style="font-size: 1.4rem; margin: 6px; color: gray"
           @click="showSettings = true" />
       </van-checkbox-group>
@@ -81,28 +81,31 @@ import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
 import { useProxyRecordStore } from '../../store/ProxyRecords'
+import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
-import Settings from '../settings/Settings.vue'
 
 const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
-// let clientStartX = 0
-
 const container = ref()
 const leftDom = ref()
 const rightDom = ref()
 const snaplist = ref()
-
 const commonStore = useCommonStore()
 const recordStore = useProxyRecordStore()
-
-
 const showSettings = ref<boolean>(false)
 
 onMounted(() => {
+  if (!__IS_WEB__) {
+    window.electronAPI.onOpenMockRuleMgr(() => {
+      recordStore.showMockRuleMgr = true
+    })
 
+    window.electronAPI.onOpenSettings(() => {
+      showSettings.value = true
+    })
+  }
 })
 
 watch(() => recordStore.isChanged, () => {
@@ -228,5 +231,4 @@ function click2Reg() {
 .register-url:focus {
   font-weight: bold;
 }
-
 </style>
