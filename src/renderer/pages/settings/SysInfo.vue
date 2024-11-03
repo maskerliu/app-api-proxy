@@ -7,7 +7,7 @@
           <van-cell v-for="item in commonStore.serverConfig.ips" :title="item.name" :value="item.address" clickable
             is-link @click="onSelectIP(item)" />
           <template #reference>
-            <div style="width: 300px; height: 1rem; padding: 2px; margin-top: -5px;">
+            <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
               {{ curServerIp?.address }}
             </div>
           </template>

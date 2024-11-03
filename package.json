@@ -12,9 +12,7 @@
     "build:web": "cross-env BUILD_TARGET=web node --experimental-json-modules --import tsx .build-scripts/builder.ts",
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
     "pub": "yarn build && electron-builder",
-    "asar": "node .build-scripts/compress-asar.js",
-    "start": "electron-forge start",
-    "make": "electron-forge make"
+    "asar": "node .build-scripts/compress-asar.js"
   },
   "build": {
     "productName": "app-api-proxy",
@@ -104,6 +102,7 @@
     "@types/express": "^5.0.0",
     "@types/express-fileupload": "^1.5.1",
     "@types/express-serve-static-core": "^5.0.0",
+    "@types/json-bigint": "^1.0.4",
     "@types/node": "22.7.7",
     "@types/pouchdb": "^6.4.2",
     "@types/pouchdb-find": "^7.3.3",

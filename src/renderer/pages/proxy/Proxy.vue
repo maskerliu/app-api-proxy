@@ -1,5 +1,5 @@
 <template>
-  <van-row ref="container" class="full-row">
+  <van-row ref="container" class="full-row" justify="start" style="overflow-y: auto;">
     <van-col ref="leftDom" class="bg-border left-panel">
       <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
         style="width: 100%; padding: 5px 5px; ">
@@ -16,21 +16,23 @@
           @click="recordStore.showMockRuleMgr = true" />
         <van-icon class="iconfont icon-qrcode" style="font-size: 1.4rem; margin: 6px; color: gray"
           @click="commonStore.showQrCode = true" />
+        <van-icon class="iconfont icon-setting" style="font-size: 1.4rem; margin: 6px; color: gray"
+          @click="showSettings = true" />
       </van-checkbox-group>
 
-      <van-field v-model="proxyDelay" type="number" left-icon="filter-o">
+      <van-field v-model="proxyDelay" type="number">
         <template #label>
-          <van-icon class="iconfont icon-delay" />
+          <van-icon class="iconfont icon-delay" style="font-size: 16px; margin-top: 5px;" />
         </template>
         <template #button>
           <van-button plain size="small" type="primary" @click="saveProxyDelay">
-            <van-icon class="iconfont icon-cloud-sync" style="font-size: 16px;"/>
+            <van-icon class="iconfont icon-cloud-sync" style="font-size: 16px;" />
           </van-button>
         </template>
       </van-field>
 
       <van-field v-model="recordStore.filterKeyword" :placeholder="$t('common.searchPlaceholder')" clearable center
-        left-icon="filter-o" style="margin-top: 10px">
+        left-icon="filter-o" style="margin-top: 5px">
         <template #button>
           <van-button plain size="small" type="primary" @click="recordStore.mockRecord" icon="delete-o" />
         </template>
@@ -54,16 +56,19 @@
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
     </van-col>
 
-    <van-popup round v-model:show="recordStore.showMockRuleMgr" :style="{ width: '90%', height: '90vh', padding: '0' }">
-      <mock-rule-mgr style="display: flex" :record="recordStore.records.get(recordStore.curRecordId)" />
+    <van-popup v-model:show="recordStore.showMockRuleMgr" position="right">
+      <mock-rule-mgr :record="recordStore.records.get(recordStore.curRecordId)" />
     </van-popup>
 
-    <van-popup round :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" :show-confirm-button="false"
-      :show-cancel-button="false">
+    <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode">
       <qrcode-vue :value="commonStore.registerUrl" :size="300" center style="margin: 5px" />
       <div class="register-url" @click="click2Reg">
         {{ commonStore.registerUrl }}
       </div>
+    </van-popup>
+
+    <van-popup v-model:show="showSettings" position="right">
+      <settings />
     </van-popup>
   </van-row>
 </template>
@@ -79,6 +84,7 @@ import { useProxyRecordStore } from '../../store/ProxyRecords'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
+import Settings from '../settings/Settings.vue'
 
 const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
@@ -91,6 +97,9 @@ const snaplist = ref()
 
 const commonStore = useCommonStore()
 const recordStore = useProxyRecordStore()
+
+
+const showSettings = ref<boolean>(false)
 
 onMounted(() => {
 
@@ -107,15 +116,6 @@ watch(() => recordStore.filterKeyword, () => {
 watch(() => recordStore.proxyTypes, () => {
   recordStore.updateFilter()
 })
-
-// watch(proxyDelay, async () => {
-//   try {
-//     await setProxyDelay(Number(proxyDelay.value))
-//     showNotify({ message: '成功设置延迟', type: 'success' })
-//   } catch (err) {
-//     showNotify({ message: '设置延迟失败', type: 'danger' })
-//   }
-// })
 
 async function saveProxyDelay() {
   try {
@@ -153,6 +153,7 @@ function moveHandle(curWidth: any) {
 
 function click2Reg() {
   mockRegister().then((resp) => {
+    showNotify({ message: resp, type: 'success', duration: 500 })
     commonStore.showQrCode = resp == null
   })
 }
@@ -162,28 +163,31 @@ function click2Reg() {
 <style scoped>
 .left-panel {
   margin: 5px;
-  min-width: 320px;
-  height: calc(100% - 10px);
+  min-width: 348px;
+  height: calc(100vh - 10px);
 }
 
 .record-snap-panel {
-  height: calc(100% - 165px);
-  overflow-y: auto;
+  height: calc(100vh - 176px);
+  overflow-y: scroll;
   overflow-x: hidden;
-  margin: 15px 0 10px;
+  margin: 5px 0 0px 0;
 }
 
 .resize-bar {
   position: relative;
   width: 10px;
   height: calc(100% - 10px);
-  margin-top: 5px;
+  margin: 5px 5px 5px 0;
   text-align: center;
 }
 
 .right-panel {
   flex: 1;
   padding: 0;
+  /* flex-shrink: 0;
+  flex-grow: 1; */
+  position: relative;
   height: 100%;
   min-width: 375px;
 }
@@ -211,11 +215,18 @@ function click2Reg() {
 }
 
 .register-url {
+  text-decoration: underline;
   width: 300px;
   color: #777;
   padding: 5px;
   font-size: 0.8rem;
   user-select: text;
   word-break: break-all;
+  cursor: pointer;
 }
+
+.register-url:focus {
+  font-weight: bold;
+}
+
 </style>

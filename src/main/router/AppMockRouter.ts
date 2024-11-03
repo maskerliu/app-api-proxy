@@ -1,6 +1,6 @@
 import express, { Request, Response, Router } from "express"
 import { inject, injectable } from "inversify"
-import * as JSONBigInt from 'json-bigint'
+import JSONBig from 'json-bigint'
 import 'reflect-metadata'
 import { BizCode, BizFail, BizResponse } from "../../common/base.models"
 import { ProxyMock } from "../../common/proxy.models"
@@ -27,7 +27,7 @@ export class AppMockRouter {
   constructor() {
     this.router = express.Router()
 
-    this.router.all("/register", async (req: any, resp: Response) => {
+    this.router.post("/register", async (req: any, resp: Response) => {
       let uid: string = req.query["uid"] as string
       await this.route(req, resp, this.commonService.register, this.commonService, [uid])
     })
@@ -58,10 +58,10 @@ export class AppMockRouter {
       this.route(req, resp, this.mockService.getMockRuleDetail, this.mockService, [uid, ruleId])
     })
 
-    this.router.post("/saveMockRule", (req: any, resp: Response) => {
+    this.router.post("/saveMockRule", (req: Request, resp: Response) => {
       let uid: string = req.query["uid"] as string
       let onlySnap: string = req.query["onlySnap"] as string
-      let rule: ProxyMock.MockRule = JSONBigInt.parse(req.body["rule"])
+      let rule: ProxyMock.MockRule=this.parseBody(req, 'rule')
       this.route(req, resp, this.mockService.saveMockRule, this.mockService, [uid, onlySnap == 'true', rule])
     })
 
@@ -70,7 +70,6 @@ export class AppMockRouter {
       let ruleId: string = req.query["ruleId"] as string
       this.route(req, resp, this.mockService.deleteMockRule, this.mockService, [uid, ruleId])
     })
-
   }
 
   async route(req: Request, resp: Response, func: Function, target: any, args: any[]) {
@@ -93,5 +92,23 @@ export class AppMockRouter {
       resp.json(bizResp)
       resp.end()
     }
+  }
+
+  private parseBody(req: Request, name: string) {
+    let contentType = req.headers['content-type']
+    let body:any
+    if (contentType.indexOf('multipart/form-data') !== -1) {
+      try {
+        body = JSONBig.parse(req.body[name]) // try parse as JSON object
+      } catch (err) {
+        body = req.body[name] // just as plain text
+      }
+    } else if (contentType.indexOf('application/json') !== -1) {
+      body = JSONBig.parse(req.body)
+    } else {
+      body = null
+    }
+
+    return body
   }
 }

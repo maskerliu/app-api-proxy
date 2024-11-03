@@ -83,7 +83,6 @@ export class MockService implements IMockService {
 
     let result = await this.mockRepo.save(rule, onlySnap)
     this.updateMockSettings(uid, result, isMock)
-
     return result
   }
 

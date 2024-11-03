@@ -35,14 +35,13 @@ onMounted(() => {
 }
 
 #app {
-  font-family: "Microsoft YaHei", 微软雅黑, "MicrosoftJhengHei", 华文细黑,
-    STHeiti, MingLiu, monospace;
+  font-family: "Consolas,Monaco,Menlo,Bitstream Vera Sans Mono,monospace";
   background: transparent;
   letter-spacing: 1px;
-  -moz-user-select: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+  /* -moz-user-select: none;
+  -webkit-user-select: none; */
+  /* -ms-user-select: none; */
+  /* user-select: none; */
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -59,7 +58,7 @@ onMounted(() => {
 .biz-content {
   width: 100%;
   min-width: 375px;
-  height: calc(100% - 50px);
+  height: calc(100% - 0px);
   margin: 0px 0 50px 0;
   background: #f1f2f6;
   overflow-y: hidden;

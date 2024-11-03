@@ -1,12 +1,12 @@
 <template>
   <van-row class="full-row">
-    <div class="drag-bar"></div>
+    <!-- <div class="drag-bar"></div> -->
     <router-view class="biz-content" v-slot="{ Component, route }">
       <transition name="fade">
         <component :is="Component" :key="route.path" />
       </transition>
     </router-view>
-    <van-tabbar route v-model="active">
+    <!-- <van-tabbar route v-model="active">
       <van-tabbar-item replace to="/proxy">
         <template #icon>
           <van-icon class="iconfont icon-mock" size="22" />
@@ -27,7 +27,7 @@
           <van-icon class="iconfont icon-setting" size="22" />
         </template>
       </van-tabbar-item>
-    </van-tabbar>
+    </van-tabbar> -->
     <debug-panel />
   </van-row>
 </template>

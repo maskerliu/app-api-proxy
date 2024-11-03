@@ -1,5 +1,40 @@
 <template>
-  <van-col class="bg-border" style="height: calc(100% - 10px); width: 300px; padding: 0px">
+  <van-cell-group inset :title="$t('settings.boardcast.onlineClient') + '[' + commonStore.clientInfos.length + ']'">
+    <van-field :placeholder="$t('settings.boardcast.placeholder')" v-model="broadcastMsg">
+      <template #right-icon>
+        <van-button plain size="small" type="primary" @click="sendBroadcastMsg">
+          {{ $t('settings.boardcast.btnSend') }}
+        </van-button>
+      </template>
+    </van-field>
+
+    <van-grid :column-num="3" clickable style="max-height: calc(100vh - 91px); overflow-y: scroll;">
+      <van-grid-item v-for="item in commonStore.clientInfos" @click="showOpMenu(item)" badge="9"
+        style="max-height: 80px">
+        <template #text>
+          <div class="single-line">{{ item.uid }}</div>
+        </template>
+        <template #icon>
+          <van-icon class="iconfont icon-network-data" size="30" />
+        </template>
+      </van-grid-item>
+    </van-grid>
+
+    <van-popup round v-model:show="dialogVisible" closeable close-icon="close">
+      <van-form style="width: 450px; margin: 15px">
+        <van-field label="client id" :model-value="selectClient.uid" readonly />
+        <van-field label="client key" :model-value="selectClient.key" readonly />
+        <van-field label="client ip" :model-value="`${selectClient.ip}:${selectClient.port}`" readonly />
+
+        <van-field placeholder="请输入内容" v-model="imMsg">
+          <template #right-icon>
+            <van-button plain icon="guide-o" @click="sendMsg" size="small" />
+          </template>
+        </van-field>
+      </van-form>
+    </van-popup>
+  </van-cell-group>
+  <!-- <van-col class="bg-border" style="min-width: 375px; padding: 0px; flex-shrink: 0; flex-grow: 1;">
     <div style="font-size: 0.8rem; padding: 10px; color: grey">
       {{ $t('settings.boardcast.onlineClient') }} [{{ commonStore.clientInfos.length }}]
     </div>
@@ -39,7 +74,7 @@
         </van-field>
       </van-form>
     </van-popup>
-  </van-col>
+  </van-col> -->
 </template>
 <script lang="ts" setup>
 import { ref } from 'vue';
@@ -84,6 +119,4 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
 }
 
 </script>
-<style scoped>
-
-</style>
+<style scoped></style>
