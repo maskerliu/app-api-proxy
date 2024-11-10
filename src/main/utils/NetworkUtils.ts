@@ -1,4 +1,4 @@
-import {Address6} from 'ip-address'
+import { Address6 } from 'ip-address'
 import { NetworkInterfaceInfo, networkInterfaces } from 'os'
 
 export function getLocalIPs() {
@@ -7,7 +7,10 @@ export function getLocalIPs() {
     let iface: NetworkInterfaceInfo[] = networkInterfaces()[devName]
     for (let i = 0; i < iface.length; i++) {
       let alias: NetworkInterfaceInfo = iface[i]
-      if (alias.family === "IPv4" && alias.address !== "127.0.0.1" && (devName === 'WLAN' || devName === 'eth0')) {
+      if (alias.family === "IPv4" && alias.address !== "127.0.0.1" &&
+        (devName.toLowerCase().indexOf('wlan') !== -1 ||
+          devName.toLowerCase().indexOf('eth') !== -1 ||
+          devName.indexOf('以太网') !== -1)) {
         ips.push({
           name: devName,
           netmask: alias.netmask,

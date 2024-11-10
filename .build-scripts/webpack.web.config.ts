@@ -143,16 +143,14 @@ class WebConfig extends BaseConfig {
           removeComments: true
         },
         nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
-      }),
-      new DefinePlugin({ PROTOCOL: `'${config.protocol}'` })
+      })
     )
 
-    this.plugins.push(new DefinePlugin({
-      SERVER_BASE_URL: config.domain ? `'${config.domain}'` : `'${config.protocol}://${localServer}:${config.port}'`,
-      PROTOCL: config.protocol
-    }))
-
     if (process.env.NODE_ENV !== 'production') {
+      this.plugins.push(new DefinePlugin({
+        SERVER_BASE_URL: `'${config.protocol}://${localServer}:${config.port}'`,
+      }))
+
       this.plugins.push(
         // new BundleAnalyzerPlugin({
         //   analyzerMode: 'server',

@@ -4,7 +4,7 @@ import JSONBig from 'json-bigint'
 import 'reflect-metadata'
 import { BizCode, BizFail, BizResponse } from "../../common/base.models"
 import { ProxyMock } from "../../common/proxy.models"
-import { IocTypes } from "../common/Const"
+import { IocTypes } from "../MainConst"
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
 
 @injectable()
@@ -39,7 +39,7 @@ export class AppMockRouter {
 
     this.router.post("/setProxyDelay", (req: any, resp: Response) => {
       let uid: string = req.query["uid"] as string
-      let delay: number = req.query["keyword"] as number
+      let delay: number = req.query["delay"] as number
       this.route(req, resp, this.proxyService.setProxyDelay, this.proxyService, [uid, delay])
     })
 

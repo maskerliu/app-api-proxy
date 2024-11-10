@@ -1,10 +1,10 @@
 import {
-  app, BrowserWindow, BrowserWindowConstructorOptions,
-  ipcMain, IpcMainEvent, ipcRenderer, Menu, nativeImage, nativeTheme, session, Tray
+  app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, IpcMainEvent, Menu, nativeImage, nativeTheme, session, Tray
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { USER_DATA_DIR } from './common/Const'
+import { ElectronAPICMD } from '../common/ipc.api'
+import { USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
 
 
@@ -65,12 +65,12 @@ export default class MainApp {
     const contextMenu = Menu.buildFromTemplate([
       {
         label: '用例管理', click: () => {
-          this.mainWindow.webContents.send('openMockRuleMgr', 1)
+          this.mainWindow.webContents.send(ElectronAPICMD.openMockRuleMgr)
         }
       },
       {
         label: '设置', click: () => {
-          this.mainWindow.webContents.send('openSettings', 1)
+          this.mainWindow.webContents.send(ElectronAPICMD.openSettings)
         }
       },
       {
@@ -86,7 +86,7 @@ export default class MainApp {
         this.createMainWindow()
       }
     })
-    
+
     tray.setToolTip('AppApiProxy')
     tray.setContextMenu(contextMenu)
   }
@@ -184,8 +184,8 @@ export default class MainApp {
   }
 
   private initIPCService() {
-    ipcMain.handle('openGame', (envent: IpcMainEvent, args?: any) => {
-      // this.createGameWindow(args[0])
+    ipcMain.handle('updateServerPort', (event: IpcMainEvent, args?: any) => {
+      console.log(args)
     })
   }
 

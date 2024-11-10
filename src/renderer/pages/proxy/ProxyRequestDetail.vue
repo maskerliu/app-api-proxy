@@ -1,46 +1,43 @@
 <template>
-  <van-form style="min-width: 420px; height: 100vh; overflow-y: scroll;" label-align="right" colon>
-    <van-cell-group inset title="">
-      <van-sticky :offset-top="5">
-        <van-cell center :title="record.url">
-          <template #right-icon>
-            <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description"
-              @click="copyLink" />
-            <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
-          </template>
-        </van-cell>
-      </van-sticky>
+  <van-form label-align="right" colon>
+    <van-cell-group inset title="" class="content">
+      <van-cell center :title="record.url">
+        <template #right-icon>
+          <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description" @click="copyLink" />
+          <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
+        </template>
+      </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.requestHeader')">
+    <van-cell-group inset :title="$t('proxy.requestHeader')" class="content">
       <van-cell>
         <template #value>
-          <vue-json-pretty class="content" :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
+          <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
             :data="record.headers == null ? {} : record.headers" />
         </template>
 
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.requestParams')">
+    <van-cell-group inset :title="$t('proxy.requestParams')" class="content">
       <van-cell>
-        <vue-json-pretty class="content" :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
+        <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
           :data="record.requestData == null ? {} : record.requestData" />
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.responseHeader')">
+    <van-cell-group inset :title="$t('proxy.responseHeader')" class="content">
       <van-cell>
-        <vue-json-pretty class="content" :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
+        <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
           :data="record.responseHeaders == null ? {} : record.responseHeaders" />
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;">
+    <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;" class="content">
       <van-cell>
         <template #value>
-          <vue-json-pretty class="content" :show-icon="true" theme="light" :showLineNumber="true"
-            :showDoubleQuotes="false" style=" max-height: calc(100vh - 125px); overflow-y: auto;"
+          <vue-json-pretty :show-icon="true" theme="light" :showLineNumber="true" :showDoubleQuotes="false"
+            style=" max-height: calc(100vh - 125px); overflow-y: auto;"
             :data="record.responseData == null ? {} : record.responseData">
             <template #renderNodeValue="{ node, defaultValue }">
               <template v-if="typeof node.content === 'string' && node.content.startsWith('https://')">
@@ -68,7 +65,7 @@ const VIDEO_RGX = new RegExp('(.mp4)$')
 const IMG_RGX = new RegExp('(.jpg|.jpeg|.png|.JPG|.gif|.GIF|.webp)$')
 
 defineProps({
-  record: { type: Object as PropType<ProxyMock.ProxyRequestRecord> },
+  record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
 })
 
 const recordStore = useProxyRecordStore()
@@ -140,7 +137,8 @@ a {
 }
 
 .content {
+  width: calc(100% - 400px);
   font-size: 0.7rem;
-  padding: 0 5px;
+  padding: 10px;
 }
 </style>

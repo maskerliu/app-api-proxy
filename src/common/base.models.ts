@@ -86,8 +86,10 @@ export interface IP {
 }
 
 export interface LocalServerConfig {
+  protocol: string
   ip?: string
   port?: number
+  domain?: string
   ips?: Array<IP>
   apiDefineServer?: string // API定义服务地址
   statRuleServer?: string // 埋点定义服务地址

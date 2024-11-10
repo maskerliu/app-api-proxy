@@ -49,7 +49,8 @@ export default {
   settings: {
     sys: {
       title: '系统信息',
-      server: '服务地址',
+      server: '服务IP地址',
+      serverDomain: '服务域名',
       port: '代理Http服务端口',
       proxySocketPort: '代理长连服务端口',
       apiDefineServer: 'API定义服务地址',

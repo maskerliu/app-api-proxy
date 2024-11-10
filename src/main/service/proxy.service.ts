@@ -5,7 +5,7 @@ import { inject, injectable } from 'inversify'
 import "reflect-metadata"
 import zlib from 'zlib'
 import { ProxyMock } from '../../common/proxy.models'
-import { IocTypes } from '../common/Const'
+import { IocTypes } from '../MainConst'
 import { IMockService } from './mock.service'
 import { IPushService } from './push.service'
 
@@ -22,7 +22,7 @@ export type ProxyPref = {
 export interface IProxyService {
   getDataProxyServer(uid: string): ProxyPref
   setDataProxyServer(uid: string, proxyPref: ProxyPref): void
-  setProxyDelay(uid: string, delay?: number): void
+  setProxyDelay(uid: string, delay: number): void
   handleStatRequest(req: any, resp: Response): Promise<void>
   handleRequest(req: Request, resp: Response): Promise<void>
 }
@@ -57,8 +57,7 @@ export class ProxyService implements IProxyService {
   }
 
 
-  public setProxyDelay(uid: string, delay?: number) {
-    console.log(this.proxyPrefs)
+  public setProxyDelay(uid: string, delay: number) {
     if (this.proxyPrefs.has(uid))
       this.proxyPrefs.get(uid).delay = delay
     else {

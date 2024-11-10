@@ -25,11 +25,11 @@ async function request<T>(method: string, path: string, baseURL?: string, header
     case BizCode.SUCCESS:
       return bizResp.data
     case BizCode.FAIL:
-      showNotify({ message: bizResp.msg, type: "warning" })
+      showNotify({ message: bizResp.msg, type: "warning", duration: 1000 })
       return Promise.reject(bizResp.msg)
     case BizCode.ERROR:
-    console.log(resp.data)
-      showNotify({ message: bizResp.msg, type: "danger" })
+      console.log(resp.data)
+      showNotify({ message: bizResp.msg, type: "danger", duration: 1200 })
       return Promise.reject(bizResp.msg)
     default:
       break

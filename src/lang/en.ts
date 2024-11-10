@@ -51,6 +51,7 @@ export default {
       title: 'System Info',
       server: 'Server',
       port: 'Server Port',
+      serverDomain: 'Server Domain',
       proxySocketPort: 'Socket Port',
       apiDefineServer: 'API Define Server',
       statRuleServer: 'Stat Rule Server',

@@ -1,14 +1,5 @@
 import { IpcRenderer } from "electron"
-
-export interface IElectronAPI {
-  openFile: (...args: any) => Promise<void>
-  openGame: (...args: any) => Promise<void>
-
-  onOpenMockRuleMgr: (value: any) => void
-
-  onOpenSettings: (value: any) => void
-}
-
+import { IElectronAPI } from "./common/ipc.api"
 
 declare global {
   let __DEV__: boolean
@@ -20,6 +11,5 @@ declare global {
   }
 
   let __IS_WEB__: boolean
-  let PROTOCOL: string
   let SERVER_BASE_URL: string
 }

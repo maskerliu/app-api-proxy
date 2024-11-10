@@ -10,6 +10,7 @@ thumbs.db
 !.gitkeep
 yarn.lock
 package-lock.json
+.yarn
 .idea/*
 .vscode/*
 *.log

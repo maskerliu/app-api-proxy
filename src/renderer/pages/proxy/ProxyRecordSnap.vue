@@ -1,5 +1,11 @@
 <template>
-  <van-cell center size="large" @click="recordStore.curRecordId = source.id" :is-link="true">
+  <van-cell center @click="recordStore.curRecordId = source.id" :is-link="true" style="padding: 10px 0;">
+    <template #icon>
+      <div class="item-timeline">
+        <div class="item-selected" v-if="recordStore.curRecordId == source.id"></div>
+        <div class="item-timeline-dot" v-bind:style="{ background: source.timelineColor }"></div>
+      </div>
+    </template>
     <template #title>
       <div v-if="source.type == 5020" class="request-snap-url"
         v-for="(item, idx) in (source as ProxyMock.ProxyStatRecord).statistics.bps.slice(0, 2)">
@@ -12,33 +18,29 @@
       <span v-else class="request-snap-url">
         {{ source.url }}
       </span>
-      <van-loading size="20" type="spinner" style="position: absolute; margin-top: -28px; right: 40px"
+      <van-loading size="20" type="spinner" style="width: 28px; margin-top: -28px; "
         v-if="source.type != 5012 && source.type != 5020" />
     </template>
     <template #label>
       <van-icon v-if="source.isMock" class="iconfont icon-api"
-          style="font-size: 1rem; color: brown; font-weight: bold; margin-right: 10px; padding-top: 2px;" />
-      <strong v-if="source.type == 5020" class="request-snap-method">[打点]</strong>
-      <strong v-else class="request-snap-method">[{{ source.method }}]</strong>
-      <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'" style="margin-left: 5px">
-        <b>[HTTP]</b>
-        {{ source.statusCode }}
-      </van-tag>
-      <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
-        style="margin-left: 5px" v-if="source.responseData != null">
-        <b>[BIZ]</b>
-        {{ source.responseData.code }}
-      </van-tag>
-      <span style="margin-left: 5px; font-size: 0.6rem;"
-        v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">耗时: {{
-          source.time ? source.time : "--"
-        }} ms</span>
+          style="font-size: 0.7rem; color: brown; font-weight: bold; margin-right: 5px;" />
+        <strong v-if="source.type == 5020" class="request-snap-method">[打点]</strong>
+        <strong v-else class="request-snap-method">[{{ source.method }}]</strong>
+        <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'" style="margin-left: 5px">
+          <b>[HTTP]</b>
+          {{ source.statusCode }}
+        </van-tag>
+        <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
+          style="margin-left: 5px" v-if="source.responseData != null">
+          <b>[BIZ]</b>
+          {{ source.responseData.code }}
+        </van-tag>
+        <span style="margin-left: 5px; font-size: 0.6rem;"
+          v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
+          耗时: {{ source.time ? source.time : "--" }} ms
+        </span>
     </template>
-    <template #icon>
-      <div class="item-timeline">
-        <div class="item-timeline-dot" v-bind:style="{ background: source.timelineColor }"></div>
-      </div>
-    </template>
+
   </van-cell>
 </template>
 
@@ -61,11 +63,10 @@ const recordStore = useProxyRecordStore()
 <style scoped>
 .item-selected {
   position: absolute;
-  width: calc(100%);
-  height: calc(100% - 1px);
+  width: 10px;
+  height: 100%;
   background: #9191a148;
-  left: 10;
-  top: -1px;
+  left: -6px;
   z-index: 99;
 }
 
@@ -122,7 +123,7 @@ const recordStore = useProxyRecordStore()
 }
 
 .request-snap-url {
-  width: calc(100% - 30px);
+  max-width: 260px;
   font-size: 0.7rem;
   font-weight: bold;
   color: #34495e;
@@ -132,22 +133,5 @@ const recordStore = useProxyRecordStore()
   overflow: hidden;
   text-overflow: ellipsis;
   direction: rtl;
-}
-
-.request-snap-status {
-  width: 100%;
-  margin-top: 10px;
-  font-size: 0.6rem;
-  font-weight: bold;
-}
-
-.request-snap-loading {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #dfdfdf88;
-  top: 0;
 }
 </style>
