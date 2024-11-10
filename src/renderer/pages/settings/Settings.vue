@@ -1,5 +1,5 @@
 <template>
-  <van-form class="full-row" style="width: 80vw; min-width: 375px; height: 100vh; padding:0; overflow-y: scroll;"
+  <van-form class="full-row" style="width: 80vw; min-width: 375px; padding-top: 12px; "
     label-align="right" colon>
     <sys-info />
     <local-resource-mgr />
@@ -44,6 +44,7 @@ onMounted(() => {
   Reflect.apply(Reflect.get(Test.prototype, 'print'), test, [])
   console.log(test2['test'])
   Reflect.apply(Reflect.get(Test.prototype, 'print'), test2, [])
+
 })
 
 </script>

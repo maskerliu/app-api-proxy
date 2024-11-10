@@ -76,7 +76,8 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
     shouldFilter(record: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): boolean {
       if (record.type == ProxyMock.PorxyType.REQUEST_START ||
         record.type == ProxyMock.PorxyType.REQUEST_END) {
-        return this.proxyTypes.indexOf(String(ProxyMock.PorxyType.REQUEST)) == -1
+        return this.proxyTypes.indexOf(String(ProxyMock.PorxyType.REQUEST)) == -1 ||
+          (record as ProxyMock.ProxyRequestRecord).url.indexOf(this.filterKeyword) == -1
       }
 
       if (record.type == ProxyMock.PorxyType.STATISTICS ||
@@ -97,7 +98,7 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
         headers: {
           'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
           'x-user-lang': 'zh_CN',
-          'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStr…PCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+          'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStrPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
           'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
           'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
         },
@@ -109,13 +110,13 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
           code: '8000', msg: 'SUCCESS' + new Date().getMilliseconds(), success: true, result: {
             'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
             'x-user-lang': 'zh_CN',
-            'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStr…PCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+            'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
             'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
             'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
             test: {
               'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
               'x-user-lang': 'zh_CN',
-              'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStr…PCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+              'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStrPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
               'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
               'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
             },
@@ -129,8 +130,8 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
         time: 406 + new Date().getMilliseconds(),
         timelineColor: "#FF9800",
         timestamp: 5,
-        type: 5011,
-        url: "/tg-app/center/v1/config/mainPage",
+        type: ProxyMock.PorxyType.REQUEST_START,
+        url: "/tg-app/center/v1/config/mainPage/helloworld",
         _idx: "277" + new Date().getMilliseconds(),
       }
       this.updateRecord(fakeRecord)

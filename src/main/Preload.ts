@@ -1,16 +1,18 @@
-import { contextBridge, ipcRenderer, IpcRenderer } from 'electron'
-import { IElectronAPI } from '../global'
-import { callInterceptor } from 'vant/lib/utils'
+import { contextBridge, ipcRenderer } from 'electron'
+import { ElectronAPICMD, IElectronAPI } from '../common/ipc.api'
 
 
 let apis: IElectronAPI = {
-  openFile: (...args: any) => ipcRenderer.invoke('dialog:openFile'),
-
-  openGame: (...args: any) => ipcRenderer.invoke('openGame', args),
-
-  onOpenMockRuleMgr: (callback: any) => ipcRenderer.on('openMockRuleMgr', (_event, value) => callback(value)),
-
-  onOpenSettings: (callback: any) => ipcRenderer.on('openSettings', (_event, value) => callback(value))
+  openFile: function (...args: any): Promise<void> {
+    ipcRenderer.invoke('dialog:openFile')
+    return null
+  },
+  onOpenMockRuleMgr: function (callback: any): void {
+    ipcRenderer.on(ElectronAPICMD.openMockRuleMgr, (_event) => callback())
+  },
+  onOpenSettings: function (callback: any): void {
+    ipcRenderer.on(ElectronAPICMD.openSettings, (_event) => callback())
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', apis)

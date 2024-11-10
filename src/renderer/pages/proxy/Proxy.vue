@@ -1,25 +1,27 @@
 <template>
-  <van-row ref="container" class="full-row" justify="start" style="overflow-y: auto;">
-    <van-col ref="leftDom" class="bg-border left-panel">
-      <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
-        style="width: 100%; padding: 5px 5px; ">
-        <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
-          <i class="iconfont icon-api" style="font-weight: blod"></i>
-        </van-checkbox>
-        <van-checkbox shape="square" name="5020" style="padding: 5px 10px">
-          <van-icon class="iconfont icon-maidian" style="font-weight: blod" />
-        </van-checkbox>
-        <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
-          <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
-        </van-checkbox>
-        <van-icon class="iconfont icon-qrcode" style="font-size: 1.4rem; margin: 6px; color: gray"
-          @click="commonStore.showQrCode = true" />
-        <van-icon class="iconfont icon-rule" style="font-size: 1.4rem; margin: 6px; color: gray"
-          @click="recordStore.showMockRuleMgr = true" />
-        <van-icon class="iconfont icon-setting" style="font-size: 1.4rem; margin: 6px; color: gray"
-          @click="showSettings = true" />
-      </van-checkbox-group>
-
+  <van-row justify="start" style="height: 100%; width: 100%; overflow-x: hidden; overflow-y: auto;">
+    <van-col :span="4" class="bg-border" style="flex-grow: 0; min-width: 340px; height: calc(100% - 10px);">
+      <van-row style="display: flex; width:100%;" justify="space-between">
+        <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal" style="width: 235px;">
+          <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
+            <i class="iconfont icon-api" style="font-weight: blod"></i>
+          </van-checkbox>
+          <van-checkbox shape="square" name="5020" style="padding: 5px 10px">
+            <van-icon class="iconfont icon-maidian" style="font-weight: blod" />
+          </van-checkbox>
+          <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
+            <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
+          </van-checkbox>
+        </van-checkbox-group>
+        <div style="padding-top: 6px;">
+          <van-icon class="iconfont icon-qrcode" style="font-size: 1.4rem; margin: 6px; color: gray"
+            @click="commonStore.showQrCode = true" />
+          <van-icon class="iconfont icon-rule" style="font-size: 1.4rem; margin: 6px; color: gray"
+            @click="recordStore.showMockRuleMgr = true" />
+          <van-icon class="iconfont icon-setting" style="font-size: 1.4rem; margin: 6px; color: gray"
+            @click="showSettings = true" />
+        </div>
+      </van-row>
       <van-field v-model="proxyDelay" type="number">
         <template #label>
           <van-icon class="iconfont icon-delay" style="font-size: 16px; margin-top: 5px;" />
@@ -30,7 +32,6 @@
           </van-button>
         </template>
       </van-field>
-
       <van-field v-model="recordStore.filterKeyword" :placeholder="$t('common.searchPlaceholder')" clearable center
         left-icon="filter-o" style="margin-top: 5px">
         <template #button>
@@ -44,20 +45,73 @@
       </van-list>
     </van-col>
 
-    <van-col ref="resizeBar" class="resize-bar">
-      <div class="division-line"></div>
-      <i class="iconfont icon-division division" @mousedown.stop.prevent="resizeDown"></i>
+    <van-col :span="17" style="flex-grow: 0; min-width: 375px; height: 100%; overflow-y: auto;">
+      <van-form label-align="right" colon
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020">
+        <van-cell-group inset title="">
+          <van-cell center :title="recordStore.records.get(recordStore.curRecordId).url">
+            <template #right-icon>
+              <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description"
+                @click="copyLink" />
+              <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
+            </template>
+          </van-cell>
+        </van-cell-group>
+
+        <van-cell-group inset :title="$t('proxy.requestHeader')">
+          <van-cell>
+            <template #value>
+              <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
+                :data="recordStore.records.get(recordStore.curRecordId).headers == null ? {} : recordStore.records.get(recordStore.curRecordId).headers" />
+            </template>
+          </van-cell>
+        </van-cell-group>
+
+        <van-cell-group inset :title="$t('proxy.requestParams')">
+          <van-cell>
+            <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
+              :data="recordStore.records.get(recordStore.curRecordId).requestData == null ? {} : recordStore.records.get(recordStore.curRecordId).requestData" />
+          </van-cell>
+        </van-cell-group>
+
+        <van-cell-group inset :title="$t('proxy.responseHeader')">
+          <van-cell>
+            <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
+              :data="recordStore.records.get(recordStore.curRecordId).responseHeaders == null ? {} : recordStore.records.get(recordStore.curRecordId).responseHeaders" />
+          </van-cell>
+        </van-cell-group>
+        <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;">
+          <van-cell>
+            <template #value>
+              <vue-json-pretty :show-icon="true" theme="light" :showLineNumber="true" :showDoubleQuotes="false"
+                style=" max-height: calc(100vh - 125px); overflow-y: auto;"
+                :data="recordStore.records.get(recordStore.curRecordId).responseData == null ? {} : recordStore.records.get(recordStore.curRecordId).responseData">
+                <template #renderNodeValue="{ node, defaultValue }">
+                  <template v-if="typeof node.content === 'string' && node.content.startsWith('https://')">
+                    <a :href="node.content" target="_blank">{{ node.content }}</a>
+                  </template>
+                  <template v-else>{{ defaultValue }}</template>
+                </template>
+              </vue-json-pretty>
+            </template>
+          </van-cell>
+        </van-cell-group>
+      </van-form>
+
+      <!-- <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" /> -->
+
+      <!--  <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyStatRecord"
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020"
+        class="right-panel" /> -->
     </van-col>
 
-    <van-col ref="rightDom" class="right-panel">
-      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyRequestRecord"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
-      <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyStatRecord"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
-    </van-col>
-
-    <van-popup v-model:show="recordStore.showMockRuleMgr" position="right">
+    <van-popup v-model:show="recordStore.showMockRuleMgr" position="right" closeable close-icon="close">
       <mock-rule-mgr :record="recordStore.records.get(recordStore.curRecordId)" />
+    </van-popup>
+
+    <van-popup v-model:show="showSettings" position="right" closeable close-icon="close">
+      <settings />
     </van-popup>
 
     <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode">
@@ -67,16 +121,15 @@
       </div>
     </van-popup>
 
-    <van-popup v-model:show="showSettings" position="right">
-      <settings />
-    </van-popup>
   </van-row>
+
 </template>
 
 <script lang="ts" setup>
 import QrcodeVue from 'qrcode.vue'
-import { showNotify } from 'vant'
+import { List, showNotify } from 'vant'
 import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import 'vue-json-pretty/lib/styles.css'
 import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
@@ -85,16 +138,16 @@ import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
+import VueJsonPretty from 'vue-json-pretty'
+import 'vue-json-pretty/lib/styles.css'
 
 const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
-const container = ref()
-const leftDom = ref()
-const rightDom = ref()
-const snaplist = ref()
+const snaplist = ref<typeof List>()
 const commonStore = useCommonStore()
 const recordStore = useProxyRecordStore()
 const showSettings = ref<boolean>(false)
+
 
 onMounted(() => {
   if (!__IS_WEB__) {
@@ -106,9 +159,11 @@ onMounted(() => {
       showSettings.value = true
     })
   }
+
 })
 
 watch(() => recordStore.isChanged, () => {
+  recordStore.curRecordId = -1
   snaplist.value.$el.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
@@ -123,35 +178,10 @@ watch(() => recordStore.proxyTypes, () => {
 async function saveProxyDelay() {
   try {
     await setProxyDelay(Number(proxyDelay.value))
-    showNotify({ message: '成功设置延迟', type: 'success' })
+    showNotify({ message: '成功设置延迟', type: 'success', duration: 500 })
   } catch (err) {
-    showNotify({ message: '设置延迟失败', type: 'danger' })
+    showNotify({ message: '设置延迟失败', type: 'danger', duration: 1200 })
   }
-}
-
-function resizeDown(e: MouseEvent) {
-  // clientStartX = e.clientX
-  document.onmousemove = (e) => {
-    moveHandle(e.clientX)
-    return false
-  }
-
-  document.onmouseup = () => {
-    document.onmousemove = null
-    document.onmouseup = null
-  }
-  return false
-}
-
-function moveHandle(curWidth: any) {
-  let changeWidth = curWidth - 85
-  if (changeWidth < 300) {
-    changeWidth = 300
-    curWidth = 330
-  }
-  let remainWidth = container.value.$el.clientWidth - changeWidth - 20
-  leftDom.value.$el.style.width = changeWidth + 'px'
-  rightDom.value.$el.style.width = remainWidth + 'px'
 }
 
 function click2Reg() {
@@ -161,60 +191,47 @@ function click2Reg() {
   })
 }
 
+
+function copyLink() {
+  // clipboard.writeText(this.record.url)
+}
+
+function addToMockRule() {
+  recordStore.showMockRuleMgr = true
+}
+
 </script>
 
 <style scoped>
+:root {
+  --van-popup-close-icon-margin: 40px;
+}
+
 .left-panel {
+  flex-grow: 1;
+  flex-shrink: 0;
   margin: 5px;
-  min-width: 348px;
-  height: calc(100vh - 10px);
-}
-
-.record-snap-panel {
-  height: calc(100vh - 176px);
-  overflow-y: scroll;
-  overflow-x: hidden;
-  margin: 5px 0 0px 0;
-}
-
-.resize-bar {
-  position: relative;
-  width: 10px;
+  min-width: 345px;
   height: calc(100% - 10px);
-  margin: 5px 5px 5px 0;
-  text-align: center;
 }
 
 .right-panel {
-  flex: 1;
-  padding: 0;
-  /* flex-shrink: 0;
-  flex-grow: 1; */
-  position: relative;
+  flex-grow: 19;
+  flex-shrink: 0;
+  min-width: 380px;
   height: 100%;
-  min-width: 375px;
 }
 
-.resize-bar .division-line {
-  width: 1px;
-  height: 100%;
-  position: absolute;
-  left: 4px;
-  z-index: 0;
-  border-left: 2px dotted #d6d6d6;
+.record-snap-panel {
+  width: 100%;
+  height: calc(100vh - 176px);
+  overflow-y: scroll;
+  overflow-x: hidden;
+  margin: 5px 0 0 0;
 }
 
-.resize-bar .division {
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: grey;
-  position: relative;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.resize-bar .division:hover {
-  cursor: col-resize;
+.record-snap-panel::-webkit-scrollbar {
+  display: none;
 }
 
 .register-url {
@@ -230,5 +247,16 @@ function click2Reg() {
 
 .register-url:focus {
   font-weight: bold;
+}
+
+a {
+  color: rgb(31, 187, 166);
+  text-decoration: underline;
+}
+
+.content {
+  width: 300px;
+  font-size: 0.7rem;
+  padding: 0 5px;
 }
 </style>

@@ -11,6 +11,7 @@ let pushClient: PushClient = null
 export const useCommonStore = defineStore('Common', {
   state: () => {
     return {
+      uid: '',
       showQrCode: false,
       registerUrl: '',
       serverConfig: {} as LocalServerConfig
@@ -22,7 +23,8 @@ export const useCommonStore = defineStore('Common', {
     },
     async init() {
       pushClient = new PushClient()
-      if (__DEV__ || !__IS_WEB__) { // dev mode 
+
+      if (__DEV__ || !__IS_WEB__) {
         updateBaseDomain(SERVER_BASE_URL)
       }
 
@@ -44,20 +46,18 @@ export const useCommonStore = defineStore('Common', {
     },
     publishMessage(message: string) {
       // here just mock a device to send a fake monitor data for test
-     
+
     },
     updateServerConfig(config?: LocalServerConfig) {
-      let uid = generateUid()
+      this.uid = generateUid()
       this.serverConfig = config ? config : this.serverConfig
-      updateClientUID(uid)
+      updateClientUID(this.uid)
 
+      this.registerUrl = `${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${this.uid}`
       if (__IS_WEB__) {
-        this.registerUrl = `${SERVER_BASE_URL}/appmock/register?uid=${uid}`
-        pushClient.start(SERVER_BASE_URL, uid)
+        pushClient.start(`${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}`, this.uid)
       } else {
-        // updateBaseDomain(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`)
-        this.registerUrl = `${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${uid}`
-        pushClient.start(`${PROTOCOL}://${this.serverConfig.ip}:${this.serverConfig.port}`, uid)
+        pushClient.start(`${this.serverConfig.protocol}://localhost:${this.serverConfig.port}`, this.uid)
       }
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {

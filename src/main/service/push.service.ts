@@ -3,6 +3,7 @@ import { injectable } from 'inversify'
 import "reflect-metadata"
 import { Connection, createServer, Server as SockServer } from 'sockjs'
 import { ProxyMock } from '../../common/proxy.models'
+import { random } from '../../renderer/common'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
@@ -79,7 +80,6 @@ export class PushService implements IPushService {
       })
     })
 
-    console.log('hello', this.pushClients)
     return result
   }
 
@@ -95,8 +95,6 @@ export class PushService implements IPushService {
         break
       }
     }
-
-    console.log("test", this.pushClients)
   }
 
   private handleClose(conn: Connection) {

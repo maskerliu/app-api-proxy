@@ -5,16 +5,17 @@ import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import path from 'path'
 import tcpPortUsed from 'tcp-port-used'
-import { IocTypes, USER_DATA_DIR } from './common/Const'
+import { IocTypes, USER_DATA_DIR } from './MainConst'
 import { bizContainer } from './IocContainer'
 import { AppMockRouter } from './router/AppMockRouter'
 import { ICommonService, IProxyService, IPushService } from './service'
+import { Server } from 'http'
 
 export class MainServer {
 
   private buildConfig = JSON.parse(process.env.BUILD_CONFIG)
 
-  private httpServer: any
+  private httpServer: Server
   private httpApp: Application
 
   private appmockRouter: AppMockRouter
@@ -44,6 +45,7 @@ export class MainServer {
     if (this.httpServer != null) {
       this.httpServer.close(() => { this.httpServer = null })
     }
+    
     this.startHttpServer()
   }
 

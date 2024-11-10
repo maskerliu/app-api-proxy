@@ -159,7 +159,7 @@ function consoleLog(proc: string, data: any, color?: string) {
     (proc == 'Electron' ? data.toString() : data.toString({ colors: true, chunks: false }))
       .split(/\r?\n/).forEach((line: string) => {
         // line = line.replace(/(.{})/g, '$1\n')
-        log += ` ${line}\n`
+        log += `| ${line}\n`
       })
   } else {
     log += `${data}\n`
@@ -190,6 +190,7 @@ async function start() {
 
   try {
     let localIPv4 = WebpackDevServer.internalIPSync('v4')
+    console.log(localIPv4)
     await Promise.all([
       startDevServer(webConfig.init(localIPv4), 9081),
       startDevServer(rendererConfig.init(localIPv4), 9080),

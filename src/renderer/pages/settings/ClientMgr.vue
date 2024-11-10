@@ -9,13 +9,13 @@
     </van-field>
 
     <van-grid :column-num="3" clickable style="max-height: calc(100vh - 91px); overflow-y: scroll;">
-      <van-grid-item v-for="item in clients" @click="showOpMenu(item)" badge="9"
-        style="max-height: 80px">
+      <van-grid-item v-for="item in clients" @click="showOpMenu(item)" badge="9" style="max-height: 80px">
         <template #text>
           <div class="single-line">{{ item.uid }}</div>
         </template>
         <template #icon>
-          <van-icon class="iconfont icon-network-data" size="30" />
+          <van-icon class="iconfont icon-network-data" size="30"
+            :style="{ color: commonStore.uid == item.uid ? 'green' : 'gray' }" />
         </template>
       </van-grid-item>
     </van-grid>

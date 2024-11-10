@@ -21,10 +21,10 @@ onMounted(() => {
   font-family: "Consolas,Monaco,Menlo,Bitstream Vera Sans Mono,monospace";
   background: transparent;
   letter-spacing: 1px;
-  -moz-user-select: none;
+  /* -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
-  user-select: none;
+  user-select: none; */
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -34,14 +34,15 @@ onMounted(() => {
 .bg-border {
   margin: 5px;
   padding: 0;
-  border-radius: 5px;
-  box-shadow: 0px 5px 5px -5px #000;
+  border-radius: 8px;
+  border: 1px solid #e1e1e1;
+  box-shadow: 0px 12px 8px -12px #000;
 }
 
 .biz-content {
   width: 100%;
   min-width: 375px;
-  height: calc(100% - 0);
+  height: 100%;
   margin: 0px 0 50px 0;
   background: #f1f2f6;
   overflow-y: hidden;

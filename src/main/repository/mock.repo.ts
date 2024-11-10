@@ -3,7 +3,7 @@ import path from 'path'
 import PouchFind from 'pouchdb-find'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '../../common/proxy.models'
-import { USER_DATA_DIR } from '../common/Const'
+import { USER_DATA_DIR } from '../MainConst'
 import BaseRepo from './base.repo'
 import "reflect-metadata"
 

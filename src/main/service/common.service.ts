@@ -2,10 +2,12 @@ import { inject, injectable } from "inversify"
 import "reflect-metadata"
 import { LocalServerConfig } from '../../common/base.models'
 import { ProxyMock } from '../../common/proxy.models'
-import { IocTypes, Lynx_Mqtt_Broker } from '../common/Const'
+import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { findIp, getLocalIPs } from '../utils/NetworkUtils'
 import { IProxyService, ProxyPref } from './proxy.service'
 import { IPushService } from './push.service'
+import { accessSync, existsSync, readFile, readFileSync, writeFileSync } from 'fs'
+import path from 'path'
 
 export interface ICommonService {
   serverConfig: LocalServerConfig
@@ -20,23 +22,36 @@ export interface ICommonService {
 @injectable()
 export class CommonService implements ICommonService {
 
+  serverConfig: LocalServerConfig
+
   @inject(IocTypes.ProxyService)
   private proxyService: IProxyService
   @inject(IocTypes.PushService)
   private pushService: IPushService
 
   constructor() {
-    let config = JSON.parse(process.env.BUILD_CONFIG)
-    this.serverConfig = {
-      // ip: getLocalIPs()[0].address,
-      ip: findIp('v4'),
-      port: config.port,
-      ips: getLocalIPs(),
-      mqttBroker: Lynx_Mqtt_Broker
+    let filePath = path.join(USER_DATA_DIR, 'local.config.json')
+    try {
+      accessSync(filePath)
+    } catch (err) {
+      console.log('file not exist')
+      writeFileSync(filePath, process.env.BUILD_CONFIG, 'utf-8')
+    } finally {
+      let data = readFileSync(filePath, 'utf-8')
+      let config = JSON.parse(data)
+      console.log('read from local', config)
+      this.serverConfig = {
+        protocol: config.protocol,
+        ip: findIp('v4'),
+        port: config.port,
+        domain: config.domain,
+        ips: getLocalIPs(),
+        mqttBroker: Lynx_Mqtt_Broker
+      }
+
+      console.log(this.serverConfig.ip)
     }
   }
-
-  serverConfig: LocalServerConfig
 
   public register(uid: string) {
     if (uid != null) {

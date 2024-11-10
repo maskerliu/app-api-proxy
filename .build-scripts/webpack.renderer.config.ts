@@ -139,7 +139,9 @@ class RendererConfig extends BaseConfig {
         },
         nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
       }),
-      new DefinePlugin({ SERVER_BASE_URL: `'${config.protocol}://localhost:${config.port}'`, PROTOCOL: `'${config.protocol}'` }),
+      new DefinePlugin({
+        SERVER_BASE_URL: `'${config.protocol}://localhost:${config.port}'`, PROTOCOL: `'${config.protocol}'`
+      }),
     )
 
     if (process.env.NODE_ENV !== 'production') {
