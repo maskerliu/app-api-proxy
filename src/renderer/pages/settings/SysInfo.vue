@@ -22,7 +22,7 @@
     </van-field>
 
     <van-field center :label="item.tooltip" label-width="10rem" v-for="item in perferences"
-      :model-value="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly">
+      v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly">
       <template #button>
         <van-button plain type="primary" size="small" v-if="item.hasSave" @click="onSave">{{ $t('common.save') }}
         </van-button>
@@ -35,7 +35,7 @@
 <script lang="ts" setup>
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IP } from '../../../common/base.models'
+import { LocalIP } from '../../../common/base.models'
 
 import { useCommonStore } from '../../store'
 
@@ -50,7 +50,7 @@ type SettingPreference = {
 
 const { t } = useI18n()
 const commonStore = useCommonStore()
-const curServerIp = ref<IP>(null)
+const curServerIp = ref<LocalIP>(null)
 const showPopover = ref(false)
 
 let perferences = [
@@ -80,7 +80,7 @@ watch(() => commonStore.serverConfig, () => {
   if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
 })
 
-function onSelectIP(ip: IP) {
+function onSelectIP(ip: LocalIP) {
   curServerIp.value = ip
   showPopover.value = false
 }

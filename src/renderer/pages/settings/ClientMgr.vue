@@ -40,6 +40,7 @@ import { onMounted, ref } from 'vue'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
 import { getAllPushClients } from '../../../common/proxy.api'
+import { showNotify } from 'vant';
 
 const commonStore = useCommonStore()
 const dialogVisible = ref(false)
@@ -49,7 +50,11 @@ const clients = ref<ProxyMock.ClientInfo[]>([])
 const imMsg = ref('')
 
 onMounted(async () => {
-  clients.value = await getAllPushClients()
+  try {
+    clients.value = await getAllPushClients()
+  } catch (error) {
+    showNotify(error)
+  }
 })
 
 function sendBroadcastMsg(): void {

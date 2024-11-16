@@ -32,6 +32,7 @@ class Hello {
   }
 }
 
+
 onMounted(() => {
   let test = new Test('chris', 'xxxxx')
   let test2 = new Test('tom', 'ooooo')

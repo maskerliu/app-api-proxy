@@ -1,6 +1,6 @@
 <template>
   <van-row justify="start" style="height: 100%; width: 100%; overflow-x: hidden; overflow-y: auto;">
-    <van-col :span="4" class="bg-border" style="flex-grow: 0; min-width: 340px; height: calc(100% - 10px);">
+    <van-col class="bg-border" style="flex-grow: 1; min-width: 340px; height: calc(100% - 10px);">
       <van-row style="display: flex; width:100%;" justify="space-between">
         <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal" style="width: 235px;">
           <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
@@ -14,12 +14,9 @@
           </van-checkbox>
         </van-checkbox-group>
         <div style="padding-top: 6px;">
-          <van-icon class="iconfont icon-qrcode" style="font-size: 1.4rem; margin: 6px; color: gray"
-            @click="commonStore.showQrCode = true" />
-          <van-icon class="iconfont icon-rule" style="font-size: 1.4rem; margin: 6px; color: gray"
-            @click="recordStore.showMockRuleMgr = true" />
-          <van-icon class="iconfont icon-setting" style="font-size: 1.4rem; margin: 6px; color: gray"
-            @click="showSettings = true" />
+          <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
+          <van-icon class="iconfont icon-rule left-panel-icon" @click="recordStore.showMockRuleMgr = true" />
+          <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true" />
         </div>
       </van-row>
       <van-field v-model="proxyDelay" type="number">
@@ -44,66 +41,13 @@
           :source="recordStore.records.get(key)" />
       </van-list>
     </van-col>
+    <van-col style="flex-grow: 19; flex-basis: 50%; min-width: 375px; height: calc(100% - 10px); overflow-y: auto;">
+      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
 
-    <van-col :span="17" style="flex-grow: 0; min-width: 375px; height: 100%; overflow-y: auto;">
-      <van-form label-align="right" colon
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020">
-        <van-cell-group inset title="">
-          <van-cell center :title="recordStore.records.get(recordStore.curRecordId).url">
-            <template #right-icon>
-              <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description"
-                @click="copyLink" />
-              <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
-            </template>
-          </van-cell>
-        </van-cell-group>
-
-        <van-cell-group inset :title="$t('proxy.requestHeader')">
-          <van-cell>
-            <template #value>
-              <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
-                :data="recordStore.records.get(recordStore.curRecordId).headers == null ? {} : recordStore.records.get(recordStore.curRecordId).headers" />
-            </template>
-          </van-cell>
-        </van-cell-group>
-
-        <van-cell-group inset :title="$t('proxy.requestParams')">
-          <van-cell>
-            <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
-              :data="recordStore.records.get(recordStore.curRecordId).requestData == null ? {} : recordStore.records.get(recordStore.curRecordId).requestData" />
-          </van-cell>
-        </van-cell-group>
-
-        <van-cell-group inset :title="$t('proxy.responseHeader')">
-          <van-cell>
-            <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
-              :data="recordStore.records.get(recordStore.curRecordId).responseHeaders == null ? {} : recordStore.records.get(recordStore.curRecordId).responseHeaders" />
-          </van-cell>
-        </van-cell-group>
-        <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;">
-          <van-cell>
-            <template #value>
-              <vue-json-pretty :show-icon="true" theme="light" :showLineNumber="true" :showDoubleQuotes="false"
-                style=" max-height: calc(100vh - 125px); overflow-y: auto;"
-                :data="recordStore.records.get(recordStore.curRecordId).responseData == null ? {} : recordStore.records.get(recordStore.curRecordId).responseData">
-                <template #renderNodeValue="{ node, defaultValue }">
-                  <template v-if="typeof node.content === 'string' && node.content.startsWith('https://')">
-                    <a :href="node.content" target="_blank">{{ node.content }}</a>
-                  </template>
-                  <template v-else>{{ defaultValue }}</template>
-                </template>
-              </vue-json-pretty>
-            </template>
-          </van-cell>
-        </van-cell-group>
-      </van-form>
-
-      <!-- <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" /> -->
-
-      <!--  <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyStatRecord"
+      <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020"
-        class="right-panel" /> -->
+        class="right-panel" />
     </van-col>
 
     <van-popup v-model:show="recordStore.showMockRuleMgr" position="right" closeable close-icon="close">
@@ -129,17 +73,14 @@
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
 import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
-import 'vue-json-pretty/lib/styles.css'
 import { mockRegister, setProxyDelay } from '../../../common/proxy.api'
-import { ProxyMock } from '../../../common/proxy.models'
 import { useCommonStore } from '../../store'
 import { useProxyRecordStore } from '../../store/ProxyRecords'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
-import VueJsonPretty from 'vue-json-pretty'
-import 'vue-json-pretty/lib/styles.css'
+
 
 const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
@@ -150,6 +91,8 @@ const showSettings = ref<boolean>(false)
 
 
 onMounted(() => {
+  console.log(/(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/.test('192.168.59.1'))
+
   if (!__IS_WEB__) {
     window.electronAPI.onOpenMockRuleMgr(() => {
       recordStore.showMockRuleMgr = true
@@ -159,7 +102,6 @@ onMounted(() => {
       showSettings.value = true
     })
   }
-
 })
 
 watch(() => recordStore.isChanged, () => {
@@ -175,6 +117,11 @@ watch(() => recordStore.proxyTypes, () => {
   recordStore.updateFilter()
 })
 
+function openMockRuleMgr() {
+  recordStore.showMockRuleMgr = true
+
+}
+
 async function saveProxyDelay() {
   try {
     await setProxyDelay(Number(proxyDelay.value))
@@ -189,15 +136,6 @@ function click2Reg() {
     showNotify({ message: resp, type: 'success', duration: 500 })
     commonStore.showQrCode = resp == null
   })
-}
-
-
-function copyLink() {
-  // clipboard.writeText(this.record.url)
-}
-
-function addToMockRule() {
-  recordStore.showMockRuleMgr = true
 }
 
 </script>
@@ -220,6 +158,12 @@ function addToMockRule() {
   flex-shrink: 0;
   min-width: 380px;
   height: 100%;
+}
+
+.left-panel-icon {
+  font-size: 1.4rem;
+  margin: 6px;
+  color: gray
 }
 
 .record-snap-panel {

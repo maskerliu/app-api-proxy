@@ -1,13 +1,17 @@
 import { Address6 } from 'ip-address'
 import { NetworkInterfaceInfo, networkInterfaces } from 'os'
+import { LocalIP } from '../../common/base.models'
 
-export function getLocalIPs() {
+const ipRegex = /(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/
+
+export function getLocalIPs(): LocalIP[] {
   let ips = []
   for (let devName in networkInterfaces()) {
     let iface: NetworkInterfaceInfo[] = networkInterfaces()[devName]
     for (let i = 0; i < iface.length; i++) {
       let alias: NetworkInterfaceInfo = iface[i]
       if (alias.family === "IPv4" && alias.address !== "127.0.0.1" &&
+        !ipRegex.test(alias.address) &&
         (devName.toLowerCase().indexOf('wlan') !== -1 ||
           devName.toLowerCase().indexOf('eth') !== -1 ||
           devName.indexOf('以太网') !== -1)) {

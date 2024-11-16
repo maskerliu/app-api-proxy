@@ -1,5 +1,5 @@
 {
   "port": 8884,
   "protocol": "http",
-  "domain": "http://172.22.48.1:8884"
+  "domain": "http://192.168.31.185:8884"
 }

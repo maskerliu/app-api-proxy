@@ -1,7 +1,7 @@
 <template>
   <van-row style="width: 80vw; min-width: 375px; height: 100vh; overflow: hidden;">
     <van-row class="bg-border" justify="start" style="width: calc(100% - 10px);">
-      <van-col style="min-width: 348px;height: 100%; flex-shrink: 0; flex-grow: 1;">
+      <van-col style="min-width: 348px; flex-grow: 1; flex-basis: 50%;">
         <van-collapse accordion v-model="activeSearchResult">
           <van-collapse-item name="0" :disabled="true" :is-link="false">
             <template #title>
@@ -11,8 +11,8 @@
                   <van-icon plain type="primary" name="plus" size="small" @click="onRuleEdit(null)"
                     style="margin-right: 35px;" />
                 </template>
-              </van-search>     
-            </template> 
+              </van-search>
+            </template>
 
             <van-list class="search-result" :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
               <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
@@ -32,24 +32,31 @@
           </van-collapse-item>
         </van-collapse>
       </van-col>
-      <van-col style="min-width: 380px; height: 100%; flex-shrink: 0; flex-grow: 1;">
+      <van-col style="min-width: 380px; flex-grow: 1; flex-basis: 50%;">
         <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
-          :label="curRule?.desc == null ? $t('mock.rule.desc') : curRule.desc" style="padding: 5px 10px;">
+          style="padding: 5px 10px;">
           <template #icon v-if="curRule._id != null">
             <van-icon class="iconfont icon-cancel" size="20" style="color: red; margin-right: 10px;"
               @click="onRuleSelect(null)" />
           </template>
+          <template #label>
+            <span
+              style="max-width: calc(100% - 130px); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              {{ curRule?.desc == null ? $t('mock.rule.desc') : curRule.desc }}
+            </span>
+          </template>
           <template #value>
-            <van-button plain type="primary" size="small" @click="onRuleEdit(curRule)" :disabled="curRule._id == null">
-              <van-icon class="iconfont icon-edit" size="18" />
+            <van-button plain type="primary" size="mini" @click="onRuleEdit(curRule)" :disabled="curRule._id == null"
+              style="padding-top: 2px;">
+              <van-icon class="iconfont icon-edit" size="14" />
             </van-button>
-            <van-button plain type="danger" size="small" @click="onRuleDelete(curRule)" :disabled="curRule._id == null"
-              style="margin-left: 10px;">
-              <van-icon class="iconfont icon-delete" size="18" style="color: red;" />
+            <van-button plain type="danger" size="mini" @click="onRuleDelete(curRule)" :disabled="curRule._id == null"
+              style="margin-left: 10px; padding-top: 2px;">
+              <van-icon class="iconfont icon-delete" size="14" style="color: red;" />
             </van-button>
-            <van-button plain type="primary" size="small" @click="onSave(false)" :disabled="curRule._id == null"
-              style="margin-left: 10px;">
-              <van-icon class="iconfont icon-cloud-sync" size="18" />
+            <van-button plain type="primary" size="mini" @click="onSave(false)" :disabled="curRule._id == null"
+              style="margin-left: 10px; padding-top: 2px;">
+              <van-icon class="iconfont icon-cloud-sync" size="14" />
             </van-button>
           </template>
           <template #right-icon>
@@ -85,9 +92,8 @@
       <van-col style="padding-top: 50px">
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
-      <van-col style="height: calc(100% - 10px); flex: 1; overflow: auto;">
-        <vue-json-pretty class="json-editor" :showIcon="true" :editable="true" :showLineNumber="true"
-          style="font-size: 0.7rem;" :showDoubleQuotes="false" :data="curRecord" />
+      <van-col style="height: calc(100% - 10px); flex: 1; margin: 5px;">
+        <vue-ace-editor :read-only="false" :data="JSON.stringify(curRecord, null, '\t')" />
       </van-col>
     </van-row>
 
@@ -114,11 +120,13 @@
 
 <script lang="ts" setup>
 import { showNotify } from 'vant'
-import { onMounted, PropType, ref, watch } from 'vue'
+import { onMounted, PropType, readonly, ref, watch } from 'vue'
 import VueJsonPretty from 'vue-json-pretty'
+import VueAceEditor from '../components/VueAceEditor.vue'
 import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { json2map, map2json } from '../../common'
+import { flat } from 'vant/lib/utils'
 
 const props = defineProps({
   isMock: { type: Boolean, require: false, default: false },
