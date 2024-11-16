@@ -1,6 +1,6 @@
 <template>
   <van-list style="padding: 5px;">
-    <van-cell v-for="(item, idx) in record.statistics.bps" :title="item.pageId" :label="item.elementId"
+    <van-cell v-for="(item, idx) in (record as ProxyMock.ProxyStatRecord).statistics.bps" :title="item.pageId" :label="item.elementId"
       :value="item.args" />
   </van-list>
 </template>
@@ -16,7 +16,7 @@ type SateRule = { desc: string, rule: string[], ruleDesc: string }
 
 const ProxyStatDetail = defineComponent({
   props: {
-    record: { type: Object as PropType<ProxyMock.ProxyStatRecord> },
+    record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
   },
   mounted() {
     this.rows = []

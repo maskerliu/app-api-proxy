@@ -5,6 +5,7 @@ import { getServerConfig } from '../../common/proxy.api'
 import { ProxyMock } from '../../common/proxy.models'
 import { generateUid } from '../common'
 import PushClient from '../common/PushClient'
+import { showNotify } from 'vant'
 
 let pushClient: PushClient = null
 
@@ -32,7 +33,7 @@ export const useCommonStore = defineStore('Common', {
         this.serverConfig = await getServerConfig()
         this.updateServerConfig()
       } catch (err) {
-        console.error(err)
+        showNotify(err)
       }
     },
     async saveLocalServerConfig(config: LocalServerConfig) {

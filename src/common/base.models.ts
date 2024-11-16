@@ -75,7 +75,7 @@ export interface AppInfo {
   bundleId: string
 }
 
-export interface IP {
+export interface LocalIP {
   address: string
   netmask: string
   family: string
@@ -90,7 +90,7 @@ export interface LocalServerConfig {
   ip?: string
   port?: number
   domain?: string
-  ips?: Array<IP>
+  ips?: Array<LocalIP>
   apiDefineServer?: string // API定义服务地址
   statRuleServer?: string // 埋点定义服务地址
   dataServer?: string // 流量代理服务地址

@@ -42,14 +42,14 @@ export class CommonService implements ICommonService {
       console.log('read from local', config)
       this.serverConfig = {
         protocol: config.protocol,
-        ip: findIp('v4'),
+        ip: getLocalIPs()[0].address,
         port: config.port,
         domain: config.domain,
         ips: getLocalIPs(),
         mqttBroker: Lynx_Mqtt_Broker
       }
 
-      console.log(this.serverConfig.ip)
+      console.log("hello", this.serverConfig.ip)
     }
   }
 

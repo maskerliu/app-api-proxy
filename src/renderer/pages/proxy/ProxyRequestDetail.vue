@@ -1,6 +1,6 @@
 <template>
   <van-form label-align="right" colon>
-    <van-cell-group inset title="" class="content">
+    <van-cell-group inset title="" class="content" style="margin-top: 15px;">
       <van-cell center :title="record.url">
         <template #right-icon>
           <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description" @click="copyLink" />
@@ -12,59 +12,48 @@
     <van-cell-group inset :title="$t('proxy.requestHeader')" class="content">
       <van-cell>
         <template #value>
-          <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
-            :data="record.headers == null ? {} : record.headers" />
+          <vue-ace-editor :options="{ showLineNumbers: false }"
+            :data="record.headers == null ? '{}' : JSON.stringify(record.headers, null, '\t')" />
         </template>
-
       </van-cell>
     </van-cell-group>
 
     <van-cell-group inset :title="$t('proxy.requestParams')" class="content">
       <van-cell>
-        <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
-          :data="record.requestData == null ? {} : record.requestData" />
+        <vue-ace-editor :data="record.requestData == null ? '{}' : JSON.stringify(record.requestData, null, '\t')" />
       </van-cell>
     </van-cell-group>
 
     <van-cell-group inset :title="$t('proxy.responseHeader')" class="content">
       <van-cell>
-        <vue-json-pretty :show-icon="true" theme="light" :deep="0" :showDoubleQuotes="false"
-          :data="record.responseHeaders == null ? {} : record.responseHeaders" />
+        <vue-ace-editor
+          :data="record.responseHeaders == null ? '{}' : JSON.stringify(record.responseHeaders, null, '\t')" />
       </van-cell>
     </van-cell-group>
 
     <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;" class="content">
       <van-cell>
         <template #value>
-          <vue-json-pretty :show-icon="true" theme="light" :showLineNumber="true" :showDoubleQuotes="false"
-            style=" max-height: calc(100vh - 125px); overflow-y: auto;"
-            :data="record.responseData == null ? {} : record.responseData">
-            <template #renderNodeValue="{ node, defaultValue }">
-              <template v-if="typeof node.content === 'string' && node.content.startsWith('https://')">
-                <a :href="node.content" target="_blank">{{ node.content }}</a>
-              </template>
-              <template v-else>{{ defaultValue }}</template>
-            </template>
-          </vue-json-pretty>
+          <vue-ace-editor
+            :data="record.responseData == null ? '{}' : JSON.stringify(record.responseData, null, '\t')" />
         </template>
       </van-cell>
-
     </van-cell-group>
   </van-form>
 </template>
 
 <script lang="ts" setup>
 import { PropType, ref, watch } from 'vue'
-import VueJsonPretty from 'vue-json-pretty'
-import 'vue-json-pretty/lib/styles.css'
 import { ProxyMock } from '../../../common/proxy.models'
 import { useProxyRecordStore } from '../../store/ProxyRecords'
+import { showToast } from 'vant'
+import VueAceEditor from '../components/VueAceEditor.vue'
 
 const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
 const VIDEO_RGX = new RegExp('(.mp4)$')
 const IMG_RGX = new RegExp('(.jpg|.jpeg|.png|.JPG|.gif|.GIF|.webp)$')
 
-defineProps({
+const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
 })
 
@@ -114,6 +103,12 @@ function closeImgPreview() {
 }
 
 function copyLink() {
+  // var input = document.createElement('input')
+  // input.value = props.record.url
+  // document.body.appendChild(input)
+  // input.select()
+  // document.execCommand("copy")
+  showToast(`[ ${props.record.url} ] has copyed!`)
   // clipboard.writeText(this.record.url)
 }
 
@@ -137,7 +132,6 @@ a {
 }
 
 .content {
-  width: calc(100% - 400px);
   font-size: 0.7rem;
   padding: 10px;
 }

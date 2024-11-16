@@ -23,22 +23,22 @@
     </template>
     <template #label>
       <van-icon v-if="source.isMock" class="iconfont icon-api"
-          style="font-size: 0.7rem; color: brown; font-weight: bold; margin-right: 5px;" />
-        <strong v-if="source.type == 5020" class="request-snap-method">[打点]</strong>
-        <strong v-else class="request-snap-method">[{{ source.method }}]</strong>
-        <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'" style="margin-left: 5px">
-          <b>[HTTP]</b>
-          {{ source.statusCode }}
-        </van-tag>
-        <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
-          style="margin-left: 5px" v-if="source.responseData != null">
-          <b>[BIZ]</b>
-          {{ source.responseData.code }}
-        </van-tag>
-        <span style="margin-left: 5px; font-size: 0.6rem;"
-          v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
-          耗时: {{ source.time ? source.time : "--" }} ms
-        </span>
+        style="font-size: 0.7rem; color: brown; font-weight: bold; margin-right: 5px;" />
+      <strong v-if="source.type == 5020" class="request-snap-method">[打点]</strong>
+      <strong v-else class="request-snap-method">[{{ source.method }}]</strong>
+      <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'" style="margin-left: 5px">
+        <b>[HTTP]</b>
+        {{ source.statusCode }}
+      </van-tag>
+      <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
+        style="margin-left: 5px" v-if="source.responseData != null">
+        <b>[BIZ]</b>
+        {{ source.responseData.code }}
+      </van-tag>
+      <span style="margin-left: 5px; font-size: 0.6rem;"
+        v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
+        耗时: {{ source.time ? source.time : "--" }} ms
+      </span>
     </template>
 
   </van-cell>
@@ -123,7 +123,7 @@ const recordStore = useProxyRecordStore()
 }
 
 .request-snap-url {
-  max-width: 260px;
+  max-width: calc(100% - 100px);
   font-size: 0.7rem;
   font-weight: bold;
   color: #34495e;
