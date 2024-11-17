@@ -93,7 +93,7 @@
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
       <van-col style="height: calc(100% - 10px); flex: 1; margin: 5px;">
-        <vue-ace-editor :read-only="false" :data="JSON.stringify(curRecord, null, '\t')" />
+        <vue-ace-editor :read-only="false" :options="{ maxLines: 38 }" :data="JSON.stringify(curRecord, null, '\t')" />
       </van-col>
     </van-row>
 
@@ -120,13 +120,12 @@
 
 <script lang="ts" setup>
 import { showNotify } from 'vant'
-import { onMounted, PropType, readonly, ref, watch } from 'vue'
-import VueJsonPretty from 'vue-json-pretty'
-import VueAceEditor from '../components/VueAceEditor.vue'
+import { onMounted, PropType, ref, watch } from 'vue'
 import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { json2map, map2json } from '../../common'
-import { flat } from 'vant/lib/utils'
+import VueAceEditor from '../components/VueAceEditor.vue'
+
 
 const props = defineProps({
   isMock: { type: Boolean, require: false, default: false },
