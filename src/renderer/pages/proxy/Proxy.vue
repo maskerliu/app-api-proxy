@@ -96,9 +96,11 @@ onMounted(() => {
   if (!__IS_WEB__) {
     window.electronAPI.onOpenMockRuleMgr(() => {
       recordStore.showMockRuleMgr = true
+      showSettings.value =false
     })
 
     window.electronAPI.onOpenSettings(() => {
+      recordStore.showMockRuleMgr = false
       showSettings.value = true
     })
   }
@@ -116,11 +118,6 @@ watch(() => recordStore.filterKeyword, () => {
 watch(() => recordStore.proxyTypes, () => {
   recordStore.updateFilter()
 })
-
-function openMockRuleMgr() {
-  recordStore.showMockRuleMgr = true
-
-}
 
 async function saveProxyDelay() {
   try {

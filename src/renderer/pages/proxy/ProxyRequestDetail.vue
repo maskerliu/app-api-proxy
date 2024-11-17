@@ -12,7 +12,7 @@
     <van-cell-group inset :title="$t('proxy.requestHeader')" class="content">
       <van-cell>
         <template #value>
-          <vue-ace-editor :options="{ showLineNumbers: false }"
+          <vue-ace-editor :fold="false"
             :data="record.headers == null ? '{}' : JSON.stringify(record.headers, null, '\t')" />
         </template>
       </van-cell>
@@ -26,7 +26,7 @@
 
     <van-cell-group inset :title="$t('proxy.responseHeader')" class="content">
       <van-cell>
-        <vue-ace-editor
+        <vue-ace-editor :fold="false"
           :data="record.responseHeaders == null ? '{}' : JSON.stringify(record.responseHeaders, null, '\t')" />
       </van-cell>
     </van-cell-group>
