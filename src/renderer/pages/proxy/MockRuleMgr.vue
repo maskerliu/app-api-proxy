@@ -92,7 +92,7 @@
       <van-col style="padding-top: 50px">
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
-      <van-col style="height: calc(100% - 10px); flex: 1; margin: 5px;">
+      <van-col style="height: calc(100% - 10px); flex: 1; margin: 8px 5px 0 5px;">
         <vue-ace-editor :read-only="false" :options="{ maxLines: 38 }" :data="JSON.stringify(curRecord, null, '\t')" />
       </van-col>
     </van-row>
@@ -243,7 +243,7 @@ function onMockSwitchChanged(rule: ProxyMock.MockRule) {
 
 async function onSave(isSnap: boolean) {
   console.log(curRule.value)
-  if (curRule.value == null || curRule.value._id == null) return
+  if (curRule.value == null || curRule.value.name == null) return
 
   try {
     curRule.value.jsonRequests = map2json(curRule.value.requests)

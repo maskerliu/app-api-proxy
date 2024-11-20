@@ -1,6 +1,6 @@
 <template>
   <van-form label-align="right" colon>
-    <van-cell-group inset title="" class="content" style="margin-top: 15px;">
+    <van-cell-group inset title="" class="content" style="margin-top: 5px;">
       <van-cell center :title="record.url">
         <template #right-icon>
           <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description" @click="copyLink" />
@@ -133,6 +133,6 @@ a {
 
 .content {
   font-size: 0.7rem;
-  padding: 10px;
+  padding: 0;
 }
 </style>

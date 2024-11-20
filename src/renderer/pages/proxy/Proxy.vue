@@ -41,7 +41,7 @@
           :source="recordStore.records.get(key)" />
       </van-list>
     </van-col>
-    <van-col style="flex-grow: 19; flex-basis: 50%; min-width: 375px; height: calc(100% - 10px); overflow-y: auto;">
+    <van-col style="flex-grow: 19; flex-basis: 50%; min-width: 375px; height: calc(100% - 4px); margin: 2px 0; overflow-y: auto;">
       <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
 

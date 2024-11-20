@@ -11,68 +11,9 @@
     "build:clean": "cross-env BUILD_TARGET=clean node --experimental-json-modules --import tsx .build-scripts/builder.ts",
     "build:web": "cross-env BUILD_TARGET=web node --experimental-json-modules --import tsx .build-scripts/builder.ts",
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
-    "pub": "yarn build && electron-builder",
+    "pub": "yarn build && electron-builder -c electron-builder.yml",
+    "pkg": "yarn build && node --import tsx .build-scripts/pkg.ts",
     "asar": "node .build-scripts/compress-asar.js"
-  },
-  "build": {
-    "productName": "app-api-proxy",
-    "appId": "com.lynxchina.desktop.apiProxy",
-    "directories": {
-      "output": "build"
-    },
-    "files": [
-      "dist/**/*",
-      "!**/node_modules/**/*.map",
-      "!**/node_modules/.github/*",
-      "!**/node_modules/**/*.md",
-      "!**/node_modules/**/LICENSE",
-      "!**/node_modules/**/android-*/*",
-      "!**/node_modules/**/linux-*/*",
-      "!**/node_modules/**/win32-ia32/*",
-      "!**/node_modules/**/deps/*"
-    ],
-    "extraResources": [],
-    "extraFiles": [],
-    "pkg": {
-      "installLocation": "/Applications"
-    },
-    "mac": {
-      "icon": "build/icons/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        }
-      ],
-      "electronLanguages": [
-        "zh_CN",
-        "en"
-      ]
-    },
-    "win": {
-      "icon": "build/icons/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "electronLanguages": [
-        "zh_CN",
-        "en"
-      ]
-    },
-    "nsis": {
-      "deleteAppDataOnUninstall": true
-    },
-    "linux": {
-      "icon": "icons",
-      "target": "snap"
-    }
   },
   "resolutions": {
     "leveldown": "^6.1.1",
@@ -148,7 +89,6 @@
     "vant": "^4.9.8",
     "vue": "^3.5.12",
     "vue-i18n": "^10.0.4",
-    "vue-json-pretty": "^2.4.0",
     "vue-loader": "^17.4.2",
     "vue-router": "^4.4.5",
     "vue-style-loader": "^4.1.3",

@@ -88,10 +88,16 @@ class MainConfig extends BaseConfig {
           to: path.join(dirname, '../dist/electron/'),
         }]
       }),
+      // new CopyWebpackPlugin({
+      //   patterns: [{
+      //     from: path.join(dirname, '../icons/'),
+      //     to: path.join(dirname, '../build/icons/'),
+      //   }]
+      // }),
       new CopyWebpackPlugin({
         patterns: [{
-          from: path.join(dirname, '../icons'),
-          to: path.join(dirname, '../build/icons/'),
+          from: path.join(dirname, '../icons/'),
+          to: path.join(dirname, '../dist/electron/static/'),
         }]
       }),
     )

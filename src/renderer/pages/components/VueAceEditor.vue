@@ -43,7 +43,7 @@ const emit = defineEmits<{
 let _editor: Ace.Editor = null
 let _defOpts: Partial<Ace.EditorOptions> = {
   fontSize: 12,
-  maxLines: 20,
+  maxLines: 22,
   minLines: 1,
   theme: 'ace/theme/tomorrow',
   displayIndentGuides: true,
@@ -120,7 +120,6 @@ watch(() => props.lang, () => {
   background-position: center;
   border-radius: 3px;
   border: 1px solid #e11c1cf5 !important;
-  ;
   cursor: pointer;
 }
 
