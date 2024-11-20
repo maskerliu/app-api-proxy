@@ -7,6 +7,9 @@ let apis: IElectronAPI = {
     ipcRenderer.invoke('dialog:openFile')
     return null
   },
+  openDevTools(...args: any): void {
+    ipcRenderer.invoke(ElectronAPICMD.openDevTools, args)
+  },
   onOpenMockRuleMgr: function (callback: any): void {
     ipcRenderer.on(ElectronAPICMD.openMockRuleMgr, (_event) => callback())
   },

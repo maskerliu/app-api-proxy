@@ -17,7 +17,7 @@ const okayLog = chalk.bgBlue.white(' OKAY ') + ' '
 process.env.NODE_ENV = Run_Mode_PROD
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
-function run() {
+export function run() {
   if (process.env.BUILD_TARGET === 'clean') clean()
   if (process.env.BUILD_TARGET === 'web') web()
   else build()

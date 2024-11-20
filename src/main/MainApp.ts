@@ -9,11 +9,12 @@ import { MainServer } from './MainServer'
 
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
+const IS_DEV = process.env.NODE_ENV === 'development'
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
-  private winURL: string = process.env.NODE_ENV === 'development' ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
-  private trayFloder: string = process.env.NODE_ENV === 'development' ? path.join(__dirname, '../../build/icons') : path.join(__dirname, './static')
+  private winURL: string = IS_DEV ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
+  private trayFloder: string = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
   private trayIconName: string = process.platform === 'win32' ? "icon.ico" : "icon.icns"
 
   private mainServer: MainServer = new MainServer()
@@ -114,7 +115,7 @@ export default class MainApp {
       show: false,
       titleBarStyle: process.platform === 'win32' ? 'default' : 'hidden',
       webPreferences: {
-        // devTools: process.env.NODE_ENV == 'development',
+        devTools: true, //process.env.NODE_ENV == 'development',
         nodeIntegration: true,
         sandbox: false,
         preload: path.join(__dirname, 'preload.cjs')
@@ -126,9 +127,9 @@ export default class MainApp {
     this.mainWindow.webContents.frameRate = 30
 
     if (process.env.NODE_ENV == 'development') {
-      this.mainWindow.webContents.openDevTools()
-    }
 
+    }
+    this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
     this.mainWindow.on('closed', () => {
       this.mainServer.stop()
       this.mainWindow.destroy()
@@ -186,6 +187,11 @@ export default class MainApp {
   private initIPCService() {
     ipcMain.handle('updateServerPort', (event: IpcMainEvent, args?: any) => {
       console.log(args)
+    })
+
+    ipcMain.handle(ElectronAPICMD.openDevTools, (event: IpcMainEvent, args?: any) => {
+      this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
+      console.log('open dev tool')
     })
   }
 

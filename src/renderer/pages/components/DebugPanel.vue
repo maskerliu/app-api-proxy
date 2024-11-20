@@ -3,20 +3,25 @@
     <van-form class="full-row" style="width: 100%; min-width: 375px; padding-top: 12px; " label-align="right" colon>
       <van-cell-group inset :title="$t('settings.sys.title')">
         <van-cell title="go to new" clickable>
-          
+
         </van-cell>
 
-        <van-cell title="go to old" clickable></van-cell>
+        <van-cell title="Developer Tools" clickable @click="openDevTools"></van-cell>
       </van-cell-group>
     </van-form>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { defineComponent, ref } from 'vue'
 
 function toNew() {
   alert('去新版')
+}
+
+function openDevTools() {
+  if (!__IS_WEB__) {
+    window.electronAPI.openDevTools()
+  }
 }
 
 </script>

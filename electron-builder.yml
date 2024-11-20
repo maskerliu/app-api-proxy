@@ -1,0 +1,51 @@
+productName: app-api-proxy
+appId: com.github.maskerliu.AppApiProxy
+directories:
+  output: build
+
+files:
+  - "dist/**/*"
+  - "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+  - "!**/node_modules/*/{LICENSE,README,readme,.eslintignore,.nycrc}"
+  - "!**/node_modules/*/*.map"
+  - "!**/node_modules/*/*.md"
+  - "!**/node_modules/*/doc/**/*"
+  - "!**/node_modules/*/.github/*"
+  - "!**/node_modules/*/deps/**/*"
+  - "!**/node_modules/*/prebuilds/**/*"
+  - "**/node_modules/*/prebuilds/${platform}-${arch}/**/*"
+
+# extraResources:
+#   -
+# extraFiles:
+#   -
+
+pkg:
+  installLocation: /Applications
+
+electronLanguages:
+  - en-US
+  - zh-CN
+
+win:
+  icon: icons/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  deleteAppDataOnUninstall: true
+  allowToChangeInstallationDirectory: true
+  createStartMenuShortcut: true
+
+mac:
+  icon: icons/icon.icns
+  target:
+    - target: dmg
+      arch: universal
+
+# linux:
+#   icon: icons/icon.png
+#   traget: snap
