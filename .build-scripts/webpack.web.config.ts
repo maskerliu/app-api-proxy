@@ -58,11 +58,12 @@ class WebConfig extends BaseConfig {
         type: "asset/inline",
       },
       {
-        test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
+        test: /\.(png|jpe?g|gif|svg)$/i,
         loader: 'url-loader',
+        type: 'asset/resource',
         options: {
-          limit: 10000,
-          name: 'imgs/[name].[ext]'
+          limit: 1000,
+          name: 'imgs/[hash][name].[ext]'
         }
       },
       {

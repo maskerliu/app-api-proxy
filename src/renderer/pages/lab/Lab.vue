@@ -1,6 +1,6 @@
 <template>
-  <van-row class="full-row" justify="center" align="center">
-    <van-col class="full-row bg-border" style="max-height: 174px;">
+  <van-row class="full-row" justify="center">
+    <van-col class="full-row border-bg" style="max-height: 174px;">
       
     </van-col>
 
