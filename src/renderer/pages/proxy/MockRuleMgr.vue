@@ -1,9 +1,9 @@
 <template>
-  <van-row style="width: 80vw; min-width: 375px; height: 100vh; overflow: hidden;">
-    <van-row class="bg-border" justify="start" style="width: calc(100% - 10px);">
+  <van-row class="mgr-content">
+    <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);">
       <van-col style="min-width: 348px; flex-grow: 1; flex-basis: 50%;">
-        <van-collapse accordion v-model="activeSearchResult">
-          <van-collapse-item name="0" :disabled="true" :is-link="false">
+        <van-collapse accordion v-model="activeSearchResult" :border="false" style="background-color: white;">
+          <van-collapse-item name="0" :disabled="true" :is-link="false" style="padding-top: 2px;">
             <template #title>
               <van-search show-action :clearable="false" v-model="keyword" style="padding: 0;"
                 :placeholder="$t('common.searchPlaceholder')">
@@ -40,22 +40,20 @@
               @click="onRuleSelect(null)" />
           </template>
           <template #label>
-            <span
-              style="max-width: calc(100% - 130px); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
               {{ curRule?.desc == null ? $t('mock.rule.desc') : curRule.desc }}
             </span>
           </template>
           <template #value>
-            <van-button plain type="primary" size="mini" @click="onRuleEdit(curRule)" :disabled="curRule._id == null"
-              style="padding-top: 2px;">
+            <van-button plain type="primary" size="small" @click="onRuleEdit(curRule)" :disabled="curRule._id == null">
               <van-icon class="iconfont icon-edit" size="14" />
             </van-button>
-            <van-button plain type="danger" size="mini" @click="onRuleDelete(curRule)" :disabled="curRule._id == null"
-              style="margin-left: 10px; padding-top: 2px;">
+            <van-button plain type="danger" size="small" @click="onRuleDelete(curRule)" :disabled="curRule._id == null"
+              style="margin-left: 10px;">
               <van-icon class="iconfont icon-delete" size="14" style="color: red;" />
             </van-button>
-            <van-button plain type="primary" size="mini" @click="onSave(false)" :disabled="curRule._id == null"
-              style="margin-left: 10px; padding-top: 2px;">
+            <van-button plain type="primary" size="small" @click="onSave(false)" :disabled="curRule._id == null"
+              style="margin-left: 10px;">
               <van-icon class="iconfont icon-cloud-sync" size="14" />
             </van-button>
           </template>
@@ -66,8 +64,8 @@
         </van-cell>
       </van-col>
     </van-row>
-    <van-row style="width: 100%; height: calc(100% - 76px); display: flex">
-      <van-col class="bg-border" style="width: 300px; height: calc(100% - 10px);">
+    <van-row :style="{ width: '100%', height: 'calc(100% - 10px - ' + topBarHeight + 'px)' }">
+      <van-col class="border-bg" style="width: 300px; height: calc(100% - 10px);">
         <van-list v-if="curRule != null && curRule.requests != null">
           <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
             is-link>
@@ -93,7 +91,8 @@
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
       <van-col style="height: calc(100% - 10px); flex: 1; margin: 8px 5px 0 5px;">
-        <vue-ace-editor :read-only="false" :options="{ maxLines: 38 }" :data="JSON.stringify(curRecord, null, '\t')" />
+        <vue-ace-editor ref="aceEditor" :read-only="false" :options="{ maxLines: topBarHeight > 100 ? 35 : 43 }"
+          :data="JSON.stringify(curRecord, null, '\t')" />
       </van-col>
     </van-row>
 
@@ -119,12 +118,13 @@
 </template>
 
 <script lang="ts" setup>
-import { showNotify } from 'vant'
-import { onMounted, PropType, ref, watch } from 'vue'
+import { showNotify, Row } from 'vant'
+import { onMounted, onUnmounted, PropType, ref, watch } from 'vue'
 import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
 import { ProxyMock } from '../../../common/proxy.models'
 import { json2map, map2json } from '../../common'
 import VueAceEditor from '../components/VueAceEditor.vue'
+import { windowHeight } from 'vant/lib/utils'
 
 
 const props = defineProps({
@@ -135,7 +135,7 @@ const props = defineProps({
     default: null,
   },
 })
-
+const topBar = ref<typeof Row>()
 const keyword = ref<string>('')
 const activeSearchResult = ref<string>('-1')
 const rules = ref<Array<ProxyMock.MockRule>>(null)
@@ -146,11 +146,33 @@ const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const content = ref<string>('')
+const windowWidth = ref<number>(0)
+const topBarHeight = ref<number>(0)
+const aceEditor = ref<typeof VueAceEditor>()
 
 onMounted(() => {
+  window.onresize = () => {
+    windowWidth.value = document.body.clientWidth
+    topBarHeight.value = topBar.value.$el.offsetHeight
+  }
+  windowWidth.value = document.body.clientWidth
+  topBarHeight.value = topBar.value.$el.offsetHeight
   curRule.value = new ProxyMock.MockRule()
   curRecord.value = props.record
   content.value = JSON.stringify(curRecord.value, null, '\t')
+})
+
+onUnmounted(() => {
+  window.onresize = null
+})
+
+watch(() => topBarHeight.value, () => {
+  console.log(topBarHeight.value)
+  let maxLines = document.body.clientWidth - topBar.value.$el.offsetHeight
+  console.log(maxLines / 15)
+  if (topBarHeight.value > 100) {
+    // aceEditor.value.updateOptions()
+  }
 })
 
 watch(() => props.record, () => {
@@ -159,7 +181,6 @@ watch(() => props.record, () => {
 })
 
 watch(() => keyword.value, () => {
-  console.log(keyword.value)
   if (keyword.value == '') {
     activeSearchResult.value = '-1'
     return
@@ -172,7 +193,7 @@ async function fetchPagedMockRules() {
   try {
     rules.value = await searchMockRules(keyword.value)
   } catch (err) {
-    showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 1200 })
+    showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
   }
 }
 
@@ -284,6 +305,14 @@ function onRecordDeleteConfirm() {
 </script>
 
 <style scoped>
+.mgr-content {
+  width: 80vw;
+  min-width: 375px;
+  height: 100vh;
+  overflow: hidden;
+  background: #ebecef;
+}
+
 .search-result {
   min-width: 200px;
   height: 50vh;
@@ -305,9 +334,5 @@ function onRecordDeleteConfirm() {
   display: block;
   direction: rtl;
   padding: 2px 6px;
-}
-
-.json-editor {
-  font-size: 0.8rem;
 }
 </style>

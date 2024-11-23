@@ -47,20 +47,19 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.bg-border {
+.border-bg {
   margin: 5px;
   padding: 0;
-  border-radius: 8px;
-  border: 1px solid #e1e1e1;
+  /* border-radius: 8px; */
+  /* border: 1px solid #e1e1e1; */
   box-shadow: 0px 12px 8px -12px #000;
 }
 
 .biz-content {
   width: 100%;
   min-width: 375px;
-  height: calc(100% - 0px);
-  margin: 0px 0 50px 0;
-  background: #f1f2f6;
+  height: 100%;
+  background: #ebecef;
   overflow-y: hidden;
 }
 </style>

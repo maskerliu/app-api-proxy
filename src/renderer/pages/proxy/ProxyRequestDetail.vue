@@ -1,7 +1,10 @@
 <template>
   <van-form label-align="right" colon>
     <van-cell-group inset title="" class="content" style="margin-top: 5px;">
-      <van-cell center :title="record.url">
+      <van-cell center>
+        <template #title>
+          <span class="van-ellipsis">{{ record.url }}</span>
+        </template>
         <template #right-icon>
           <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description" @click="copyLink" />
           <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />

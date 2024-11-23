@@ -91,7 +91,7 @@ const showSettings = ref<boolean>(false)
 
 
 onMounted(() => {
-  console.log(/(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/.test('192.168.59.1'))
+  // console.log(/(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/.test('192.168.59.1'))
 
   if (!__IS_WEB__) {
     window.electronAPI.onOpenMockRuleMgr(() => {

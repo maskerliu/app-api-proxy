@@ -2,19 +2,21 @@
   <div ref="aceEditor" style="width: 100%; height: 100vh;"></div>
 </template>
 <script lang="ts" setup>
-import ace, { Ace } from "ace-builds"
+import ace, { Ace } from 'ace-builds'
+import 'ace-builds/css/ace.css'
+// import 'ace-builds/webpack-resolver'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-json'
 import 'ace-builds/src-noconflict/mode-text'
-import 'ace-builds/src-noconflict/theme-tomorrow'
+import 'ace-builds/src-noconflict/theme-chrome'
 import { nextTick, onMounted, ref, watch } from 'vue'
 
-ace.config.setModuleUrl('ace/mode/javascript', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-javascript.js'))
-ace.config.setModuleUrl('ace/mode/text', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-text.js'))
-ace.config.setModuleUrl('ace/mode/json', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-json.js'))
-ace.config.setModuleUrl('ace/theme/tomorrow', require('file-loader?esModule=false!ace-builds/src-noconflict/theme-tomorrow.js'))
-ace.config.setModuleUrl('ace/ext/language_tools', require('file-loader?esModule=false!ace-builds/src-noconflict/ext-language_tools.js'))
+// ace.config.setModuleUrl('ace/mode/javascript', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-javascript.js'))
+// ace.config.setModuleUrl('ace/mode/text', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-text.js'))
+// ace.config.setModuleUrl('ace/mode/json', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-json.js'))
+// ace.config.setModuleUrl('ace/theme/chrome', require('file-loader?esModule=false!ace-builds/src-noconflict/theme-chrome.js'))
+// ace.config.setModuleUrl('ace/ext/language_tools', require('file-loader?esModule=false!ace-builds/src-noconflict/ext-language_tools.js'))
 
 
 interface VueAceEditorProps {
@@ -27,7 +29,7 @@ interface VueAceEditorProps {
 }
 
 const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
-  theme: 'tomorrow',
+  theme: 'chrome',
   lang: 'json',
   fold: true,
   readOnly: true
@@ -42,7 +44,7 @@ const emit = defineEmits<{
 
 let _editor: Ace.Editor = null
 let _defOpts: Partial<Ace.EditorOptions> = {
-  fontSize: 12,
+  fontSize: 11,
   maxLines: 22,
   minLines: 1,
   theme: 'ace/theme/tomorrow',
@@ -79,19 +81,11 @@ onMounted(() => {
     useWrapMode: true,
   })
 
-  // _editor.session.setTabSize(2)
-  // _editor.session.setMode(`ace/mode/${props.lang}`)
-  // _editor.session.setFoldStyle('markbegin')
-  // _editor.session.setUseWrapMode(true)
   if (props.fold) _editor.session.foldAll()
 
   _editor.insert(props.data)
 
   _editor.resize()
-  // mirror local editor with global editor
-  // _editor.on('change', () => {
-  //   emit('change:data', _editor.getValue())
-  // })
 })
 
 watch(() => props.data, () => {
@@ -106,9 +100,13 @@ watch(() => props.lang, () => {
   _editor.setOption('mode', `ace/mode/${props.lang}`)
 })
 
+function updateOptions(optons: Partial<Ace.EditorOptions>) {
+
+}
+
 </script>
 <style scoped>
-@import "~ace-builds/css/ace.css";
+/* @import "~ace-builds/css/ace.css"; */
 
 .ace_fold-widget {
   box-sizing: border-box;
@@ -122,6 +120,4 @@ watch(() => props.lang, () => {
   border: 1px solid #e11c1cf5 !important;
   cursor: pointer;
 }
-
-.ace_fold-widget.ace_closed {}
 </style>

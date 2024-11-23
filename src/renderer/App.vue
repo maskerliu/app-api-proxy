@@ -31,11 +31,11 @@ onMounted(() => {
   filter: invert(0.01);
 }
 
-.bg-border {
+.border-bg {
   margin: 5px;
   padding: 0;
-  border-radius: 8px;
-  border: 1px solid #e1e1e1;
+  /* border-radius: 8px; */
+  /* border: 1px solid #e1e1e1; */
   box-shadow: 0px 12px 8px -12px #000;
 }
 
@@ -43,8 +43,7 @@ onMounted(() => {
   width: 100%;
   min-width: 375px;
   height: 100%;
-  margin: 0px 0 50px 0;
-  background: #f1f2f6;
+  background: #ebecef;
   overflow-y: hidden;
 }
 
