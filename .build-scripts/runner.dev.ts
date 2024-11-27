@@ -190,7 +190,6 @@ async function start() {
 
   try {
     let localIPv4 = WebpackDevServer.internalIPSync('v4')
-    console.log("test", localIPv4)
     await Promise.all([
       startDevServer(webConfig.init(localIPv4), 9081),
       startDevServer(rendererConfig.init(localIPv4), 9080),

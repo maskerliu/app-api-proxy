@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ProxyMock } from '../../common/proxy.models'
+import { ProxyMock } from '../../common'
 
 
 const COLORS: string[] = [
@@ -15,13 +15,12 @@ const COLORS: string[] = [
   "#673AB7"
 ]
 
-export const useProxyRecordStore = defineStore('ProxyRecords', {
+export const ProxyRecordStore = defineStore('ProxyRecords', {
   state: () => {
     return {
       proxyTypes: [String(ProxyMock.PorxyType.REQUEST)],
       filterKeyword: '' as string | number,
       curRecordId: -1,
-      curRecord: null as ProxyMock.ProxyRequestRecord,
       records: new Map() as Map<number, (ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord)>,
       isChanged: 0, // is a random number to identify the records change,
       showMockRuleMgr: false,
@@ -41,7 +40,6 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
             }
           }
 
-          record._idx = record.id + ""
           record.timelineColor = COLORS[record.timestamp % 10]
 
           this.records.set(record.id, record)
@@ -92,9 +90,12 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
 
       return false
     },
-    mockRecord() {
-      this.isChanged = Number(Math.random())
-      let fakeRecord = {
+    mockRecordStart(id: number) {
+      this.isChanged = Math.random()
+      let fakeRecord: ProxyMock.ProxyRequestRecord = {
+        id,
+        isMock: true,
+        method: "POST",
         headers: {
           'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
           'x-user-lang': 'zh_CN',
@@ -102,39 +103,50 @@ export const useProxyRecordStore = defineStore('ProxyRecords', {
           'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
           'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
         },
-        id: 277 + new Date().getMilliseconds(),
+        requestData: null,
+        timelineColor: "#FF9800",
+        timestamp: 5,
+        type: ProxyMock.PorxyType.REQUEST_START,
+        url: "/tg-app/center/v1/config/mainPage/helloworld",
+      }
+      this.updateRecord(fakeRecord)
+    },
+    mockRecordEnd(id: number) {
+      let respData = {
+        code: '8000', msg: 'SUCCESS' + new Date().getMilliseconds(), success: true, result: {
+          'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
+          'x-user-lang': 'zh_CN',
+          'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+          'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
+          'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
+          test: {
+            'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
+            'x-user-lang': 'zh_CN',
+            'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStrPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
+            'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
+            'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
+          },
+          snap: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
+          video: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
+          audio: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg'
+        }, tid: '0712ed382aff47e4877b5f55fce0832f'
+      }
+      this.isChanged = Math.random()
+      let fakeRecord: ProxyMock.ProxyRequestRecord = {
+        id,
         isMock: true,
         method: "POST",
         requestData: null,
-        responseData: {
-          code: '8000', msg: 'SUCCESS' + new Date().getMilliseconds(), success: true, result: {
-            'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
-            'x-user-lang': 'zh_CN',
-            'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
-            'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
-            'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
-            test: {
-              'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
-              'x-user-lang': 'zh_CN',
-              'x-accesstoken': 'gjJihHDfqcuivHL1b2U05ngPPbDequNybWF0qBfUjXmPGFKStrPCepu9KdDpve7hmhb2N2mWTOJBWopdJs0Sh9ZbrHK5V19saq0',
-              'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
-              'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
-            },
-            snap: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
-            video: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
-            audio: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg'
-          }, tid: '0712ed382aff47e4877b5f55fce0832f'
-        },
+        responseData: JSON.stringify(respData),
         responseHeaders: { 'content-length': '2157', 'content-type': 'application/json;charset=UTF-8', date: 'Tue, 20 Sep 2022 09:27:05 GMT' },
         statusCode: 200,
         time: 406 + new Date().getMilliseconds(),
         timelineColor: "#FF9800",
         timestamp: 5,
-        type: ProxyMock.PorxyType.REQUEST_START,
+        type: ProxyMock.PorxyType.REQUEST_END,
         url: "/tg-app/center/v1/config/mainPage/helloworld",
-        _idx: "277" + new Date().getMilliseconds(),
       }
       this.updateRecord(fakeRecord)
-    },
+    }
   }
 })

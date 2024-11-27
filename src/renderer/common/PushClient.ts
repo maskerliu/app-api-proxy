@@ -1,11 +1,9 @@
 import SockJS from 'sockjs-client'
 import { showNotify } from 'vant'
-import { getAllPushClients } from '../../common/proxy.api'
 import { ProxyMock } from '../../common/proxy.models'
-import { useCommonStore } from '../store'
-import { useProxyRecordStore } from '../store/ProxyRecords'
+import { CommonStore, ProxyRecordStore } from '../store'
 
-export default class PushClient {
+export class PushClient {
   private uid: string
   private sockjs: WebSocket
 
@@ -13,8 +11,8 @@ export default class PushClient {
   private proxyRecordStore: any
 
   constructor() {
-    this.commonStore = useCommonStore()
-    this.proxyRecordStore = useProxyRecordStore()
+    this.commonStore = CommonStore()
+    this.proxyRecordStore = ProxyRecordStore()
   }
 
   public start(host: string, uid: string): void {
@@ -25,10 +23,6 @@ export default class PushClient {
     this.sockjs = new SockJS(`${host}/echo`, { transports: 'websocket' })
     this.sockjs.onopen = () => { this.register(uid) }
     this.sockjs.onmessage = (e: any) => { this.handleMsg(e.data) }
-  }
-
-  public close() {
-    this.sockjs.close()
   }
 
   public send(data: ProxyMock.PushMsg<any>): void {

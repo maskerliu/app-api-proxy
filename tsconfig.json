@@ -13,6 +13,7 @@
     "noEmitOnError": true,
     "noImplicitAny": false,
     "noImplicitThis": false,
+    "importsNotUsedAsValues": "remove",
     "resolveJsonModule": true,
     "strict": true,
     "strictFunctionTypes": false,

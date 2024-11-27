@@ -12,17 +12,10 @@ import { IPushService } from './push.service'
 const JSONBigInt = require('json-bigint')
 let MockKey = null
 
-
-export type ProxyPref = {
-  dataServer?: string, // 数据代理服务器，可以指向开发自己的
-  status: boolean,
-  delay: number
-}
-
 export interface IProxyService {
-  getDataProxyServer(uid: string): ProxyPref
-  setDataProxyServer(uid: string, proxyPref: ProxyPref): void
-  setProxyDelay(uid: string, delay: number): void
+  getDataProxyServer(uid: string): ProxyMock.ProxyConfig
+  setDataProxyServer(uid: string, proxyPref: ProxyMock.ProxyConfig): void
+  saveProxyConfig(uid: string, config: ProxyMock.ProxyConfig): void
   handleStatRequest(req: any, resp: Response): Promise<void>
   handleRequest(req: Request, resp: Response): Promise<void>
 }
@@ -31,7 +24,7 @@ export interface IProxyService {
 export class ProxyService implements IProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
-  private proxyPrefs: Map<string, ProxyPref>
+  private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
   @inject(IocTypes.MocksService)
   private readonly mockService: IMockService
@@ -41,33 +34,35 @@ export class ProxyService implements IProxyService {
 
   constructor() {
     this._sessionId = 0
-    this.proxyPrefs = new Map()
+    this.proxyConfigs = new Map()
     // axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
     //   MockKey = resp.data
     //   console.log(MockKey)
     // }).catch(err => { console.error('FetchMockKey', err.cause) })
   }
 
-  public getDataProxyServer(uid: string): ProxyPref {
-    return this.proxyPrefs.get(uid)
+  public getDataProxyServer(uid: string): ProxyMock.ProxyConfig {
+    return this.proxyConfigs.get(uid)
   }
 
-  public setDataProxyServer(uid: string, proxyPref: ProxyPref) {
-    this.proxyPrefs.set(uid, proxyPref)
+  public setDataProxyServer(uid: string, proxyPref: ProxyMock.ProxyConfig) {
+    this.proxyConfigs.set(uid, proxyPref)
   }
 
-
-  public setProxyDelay(uid: string, delay: number) {
-    if (this.proxyPrefs.has(uid))
-      this.proxyPrefs.get(uid).delay = delay
-    else {
-      this.proxyPrefs.set(uid, { delay, status: false })
+  public saveProxyConfig(uid: string, config: ProxyMock.ProxyConfig) {
+    if (this.proxyConfigs.has(uid)) {
+      let uConfig = this.proxyConfigs.get(uid)
+      if (config.delay) uConfig.delay = config.delay
+      if (config.dataServer) uConfig.dataServer = config.dataServer
+      if (config.status) uConfig.status = config.status
+    } else {
+      this.proxyConfigs.set(uid, config)
     }
     return 'success'
   }
 
   public async handleStatRequest(req: any, resp: Response) {
-    let data = Buffer.from(req.rawbody)
+    let data = Buffer.from<ArrayBuffer>(req.rawbody)
     zlib.unzip(data, async (err: any, buffer: any) => {
       if (!err) {
         let record: ProxyMock.ProxyStatRecord = {
@@ -101,7 +96,7 @@ export class ProxyService implements IProxyService {
   public async handleRequest(req: Request, resp: Response) {
     let uid = req.header('mock-uid')
     // 清理无效配置
-    if (!this.pushService.hasProxy(uid)) this.proxyPrefs.delete(uid)
+    if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
 
     let startTime = new Date().getTime()
     let sessionId = ++this._sessionId
@@ -128,8 +123,8 @@ export class ProxyService implements IProxyService {
 
     this.pushService.sendProxyMessage(uid, data)
 
-    let delay = (this.proxyPrefs.has(uid) && this.proxyPrefs.get(uid).delay) ?
-      this.proxyPrefs.get(uid).delay : 0
+    let delay = (this.proxyConfigs.has(uid) && this.proxyConfigs.get(uid).delay) ?
+      this.proxyConfigs.get(uid).delay : 0
 
     let bizResp = null
     try {
@@ -161,10 +156,10 @@ export class ProxyService implements IProxyService {
     }
 
     let requestUrl = originHost + req.path
-    if (this.proxyPrefs.has(uid)
-      && this.proxyPrefs.get(uid).status
-      && this.proxyPrefs.get(uid).dataServer != null) {
-      requestUrl = this.proxyPrefs.get(uid).dataServer + req.path
+    if (this.proxyConfigs.has(uid)
+      && this.proxyConfigs.get(uid).status
+      && this.proxyConfigs.get(uid).dataServer != null) {
+      requestUrl = this.proxyConfigs.get(uid).dataServer + req.path
     }
 
     let options: AxiosRequestConfig = {

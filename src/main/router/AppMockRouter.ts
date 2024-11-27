@@ -37,10 +37,10 @@ export class AppMockRouter {
       this.route(req, resp, this.commonService.getServerConfig, this.commonService, [])
     })
 
-    this.router.post("/setProxyDelay", (req: any, resp: Response) => {
+    this.router.post('/saveProxyConfig', (req: any, resp: Response) => {
       let uid: string = req.query["uid"] as string
-      let delay: number = req.query["delay"] as number
-      this.route(req, resp, this.proxyService.setProxyDelay, this.proxyService, [uid, delay])
+      let config =  this.parseBody(req, 'config')
+      this.route(req, resp, this.proxyService.saveProxyConfig, this.proxyService, [uid, config])
     })
 
     this.router.get("/searchMockRules", (req: any, resp: Response) => {

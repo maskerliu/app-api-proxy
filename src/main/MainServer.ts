@@ -3,13 +3,14 @@ import cors, { CorsOptions } from 'cors'
 import express, { Application, Response } from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
+import { Server } from 'http'
 import path from 'path'
 import tcpPortUsed from 'tcp-port-used'
-import { IocTypes, USER_DATA_DIR } from './MainConst'
+import { LocalServerConfig } from '../common/base.models'
 import { bizContainer } from './IocContainer'
+import { IocTypes, USER_DATA_DIR } from './MainConst'
 import { AppMockRouter } from './router/AppMockRouter'
 import { ICommonService, IProxyService, IPushService } from './service'
-import { Server } from 'http'
 
 export class MainServer {
 
@@ -45,8 +46,16 @@ export class MainServer {
     if (this.httpServer != null) {
       this.httpServer.close(() => { this.httpServer = null })
     }
-    
+
     this.startHttpServer()
+  }
+
+  public getSysSettings() {
+    return this.commonService.getServerConfig()
+  }
+
+  public updateSysSettings(config: LocalServerConfig) {
+    this.commonService.saveServerConfig(config)
   }
 
   public async stop() {
@@ -113,11 +122,21 @@ export class MainServer {
       this.httpServer = HTTP.createServer(this.httpApp)
     }
     this.pushService.bindServer(this.httpServer)
+
+    this.httpServer.addListener('close', () => {
+      console.log('close http server')
+    })
+
+    this.httpServer.addListener('error', (err: Error) => {
+      console.log(err)
+    })
+
     this.httpServer.listen(
       this.commonService.serverConfig.port,
       '0.0.0.0',
       () => console.log(`--启动本地代理Http服务--[${this.commonService.serverConfig.port}]`)
     )
+
   }
 
   private handleRequest(req: any, resp: Response) {

@@ -105,7 +105,7 @@ export default class MainApp {
       title: "AppApiProxy",
       width: 1200,
       height: 800,
-      minWidth: 1024,
+      // minWidth: 1024,
       minHeight: 640,
       useContentSize: true,
       transparent: false,
@@ -125,18 +125,13 @@ export default class MainApp {
     this.mainWindow = new BrowserWindow(winOpt)
     this.mainWindow.loadURL(this.winURL)
     this.mainWindow.webContents.frameRate = 30
-
-    if (process.env.NODE_ENV == 'development') {
-
-    }
-    this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
     this.mainWindow.on('closed', () => {
-      this.mainServer.stop()
       this.mainWindow.destroy()
       this.mainWindow = null
     })
 
     this.mainWindow.on('ready-to-show', () => {
+      this.mainWindow.webContents.send(ElectronAPICMD.getSysSettings, this.mainServer.getSysSettings())
       this.mainWindow.show()
       this.mainWindow.focus()
     })
@@ -162,6 +157,7 @@ export default class MainApp {
   }
 
   private initSessionConfig() {
+    session.defaultSession.loadExtension('C:/Users/lynxc/AppData/Local/Google/Chrome/User\ Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/7.6.4_0')
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
         || details.url.indexOf('alicdn.com') !== -1) {
@@ -191,14 +187,17 @@ export default class MainApp {
 
     ipcMain.handle(ElectronAPICMD.openDevTools, (event: IpcMainEvent, args?: any) => {
       this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
-      console.log('open dev tool')
     })
-  }
 
-  private registerThemeChanged() {
+    ipcMain.handle(ElectronAPICMD.saveSysSettings, (event: IpcMainEvent, ...args: any) => {
+      this.mainServer.updateSysSettings(JSON.parse(args))
+      this.mainServer.stop()
+      this.mainServer.start()
+      this.mainWindow.webContents.send(ElectronAPICMD.getSysSettings, this.mainServer.getSysSettings())
+    })
 
     nativeTheme.on("updated", () => {
-
+      this.mainWindow.webContents.send(ElectronAPICMD.sysThemeChanged)
     })
   }
 

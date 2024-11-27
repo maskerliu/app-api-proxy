@@ -3,7 +3,7 @@
     <template #icon>
       <div class="item-timeline">
         <div class="item-selected" v-if="recordStore.curRecordId == source.id"></div>
-        <div class="item-timeline-dot" v-bind:style="{ background: source.timelineColor }"></div>
+        <div class="item-timeline-dot" v-bind:style="{ borderColor: source.timelineColor }"></div>
       </div>
     </template>
     <template #title>
@@ -18,7 +18,8 @@
       <span v-else class="request-snap-url">
         {{ source.url }}
       </span>
-      <van-loading size="20" type="spinner" style="width: 28px; margin-top: -28px; "
+      <van-overlay></van-overlay>
+      <van-loading size="20" style="width: 28px; margin-top: -28px; "
         v-if="source.type != 5012 && source.type != 5020" />
     </template>
     <template #label>
@@ -46,8 +47,8 @@
 
 <script lang="ts" setup>
 import type { PropType } from 'vue';
-import { ProxyMock } from '../../../common/proxy.models';
-import { useProxyRecordStore } from '../../store/ProxyRecords';
+import { ProxyMock } from '../../../common';
+import { ProxyRecordStore } from '../../store';
 
 defineProps({
   source: {
@@ -56,14 +57,14 @@ defineProps({
   },
 })
 
-const recordStore = useProxyRecordStore()
+const recordStore = ProxyRecordStore()
 
 </script>
 
 <style scoped>
 .item-selected {
   position: absolute;
-  width: 10px;
+  width: 11px;
   height: 100%;
   background: #9191a148;
   left: -6px;
@@ -84,11 +85,12 @@ const recordStore = useProxyRecordStore()
 
 .item-timeline-dot {
   border-radius: 7px;
-  background-color: aquamarine;
+  border: 2px solid;
+  border-color: #2980b9;
   width: 10px;
   height: 10px;
-  margin-top: 20px;
-  margin-left: -6px;
+  margin-top: 15px;
+  margin-left: -8px;
 }
 
 .record-snap-item:hover {

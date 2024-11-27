@@ -2,7 +2,7 @@
   <div style="width: 375px; height: 100vh;">
     <van-form class="full-row" style="width: 100%; min-width: 375px; padding-top: 12px; " label-align="right" colon>
       <van-cell-group inset :title="$t('settings.sys.title')">
-        <van-cell title="go to new" clickable>
+        <van-cell title="go to new" clickable @click="toNew">
 
         </van-cell>
 

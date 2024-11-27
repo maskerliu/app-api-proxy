@@ -1,15 +1,13 @@
 import { defineStore } from 'pinia'
-import { updateBaseDomain, updateClientUID } from '../../common/base.api'
-import { LocalServerConfig } from '../../common/base.models'
-import { getServerConfig } from '../../common/proxy.api'
-import { ProxyMock } from '../../common/proxy.models'
-import { generateUid } from '../common'
-import PushClient from '../common/PushClient'
 import { showNotify } from 'vant'
+import { getServerConfig, LocalServerConfig, ProxyMock, updateBaseDomain, updateClientUID } from '../../common'
+import { generateUid, PushClient } from '../common'
+
+export { ProxyRecordStore } from './ProxyRecords'
 
 let pushClient: PushClient = null
 
-export const useCommonStore = defineStore('Common', {
+export const CommonStore = defineStore('Common', {
   state: () => {
     return {
       uid: '',
@@ -22,11 +20,15 @@ export const useCommonStore = defineStore('Common', {
     updateShowQrCode(show: boolean) {
       this.showQrCode = show
     },
-    async init() {
+    async init(config?: LocalServerConfig) {
       pushClient = new PushClient()
 
-      if (__DEV__ || !__IS_WEB__) {
-        updateBaseDomain(SERVER_BASE_URL)
+      if (config) {
+        updateBaseDomain(`${config.protocol}://${config.ip}:${config.port}`)
+      } else {
+        if (__DEV__ || !__IS_WEB__) {
+          updateBaseDomain(SERVER_BASE_URL)
+        }
       }
 
       try {

@@ -1,3 +1,5 @@
+export { PushClient } from './PushClient'
+
 export function generateUid(): string {
   let len = 8
   let res = []

@@ -1,6 +1,5 @@
 <template>
-  <van-form class="full-row" style="width: 80vw; min-width: 375px; padding-top: 12px; "
-    label-align="right" colon>
+  <van-form class="full-row" style="width: 80vw; min-width: 375px; padding-top: 12px; " label-align="right" colon>
     <sys-info />
     <local-resource-mgr />
     <client-mgr style="margin-bottom: 20px;" />
@@ -9,7 +8,6 @@
 
 <script lang="ts" setup>
 import { onMounted } from 'vue'
-
 import ClientMgr from './ClientMgr.vue'
 import LocalResourceMgr from './LocalResourceMgr.vue'
 import SysInfo from './SysInfo.vue'

@@ -32,7 +32,7 @@
             <span class="json-note">{{ innerclosed ? length + " items" : "" }}</span>
           </span>
           <span v-if="!length">{{
-              `${isArray ? "[]" : "{}"}${isLast ? "" : ","}`
+            `${isArray ? "[]" : "{}"}${isLast ? "" : ","}`
           }}</span>
         </p>
         <div v-if="!innerclosed && length" class="json-body">
@@ -46,10 +46,10 @@
               </span>
               <span :class="['json-value', getDataType(item.value)]">
                 {{
-                    (getDataType(item.value) === "string" ? '"' : "") +
-                    item.value +
-                    (getDataType(item.value) === "string" ? '"' : "") +
-                    (index === items.length - 1 ? "" : ",")
+                  (getDataType(item.value) === "string" ? '"' : "") +
+                  item.value +
+                  (getDataType(item.value) === "string" ? '"' : "") +
+                  (index === items.length - 1 ? "" : ",")
                 }}
               </span>
             </p>
@@ -64,7 +64,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   fontSize: { type: Number, require: false, default: 12 },

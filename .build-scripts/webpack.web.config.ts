@@ -23,7 +23,7 @@ class WebConfig extends BaseConfig {
   name: Configuration['name'] = 'web'
   devtool: Configuration['devtool'] = 'cheap-module-source-map'
   target: Configuration['target'] = 'web'
-  entry: Configuration['entry'] = { web: path.join(dirname, '../src/web/index.ts') }
+  entry: Configuration['entry'] = { web: path.join(dirname, '../src/renderer/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
   ignoreWarnings = [/Failed to parse source map/]
 

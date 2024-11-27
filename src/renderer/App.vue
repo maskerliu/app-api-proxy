@@ -6,13 +6,19 @@
 import { onMounted, ref } from 'vue';
 
 import BizMain from './pages/BizMain.vue';
-import { useCommonStore } from './store';
+import { CommonStore } from './store';
 
 const canRender = ref(true)
 
 onMounted(() => {
   canRender.value = true
-  useCommonStore().init()
+  if (!__IS_WEB__) {
+    window.electronAPI.onGetSysSettings((result) => {
+      CommonStore().init(result)
+    })
+  } else {
+    CommonStore().init()
+  }
 })
 </script>
 
