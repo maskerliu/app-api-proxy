@@ -1,5 +1,5 @@
 <template>
-  <div ref="aceEditor" style="width: 100%; height: 100vh;"></div>
+  <div ref="aceEditor" style="width: 100%; height: 100%;"></div>
 </template>
 <script lang="ts" setup>
 import ace, { Ace } from 'ace-builds'
@@ -25,26 +25,18 @@ interface VueAceEditorProps {
   options: Partial<Ace.EditorOptions>
   fold: boolean
   data: string,
-  readOnly: boolean
+  readOnly: boolean,
+  maxLines: number
 }
 
-const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
-  theme: 'chrome',
-  lang: 'json',
-  fold: true,
-  readOnly: true
-})
-
-const aceEditor = ref<HTMLElement>()
-
 const emit = defineEmits<{
-  change: [data: string],
-  update: [data: string]
+  change: [data: string, maxLines: number],
+  update: [data: string, maxLines: number]
 }>()
 
 let _editor: Ace.Editor = null
 let _defOpts: Partial<Ace.EditorOptions> = {
-  fontSize: 11,
+  // fontSize: 11,
   maxLines: 22,
   minLines: 1,
   theme: 'ace/theme/tomorrow',
@@ -56,6 +48,7 @@ let _defOpts: Partial<Ace.EditorOptions> = {
   showLineNumbers: true,
   showGutter: true,
   showPrintMargin: true,
+  autoScrollEditorIntoView: true,
   highlightActiveLine: true,
   highlightSelectedWord: false, // 高亮选中文本
   enableLiveAutocompletion: true, // 启用实时自动完成
@@ -69,9 +62,21 @@ let _defOpts: Partial<Ace.EditorOptions> = {
   foldStyle: 'markbeginend',
 }
 
+const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
+  theme: 'chrome',
+  lang: 'json',
+  fold: true,
+  readOnly: true,
+  data: '{}',
+  maxLines: 22
+})
+
+const aceEditor = ref<HTMLElement>()
+
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
   _defOpts.theme = props.theme ? `ace/theme/${props.theme}` : _defOpts.theme
+  _defOpts.maxLines = props.maxLines
   _editor = ace.edit(aceEditor.value, Object.assign(_defOpts, props.options))
 
   _editor.session.setOptions({
@@ -84,7 +89,11 @@ onMounted(() => {
   if (props.fold) _editor.session.foldAll()
 
   _editor.insert(props.data)
+  _editor.resize()
+})
 
+watch(() => props.maxLines, () => {
+  _editor.setOption('maxLines', props.maxLines)
   _editor.resize()
 })
 
@@ -99,10 +108,6 @@ watch(() => props.data, () => {
 watch(() => props.lang, () => {
   _editor.setOption('mode', `ace/mode/${props.lang}`)
 })
-
-function updateOptions(optons: Partial<Ace.EditorOptions>) {
-
-}
 
 </script>
 <style scoped>

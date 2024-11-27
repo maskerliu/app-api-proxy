@@ -1,16 +1,19 @@
 <template>
-  <van-form label-align="right" colon>
-    <van-cell-group inset title="" class="content" style="margin-top: 5px;">
-      <van-cell center>
-        <template #title>
-          <span class="van-ellipsis">{{ record.url }}</span>
-        </template>
-        <template #right-icon>
-          <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description" @click="copyLink" />
-          <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
-        </template>
-      </van-cell>
-    </van-cell-group>
+  <van-form ref="container" label-align="right" colon>
+    <van-sticky :offset-top="5" :container="container">
+      <van-cell-group inset title="" class="content" style="margin-top: 5px;">
+        <van-cell center>
+          <template #title>
+            <span class="van-ellipsis">{{ record.url }}</span>
+          </template>
+          <template #right-icon>
+            <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description"
+              @click="copyLink" />
+            <van-button plain size="small" type="primary" icon="bookmark-o" @click="addToMockRule" />
+          </template>
+        </van-cell>
+      </van-cell-group>
+    </van-sticky>
 
     <van-cell-group inset :title="$t('proxy.requestHeader')" class="content">
       <van-cell>
@@ -46,10 +49,10 @@
 </template>
 
 <script lang="ts" setup>
-import { PropType, ref, watch } from 'vue'
-import { ProxyMock } from '../../../common/proxy.models'
-import { useProxyRecordStore } from '../../store/ProxyRecords'
 import { showToast } from 'vant'
+import { PropType, ref, watch } from 'vue'
+import { ProxyMock } from '../../../common'
+import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
 const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
@@ -60,7 +63,8 @@ const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
 })
 
-const recordStore = useProxyRecordStore()
+const recordStore = ProxyRecordStore()
+const container = ref(null);
 const apiDesc = ref<string>(null)
 const curImgSrc = ref<string>(null)
 const curAudioSrc = ref<string>(null)

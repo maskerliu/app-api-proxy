@@ -30,7 +30,8 @@
 </van-tabbar> -->
 
 
-    <van-floating-bubble :offset="{x:10, y: 500}" axis="xy" :gap="10" magnetic="x" icon="fire-o" @click="onOpenDebugPanel" />
+    <van-floating-bubble :offset="{ x: 10, y: 500 }" axis="xy" :gap="10" magnetic="x" icon="fire-o"
+      @click="onOpenDebugPanel" />
 
     <van-popup v-model:show="showDebugPanel" position="left" closeable close-icon="close">
       <debug-panel />
@@ -40,9 +41,9 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import DebugPanel from './components/DebugPanel.vue';
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import DebugPanel from './components/DebugPanel.vue'
 
 const active = ref<number>(0)
 const showDebugPanel = ref<boolean>(false)

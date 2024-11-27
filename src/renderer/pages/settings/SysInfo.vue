@@ -23,42 +23,46 @@
 
     <van-field center :label="item.tooltip" label-width="10rem" v-for="item in perferences"
       v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly">
-      <template #button>
-        <van-button plain type="primary" size="small" v-if="item.hasSave" @click="onSave">{{ $t('common.save') }}
-        </van-button>
-        <van-switch v-if="item.hasStatus"></van-switch>
+      <template #right-icon>
+        <van-switch v-if="item.hasStatus" style="margin-top: 5px;"></van-switch>
       </template>
     </van-field>
 
+    <van-cell v-if="canSave">
+      <template #value>
+        <van-button plain type="primary" size="normal" block @click="onSave">
+          {{ $t('common.save') }}
+        </van-button>
+      </template>
+    </van-cell>
   </van-cell-group>
 </template>
 <script lang="ts" setup>
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LocalIP } from '../../../common/base.models'
-
-import { useCommonStore } from '../../store'
+import { CommonStore } from '../../store'
 
 type SettingPreference = {
   key: string
   tooltip: string
-  hasSave?: boolean
   hasStatus?: boolean
   statusKey?: string
   readonly?: boolean
 }
 
 const { t } = useI18n()
-const commonStore = useCommonStore()
+const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
-const showPopover = ref(false)
+const showPopover = ref<boolean>(false)
+const canSave = ref<boolean>(false)
 
 let perferences = [
   { tooltip: t('settings.sys.serverDomain'), key: 'domain' },
-  { tooltip: t('settings.sys.port'), key: 'port', hasSave: !__IS_WEB__, readonly: __IS_WEB__ },
-  { tooltip: t('settings.sys.proxySocketPort'), key: 'proxySocketPort', readonly: false },
-  { tooltip: t('settings.sys.apiDefineServer'), key: 'apiDefineServer', hasSave: true },
-  { tooltip: t('settings.sys.statRuleServer'), key: 'statRuleServer', hasSave: true },
+  { tooltip: t('settings.sys.port'), key: 'port', readonly: __IS_WEB__ },
+  { tooltip: t('settings.sys.proxySocketPort'), key: 'proxySocketPort', readonly: __IS_WEB__ },
+  { tooltip: t('settings.sys.apiDefineServer'), key: 'apiDefineServer', readonly: __IS_WEB__ },
+  { tooltip: t('settings.sys.statRuleServer'), key: 'statRuleServer', readonly: __IS_WEB__ },
   {
     tooltip: t('settings.sys.dataProxyServer'),
     key: 'dataProxyServer',
@@ -74,6 +78,7 @@ let perferences = [
 
 onMounted(() => {
   if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
+  canSave.value = !__IS_WEB__
 })
 
 watch(() => commonStore.serverConfig, () => {
@@ -86,9 +91,8 @@ function onSelectIP(ip: LocalIP) {
 }
 
 function onSave() {
-
   if (!__IS_WEB__) {
-    console.log(commonStore.serverConfig)
+    window.electronAPI.saveSysSettings(JSON.stringify(commonStore.serverConfig))
   }
 }
 

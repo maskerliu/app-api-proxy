@@ -8,9 +8,8 @@
 <script lang="ts">
 import { mapState } from 'pinia'
 import { defineComponent, PropType } from 'vue'
-import { ProxyMock } from '../../../common/proxy.models'
-import { useCommonStore } from '../../store'
-import { useProxyRecordStore } from '../../store/ProxyRecords'
+import { ProxyMock } from '../../../common'
+import { CommonStore,ProxyRecordStore } from '../../store'
 
 type SateRule = { desc: string, rule: string[], ruleDesc: string }
 
@@ -25,8 +24,8 @@ const ProxyStatDetail = defineComponent({
     }
   },
   computed: {
-    ...mapState(useProxyRecordStore, []),
-    ...mapState(useCommonStore, ['serverConfig']),
+    ...mapState(ProxyRecordStore, []),
+    ...mapState(CommonStore, ['serverConfig']),
   },
   data() {
     return {

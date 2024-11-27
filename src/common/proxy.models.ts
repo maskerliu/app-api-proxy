@@ -1,6 +1,13 @@
 import { Connection } from "sockjs"
 
 export namespace ProxyMock {
+
+  export type ProxyConfig = {
+    dataServer?: string, // 数据代理服务器，可以指向开发自己的
+    status: boolean,
+    delay: number
+  }
+
   export interface StatisticRecord {
     app_id: string
     app_version: string
@@ -19,7 +26,7 @@ export namespace ProxyMock {
   export interface ProxyRequestRecord {
     id: number
     type: number
-    _idx?: string // 列表索引
+    // _idx?: string // 列表索引
     timestamp?: number // 请求发起时间
     method?: string
     url?: string

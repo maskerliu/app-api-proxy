@@ -23,8 +23,7 @@
                       @click="onRuleEdit(rule)" />
                     <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
                       @click="onRuleDelete(rule)" />
-                    <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
-                      @click="onSave(false)" />
+                    <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px" @click="onSave" />
                   </div>
                 </template>
               </van-cell>
@@ -90,9 +89,9 @@
       <van-col style="padding-top: 50px">
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
-      <van-col style="height: calc(100% - 10px); flex: 1; margin: 8px 5px 0 5px;">
-        <vue-ace-editor ref="aceEditor" :read-only="false" :options="{ maxLines: topBarHeight > 100 ? 35 : 43 }"
-          :data="JSON.stringify(curRecord, null, '\t')" />
+
+      <van-col style="height: 100%; flex: 1;">
+        <vue-ace-editor ref="aceEditor" :read-only="false" :max-lines="maxLines" :data="content" />
       </van-col>
     </van-row>
 
@@ -118,17 +117,13 @@
 </template>
 
 <script lang="ts" setup>
-import { showNotify, Row } from 'vant'
-import { onMounted, onUnmounted, PropType, ref, watch } from 'vue'
-import { deleteMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '../../../common/proxy.api'
-import { ProxyMock } from '../../../common/proxy.models'
+import { Row, showNotify } from 'vant'
+import { onMounted, PropType, ref, watch } from 'vue'
+import { deleteMockRule, getMockRuleDetail, ProxyMock, saveMockRule, searchMockRules } from '../../../common'
 import { json2map, map2json } from '../../common'
 import VueAceEditor from '../components/VueAceEditor.vue'
-import { windowHeight } from 'vant/lib/utils'
-
 
 const props = defineProps({
-  isMock: { type: Boolean, require: false, default: false },
   record: {
     type: Object as PropType<ProxyMock.ProxyRequestRecord>,
     require: false,
@@ -139,6 +134,7 @@ const topBar = ref<typeof Row>()
 const keyword = ref<string>('')
 const activeSearchResult = ref<string>('-1')
 const rules = ref<Array<ProxyMock.MockRule>>(null)
+const curRecordStr = ref<string>()
 const curRecord = ref<ProxyMock.ProxyRequestRecord>(null)
 const curRecordKey = ref<string>(null)
 const showRuleEdit = ref(false)
@@ -149,6 +145,7 @@ const content = ref<string>('')
 const windowWidth = ref<number>(0)
 const topBarHeight = ref<number>(0)
 const aceEditor = ref<typeof VueAceEditor>()
+const maxLines = ref<number>(1)
 
 onMounted(() => {
   window.onresize = () => {
@@ -162,17 +159,18 @@ onMounted(() => {
   content.value = JSON.stringify(curRecord.value, null, '\t')
 })
 
-onUnmounted(() => {
-  window.onresize = null
-})
-
 watch(() => topBarHeight.value, () => {
-  console.log(topBarHeight.value)
-  let maxLines = document.body.clientWidth - topBar.value.$el.offsetHeight
-  console.log(maxLines / 15)
-  if (topBarHeight.value > 100) {
-    // aceEditor.value.updateOptions()
-  }
+  let height = document.body.clientHeight - topBarHeight.value
+
+  console.log(Math.floor(height / 15))
+  maxLines.value = Math.floor(height / 15)
+  // if (__IS_WEB__) {
+  //   maxLines.value = topBarHeight.value > 100 ? 40 : 45
+  // } else {
+  //   maxLines.value = topBarHeight.value > 100 ? 45 : 49
+  // }
+  // document.body.clientWidth - topBar.value.$el.offsetHeight
+  // console.log(maxLines / 15)
 })
 
 watch(() => props.record, () => {
@@ -253,28 +251,23 @@ async function onRuleDeleteConfirm() {
   }
 }
 
-function onRuleUpload(rule: ProxyMock.MockRule) {
-  curRule.value = rule
-}
-
 function onMockSwitchChanged(rule: ProxyMock.MockRule) {
   curRule.value = rule
   onSave(true)
 }
 
-async function onSave(isSnap: boolean) {
-  console.log(curRule.value)
+async function onSave(onlySnap: boolean = false) {
   if (curRule.value == null || curRule.value.name == null) return
 
   try {
     curRule.value.jsonRequests = map2json(curRule.value.requests)
-    curRule.value._id = await saveMockRule(curRule.value, isSnap)
+    curRule.value._id = await saveMockRule(curRule.value, onlySnap)
     await fetchMockRuleDetail()
     showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
   } catch (err) {
     showNotify({ message: '规则更新失败', type: 'danger', duration: 1200 })
   }
-  if (isSnap) showRuleEdit.value = false
+  if (onlySnap) showRuleEdit.value = false
 }
 
 function onRecordSelected(record: ProxyMock.ProxyRequestRecord) {
@@ -325,12 +318,13 @@ function onRecordDeleteConfirm() {
 }
 
 .record-snap {
-  border: 1px #ddd dashed;
+  border-radius: 4px;
+  border: 2px #ddd dashed;
   font-size: 0.7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  width: 200px;
+  width: 220px;
   display: block;
   direction: rtl;
   padding: 2px 6px;

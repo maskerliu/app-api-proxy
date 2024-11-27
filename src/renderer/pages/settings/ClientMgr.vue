@@ -36,13 +36,13 @@
   </van-cell-group>
 </template>
 <script lang="ts" setup>
+import { showNotify } from 'vant'
 import { onMounted, ref } from 'vue'
-import { ProxyMock } from '../../../common/proxy.models'
-import { useCommonStore } from '../../store'
 import { getAllPushClients } from '../../../common/proxy.api'
-import { showNotify } from 'vant';
+import { ProxyMock } from '../../../common/proxy.models'
+import { CommonStore } from '../../store'
 
-const commonStore = useCommonStore()
+const commonStore = CommonStore()
 const dialogVisible = ref(false)
 const selectClient = ref<ProxyMock.ClientInfo>()
 const broadcastMsg = ref('')

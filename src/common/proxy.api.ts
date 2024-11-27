@@ -3,10 +3,6 @@ import { LocalServerConfig } from './base.models'
 import { ProxyMock } from './proxy.models'
 
 
-export function setProxyDelay(delay: number) {
-  return post<string>('/appmock/setProxyDelay', null, { delay })
-}
-
 export function searchMockRules(keyword: string) {
   return get<Array<ProxyMock.MockRule>>('/appmock/searchMockRules', null, { keyword })
 }
@@ -27,8 +23,8 @@ export function getServerConfig() {
   return get<LocalServerConfig>('/appmock/getServerConfig')
 }
 
-export async function syncServerConfig(config: LocalServerConfig) {
-  return post<LocalServerConfig>('/appmock/saveServerConfig', null, null, config)
+export async function saveProxyConfig(config: Partial<ProxyMock.ProxyConfig>) {
+  return post<string>('/appmock/saveProxyConfig', null, null, config)
 }
 
 export function getAllPushClients() {
