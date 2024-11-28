@@ -1,7 +1,7 @@
 <template>
   <van-row class="mgr-content">
     <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);">
-      <van-col style="min-width: 348px; flex-grow: 1; flex-basis: 50%;">
+      <van-col style="min-width: 348px; flex-grow: 1; flex-basis: 50%; height: 56px;">
         <van-collapse accordion v-model="activeSearchResult" :border="false" style="background-color: white;">
           <van-collapse-item name="0" :disabled="true" :is-link="false" style="padding-top: 2px;">
             <template #title>
@@ -31,7 +31,7 @@
           </van-collapse-item>
         </van-collapse>
       </van-col>
-      <van-col style="min-width: 380px; flex-grow: 1; flex-basis: 50%;">
+      <van-col style="min-width: 380px; flex-grow: 1; flex-basis: 50%; height: 56px;">
         <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
           style="padding: 5px 10px;">
           <template #icon v-if="curRule._id != null">
@@ -91,7 +91,8 @@
       </van-col>
 
       <van-col style="height: 100%; flex: 1;">
-        <vue-ace-editor ref="aceEditor" :read-only="false" :max-lines="maxLines" :data="content" />
+        <vue-ace-editor ref="aceEditor" :read-only="false" :max-lines="maxLines" :max-height="maxHeight"
+          :data="content" />
       </van-col>
     </van-row>
 
@@ -142,17 +143,18 @@ const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const content = ref<string>('')
-const windowWidth = ref<number>(0)
+const windowHeight = ref<number>(0)
 const topBarHeight = ref<number>(0)
 const aceEditor = ref<typeof VueAceEditor>()
 const maxLines = ref<number>(1)
+const maxHeight = ref<number>(15)
 
 onMounted(() => {
   window.onresize = () => {
-    windowWidth.value = document.body.clientWidth
     topBarHeight.value = topBar.value.$el.offsetHeight
+    windowHeight.value = document.body.clientHeight
   }
-  windowWidth.value = document.body.clientWidth
+  windowHeight.value = document.body.clientWidth
   topBarHeight.value = topBar.value.$el.offsetHeight
   curRule.value = new ProxyMock.MockRule()
   curRecord.value = props.record
@@ -160,17 +162,11 @@ onMounted(() => {
 })
 
 watch(() => topBarHeight.value, () => {
-  let height = document.body.clientHeight - topBarHeight.value
+  maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
+})
 
-  console.log(Math.floor(height / 15))
-  maxLines.value = Math.floor(height / 15)
-  // if (__IS_WEB__) {
-  //   maxLines.value = topBarHeight.value > 100 ? 40 : 45
-  // } else {
-  //   maxLines.value = topBarHeight.value > 100 ? 45 : 49
-  // }
-  // document.body.clientWidth - topBar.value.$el.offsetHeight
-  // console.log(maxLines / 15)
+watch(() => windowHeight.value, () => {
+  maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
 })
 
 watch(() => props.record, () => {

@@ -35,11 +35,9 @@
   "include": [
     "src/**/*",
     "src/**/*.vue",
-    ".build-scripts/**/*",
-    "test/**/*"
+    ".build-scripts/**/*"
   ],
   "exclude": [
     "node_modules"
   ],
-  
 }

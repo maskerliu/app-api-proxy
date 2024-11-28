@@ -23,7 +23,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       curRecordId: -1,
       records: new Map() as Map<number, (ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord)>,
       isChanged: 0, // is a random number to identify the records change,
-      showMockRuleMgr: false,
+
     }
   },
   actions: {

@@ -3,8 +3,7 @@
 </template>
 <script lang="ts" setup>
 import ace, { Ace } from 'ace-builds'
-import 'ace-builds/css/ace.css'
-// import 'ace-builds/webpack-resolver'
+// import 'ace-builds/css/ace.css'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 import 'ace-builds/src-noconflict/mode-javascript'
 import 'ace-builds/src-noconflict/mode-json'
@@ -26,7 +25,8 @@ interface VueAceEditorProps {
   fold: boolean
   data: string,
   readOnly: boolean,
-  maxLines: number
+  maxLines: number,
+  maxHeight: number
 }
 
 const emit = defineEmits<{
@@ -68,7 +68,7 @@ const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
   fold: true,
   readOnly: true,
   data: '{}',
-  maxLines: 22
+  maxLines: 22,
 })
 
 const aceEditor = ref<HTMLElement>()
@@ -112,6 +112,7 @@ watch(() => props.lang, () => {
 </script>
 <style scoped>
 /* @import "~ace-builds/css/ace.css"; */
+/* @import "ace-builds/css/ace.css"; */
 
 .ace_fold-widget {
   box-sizing: border-box;
