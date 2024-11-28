@@ -1,5 +1,8 @@
 <template>
-  <van-cell center @click="recordStore.curRecordId = source.id" :is-link="true" style="padding: 10px 0;">
+  <van-cell center @click="recordStore.curRecordId = source.id" :is-link="true" style="padding: 10px 0;" :title-style="{
+    margin: '0 15px 0 20px', maxWidth: 'calc(100% - 1px)', direction: 'rtl',
+    unicodeBidi: 'embed'
+  }" title-class="request-snap-url">
     <template #icon>
       <div class="item-timeline">
         <div class="item-selected" v-if="recordStore.curRecordId == source.id"></div>
@@ -15,40 +18,44 @@
           {{ item.elementId == "" ? item.arg1 : item.elementId }}
         </span>
       </div>
-      <span v-else class="request-snap-url">
+      <span v-else class="van-ellipsis">
         {{ source.url }}
       </span>
-      <van-overlay></van-overlay>
-      <van-loading size="20" style="width: 28px; margin-top: -28px; "
-        v-if="source.type != 5012 && source.type != 5020" />
     </template>
     <template #label>
-      <van-icon v-if="source.isMock" class="iconfont icon-api"
-        style="font-size: 0.7rem; color: brown; font-weight: bold; margin-right: 5px;" />
-      <strong v-if="source.type == 5020" class="request-snap-method">[打点]</strong>
-      <strong v-else class="request-snap-method">[{{ source.method }}]</strong>
-      <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'" style="margin-left: 5px">
-        <b>[HTTP]</b>
-        {{ source.statusCode }}
-      </van-tag>
-      <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
-        style="margin-left: 5px" v-if="source.responseData != null">
-        <b>[BIZ]</b>
-        {{ source.responseData.code }}
-      </van-tag>
-      <span style="margin-left: 5px; font-size: 0.6rem;"
-        v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
-        耗时: {{ source.time ? source.time : "--" }} ms
-      </span>
-    </template>
+      <div justify="start" style="direction: rtl; unicode-bidi: embed; width: 100%;">
+        <span class="request-snap-timecost" v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
+          耗时: {{ source.time ? `${source.time}`.padStart(5, '&nbsp;') : "-----" }} ms
+        </span>
+        <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
+          style="margin-left: 5px; font-size: 0.5rem;" v-if="source.responseData != null">
+          {{ source.responseData.code }}<b>[BIZ]</b>
+        </van-tag>
 
+        <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'"
+          style="margin-left: 5px; font-size: 0.5rem;">
+          {{ source.statusCode }} <b>[HTTP]</b>
+        </van-tag>
+
+        <van-tag v-if="source.type == 5020" type="primary">[打点]</van-tag>
+        <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'">{{ source.method }}</van-tag>
+        <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
+          style="font-size: 1.1rem; color: brown; font-weight: bold; top: 3px; margin-right: 8px;" />
+
+      </div>
+    </template>
+    <template #right-icon>
+      <van-loading size="20" color="#8e44ad" style="margin-right: 5px;"
+        v-if="source.type != 5012 && source.type != 5020" />
+      <van-icon v-else name="arrow" size="20" color="grey" style="margin-right: 5px;" />
+    </template>
   </van-cell>
 </template>
 
 <script lang="ts" setup>
-import type { PropType } from 'vue';
-import { ProxyMock } from '../../../common';
-import { ProxyRecordStore } from '../../store';
+import type { PropType } from 'vue'
+import { ProxyMock } from '../../../common'
+import { ProxyRecordStore } from '../../store'
 
 defineProps({
   source: {
@@ -93,11 +100,6 @@ const recordStore = ProxyRecordStore()
   margin-left: -8px;
 }
 
-.record-snap-item:hover {
-  background: #ececec;
-  cursor: pointer;
-}
-
 .stat-snap-pid {
   max-width: 100px;
   font-size: 0.6rem;
@@ -117,19 +119,26 @@ const recordStore = ProxyRecordStore()
 }
 
 .request-snap-method {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: bold;
   color: #2980b9;
   top: 10px;
-  right: 35px;
+  margin: 0 5px;
+}
+
+.request-snap-timecost {
+  margin-left: 5px;
+  font-size: 0.7rem;
 }
 
 .request-snap-url {
-  max-width: calc(100% - 100px);
-  font-size: 0.7rem;
+  direction: rtl;
+  unicode-bidi: embed;
+  /* max-width: calc(100% - 60px);
+  width: calc(100% - 60px); */
+  font-size: 0.8rem;
   font-weight: bold;
   color: #34495e;
-  padding: 0 0 5px 5px;
   display: block;
   white-space: nowrap;
   overflow: hidden;

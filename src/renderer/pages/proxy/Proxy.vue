@@ -10,13 +10,13 @@
             <van-icon class="iconfont icon-maidian" style="font-weight: blod" />
           </van-checkbox>
           <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
-            <van-icon class="iconfont icon-shuiguan" style="font-weight: blod" />
+            <van-icon class="iconfont icon-websocket" style="font-weight: blod" />
           </van-checkbox>
         </van-checkbox-group>
         <div style="padding-top: 6px;">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
-          <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true" />
+          <van-icon class="iconfont icon-setting left-panel-icon" @click="commonStore.showSettings = true" />
         </div>
       </van-row>
       <van-field v-model="proxyDelay" type="number">
@@ -41,21 +41,19 @@
           :source="recordStore.records.get(key)" />
       </van-list>
     </van-col>
-    <van-col
-      style="flex-grow: 19; flex-basis: 50%; min-width: 375px; height: calc(100% - 4px); margin: 2px 0; overflow-y: auto;">
+    <van-col class="right-panel">
       <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
 
       <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId)"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020"
-        class="right-panel" />
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
     </van-col>
 
-    <van-popup v-model:show="recordStore.showMockRuleMgr" position="right" closeable close-icon="close">
+    <van-popup v-model:show="commonStore.showMockRuleMgr" position="right" closeable close-icon="close">
       <mock-rule-mgr :record="recordStore.records.get(recordStore.curRecordId)" />
     </van-popup>
 
-    <van-popup v-model:show="showSettings" position="right" closeable close-icon="close">
+    <van-popup v-model:show="commonStore.showSettings" position="right" closeable close-icon="close">
       <settings />
     </van-popup>
 
@@ -74,7 +72,7 @@
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
 import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
-import { mockRegister, setProxyDelay,saveProxyConfig } from '../../../common'
+import { mockRegister, saveProxyConfig } from '../../../common'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -87,7 +85,6 @@ const proxyDelay = ref('0')
 const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
-const showSettings = ref<boolean>(false)
 
 let mockRecordId = -1
 
@@ -96,15 +93,15 @@ onMounted(() => {
 
   if (!__IS_WEB__) {
     window.electronAPI.onOpenMockRuleMgr(() => {
-      recordStore.showMockRuleMgr = true
+      commonStore.showMockRuleMgr = true
+      commonStore.showSettings = false
       recordStore.curRecordId = -1
-      showSettings.value = false
     })
 
     window.electronAPI.onOpenSettings(() => {
-      recordStore.showMockRuleMgr = false
+      commonStore.showMockRuleMgr = false
+      commonStore.showSettings = true
       recordStore.curRecordId = -1
-      showSettings.value = true
     })
   }
 })
@@ -122,13 +119,13 @@ watch(() => recordStore.proxyTypes, () => {
 })
 
 function openRuleMgr() {
-  recordStore.showMockRuleMgr = true
+  commonStore.showMockRuleMgr = true
   recordStore.curRecordId = -1
 }
 
 async function saveProxyDelay() {
   try {
-    await saveProxyConfig({delay: Number(proxyDelay.value)})
+    await saveProxyConfig({ delay: Number(proxyDelay.value) })
     showNotify({ message: '成功设置延迟', type: 'success', duration: 500 })
   } catch (err) {
     showNotify({ message: '设置延迟失败', type: 'danger', duration: 1200 })
@@ -168,6 +165,15 @@ function onMockRecordStart() {
 
 .right-panel {
   flex-grow: 19;
+  flex-basis: 50%;
+  min-width: 375px;
+  height: calc(100% - 4px);
+  margin: 2px 0;
+  overflow-y: auto;
+}
+
+.right-panel1 {
+  flex-grow: 19;
   flex-shrink: 0;
   min-width: 380px;
   height: 100%;
@@ -182,14 +188,14 @@ function onMockRecordStart() {
 .record-snap-panel {
   width: 100%;
   height: calc(100vh - 164px);
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
   margin: 5px 0 0 0;
 }
 
-.record-snap-panel::-webkit-scrollbar {
+/* .record-snap-panel::-webkit-scrollbar {
   display: none;
-}
+} */
 
 .register-url {
   text-decoration: underline;

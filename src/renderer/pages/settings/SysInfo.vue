@@ -55,7 +55,7 @@ const { t } = useI18n()
 const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
 const showPopover = ref<boolean>(false)
-const canSave = ref<boolean>(false)
+const canSave = !__IS_WEB__
 
 let perferences = [
   { tooltip: t('settings.sys.serverDomain'), key: 'domain' },
@@ -78,7 +78,6 @@ let perferences = [
 
 onMounted(() => {
   if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
-  canSave.value = !__IS_WEB__
 })
 
 watch(() => commonStore.serverConfig, () => {
@@ -91,9 +90,8 @@ function onSelectIP(ip: LocalIP) {
 }
 
 function onSave() {
-  if (!__IS_WEB__) {
-    window.electronAPI.saveSysSettings(JSON.stringify(commonStore.serverConfig))
-  }
+  window.electronAPI.saveSysSettings(JSON.stringify(commonStore.serverConfig))
+  commonStore.showSettings = false
 }
 
 </script>

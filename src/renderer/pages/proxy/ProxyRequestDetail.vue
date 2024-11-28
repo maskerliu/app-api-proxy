@@ -52,7 +52,7 @@
 import { showToast } from 'vant'
 import { PropType, ref, watch } from 'vue'
 import { ProxyMock } from '../../../common'
-import { ProxyRecordStore } from '../../store'
+import { CommonStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
 const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
@@ -63,8 +63,8 @@ const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
 })
 
-const recordStore = ProxyRecordStore()
-const container = ref(null);
+const commonStore = CommonStore()
+const container = ref(null)
 const apiDesc = ref<string>(null)
 const curImgSrc = ref<string>(null)
 const curAudioSrc = ref<string>(null)
@@ -120,7 +120,7 @@ function copyLink() {
 }
 
 function addToMockRule() {
-  recordStore.showMockRuleMgr = true
+  commonStore.showMockRuleMgr = true
 }
 
 function updated() {
