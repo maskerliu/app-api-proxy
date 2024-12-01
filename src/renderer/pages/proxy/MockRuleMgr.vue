@@ -1,7 +1,7 @@
 <template>
   <van-row class="mgr-content">
     <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);">
-      <van-col style="min-width: 348px; flex-grow: 1; flex-basis: 50%; height: 56px;">
+      <van-col style="min-width: 348px; flex-grow: 1;">
         <van-collapse accordion v-model="activeSearchResult" :border="false" style="background-color: white;">
           <van-collapse-item name="0" :disabled="true" :is-link="false" style="padding-top: 2px;">
             <template #title>
@@ -31,9 +31,9 @@
           </van-collapse-item>
         </van-collapse>
       </van-col>
-      <van-col style="min-width: 380px; flex-grow: 1; flex-basis: 50%; height: 56px;">
+      <van-col style="min-width: 380px; flex-grow: 1;">
         <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
-          style="padding: 5px 10px;">
+          style="padding: 5px 10px;" :title-style="{ flexGrow: 1.2 }" value-class="rule-mgr-cell-value">
           <template #icon v-if="curRule._id != null">
             <van-icon class="iconfont icon-cancel" size="20" style="color: red; margin-right: 10px;"
               @click="onRuleSelect(null)" />
@@ -64,35 +64,33 @@
       </van-col>
     </van-row>
     <van-row :style="{ width: '100%', height: 'calc(100% - 10px - ' + topBarHeight + 'px)' }">
-      <van-col class="border-bg" style="width: 300px; height: calc(100% - 10px);">
-        <van-list v-if="curRule != null && curRule.requests != null">
-          <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
-            is-link>
-            <template #title>
-              <div class="record-snap">{{ record.url }}</div>
-            </template>
-            <template #label>
-              <van-tag plain mark :type="record.statusCode == 200 ? 'success' : 'danger'">
-                [http]{{ record.statusCode }}
-              </van-tag>
-              <van-tag plain mark style="margin-left: 5px"
-                :type="record.responseData?.code == 8000 ? 'success' : 'danger'">
-                [biz]{{ record.responseData?.code }}
-              </van-tag>
-            </template>
-            <template #right-icon>
-              <van-button plain type="danger" size="small" icon="delete-o" @click="onRecordDelete(record.url)" />
-            </template>
-          </van-cell>
-        </van-list>
-      </van-col>
+      <van-list class="border-bg" style="width: 300px; height: calc(100% - 10px);"
+        v-if="curRule != null && curRule.requests != null">
+        <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
+          is-link>
+          <template #title>
+            <div class="record-snap">{{ record.url }}</div>
+          </template>
+          <template #label>
+            <van-tag plain mark :type="record.statusCode == 200 ? 'success' : 'danger'">
+              [http]{{ record.statusCode }}
+            </van-tag>
+            <van-tag plain mark style="margin-left: 5px"
+              :type="record.responseData?.code == 8000 ? 'success' : 'danger'">
+              [biz]{{ record.responseData?.code }}
+            </van-tag>
+          </template>
+          <template #right-icon>
+            <van-button plain type="danger" size="small" icon="delete-o" @click="onRecordDelete(record.url)" />
+          </template>
+        </van-cell>
+      </van-list>
       <van-col style="padding-top: 50px">
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
 
-      <van-col style="height: 100%; flex: 1;">
-        <vue-ace-editor ref="aceEditor" :read-only="false" :max-lines="maxLines" :max-height="maxHeight"
-          :data="content" />
+      <van-col style="height: 100%; flex: 1; position: relative;">
+        <vue-ace-editor ref="aceEditor" :read-only="false" :data="content" class="ace-editor" />
       </van-col>
     </van-row>
 
@@ -119,24 +117,18 @@
 
 <script lang="ts" setup>
 import { Row, showNotify } from 'vant'
-import { onMounted, PropType, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { deleteMockRule, getMockRuleDetail, ProxyMock, saveMockRule, searchMockRules } from '../../../common'
 import { json2map, map2json } from '../../common'
+import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
-const props = defineProps({
-  record: {
-    type: Object as PropType<ProxyMock.ProxyRequestRecord>,
-    require: false,
-    default: null,
-  },
-})
+
+const recordStore = ProxyRecordStore()
 const topBar = ref<typeof Row>()
 const keyword = ref<string>('')
 const activeSearchResult = ref<string>('-1')
 const rules = ref<Array<ProxyMock.MockRule>>(null)
-const curRecordStr = ref<string>()
-const curRecord = ref<ProxyMock.ProxyRequestRecord>(null)
 const curRecordKey = ref<string>(null)
 const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
@@ -146,8 +138,6 @@ const content = ref<string>('')
 const windowHeight = ref<number>(0)
 const topBarHeight = ref<number>(0)
 const aceEditor = ref<typeof VueAceEditor>()
-const maxLines = ref<number>(1)
-const maxHeight = ref<number>(15)
 
 onMounted(() => {
   window.onresize = () => {
@@ -157,21 +147,26 @@ onMounted(() => {
   windowHeight.value = document.body.clientWidth
   topBarHeight.value = topBar.value.$el.offsetHeight
   curRule.value = new ProxyMock.MockRule()
-  curRecord.value = props.record
-  content.value = JSON.stringify(curRecord.value, null, '\t')
+
+  if (recordStore.curRecordId != -1) {
+    content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
+  }
 })
 
 watch(() => topBarHeight.value, () => {
-  maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
+  // aceEditor.value.$el.style.height = (document.body.clientHeight - topBarHeight.value - 10) + 'px'
+  // console.log(aceEditor.value.$el.offsetHeight)
+  // maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
 })
 
 watch(() => windowHeight.value, () => {
-  maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
+  // aceEditor.value.$el.style.height = (document.body.clientHeight - topBarHeight.value - 10) + 'px'
+  // console.log(aceEditor.value.$el.offsetHeight)
+  // maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
 })
 
-watch(() => props.record, () => {
-  curRecord.value = props.record
-  content.value = JSON.stringify(curRecord.value, null, '\t')
+watch(() => recordStore.curRecordId, () => {
+  content.value = JSON.stringify(recordStore.curRecord() ? recordStore.curRecord() : '', null, '\t')
 })
 
 watch(() => keyword.value, () => {
@@ -192,12 +187,13 @@ async function fetchPagedMockRules() {
 }
 
 function addRecord() {
-  if (curRecord.value == null) return
+  // if (curRecord.value == null) return
   if (curRule.value == null) curRule.value = new ProxyMock.MockRule()
   if (curRule.value.requests == null) curRule.value.requests = new Map()
 
-  curRecord.value = JSON.parse(content.value)
-  curRule.value.requests.set(curRecord.value.url, curRecord.value)
+  // curRecord.value = JSON.parse(content.value)
+  let record = JSON.parse(content.value)
+  curRule.value.requests.set(record.url, record)
 }
 
 function onRuleSelect(rule: ProxyMock.MockRule) {
@@ -267,9 +263,9 @@ async function onSave(onlySnap: boolean = false) {
 }
 
 function onRecordSelected(record: ProxyMock.ProxyRequestRecord) {
-  curRecord.value = record
+  // curRecord.value = record
 
-  content.value = JSON.stringify(curRecord.value, null, '\t')
+  content.value = JSON.stringify(record, null, '\t')
   // console.log(content.value)
 }
 
@@ -279,7 +275,7 @@ function onRecordDelete(key: string) {
 }
 
 function onRecordDeleteCancel() {
-  curRecord.value = null
+  // curRecord.value = null
   content.value = ''
   curRecordKey.value = null
   showRecordDelete.value = false
@@ -287,19 +283,31 @@ function onRecordDeleteCancel() {
 
 function onRecordDeleteConfirm() {
   curRule.value.requests.delete(curRecordKey.value)
-  curRecord.value = null
+  // curRecord.value = null
   content.value = ''
   showRecordDelete.value = false
 }
 </script>
 
-<style scoped>
+<style>
 .mgr-content {
   width: 80vw;
   min-width: 375px;
   height: 100vh;
   overflow: hidden;
   background: #ebecef;
+}
+
+.ace-editor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.rule-mgr-cell-value {
+  flex: 0 0 120px !important;
 }
 
 .search-result {

@@ -1,16 +1,16 @@
 <template>
   <van-cell center @click="recordStore.curRecordId = source.id" :is-link="true" style="padding: 10px 0;" :title-style="{
-    margin: '0 15px 0 20px', maxWidth: 'calc(100% - 1px)', direction: 'rtl',
-    unicodeBidi: 'embed'
-  }" title-class="request-snap-url">
+    margin: '0 10px 0 15px'
+  }">
     <template #icon>
       <div class="item-timeline">
-        <div class="item-selected" v-if="recordStore.curRecordId == source.id"></div>
-        <div class="item-timeline-dot" v-bind:style="{ borderColor: source.timelineColor }"></div>
+        <div class="item-timeline-dot"
+          v-bind:style="{ borderColor: source.timelineColor, backgroundColor: recordStore.curRecordId == source.id ? '#34495e' : 'transparent' }">
+        </div>
       </div>
     </template>
     <template #title>
-      <div v-if="source.type == 5020" class="request-snap-url"
+      <div v-if="source.type == 5020"
         v-for="(item, idx) in (source as ProxyMock.ProxyStatRecord).statistics.bps.slice(0, 2)">
         <span class="stat-snap-pid"> {{ item.pageId }} </span>
         <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
@@ -18,12 +18,14 @@
           {{ item.elementId == "" ? item.arg1 : item.elementId }}
         </span>
       </div>
-      <span v-else class="van-ellipsis">
-        {{ source.url }}
-      </span>
+      <van-row v-else justify="end">
+        <div class="request-snap-url">
+          {{ source.url }}
+        </div>
+      </van-row>
     </template>
     <template #label>
-      <div justify="start" style="direction: rtl; unicode-bidi: embed; width: 100%;">
+      <div justify="start" style="direction: rtl; unicode-bidi: embed; width: 100%; margin-top: 25px;">
         <span class="request-snap-timecost" v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
           耗时: {{ source.time ? `${source.time}`.padStart(5, '&nbsp;') : "-----" }} ms
         </span>
@@ -37,10 +39,12 @@
           {{ source.statusCode }} <b>[HTTP]</b>
         </van-tag>
 
-        <van-tag v-if="source.type == 5020" type="primary">[打点]</van-tag>
-        <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'">{{ source.method }}</van-tag>
+        <van-tag v-if="source.type == 5020" type="primary" style="margin-left: 5px;">[打点]</van-tag>
+        <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'" style="margin-left: 5px;">
+          {{ source.method }}
+        </van-tag>
         <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
-          style="font-size: 1.1rem; color: brown; font-weight: bold; top: 3px; margin-right: 8px;" />
+          style="font-size: 1.1rem; color: brown; font-weight: bold; top: 3px;" />
 
       </div>
     </template>
@@ -132,12 +136,11 @@ const recordStore = ProxyRecordStore()
 }
 
 .request-snap-url {
-  direction: rtl;
-  unicode-bidi: embed;
-  /* max-width: calc(100% - 60px);
-  width: calc(100% - 60px); */
+  position: absolute;
+  top: 10px;
+  width: calc(100% - 50px);
   font-size: 0.8rem;
-  font-weight: bold;
+  font-weight: 500;
   color: #34495e;
   display: block;
   white-space: nowrap;
