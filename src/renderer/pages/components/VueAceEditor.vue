@@ -1,5 +1,5 @@
 <template>
-  <div ref="aceEditor" style="width: 100%; height: 100%;"></div>
+  <div ref="aceEditor"></div>
 </template>
 <script lang="ts" setup>
 import ace, { Ace } from 'ace-builds'
@@ -25,8 +25,7 @@ interface VueAceEditorProps {
   fold: boolean
   data: string,
   readOnly: boolean,
-  maxLines: number,
-  maxHeight: number
+  maxLines: number
 }
 
 const emit = defineEmits<{
@@ -68,7 +67,7 @@ const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
   fold: true,
   readOnly: true,
   data: '{}',
-  maxLines: 22,
+  // maxLines: 22,
 })
 
 const aceEditor = ref<HTMLElement>()

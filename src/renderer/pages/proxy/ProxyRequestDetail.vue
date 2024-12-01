@@ -18,7 +18,7 @@
     <van-cell-group inset :title="$t('proxy.requestHeader')" class="content">
       <van-cell>
         <template #value>
-          <vue-ace-editor :fold="false"
+          <vue-ace-editor :fold="false" :max-lines="22"
             :data="record.headers == null ? '{}' : JSON.stringify(record.headers, null, '\t')" />
         </template>
       </van-cell>
@@ -26,13 +26,14 @@
 
     <van-cell-group inset :title="$t('proxy.requestParams')" class="content">
       <van-cell>
-        <vue-ace-editor :data="record.requestData == null ? '{}' : JSON.stringify(record.requestData, null, '\t')" />
+        <vue-ace-editor :max-lines="22"
+          :data="record.requestData == null ? '{}' : JSON.stringify(record.requestData, null, '\t')" />
       </van-cell>
     </van-cell-group>
 
     <van-cell-group inset :title="$t('proxy.responseHeader')" class="content">
       <van-cell>
-        <vue-ace-editor :fold="false"
+        <vue-ace-editor :fold="false" :max-lines="22"
           :data="record.responseHeaders == null ? '{}' : JSON.stringify(record.responseHeaders, null, '\t')" />
       </van-cell>
     </van-cell-group>
@@ -40,7 +41,7 @@
     <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;" class="content">
       <van-cell>
         <template #value>
-          <vue-ace-editor
+          <vue-ace-editor :max-lines="22"
             :data="record.responseData == null ? '{}' : JSON.stringify(record.responseData, null, '\t')" />
         </template>
       </van-cell>

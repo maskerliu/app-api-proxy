@@ -71,6 +71,9 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       this.records.clear()
       this.curRecordId = -1
     },
+    curRecord() {
+      return this.records.get(this.curRecordId)
+    },
     shouldFilter(record: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): boolean {
       if (record.type == ProxyMock.PorxyType.REQUEST_START ||
         record.type == ProxyMock.PorxyType.REQUEST_END) {

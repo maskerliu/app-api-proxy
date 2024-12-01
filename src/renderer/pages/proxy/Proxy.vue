@@ -7,7 +7,7 @@
             <i class="iconfont icon-api" style="font-weight: blod"></i>
           </van-checkbox>
           <van-checkbox shape="square" name="5020" style="padding: 5px 10px">
-            <van-icon class="iconfont icon-maidian" style="font-weight: blod" />
+            <van-icon class="iconfont icon-statistics" style="font-weight: blod" />
           </van-checkbox>
           <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
             <van-icon class="iconfont icon-websocket" style="font-weight: blod" />
