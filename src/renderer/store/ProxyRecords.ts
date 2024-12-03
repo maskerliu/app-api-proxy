@@ -59,7 +59,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         default:
           console.error("unsupport record type")
       }
-      this.isChanged = Math.random()
+      this.isChanged = new Date().getTime()
     },
     updateFilter() {
       [...this.records.keys()].forEach(key => {
@@ -94,11 +94,11 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       return false
     },
     mockRecordStart(id: number) {
-      this.isChanged = Math.random()
+      this.isChanged = new Date().getTime()
       let fakeRecord: ProxyMock.ProxyRequestRecord = {
         id,
         isMock: true,
-        method: "POST",
+        method: Math.random() > 0.5 ? 'POST' : 'GET',
         headers: {
           'x-udid': '202008211540279c88ca89d44e05dbc35b8740b31b5da00185ab3ad5569afe',
           'x-user-lang': 'zh_CN',
@@ -134,7 +134,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
           audio: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg'
         }, tid: '0712ed382aff47e4877b5f55fce0832f'
       }
-      this.isChanged = Math.random()
+      this.isChanged = new Date().getTime()
       let fakeRecord: ProxyMock.ProxyRequestRecord = {
         id,
         isMock: true,

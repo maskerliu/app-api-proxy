@@ -54,7 +54,12 @@ export const CommonStore = defineStore('Common', {
 
     },
     updateServerConfig(config?: LocalServerConfig) {
-      this.uid = generateUid()
+      this.uid = window.localStorage.getItem('uid')
+      if (this.uid == null) {
+        this.uid = generateUid()
+        window.localStorage.setItem('uid', this.uid)
+      }
+
       this.serverConfig = config ? config : this.serverConfig
       updateClientUID(this.uid)
 
