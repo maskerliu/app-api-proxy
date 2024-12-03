@@ -1,6 +1,6 @@
 <template>
   <van-form ref="container" label-align="right" colon>
-    <van-sticky :offset-top="5" :container="container">
+    <van-sticky :offset-top="5">
       <van-cell-group inset title="" class="content" style="margin-top: 5px;">
         <van-cell center>
           <template #title>

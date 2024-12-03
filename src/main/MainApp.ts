@@ -10,6 +10,7 @@ import { MainServer } from './MainServer'
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
 const IS_DEV = process.env.NODE_ENV === 'development'
+const VUE_PLUGIN = 'C:/Users/lynxc/AppData/Local/Google/Chrome/User\ Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/7.6.4_0'
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
@@ -25,7 +26,7 @@ export default class MainApp {
 
   public startApp() {
     if (process.platform === 'win32') {
-      app.disableHardwareAcceleration()
+      // app.disableHardwareAcceleration()
     }
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
@@ -66,11 +67,13 @@ export default class MainApp {
     const contextMenu = Menu.buildFromTemplate([
       {
         label: '用例管理', click: () => {
+          if (this.mainWindow == null) this.createMainWindow()
           this.mainWindow.webContents.send(ElectronAPICMD.openMockRuleMgr)
         }
       },
       {
         label: '设置', click: () => {
+          if (this.mainWindow == null) this.createMainWindow()
           this.mainWindow.webContents.send(ElectronAPICMD.openSettings)
         }
       },
@@ -157,7 +160,8 @@ export default class MainApp {
   }
 
   private initSessionConfig() {
-    session.defaultSession.loadExtension('C:/Users/lynxc/AppData/Local/Google/Chrome/User\ Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/7.6.4_0')
+    if (IS_DEV) session.defaultSession.loadExtension(VUE_PLUGIN)
+
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
         || details.url.indexOf('alicdn.com') !== -1) {

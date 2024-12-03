@@ -89,8 +89,8 @@
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
 
-      <van-col style="height: 100%; flex: 1; position: relative;">
-        <vue-ace-editor ref="aceEditor" :read-only="false" :data="content" class="ace-editor" />
+      <van-col style="flex: 1; position: relative;">
+        <vue-ace-editor :read-only="false" v-model:data="content" class="ace-editor" />
       </van-col>
     </van-row>
 
@@ -134,66 +134,48 @@ const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
-const content = ref<string>('')
-const windowHeight = ref<number>(0)
+const content = ref<string>(null)
 const topBarHeight = ref<number>(0)
-const aceEditor = ref<typeof VueAceEditor>()
 
 onMounted(() => {
   window.onresize = () => {
     topBarHeight.value = topBar.value.$el.offsetHeight
-    windowHeight.value = document.body.clientHeight
   }
-  windowHeight.value = document.body.clientWidth
   topBarHeight.value = topBar.value.$el.offsetHeight
   curRule.value = new ProxyMock.MockRule()
-
-  if (recordStore.curRecordId != -1) {
-    content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
-  }
-})
-
-watch(() => topBarHeight.value, () => {
-  // aceEditor.value.$el.style.height = (document.body.clientHeight - topBarHeight.value - 10) + 'px'
-  // console.log(aceEditor.value.$el.offsetHeight)
-  // maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
-})
-
-watch(() => windowHeight.value, () => {
-  // aceEditor.value.$el.style.height = (document.body.clientHeight - topBarHeight.value - 10) + 'px'
-  // console.log(aceEditor.value.$el.offsetHeight)
-  // maxLines.value = Math.floor((document.body.clientHeight - topBarHeight.value - 10) / 15)
 })
 
 watch(() => recordStore.curRecordId, () => {
-  content.value = JSON.stringify(recordStore.curRecord() ? recordStore.curRecord() : '', null, '\t')
+  if (recordStore.curRecordId != -1) {
+    content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
+    console.log('content changed')
+  }
 })
 
-watch(() => keyword.value, () => {
+watch(() => keyword.value, async () => {
   if (keyword.value == '') {
     activeSearchResult.value = '-1'
     return
   }
-  fetchPagedMockRules()
-  activeSearchResult.value = '0'
-})
 
-async function fetchPagedMockRules() {
   try {
     rules.value = await searchMockRules(keyword.value)
   } catch (err) {
     showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
   }
-}
+  activeSearchResult.value = '0'
+})
 
 function addRecord() {
-  // if (curRecord.value == null) return
   if (curRule.value == null) curRule.value = new ProxyMock.MockRule()
   if (curRule.value.requests == null) curRule.value.requests = new Map()
 
-  // curRecord.value = JSON.parse(content.value)
-  let record = JSON.parse(content.value)
-  curRule.value.requests.set(record.url, record)
+  try {
+    let record = JSON.parse(content.value)
+    curRule.value.requests.set(record.url, record)
+  } catch (err) {
+    showNotify({ message: '数据格式错误', type: 'danger', duration: 800 })
+  }
 }
 
 function onRuleSelect(rule: ProxyMock.MockRule) {
@@ -201,12 +183,9 @@ function onRuleSelect(rule: ProxyMock.MockRule) {
     curRule.value = rule
     fetchMockRuleDetail()
   } else {
-    let requests = curRule.value.requests
     curRule.value = new ProxyMock.MockRule()
-    curRule.value.requests
-    curRule.value.requests = requests
-    content.value = ''
   }
+  content.value = null
   keyword.value = ''
   activeSearchResult.value = '-1'
 }
@@ -237,6 +216,7 @@ async function onRuleDeleteConfirm() {
   try {
     await deleteMockRule(curRule.value._id)
     curRule.value = new ProxyMock.MockRule()
+    content.value = null
     showRuleDelete.value = false
   } catch (err) {
     showNotify({ message: '删除失败', type: 'warning', duration: 1000 })
@@ -263,10 +243,7 @@ async function onSave(onlySnap: boolean = false) {
 }
 
 function onRecordSelected(record: ProxyMock.ProxyRequestRecord) {
-  // curRecord.value = record
-
   content.value = JSON.stringify(record, null, '\t')
-  // console.log(content.value)
 }
 
 function onRecordDelete(key: string) {
@@ -274,17 +251,9 @@ function onRecordDelete(key: string) {
   curRecordKey.value = key
 }
 
-function onRecordDeleteCancel() {
-  // curRecord.value = null
-  content.value = ''
-  curRecordKey.value = null
-  showRecordDelete.value = false
-}
-
 function onRecordDeleteConfirm() {
   curRule.value.requests.delete(curRecordKey.value)
-  // curRecord.value = null
-  content.value = ''
+  content.value = null
   showRecordDelete.value = false
 }
 </script>
@@ -300,9 +269,9 @@ function onRecordDeleteConfirm() {
 
 .ace-editor {
   position: absolute;
-  top: 0;
+  top: 5px;
   right: 0;
-  bottom: 0;
+  bottom: 5px;
   left: 0;
 }
 
@@ -331,6 +300,6 @@ function onRecordDeleteConfirm() {
   width: 220px;
   display: block;
   direction: rtl;
-  padding: 2px 6px;
+  margin-bottom: 5px;
 }
 </style>
