@@ -129,10 +129,16 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
             'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
             'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
           },
-          snap: 'https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
-          video: 'https://ww3.sinaimg.cn/mw690/0079ZTGxly1hrr14ttxrxj30lc16odz1.jpg',
-          audio: 'https://bqq.gtimg.com/CDN/source/audio/ring.mp3'
-        }, tid: '0712ed382aff47e4877b5f55fce0832f'
+          media: {
+            jpeg: 'https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
+            gif: 'https://5b0988e595225.cdn.sohucs.com/images/20191115/dabecb1691094f8c96acb6a524803c71.gif',
+            webp: 'https://gd-hbimg.huaban.com/cf3c8a7d9e2a329af80ff0ec49589c7438e86c3d50fef-2z1q8n_fw658',
+            apng: 'https://jamesqi.com/sites/jamesqi.com/files/1f975.png',
+            video: 'https://baikevideo.cdn.bcebos.com/media/mda-OxHkzPA8lgXMtZ6Q/e413b6455b3c432b6f65d1d08efaf3fc.mp4',
+            audio: 'https://bqq.gtimg.com/CDN/source/audio/ring.mp3'
+          },
+        },
+        tid: '0712ed382aff47e4877b5f55fce0832f'
       }
       this.isChanged = new Date().getTime()
       let fakeRecord: ProxyMock.ProxyRequestRecord = {
