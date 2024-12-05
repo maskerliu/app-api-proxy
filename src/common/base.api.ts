@@ -56,3 +56,7 @@ export function updateClientUID(uid: string) {
 export function updateBaseDomain(domain: string) {
   BASE_DOMAIN = domain
 }
+
+export function baseDomain() {
+  return BASE_DOMAIN
+}

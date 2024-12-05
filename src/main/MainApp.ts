@@ -10,7 +10,7 @@ import { MainServer } from './MainServer'
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
 const IS_DEV = process.env.NODE_ENV === 'development'
-const VUE_PLUGIN = 'C:/Users/lynxc/AppData/Local/Google/Chrome/User\ Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/7.6.4_0'
+const VUE_PLUGIN = 'C:/Users/lynxc/AppData/Local/Google/Chrome/User\ Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/7.6.5_0'
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null

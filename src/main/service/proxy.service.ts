@@ -4,7 +4,7 @@ import { IncomingHttpHeaders } from 'http'
 import { inject, injectable } from 'inversify'
 import "reflect-metadata"
 import zlib from 'zlib'
-import { ProxyMock } from '../../common/proxy.models'
+import { ProxyMock } from '../../common'
 import { IocTypes } from '../MainConst'
 import { IMockService } from './mock.service'
 import { IPushService } from './push.service'
@@ -62,11 +62,10 @@ export class ProxyService implements IProxyService {
   }
 
   public async handleStatRequest(req: any, resp: Response) {
-    let data = Buffer.from<ArrayBuffer>(req.rawbody)
-    zlib.unzip(data, async (err: any, buffer: any) => {
+    zlib.unzip(Buffer.from(req.rawbody), async (err: any, buffer: any) => {
       if (!err) {
         let record: ProxyMock.ProxyStatRecord = {
-          id: ++this._sessionId,
+          id: new Date().getTime(),
           type: ProxyMock.PorxyType.STATISTICS,
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
@@ -83,7 +82,7 @@ export class ProxyService implements IProxyService {
           url: originHost + req.path,
           method: req.method,
           headers: headers,
-          data: data
+          data: req.rawbody
         }
         await axios(options)
       } else {
@@ -99,7 +98,7 @@ export class ProxyService implements IProxyService {
     if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
 
     let startTime = new Date().getTime()
-    let sessionId = ++this._sessionId
+    let sessionId = startTime
 
     let requestData = null
     if (req.method === 'GET') {
@@ -123,8 +122,7 @@ export class ProxyService implements IProxyService {
 
     this.pushService.sendProxyMessage(uid, data)
 
-    let delay = (this.proxyConfigs.has(uid) && this.proxyConfigs.get(uid).delay) ?
-      this.proxyConfigs.get(uid).delay : 0
+    let delay = this.proxyConfigs.has(uid) ? this.proxyConfigs.get(uid).delay : 0
 
     let bizResp = null
     try {
@@ -183,7 +181,7 @@ export class ProxyService implements IProxyService {
 
     let data: ProxyMock.ProxyRequestRecord
     try {
-      let resp: any = await axios(options)
+      let resp = await axios(options)
       data = {
         id: sessionId,
         type: ProxyMock.PorxyType.REQUEST_END,

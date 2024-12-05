@@ -3,7 +3,7 @@ import { inject, injectable } from "inversify"
 import JSONBig from 'json-bigint'
 import 'reflect-metadata'
 import { BizCode, BizFail, BizResponse } from "../../common/base.models"
-import { ProxyMock } from "../../common/proxy.models"
+import { ProxyMock } from "../../common/proxy.api"
 import { IocTypes } from "../MainConst"
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
 
@@ -39,7 +39,7 @@ export class AppMockRouter {
 
     this.router.post('/saveProxyConfig', (req: any, resp: Response) => {
       let uid: string = req.query["uid"] as string
-      let config =  this.parseBody(req, 'config')
+      let config = this.parseBody(req, 'config')
       this.route(req, resp, this.proxyService.saveProxyConfig, this.proxyService, [uid, config])
     })
 

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { showNotify } from 'vant'
-import { getServerConfig, LocalServerConfig, ProxyMock, updateBaseDomain, updateClientUID } from '../../common'
+import { LocalServerConfig, ProxyMock, updateBaseDomain, updateClientUID } from '../../common'
 import { generateUid, PushClient } from '../common'
 
 export { ProxyRecordStore } from './ProxyRecords'
@@ -34,7 +34,7 @@ export const CommonStore = defineStore('Common', {
       }
 
       try {
-        this.serverConfig = await getServerConfig()
+        this.serverConfig = await ProxyMock.getServerConfig()
         this.updateServerConfig()
       } catch (err) {
         showNotify(err)

@@ -72,7 +72,7 @@
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
 import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
-import { mockRegister, saveProxyConfig } from '../../../common'
+import { ProxyMock } from '../../../common'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -125,18 +125,21 @@ function openRuleMgr() {
 
 async function saveProxyDelay() {
   try {
-    await saveProxyConfig({ delay: Number(proxyDelay.value) })
+    await ProxyMock.saveProxyConfig({ delay: Number(proxyDelay.value) })
     showNotify({ message: '成功设置延迟', type: 'success', duration: 500 })
   } catch (err) {
     showNotify({ message: '设置延迟失败', type: 'danger', duration: 1200 })
   }
 }
 
-function click2Reg() {
-  mockRegister().then((resp) => {
+async function click2Reg() {
+  try {
+    let resp = await ProxyMock.mockRegister()
     showNotify({ message: resp, type: 'success', duration: 500 })
     commonStore.showQrCode = resp == null
-  })
+  } catch (err: any) {
+    showNotify({ message: err, type: 'danger', duration: 800 })
+  }
 }
 
 function onMockRecordStart() {
