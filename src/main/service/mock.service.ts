@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify"
 import "reflect-metadata"
-import { ProxyMock } from '../../common/proxy.models'
+import { ProxyMock } from '../../common'
 import { IocTypes } from "../MainConst"
 import { IMockRepo } from '../repository/mock.repo'
 import { IPushService } from './push.service'

@@ -129,9 +129,9 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
             'x-biz-trace': 'db2d1c6238fc674fceaecf9f30cb41ed00',
             'x-user-agent': 'mapi/1.0 (Android 31;com.yitan.tangguo 3.11.0;Xiaomi Mi+10;tg;3609)',
           },
-          snap: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
-          video: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
-          audio: 'https://img1.baidu.com/it/u=1251298942,390054395&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg'
+          snap: 'https://14038277.s21i.faiusr.com/2/ABUIABACGAAgodiN2QUog9DHuwEwgAU46AU.jpg',
+          video: 'https://ww3.sinaimg.cn/mw690/0079ZTGxly1hrr14ttxrxj30lc16odz1.jpg',
+          audio: 'https://bqq.gtimg.com/CDN/source/audio/ring.mp3'
         }, tid: '0712ed382aff47e4877b5f55fce0832f'
       }
       this.isChanged = new Date().getTime()

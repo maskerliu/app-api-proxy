@@ -118,7 +118,7 @@
 <script lang="ts" setup>
 import { Row, showNotify } from 'vant'
 import { onMounted, ref, watch } from 'vue'
-import { deleteMockRule, getMockRuleDetail, ProxyMock, saveMockRule, searchMockRules } from '../../../common'
+import { ProxyMock } from '../../../common'
 import { json2map, map2json } from '../../common'
 import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
@@ -159,7 +159,7 @@ watch(() => keyword.value, async () => {
   }
 
   try {
-    rules.value = await searchMockRules(keyword.value)
+    rules.value = await ProxyMock.searchMockRules(keyword.value)
   } catch (err) {
     showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
   }
@@ -194,7 +194,7 @@ async function fetchMockRuleDetail() {
   if (curRule.value.name == null && curRule.value._id == null) return
 
   try {
-    curRule.value = await getMockRuleDetail(curRule.value._id)
+    curRule.value = await ProxyMock.getMockRuleDetail(curRule.value._id)
     curRule.value.requests = json2map(curRule.value.jsonRequests)
   } catch (err) {
     showNotify({ message: '未找到对应规则', type: 'warning', duration: 1000 })
@@ -214,7 +214,7 @@ function onRuleDelete(rule: ProxyMock.MockRule) {
 
 async function onRuleDeleteConfirm() {
   try {
-    await deleteMockRule(curRule.value._id)
+    await ProxyMock.deleteMockRule(curRule.value._id)
     curRule.value = new ProxyMock.MockRule()
     content.value = null
     showRuleDelete.value = false
@@ -233,7 +233,7 @@ async function onSave(onlySnap: boolean = false) {
 
   try {
     curRule.value.jsonRequests = map2json(curRule.value.requests)
-    curRule.value._id = await saveMockRule(curRule.value, onlySnap)
+    curRule.value._id = await ProxyMock.saveMockRule(curRule.value, onlySnap)
     await fetchMockRuleDetail()
     showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
   } catch (err) {

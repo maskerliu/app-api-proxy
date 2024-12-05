@@ -1,6 +1,6 @@
 import SockJS from 'sockjs-client'
 import { showNotify } from 'vant'
-import { ProxyMock } from '../../common/proxy.models'
+import { ProxyMock } from '../../common/proxy.api'
 import { CommonStore, ProxyRecordStore } from '../store'
 
 export class PushClient {

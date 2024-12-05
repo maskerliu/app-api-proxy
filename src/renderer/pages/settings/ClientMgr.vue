@@ -38,8 +38,7 @@
 <script lang="ts" setup>
 import { showNotify } from 'vant'
 import { onMounted, ref } from 'vue'
-import { getAllPushClients } from '../../../common/proxy.api'
-import { ProxyMock } from '../../../common/proxy.models'
+import { ProxyMock } from '../../../common'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -51,7 +50,7 @@ const imMsg = ref('')
 
 onMounted(async () => {
   try {
-    clients.value = await getAllPushClients()
+    clients.value = await ProxyMock.getAllPushClients()
   } catch (error) {
     showNotify(error)
   }

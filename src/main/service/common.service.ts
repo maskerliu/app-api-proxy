@@ -2,8 +2,7 @@ import { accessSync, readFileSync, writeFileSync } from 'fs'
 import { inject, injectable } from "inversify"
 import path from 'path'
 import "reflect-metadata"
-import { LocalServerConfig } from '../../common/base.models'
-import { ProxyMock } from '../../common/proxy.models'
+import { LocalServerConfig, ProxyMock } from '../../common'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../utils/NetworkUtils'
 import { IProxyService } from './proxy.service'

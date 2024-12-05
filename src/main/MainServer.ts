@@ -1,6 +1,7 @@
+import axios, { AxiosRequestConfig, HttpStatusCode, Method, ResponseType } from 'axios'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
-import express, { Application, Response } from 'express'
+import express, { Application, Request, Response } from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import { Server } from 'http'
@@ -95,6 +96,7 @@ export class MainServer {
     }))
 
 
+
     this.httpApp.use(cors(this.corsOpt))
     this.httpApp.use(compression())
     this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
@@ -102,7 +104,11 @@ export class MainServer {
     this.httpApp.use(express.json())
     this.httpApp.use(fileUpload())
 
-    this.httpApp.use("/appmock", this.appmockRouter.router)
+    this.httpApp.use('/appmock', this.appmockRouter.router)
+
+    this.httpApp.use('/mediaproxy', (req: any, resp: Response) => {
+      this.proxyCorsMedia(req, resp)
+    })
 
     this.httpApp.all('*', (req: any, resp: Response) => { this.handleRequest(req, resp) })
   }
@@ -150,6 +156,50 @@ export class MainServer {
       })
     } else {
       this.proxyService.handleRequest(req, resp)
+    }
+  }
+
+  private async proxyCorsMedia(req: Request, resp: Response) {
+    // req.pipe(request(req.query['target'])).pipe(resp)
+    try {
+      let target = req.query['target']
+      let type = req.query['type'] as ResponseType
+      console.log(`proxy media res: ${target}`)
+      let options: AxiosRequestConfig = {
+        url: target as string,
+        method: req.method as Method,
+        responseType: type
+      }
+      let proxyResp = await axios(options)
+
+      Object.keys(proxyResp.headers).forEach(it => {
+        // if (it !== 'content-length') 
+        if (it == 'cache-control') return
+        if (it == 'expires') return
+
+        resp.setHeader(it, proxyResp.headers[it])
+      })
+      resp.status(proxyResp.status)
+      switch (type) {
+        case 'arraybuffer':
+        case 'stream':
+          resp.end(proxyResp.data.toString('binary'), 'binary')
+          break
+        // case 'stream':
+        //   proxyResp.data.pipe(resp)
+        //   break
+        default:
+          resp.end()
+      }
+
+      // resp.send(proxyResp.data)
+      // proxyResp.data.pipe(resp)
+    } catch (err) {
+      console.error(err)
+      resp.status(HttpStatusCode.InternalServerError)
+      resp.send(err)
+    } finally {
+      resp.end()
     }
   }
 

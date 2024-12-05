@@ -51,14 +51,11 @@
 
 <script lang="ts" setup>
 import { showToast } from 'vant'
-import { PropType, ref, watch } from 'vue'
+import { PropType, ref } from 'vue'
 import { ProxyMock } from '../../../common'
 import { CommonStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
-const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
-const VIDEO_RGX = new RegExp('(.mp4)$')
-const IMG_RGX = new RegExp('(.jpg|.jpeg|.png|.JPG|.gif|.GIF|.webp)$')
 
 const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
@@ -67,48 +64,6 @@ const props = defineProps({
 const commonStore = CommonStore()
 const container = ref(null)
 const apiDesc = ref<string>(null)
-const curImgSrc = ref<string>(null)
-const curAudioSrc = ref<string>(null)
-const audioPlayer = ref(null)
-const curVideoSrc = ref<string>(null)
-const showPreview = ref(false)
-
-watch(showPreview, () => {
-  if (!showPreview.value) {
-    if (audioPlayer != null) {
-      // audioPlayer.pause()
-    }
-    curImgSrc.value = null
-    curAudioSrc.value = null
-    curVideoSrc.value = null
-  }
-})
-
-function onItemClick(item: string) {
-  let canShow = false
-  if (!!AUDIO_RGX.test(item)) {
-    curAudioSrc.value = item
-    curImgSrc.value = null
-    canShow = true
-  } else if (!!IMG_RGX.test(item)) {
-    curAudioSrc.value = null
-    curImgSrc.value = item
-    canShow = true
-  } else if (!!VIDEO_RGX.test(item)) {
-    curVideoSrc.value = item
-    canShow = true
-  }
-  showPreview.value = canShow
-}
-
-function closeImgPreview() {
-  showPreview.value = false
-  curImgSrc.value = null
-  curAudioSrc.value = null
-  if (audioPlayer != null) {
-    // audioPlayer.pause()
-  }
-}
 
 function copyLink() {
   // var input = document.createElement('input')
