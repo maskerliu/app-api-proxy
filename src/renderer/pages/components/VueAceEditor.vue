@@ -2,16 +2,13 @@
   <div>
     <div ref="aceEditor"></div>
     <van-popup v-model:show="showPreview" style="width: 60%; height: 80%; overflow: hidden;">
-      <div v-if="previewType == 0" style="width: 100%; height: 50px;">
-        <audio controls preload="auto" name="media" crossorigin="anonymous" style="width: 100%;">
-          <source :src="previewSrc" type="audio/mpeg">
-        </audio>
+      <div v-show="previewType == 0" style="width: 100%; height: 50px;">
+        <audio controls preload="auto" style="width: 100%;" :src="audioSrc"></audio>
       </div>
-      <van-image v-else-if="previewType == 1" :src="previewSrc" width="100%" height="100%" fit="contain"
-        crossorigin="anonymous" />
+      <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" />
 
-      <div v-else>
-
+      <div v-show="previewType == 2" style="width: 100%;">
+        <video controls width="100%" :src="videoSrc"></video>
       </div>
     </van-popup>
   </div>
@@ -21,6 +18,7 @@ import ace, { Ace, Range } from 'ace-builds'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 import 'ace-builds/src-min-noconflict/mode-json'
 import 'ace-builds/src-min-noconflict/theme-chrome'
+import axios from 'axios'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { baseDomain } from '../../../common'
 
@@ -29,11 +27,6 @@ import { baseDomain } from '../../../common'
 // ace.config.setModuleUrl('ace/mode/json', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-json.js'))
 // ace.config.setModuleUrl('ace/theme/chrome', require('file-loader?esModule=false!ace-builds/src-noconflict/theme-chrome.js'))
 // ace.config.setModuleUrl('ace/ext/language_tools', require('file-loader?esModule=false!ace-builds/src-noconflict/ext-language_tools.js'))
-
-const AUDIO_RGX = new RegExp('(.mp3|.ogg|.wav|.m4a|.aac)$')
-const VIDEO_RGX = new RegExp('(.mp4)$')
-const IMG_RGX = new RegExp('(.jpg|.jpeg|.png|.JPG|.gif|.GIF|.webp)$')
-
 
 interface VueAceEditorProps {
   theme: string
@@ -91,6 +84,10 @@ const showPreview = ref<boolean>(false)
 const previewSrc = ref<string>(null)
 const previewType = ref<number>(0)
 
+const imgSrc = ref<string>()
+const audioSrc = ref<string>()
+const videoSrc = ref<string>()
+
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
   _defOpts.theme = props.theme ? `ace/theme/${props.theme}` : _defOpts.theme
@@ -129,6 +126,20 @@ watch(() => props.lang, () => {
   _editor.setOption('mode', `ace/mode/${props.lang}`)
 })
 
+watch(() => showPreview.value, (_, _old) => {
+
+  if (!_) {
+    URL.revokeObjectURL(audioSrc.value)
+    URL.revokeObjectURL(imgSrc.value)
+    URL.revokeObjectURL(videoSrc.value)
+
+    audioSrc.value = null
+    imgSrc.value = null
+    videoSrc.value = null
+
+  }
+})
+
 function onMouseMove(e: MouseEvent) {
   // if (_editor.$mouseHandler.isMousePressed) {
   //   if (!_editor.selection.isEmpty())
@@ -144,17 +155,25 @@ function onMouseOut() {
   clearMarker()
 }
 
-function onClick() {
+async function onClick() {
   if (!link) return
-  if (!!AUDIO_RGX.test(link)) {
-    previewType.value = 0
-    previewSrc.value = `${baseDomain()}/mediaproxy?target=${link}&type=stream`
-  } else if (!!IMG_RGX.test(link)) {
-    previewType.value = 1
-    previewSrc.value = `${baseDomain()}/mediaproxy?target=${link}&type=arraybuffer`
-  } else if (!!VIDEO_RGX.test(link)) {
-    previewType.value = 2
-    previewSrc.value = `${baseDomain()}/mediaproxy?target=${link}&type=stream`
+
+  try {
+    let resp = await axios.get(`${baseDomain()}/mediaproxy?target=${link}`,
+      { withCredentials: false, responseType: 'arraybuffer' })
+    let contentType = resp.headers['content-type'] as string
+    if (/image.*/.test(contentType)) {
+      previewType.value = 1
+      imgSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+    } else if (/audio.*/.test(contentType)) {
+      previewType.value = 0
+      audioSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+    } else if (/video.*/.test(contentType)) {
+      previewType.value = 2
+      videoSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+    }
+  } catch (err) {
+    console.log(err)
   }
   showPreview.value = true
 }

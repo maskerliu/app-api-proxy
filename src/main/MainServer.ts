@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, HttpStatusCode, Method, ResponseType } from 'axios'
+import axios, { AxiosRequestConfig, HttpStatusCode, Method } from 'axios'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Request, Response } from 'express'
@@ -140,7 +140,7 @@ export class MainServer {
     this.httpServer.listen(
       this.commonService.serverConfig.port,
       '0.0.0.0',
-      () => console.log(`--启动本地代理Http服务--[${this.commonService.serverConfig.port}]`)
+      () => console.log(`--启动本地代理Http服务[${this.commonService.serverConfig.port}]`)
     )
 
   }
@@ -163,39 +163,44 @@ export class MainServer {
     // req.pipe(request(req.query['target'])).pipe(resp)
     try {
       let target = req.query['target']
-      let type = req.query['type'] as ResponseType
       console.log(`proxy media res: ${target}`)
       let options: AxiosRequestConfig = {
         url: target as string,
-        method: req.method as Method,
-        responseType: type
+        method: req.method as Method
       }
       let proxyResp = await axios(options)
-
       Object.keys(proxyResp.headers).forEach(it => {
-        // if (it !== 'content-length') 
+        if (it == 'content-length') return
         if (it == 'cache-control') return
         if (it == 'expires') return
-
         resp.setHeader(it, proxyResp.headers[it])
       })
       resp.status(proxyResp.status)
-      switch (type) {
-        case 'arraybuffer':
-        case 'stream':
-          resp.end(proxyResp.data.toString('binary'), 'binary')
-          break
-        // case 'stream':
-        //   proxyResp.data.pipe(resp)
-        //   break
-        default:
-          resp.end()
+
+      let contentType = proxyResp.headers['content-type'] as string
+      if (/image.*/.test(contentType)) {
+        options.responseType = 'arraybuffer'
+      } else if (/audio.*/.test(contentType)) {
+        options.responseType = 'arraybuffer'
+      } else if (/video.*/.test(contentType)) {
+        options.responseType = 'arraybuffer'
       }
 
-      // resp.send(proxyResp.data)
-      // proxyResp.data.pipe(resp)
+      proxyResp = await axios(options)
+
+      switch (options.responseType) {
+        case 'arraybuffer':
+          resp.end(proxyResp.data)
+          break
+        case 'stream':
+          proxyResp.data.pipe(resp)
+          break
+        default:
+          resp.send(proxyResp.data)
+          break
+      }
     } catch (err) {
-      console.error(err)
+      // console.error(err)
       resp.status(HttpStatusCode.InternalServerError)
       resp.send(err)
     } finally {
