@@ -62,23 +62,20 @@ function onOpenDebugPanel() {
   showDebugPanel.value = true
 }
 
-// import { getCurrentInstance } from "vue"
-// const appContext = getCurrentInstance()
-// console.log(appContext)
 </script>
 
 <style>
 :root {
-  --van-dialog-border-radius: 4px;
+  --van-dialog-border-radius: 6px;
   --van-tag-font-size: 0.6rem;
   --van-tag-padding: 2px 5px;
   --van-tag-border-radius: 5px;
   --van-cell-horizontal-padding: 10px;
   --van-popup-round-radius: 8px;
-  --van-popup-close-icon-margin: 22px;
+  --van-popup-close-icon-margin: 24px;
   --van-border-width: 1.4px;
   --van-radius-md: 8px;
-  --van-dialog-radius: 2px;
+  --van-dialog-radius: 8px;
   --van-floating-bubble-background: #f04b1e;
 }
 
@@ -110,12 +107,8 @@ function onOpenDebugPanel() {
   background: rgba(0, 0, 0, 0.1);
 }
 
-.fade-enter-active {
-  animation: bounce-in 0.5s ease-in;
-}
-
-.fade-leave-active {
-  animation: bounce-out 0.5s ease-out;
+.rule-mgr-cell-value {
+  flex: 0 0 120px !important;
 }
 
 @keyframes bounce-in {

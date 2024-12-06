@@ -62,7 +62,7 @@ export class ProxyService implements IProxyService {
   }
 
   public async handleStatRequest(req: any, resp: Response) {
-    zlib.unzip(Buffer.from(req.rawbody), async (err: any, buffer: any) => {
+    zlib.unzip(Buffer.from(req.rawbody) as any, async (err: any, buffer: any) => {
       if (!err) {
         let record: ProxyMock.ProxyStatRecord = {
           id: new Date().getTime(),

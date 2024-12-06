@@ -1,7 +1,7 @@
 <template>
-  <van-form ref="container" label-align="right" colon>
+  <van-form ref="detailContainer" label-align="right" colon>
     <van-sticky :offset-top="5">
-      <van-cell-group inset title="" class="content" style="margin-top: 5px;">
+      <van-cell-group inset title="" class="detail-content" style="margin-top: 5px;">
         <van-cell center>
           <template #title>
             <span class="van-ellipsis">{{ record.url }}</span>
@@ -15,8 +15,8 @@
       </van-cell-group>
     </van-sticky>
 
-    <van-cell-group inset :title="$t('proxy.requestHeader')" class="content">
-      <van-cell>
+    <van-cell-group inset :title="$t('proxy.requestHeader')" class="detail-content">
+      <van-cell style="padding: 0;">
         <template #value>
           <vue-ace-editor :fold="false" :max-lines="22"
             :data="record.headers == null ? '{}' : JSON.stringify(record.headers, null, '\t')" />
@@ -24,22 +24,23 @@
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.requestParams')" class="content">
-      <van-cell>
+    <van-cell-group inset :title="$t('proxy.requestParams')" class="detail-content">
+      <van-cell style="padding: 0;">
         <vue-ace-editor :max-lines="22"
           :data="record.requestData == null ? '{}' : JSON.stringify(record.requestData, null, '\t')" />
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.responseHeader')" class="content">
-      <van-cell>
+    <van-cell-group inset :title="$t('proxy.responseHeader')" class="detail-content">
+      <van-cell style="padding: 0;">
         <vue-ace-editor :fold="false" :max-lines="22"
           :data="record.responseHeaders == null ? '{}' : JSON.stringify(record.responseHeaders, null, '\t')" />
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;" class="content">
-      <van-cell>
+    <van-cell-group ref="detailResp" inset :title="$t('proxy.responseBody')" style="margin-bottom: 5px;"
+      class="detail-content">
+      <van-cell style="padding: 0;">
         <template #value>
           <vue-ace-editor :max-lines="22"
             :data="record.responseData == null ? '{}' : JSON.stringify(record.responseData, null, '\t')" />
@@ -50,10 +51,9 @@
 </template>
 
 <script lang="ts" setup>
-import { showToast } from 'vant'
-import { PropType, ref } from 'vue'
+import { Form, showToast } from 'vant'
+import { inject, PropType, Ref, ref } from 'vue'
 import { ProxyMock } from '../../../common'
-import { CommonStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
 
@@ -61,9 +61,15 @@ const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
 })
 
-const commonStore = CommonStore()
-const container = ref(null)
+const detailContainer = ref<typeof Form>()
+const detailResp = ref()
 const apiDesc = ref<string>(null)
+const showMockRuleMgr = inject<Ref<boolean>>('showMockRuleMgr')
+const withCurRecord = inject<Ref<boolean>>('withCurRecord')
+
+// watch(props.record, () => {
+//   updated()
+// })
 
 function copyLink() {
   // var input = document.createElement('input')
@@ -76,25 +82,20 @@ function copyLink() {
 }
 
 function addToMockRule() {
-  commonStore.showMockRuleMgr = true
+  showMockRuleMgr.value = true
+  withCurRecord.value = true
 }
 
 function updated() {
   this.$refs.inspectorPanel.scrollTop = 0
   this.$nextTick(() => {
-    this.$refs.inspectorPanel.scrollTop =
-      this.$refs.respDataDiv.getBoundingClientRect().top
+    detailContainer.value.$el.scrollTop = detailResp.value.$el.getBoundingClientRect().top
   })
 }
 </script>
 
-<style>
-a {
-  color: rgb(31, 187, 166);
-  text-decoration: underline;
-}
-
-.content {
+<style scoped>
+.detail-content {
   font-size: 0.7rem;
   padding: 0;
 }

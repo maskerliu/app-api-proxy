@@ -16,7 +16,7 @@
         <div style="padding-top: 6px;">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
-          <van-icon class="iconfont icon-setting left-panel-icon" @click="commonStore.showSettings = true" />
+          <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true" />
         </div>
       </van-row>
       <van-field v-model="proxyDelay" type="number">
@@ -49,11 +49,11 @@
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
     </van-col>
 
-    <van-popup v-model:show="commonStore.showMockRuleMgr" position="right" closeable close-icon="close">
-      <mock-rule-mgr :record="recordStore.records.get(recordStore.curRecordId)" />
+    <van-popup v-model:show="showMockRuleMgr" position="right" closeable close-icon="close">
+      <mock-rule-mgr />
     </van-popup>
 
-    <van-popup v-model:show="commonStore.showSettings" position="right" closeable close-icon="close">
+    <van-popup v-model:show="showSettings" position="right" closeable close-icon="close">
       <settings />
     </van-popup>
 
@@ -71,7 +71,7 @@
 <script lang="ts" setup>
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
-import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
 import { ProxyMock } from '../../../common'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
@@ -86,6 +86,14 @@ const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 
+const showMockRuleMgr = ref<boolean>(false)
+const withCurRecord = ref<boolean>(false)
+const showSettings = ref<boolean>(false)
+
+provide('showMockRuleMgr', showMockRuleMgr)
+provide('withCurRecord', withCurRecord)
+provide('showSettings', showSettings)
+
 let mockRecordId = -1
 
 onMounted(() => {
@@ -93,15 +101,14 @@ onMounted(() => {
 
   if (!__IS_WEB__) {
     window.electronAPI.onOpenMockRuleMgr(() => {
-      commonStore.showMockRuleMgr = true
-      commonStore.showSettings = false
-      recordStore.curRecordId = -1
+      showMockRuleMgr.value = true
+      withCurRecord.value = false
+      showSettings.value = false
     })
 
     window.electronAPI.onOpenSettings(() => {
-      commonStore.showMockRuleMgr = false
-      commonStore.showSettings = true
-      recordStore.curRecordId = -1
+      showMockRuleMgr.value = false
+      showSettings.value = true
     })
   }
 })
@@ -119,8 +126,8 @@ watch(() => recordStore.proxyTypes, () => {
 })
 
 function openRuleMgr() {
-  commonStore.showMockRuleMgr = true
-  recordStore.curRecordId = -1
+  showMockRuleMgr.value = true
+  withCurRecord.value = false
 }
 
 async function saveProxyDelay() {
@@ -153,11 +160,7 @@ function onMockRecordStart() {
 
 </script>
 
-<style scoped>
-:root {
-  --van-popup-close-icon-margin: 40px;
-}
-
+<style>
 .left-panel {
   flex-grow: 1;
   flex-shrink: 0;
@@ -218,11 +221,5 @@ function onMockRecordStart() {
 a {
   color: rgb(31, 187, 166);
   text-decoration: underline;
-}
-
-.content {
-  width: 300px;
-  font-size: 0.7rem;
-  padding: 0 5px;
 }
 </style>
