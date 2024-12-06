@@ -160,10 +160,8 @@ export class MainServer {
   }
 
   private async proxyCorsMedia(req: Request, resp: Response) {
-    // req.pipe(request(req.query['target'])).pipe(resp)
     try {
       let target = req.query['target']
-      console.log(`proxy media res: ${target}`)
       let options: AxiosRequestConfig = {
         url: target as string,
         method: req.method as Method

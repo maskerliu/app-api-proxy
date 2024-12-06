@@ -1,15 +1,11 @@
 <template>
-  <div>
-    <div ref="aceEditor"></div>
-    <van-popup v-model:show="showPreview" style="width: 60%; height: 80%; overflow: hidden;">
-      <div v-show="previewType == 0" style="width: 100%; height: 50px;">
-        <audio controls preload="auto" style="width: 100%;" :src="audioSrc"></audio>
-      </div>
+  <div style="height: 100%; position: relative;">
+    <div ref="aceEditor" :class="maxLines ? null : 'ace-editor'"></div>
+    <van-popup v-model:show="showPreview" class="preview-container" closeable round>
+      <audio v-show="previewType == 0" controls preload="auto" style="width: 100%; height: 120px;"
+        :src="audioSrc"></audio>
       <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" />
-
-      <div v-show="previewType == 2" style="width: 100%;">
-        <video controls width="100%" :src="videoSrc"></video>
-      </div>
+      <video v-show="previewType == 2" controls width="100%" :src="videoSrc"></video>
     </van-popup>
   </div>
 </template>
@@ -46,8 +42,8 @@ let link: string = null
 let _editor: Ace.Editor = null
 let _defOpts: Partial<Ace.EditorOptions> = {
   // fontSize: 11,
-  maxLines: 22,
-  minLines: 1,
+  // maxLines: 22,
+  // minLines: 1,
   theme: 'ace/theme/tomorrow',
   displayIndentGuides: true,
   cursorStyle: 'wide',
@@ -81,7 +77,6 @@ const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
 
 const aceEditor = ref<HTMLElement>()
 const showPreview = ref<boolean>(false)
-const previewSrc = ref<string>(null)
 const previewType = ref<number>(0)
 
 const imgSrc = ref<string>()
@@ -91,7 +86,9 @@ const videoSrc = ref<string>()
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
   _defOpts.theme = props.theme ? `ace/theme/${props.theme}` : _defOpts.theme
-  _defOpts.maxLines = props.maxLines
+  if (props.maxLines) {
+    _defOpts.maxLines = props.maxLines
+  }
   _editor = ace.edit(aceEditor.value, Object.assign(_defOpts, props.options))
   _editor.session.setOptions({
     mode: `ace/mode/${props.lang}`,
@@ -103,8 +100,7 @@ onMounted(() => {
   if (props.fold) _editor.session.foldAll()
 
   if (data.value) {
-    _editor.setValue(data.value, 1)
-    _editor.resize()
+    _editor.session.setValue(data.value)
   }
 
   _editor.renderer.scroller.addEventListener('mousemove', onMouseMove)
@@ -118,7 +114,7 @@ watch(() => props.maxLines, () => {
 })
 
 watch(() => data.value, () => {
-  _editor.setValue(data.value)
+  _editor.session.setValue(data.value)
   nextTick(() => _editor.navigateFileEnd())
 })
 
@@ -136,16 +132,14 @@ watch(() => showPreview.value, (_, _old) => {
     audioSrc.value = null
     imgSrc.value = null
     videoSrc.value = null
-
   }
 })
 
 function onMouseMove(e: MouseEvent) {
-  // if (_editor.$mouseHandler.isMousePressed) {
-  //   if (!_editor.selection.isEmpty())
-  //     clearMarker()
-  //   return
-  // }
+  if ((_editor as any).$mouseHandler.isMousePressed) {
+    if (_editor.selection.isEmpty()) clearMarker()
+    return
+  }
   x = e.clientX
   y = e.clientY
   update()
@@ -208,7 +202,7 @@ function update() {
   _editor.renderer.setCursorStyle("pointer")
   _editor.session.removeMarker(marker)
   let range = new Range(token.row, token.start, token.row, token.start + token.value.length)
-  marker = _editor.session.addMarker(range, "ace_link_marker", "text", true)
+  marker = _editor.session.addMarker(range, "ace-link-marker", "text", true)
 }
 
 function clearMarker() {
@@ -247,8 +241,24 @@ function getMatchAround(regExp: RegExp, string: string, col: number): Partial<Ma
 
 </script>
 <style>
-/* @import "~ace-builds/css/ace.css"; */
-.ace_link_marker {
+.preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60%;
+  overflow: hidden;
+}
+
+.ace-editor {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  bottom: 5px;
+  left: 0;
+  margin: 0;
+}
+
+.ace-link-marker {
   position: absolute;
   border-bottom: 2px dashed black;
   background: #f9ac2f85;

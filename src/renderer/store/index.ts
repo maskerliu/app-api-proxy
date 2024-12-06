@@ -12,8 +12,6 @@ export const CommonStore = defineStore('Common', {
     return {
       uid: '',
       showQrCode: false,
-      showMockRuleMgr: false,
-      showSettings: false,
       registerUrl: '',
       serverConfig: {} as LocalServerConfig
     }

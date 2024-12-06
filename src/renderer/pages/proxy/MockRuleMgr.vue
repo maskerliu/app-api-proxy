@@ -15,7 +15,7 @@
             </template>
 
             <van-list class="search-result" :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
-              <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
+              <van-cell center class="rule-snap-item1" is-link v-for="(rule, idx) in rules" :title="rule.name"
                 :label="rule.desc" @click="onRuleSelect(rule)">
                 <template #value>
                   <div>
@@ -89,8 +89,8 @@
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
 
-      <van-col style="flex: 1; position: relative;">
-        <vue-ace-editor :read-only="false" v-model:data="content" class="ace-editor" />
+      <van-col style="flex: 1; ">
+        <vue-ace-editor :read-only="false" :data="content" />
       </van-col>
     </van-row>
 
@@ -117,7 +117,7 @@
 
 <script lang="ts" setup>
 import { Row, showNotify } from 'vant'
-import { onMounted, ref, watch } from 'vue'
+import { inject, onMounted, Ref, ref, watch } from 'vue'
 import { ProxyMock } from '../../../common'
 import { json2map, map2json } from '../../common'
 import { ProxyRecordStore } from '../../store'
@@ -135,20 +135,30 @@ const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const content = ref<string>(null)
+const windowHeight = ref<number>(0)
 const topBarHeight = ref<number>(0)
+const maxLines = ref<number>(0)
+
+const showMockRuleMgr = inject<Ref<boolean>>('showMockRuleMgr')
+const withCurRecord = inject<Ref<boolean>>('withCurRecord')
 
 onMounted(() => {
   window.onresize = () => {
+    windowHeight.value = document.body.clientHeight
     topBarHeight.value = topBar.value.$el.offsetHeight
   }
+  windowHeight.value = document.body.clientHeight
   topBarHeight.value = topBar.value.$el.offsetHeight
+
   curRule.value = new ProxyMock.MockRule()
+  content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
 })
 
-watch(() => recordStore.curRecordId, () => {
-  if (recordStore.curRecordId != -1) {
+watch(() => showMockRuleMgr.value, (_new, _old) => {
+  if (_new && withCurRecord.value) {
     content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
-    console.log('content changed')
+  } else {
+    content.value = null
   }
 })
 
@@ -164,6 +174,14 @@ watch(() => keyword.value, async () => {
     showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
   }
   activeSearchResult.value = '0'
+})
+
+watch(() => windowHeight.value, (_new) => {
+  maxLines.value = Math.floor((_new - topBarHeight.value - 12) / 15)
+})
+
+watch(() => topBarHeight.value, (_new) => {
+  maxLines.value = Math.floor((windowHeight.value - _new - 12) / 15)
 })
 
 function addRecord() {
@@ -258,25 +276,13 @@ function onRecordDeleteConfirm() {
 }
 </script>
 
-<style>
+<style scoped>
 .mgr-content {
   width: 80vw;
   min-width: 375px;
   height: 100vh;
   overflow: hidden;
   background: #ebecef;
-}
-
-.ace-editor {
-  position: absolute;
-  top: 5px;
-  right: 0;
-  bottom: 5px;
-  left: 0;
-}
-
-.rule-mgr-cell-value {
-  flex: 0 0 120px !important;
 }
 
 .search-result {
