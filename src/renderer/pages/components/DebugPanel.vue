@@ -1,10 +1,13 @@
 <template>
   <div style="width: 375px; height: 100vh;">
     <van-form class="full-row" style="width: 100%; min-width: 375px; padding-top: 12px; " label-align="right" colon>
-      <van-cell-group inset :title="$t('settings.sys.title')">
-        <van-cell title="go to new" clickable @click="toNew"></van-cell>
-        <van-cell title="Virtual Client" clickable @click="virtualClient"></van-cell>
-        <van-cell title="Developer Tools" clickable @click="openDevTools"></van-cell>
+      <van-cell-group inset :title="$t('debug.common.title')">
+        <van-cell :title="$t('debug.common.versionCheck')" clickable @click="toNew"></van-cell>
+        <van-cell :title="$t('debug.common.devTools')" clickable @click="openDevTools"></van-cell>
+      </van-cell-group>
+
+      <van-cell-group inset :title="$t('debug.virtualClient.title')">
+        <van-cell :title="'Virtual Client'" clickable @click="virtualClient"></van-cell>
       </van-cell-group>
     </van-form>
   </div>

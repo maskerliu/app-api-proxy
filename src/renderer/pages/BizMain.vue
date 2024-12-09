@@ -1,6 +1,5 @@
 <template>
   <van-row class="full-row">
-    <!-- <div class="drag-bar"></div> -->
     <router-view class="biz-content" v-slot="{ Component, route }">
       <transition name="fade">
         <component :is="Component" :key="route.path" />
@@ -105,6 +104,14 @@ function onOpenDebugPanel() {
   -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
   border-radius: 0;
   background: rgba(0, 0, 0, 0.1);
+}
+
+.drag-bar {
+  width: 100%;
+  height: 30px;
+  background-color: transparent;
+  -webkit-app-region: drag;
+  z-index: 9999;
 }
 
 .rule-mgr-cell-value {

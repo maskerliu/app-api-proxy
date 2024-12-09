@@ -3,10 +3,10 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue'
 
-import BizMain from './pages/BizMain.vue';
-import { CommonStore } from './store';
+import BizMain from './pages/BizMain.vue'
+import { CommonStore } from './store'
 
 const canRender = ref(true)
 
@@ -51,12 +51,5 @@ onMounted(() => {
   height: 100%;
   background: #ebecef;
   overflow-y: hidden;
-}
-
-.drag-bar {
-  width: 100%;
-  height: 26px;
-  -webkit-app-region: drag;
-  background: transparent;
 }
 </style>

@@ -57,6 +57,8 @@ export default {
       statRuleServer: '埋点规则服务地址',
       dataProxyServer: '代理数据服务地址',
       mqttBroker: 'MQTT服务地址',
+      theme: '主题',
+      version: '版本'
     },
     boardcast: {
       onlineClient: '在线Client',
@@ -78,6 +80,16 @@ export default {
       title: '静态资源管理',
       upload: '上传文件',
       manage: '远程资源管理'
+    }
+  },
+  debug: {
+    common: {
+      title: 'Common',
+      versionCheck: 'Check Version',
+      devTools: 'Developer Tools',
+    },
+    virtualClient: {
+      title: 'Virtual Client'
     }
   }
 }
