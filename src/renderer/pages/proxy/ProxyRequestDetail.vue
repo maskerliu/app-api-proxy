@@ -1,7 +1,7 @@
 <template>
   <van-form ref="detailContainer" label-align="right" colon>
-    <van-sticky :offset-top="5">
-      <van-cell-group inset title="" class="detail-content" style="margin-top: 5px;">
+    <van-sticky :offset-top="topOffset">
+      <van-cell-group inset title="">
         <van-cell center>
           <template #title>
             <span class="van-ellipsis">{{ record.url }}</span>
@@ -15,8 +15,8 @@
       </van-cell-group>
     </van-sticky>
 
-    <van-cell-group inset :title="$t('proxy.requestHeader')" class="detail-content">
-      <van-cell style="padding: 0;">
+    <van-cell-group inset :title="$t('proxy.requestHeader')">
+      <van-cell class="detail-content">
         <template #value>
           <vue-ace-editor :fold="false" :max-lines="22"
             :data="record.headers == null ? '{}' : JSON.stringify(record.headers, null, '\t')" />
@@ -24,15 +24,15 @@
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.requestParams')" class="detail-content">
-      <van-cell style="padding: 0;">
+    <van-cell-group inset :title="$t('proxy.requestParams')">
+      <van-cell class="detail-content">
         <vue-ace-editor :max-lines="22"
           :data="record.requestData == null ? '{}' : JSON.stringify(record.requestData, null, '\t')" />
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.responseHeader')" class="detail-content">
-      <van-cell style="padding: 0;">
+    <van-cell-group inset :title="$t('proxy.responseHeader')">
+      <van-cell class="detail-content">
         <vue-ace-editor :fold="false" :max-lines="22"
           :data="record.responseHeaders == null ? '{}' : JSON.stringify(record.responseHeaders, null, '\t')" />
       </van-cell>
@@ -56,6 +56,7 @@ import { inject, PropType, Ref, ref } from 'vue'
 import { ProxyMock } from '../../../common'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
+const topOffset = __IS_WEB__ ? 5 : 30
 
 const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },
@@ -96,7 +97,6 @@ function updated() {
 
 <style scoped>
 .detail-content {
-  font-size: 0.7rem;
   padding: 0;
 }
 </style>

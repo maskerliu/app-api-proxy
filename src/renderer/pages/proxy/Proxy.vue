@@ -42,6 +42,7 @@
       </van-list>
     </van-col>
     <van-col class="right-panel">
+      <div class="drag-bar" v-if="showDragBar"></div>
       <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
 
@@ -79,13 +80,13 @@ import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
 
-
 const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
 const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 
+const showDragBar = !__IS_WEB__
 const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
 const showSettings = ref<boolean>(false)

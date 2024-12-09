@@ -40,7 +40,8 @@
         </van-tag>
 
         <van-tag v-if="source.type == 5020" type="primary" style="margin-left: 5px;">[打点]</van-tag>
-        <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'" style="margin-left: 5px;">
+        <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'"
+          style="margin-left: 5px; font-size: 0.5rem;">
           {{ source.method }}
         </van-tag>
         <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
@@ -73,15 +74,6 @@ const recordStore = ProxyRecordStore()
 </script>
 
 <style scoped>
-.item-selected {
-  position: absolute;
-  width: 11px;
-  height: 100%;
-  background: #9191a148;
-  left: -6px;
-  z-index: 99;
-}
-
 .item-timeline {
   position: absolute;
   width: 8px;
@@ -120,14 +112,6 @@ const recordStore = ProxyRecordStore()
 .stat-snap-type {
   font-size: 0.6rem;
   color: #d35400;
-}
-
-.request-snap-method {
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: #2980b9;
-  top: 10px;
-  margin: 0 5px;
 }
 
 .request-snap-timecost {

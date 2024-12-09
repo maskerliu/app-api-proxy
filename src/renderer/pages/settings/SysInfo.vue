@@ -38,7 +38,7 @@
   </van-cell-group>
 </template>
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue'
+import { inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LocalIP } from '../../../common/base.models'
 import { CommonStore } from '../../store'
@@ -56,6 +56,8 @@ const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
 const showPopover = ref<boolean>(false)
 const canSave = !__IS_WEB__
+
+const showSettings = inject<Ref<boolean>>('showSettings')
 
 let perferences = [
   { tooltip: t('settings.sys.serverDomain'), key: 'domain' },
@@ -91,7 +93,7 @@ function onSelectIP(ip: LocalIP) {
 
 function onSave() {
   window.electronAPI.saveSysSettings(JSON.stringify(commonStore.serverConfig))
-  commonStore.showSettings = false
+  showSettings.value = false
 }
 
 </script>

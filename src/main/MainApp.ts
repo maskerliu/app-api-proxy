@@ -106,8 +106,8 @@ export default class MainApp {
 
     let winOpt: BrowserWindowConstructorOptions = {
       title: "AppApiProxy",
-      width: 1200,
-      height: 800,
+      width: 1100,
+      height: 670,
       // minWidth: 1024,
       minHeight: 640,
       useContentSize: true,
@@ -116,8 +116,13 @@ export default class MainApp {
       resizable: true,
       icon: nativeImage.createFromPath(path.join(this.trayFloder, this.trayIconName)),
       show: false,
-      titleBarStyle: process.platform === 'win32' ? 'default' : 'hidden',
+      titleBarStyle: process.platform === 'win32' ? 'hidden' : 'hiddenInset',
+      titleBarOverlay: {
+        color: "#f8f8f808",
+        symbolColor: "black",
+      },
       webPreferences: {
+        webSecurity: false,
         devTools: true, //process.env.NODE_ENV == 'development',
         nodeIntegration: true,
         sandbox: false,

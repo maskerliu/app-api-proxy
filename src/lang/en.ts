@@ -57,6 +57,8 @@ export default {
       statRuleServer: 'Stat Rule Server',
       dataProxyServer: 'Data Proxy Server',
       mqttBroker: 'MQTT Broker',
+      theme: 'Theme',
+      version: 'Version'
     },
     boardcast: {
       onlineClient: 'Online Client',
@@ -78,6 +80,16 @@ export default {
       title: 'Manage Remote Static Resources',
       upload: 'Upload File',
       manage: 'Remote Resource Manage'
+    }
+  },
+  debug: {
+    common: {
+      title: 'Common',
+      versionCheck: 'Check Version',
+      devTools: 'Developer Tools',
+    },
+    virtualClient: {
+      title: 'Virtual Client'
     }
   }
 }
