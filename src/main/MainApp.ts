@@ -189,6 +189,9 @@ export default class MainApp {
     })
   }
 
+  private i = 0
+  private timer: any
+
   private initIPCService() {
     ipcMain.handle('updateServerPort', (event: IpcMainEvent, args?: any) => {
       console.log(args)
@@ -203,6 +206,20 @@ export default class MainApp {
       this.mainServer.stop()
       this.mainServer.start()
       this.mainWindow.webContents.send(ElectronAPICMD.getSysSettings, this.mainServer.getSysSettings())
+    })
+
+    ipcMain.handle(ElectronAPICMD.downloadUpdate, (event: IpcMainEvent, ...args: any) => {
+      this.timer = setInterval(() => {
+        this.i += Math.random() * 20
+        if (this.i > 100) this.i = 100
+        this.mainWindow.webContents.send(ElectronAPICMD.downloadUpdate, { progress: this.i })
+
+        if (this.i == 100) {
+          clearInterval(this.timer)
+          this.i = 0
+        }
+      }, 1000)
+
     })
 
     nativeTheme.on("updated", () => {

@@ -8,7 +8,8 @@ export const ElectronAPICMD = {
   openSettings: 'openSettings',
   getSysSettings: 'getSysSettings',
   saveSysSettings: 'saveSysSettings',
-  sysThemeChanged: 'onSysThemeChanged'
+  sysThemeChanged: 'onSysThemeChanged',
+  downloadUpdate: 'downloadUpdate',
 }
 
 export interface IElectronAPI {
@@ -17,11 +18,15 @@ export interface IElectronAPI {
 
   openDevTools(...args: any): void
 
+  saveSysSettings(...args: any): void
+
+  downloadUpdate(...args: any): void
+
   onOpenMockRuleMgr(callback: any): void
 
   onOpenSettings(callback: any): void
 
   onGetSysSettings(callback: (result: LocalServerConfig) => void): void
 
-  saveSysSettings(...args: any): void
+  onDownloadUpdate(callback: any): void
 }
