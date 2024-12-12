@@ -1,32 +1,87 @@
 <template>
-  <biz-main v-if="canRender" />
+  <van-config-provider :theme="theme">
+    <biz-main v-if="canRender" />
+  </van-config-provider>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue'
+import { ConfigProviderTheme } from 'vant'
+import { onMounted, provide, ref } from 'vue'
 
 import BizMain from './pages/BizMain.vue'
 import { CommonStore } from './store'
 
 const canRender = ref(true)
+const theme = ref<ConfigProviderTheme>('light')
+
+provide('theme', theme)
 
 onMounted(() => {
   canRender.value = true
+  window.isWeb = __IS_WEB__
+
+  let wrapTheme = window.localStorage.getItem('theme')
+  if (wrapTheme == null) wrapTheme = 'sys'
+  if (wrapTheme !== 'sys') {
+    theme.value = wrapTheme as ConfigProviderTheme
+  } else {
+
+  }
+
   if (!__IS_WEB__) {
-    window.electronAPI.onGetSysSettings((result) => {
+    window.electronAPI.getSysSettings((result) => {
       CommonStore().init(result)
     })
+
+    if (wrapTheme == 'sys') {
+      window.electronAPI.getSysTheme((data: string) => {
+        theme.value = data as ConfigProviderTheme
+      })
+
+      window.electronAPI.onSysThemeChanged((data) => {
+        if (wrapTheme == 'sys') theme.value = data as ConfigProviderTheme
+      })
+    }
   } else {
     CommonStore().init()
   }
 })
+
 </script>
 
 <style>
+.van-theme-light {
+  --van-white: white;
+  --van-black: #333;
+  --van-gray-1: #ecedee;
+  --van-gray-8: #69696b;
+}
+
+.van-theme-dark {
+  --van-white: rgb(24, 23, 23);
+  --van-black: #efecec;
+  --van-gray-1: #272728;
+  --van-gray-8: #ccccce;
+}
+
+:root {
+  --van-dialog-border-radius: 6px;
+  --van-tag-font-size: 0.6rem;
+  --van-tag-padding: 2px 5px;
+  --van-tag-border-radius: 5px;
+  --van-cell-horizontal-padding: 10px;
+  --van-popup-round-radius: 8px;
+  --van-popup-close-icon-margin: 24px;
+  --van-border-width: 1.4px;
+  --van-radius-md: 8px;
+  --van-dialog-radius: 8px;
+  --van-floating-bubble-background: #f04b1e;
+}
+
 #app {
-  font-family: "Consolas,Monaco,Menlo,Bitstream Vera Sans Mono,monospace";
-  background: transparent;
-  letter-spacing: 1px;
+  /* font-family: "Consolas,Monaco,Menlo,Bitstream Vera Sans Mono,monospace"; */
+  background: var(--van-gray-1);
+  letter-spacing: 1.3px;
   /* -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -34,7 +89,36 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  filter: invert(0.01);
+  user-select: none;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.1);
+  -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.1);
+  background: var(--van-gray-8);
+}
+
+::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
+  -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
+  border-radius: 2px;
+  background: var(--van-gray-1);
+}
+
+.full-row {
+  width: 100%;
+  height: 100%;
+  background: var(--van-background);
+  overflow: hidden;
 }
 
 .border-bg {
@@ -45,11 +129,16 @@ onMounted(() => {
   box-shadow: 0px 12px 8px -12px #000;
 }
 
-.biz-content {
+.drag-bar {
   width: 100%;
-  min-width: 375px;
-  height: 100%;
-  background: #ebecef;
-  overflow-y: hidden;
+  height: 30px;
+  position: absolute;
+  background: linear-gradient(to bottom, var(--van-gray-1), transparent);
+  -webkit-app-region: drag;
+  z-index: 9999;
+}
+
+.rule-mgr-cell-value {
+  flex: 0 0 120px !important;
 }
 </style>

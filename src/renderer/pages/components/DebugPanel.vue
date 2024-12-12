@@ -9,12 +9,17 @@
       <van-cell-group inset :title="$t('debug.virtualClient.title')">
         <van-cell :title="'Virtual Client'" clickable @click="virtualClient"></van-cell>
       </van-cell-group>
+
+      <lab />
     </van-form>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { inject, Ref } from 'vue'
+import Lab from '../lab/Lab.vue'
 
+const showDebugPanel = inject<Ref<boolean>>('showDebugPanel')
 
 function toNew() {
   alert('去新版')
@@ -27,6 +32,7 @@ function virtualClient() {
 function openDevTools() {
   if (!__IS_WEB__) {
     window.electronAPI.openDevTools()
+    showDebugPanel.value = false
   }
 }
 

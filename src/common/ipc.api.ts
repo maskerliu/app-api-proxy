@@ -2,14 +2,16 @@ import { LocalServerConfig } from "./base.models"
 
 
 export const ElectronAPICMD = {
-  openFile: 'openFile',
-  openDevTools: 'openDevTools',
-  openMockRuleMgr: 'openMockRuleMgr',
-  openSettings: 'openSettings',
-  getSysSettings: 'getSysSettings',
-  saveSysSettings: 'saveSysSettings',
-  sysThemeChanged: 'onSysThemeChanged',
-  downloadUpdate: 'downloadUpdate',
+  OpenFile: 'openFile',
+  OpenDevTools: 'openDevTools',
+  OpenMockRuleMgr: 'openMockRuleMgr',
+  OpenSettings: 'openSettings',
+  GetSysSettings: 'getSysSettings',
+  SaveSysSettings: 'saveSysSettings',
+  SetAppTheme: 'setAppTheme',
+  GetSysTheme: 'getSysTheme',
+  SysThemeChanged: 'sysThemeChanged',
+  DownloadUpdate: 'downloadUpdate',
 }
 
 export interface IElectronAPI {
@@ -26,7 +28,13 @@ export interface IElectronAPI {
 
   onOpenSettings(callback: any): void
 
-  onGetSysSettings(callback: (result: LocalServerConfig) => void): void
+  getSysSettings(callback: (result: LocalServerConfig) => void): void
+
+  setAppTheme(theme: ('system' | 'light' | 'dark')): void
+
+  getSysTheme(callback: any): void
+
+  onSysThemeChanged(callback: (theme: string) => void): void
 
   onDownloadUpdate(callback: any): void
 }

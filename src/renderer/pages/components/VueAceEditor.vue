@@ -13,9 +13,11 @@
 import ace, { Ace, Range } from 'ace-builds'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 import 'ace-builds/src-min-noconflict/mode-json'
-import 'ace-builds/src-min-noconflict/theme-chrome'
+import 'ace-builds/src-min-noconflict/theme-cloud_editor'
+import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { ConfigProviderTheme } from 'vant'
+import { inject, nextTick, onMounted, Ref, ref, watch } from 'vue'
 import { baseDomain } from '../../../common'
 
 // ace.config.setModuleUrl('ace/mode/javascript', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-javascript.js'))
@@ -24,8 +26,9 @@ import { baseDomain } from '../../../common'
 // ace.config.setModuleUrl('ace/theme/chrome', require('file-loader?esModule=false!ace-builds/src-noconflict/theme-chrome.js'))
 // ace.config.setModuleUrl('ace/ext/language_tools', require('file-loader?esModule=false!ace-builds/src-noconflict/ext-language_tools.js'))
 
+const theme = inject<Ref<ConfigProviderTheme>>('theme')
+
 interface VueAceEditorProps {
-  theme: string
   lang: string
   options: Partial<Ace.EditorOptions>
   fold: boolean
@@ -44,7 +47,7 @@ let _defOpts: Partial<Ace.EditorOptions> = {
   // fontSize: 11,
   // maxLines: 22,
   // minLines: 1,
-  theme: 'ace/theme/tomorrow',
+  theme: 'ace/theme/cloud_editor_dark',
   displayIndentGuides: true,
   cursorStyle: 'wide',
   useWorker: false,
@@ -68,7 +71,7 @@ let _defOpts: Partial<Ace.EditorOptions> = {
 }
 
 const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
-  theme: 'chrome',
+  theme: 'cloud_editor',
   lang: 'json',
   fold: true,
   readOnly: true,
@@ -85,7 +88,7 @@ const videoSrc = ref<string>()
 
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
-  _defOpts.theme = props.theme ? `ace/theme/${props.theme}` : _defOpts.theme
+  _defOpts.theme = `ace/theme/cloud_editor${theme.value == 'light' ? '' : '_' + theme.value}`
   if (props.maxLines) {
     _defOpts.maxLines = props.maxLines
   }
@@ -108,12 +111,17 @@ onMounted(() => {
   _editor.renderer.content.addEventListener('click', onClick)
 })
 
+watch(theme, () => {
+  let newTheme = `ace/theme/cloud_editor${theme.value == 'light' ? '' : '_' + theme.value}`
+  _editor.setOption('theme', newTheme)
+})
+
 watch(() => props.maxLines, () => {
   _editor.setOption('maxLines', props.maxLines)
   _editor.resize()
 })
 
-watch(() => data.value, () => {
+watch(data, () => {
   _editor.session.setValue(data.value)
   nextTick(() => _editor.navigateFileEnd())
 })
@@ -122,7 +130,7 @@ watch(() => props.lang, () => {
   _editor.setOption('mode', `ace/mode/${props.lang}`)
 })
 
-watch(() => showPreview.value, (_, _old) => {
+watch(showPreview, (_, _old) => {
 
   if (!_) {
     URL.revokeObjectURL(audioSrc.value)
@@ -260,7 +268,7 @@ function getMatchAround(regExp: RegExp, string: string, col: number): Partial<Ma
 
 .ace-link-marker {
   position: absolute;
-  border-bottom: 2px dashed black;
+  border-bottom: 2px dashed var(--van-text-color);
   background: #f9ac2f85;
   opacity: 30%;
 }

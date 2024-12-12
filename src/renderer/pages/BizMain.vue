@@ -40,13 +40,15 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, provide, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DebugPanel from './components/DebugPanel.vue'
 
 const active = ref<number>(0)
 const enableDebug = !__IS_WEB__
 const showDebugPanel = ref<boolean>(false)
+
+provide('showDebugPanel', showDebugPanel)
 
 onMounted(() => {
   useRouter().beforeEach((to: any, from: any) => {
@@ -63,78 +65,12 @@ function onOpenDebugPanel() {
 
 </script>
 
-<style>
-:root {
-  --van-dialog-border-radius: 6px;
-  --van-tag-font-size: 0.6rem;
-  --van-tag-padding: 2px 5px;
-  --van-tag-border-radius: 5px;
-  --van-cell-horizontal-padding: 10px;
-  --van-popup-round-radius: 8px;
-  --van-popup-close-icon-margin: 24px;
-  --van-border-width: 1.4px;
-  --van-radius-md: 8px;
-  --van-dialog-radius: 8px;
-  --van-floating-bubble-background: #f04b1e;
-}
-
-.full-row {
+<style scoped>
+.biz-content {
   width: 100%;
-  height: 100%;
-  background: #eee;
-  overflow: hidden;
-}
-
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-  scrollbar-arrow-color: red;
-}
-
-::-webkit-scrollbar-thumb {
-  border-radius: 5px;
-  box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.1);
-  -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.1);
-  background: rgba(0, 0, 0, 0.2);
-  scrollbar-arrow-color: red;
-}
-
-::-webkit-scrollbar-track {
-  box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
-  -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
-  border-radius: 0;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.drag-bar {
-  width: 100%;
-  height: 30px;
-  background-color: transparent;
-  -webkit-app-region: drag;
-  z-index: 9999;
-}
-
-.rule-mgr-cell-value {
-  flex: 0 0 120px !important;
-}
-
-@keyframes bounce-in {
-  0% {
-    opacity: 0.0;
-  }
-
-  100% {
-    opacity: 1.;
-  }
-}
-
-@keyframes bounce-out {
-  0% {
-    opacity: 1.0;
-  }
-
-  100% {
-    opacity: 0.0;
-  }
+  min-width: 375px;
+  height: 100vh;
+  background: var(--van-gray-1);
+  overflow-y: hidden;
 }
 </style>

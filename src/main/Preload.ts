@@ -9,29 +9,41 @@ let apis: IElectronAPI = {
     return null
   },
   openDevTools(...args: any): void {
-    ipcRenderer.invoke(ElectronAPICMD.openDevTools, args)
+    ipcRenderer.invoke(ElectronAPICMD.OpenDevTools, args)
   },
   saveSysSettings(...args: any): void {
-    ipcRenderer.invoke(ElectronAPICMD.saveSysSettings, args)
+    ipcRenderer.invoke(ElectronAPICMD.SaveSysSettings, args)
   },
   downloadUpdate(...args: any) {
-    ipcRenderer.invoke(ElectronAPICMD.downloadUpdate, args)
+    ipcRenderer.invoke(ElectronAPICMD.DownloadUpdate, args)
   },
 
-  onGetSysSettings(callback: (result: LocalServerConfig) => void): void {
-    ipcRenderer.on(ElectronAPICMD.getSysSettings, (_event, result: LocalServerConfig) => callback(result))
+  getSysSettings(callback: (result: LocalServerConfig) => void): void {
+    ipcRenderer.on(ElectronAPICMD.GetSysSettings, (_event, result: LocalServerConfig) => callback(result))
   },
 
-  onOpenMockRuleMgr: function (callback: any): void {
-    ipcRenderer.on(ElectronAPICMD.openMockRuleMgr, (_event) => callback())
+  setAppTheme(theme: ('system' | 'light' | 'dark')): void {
+    ipcRenderer.invoke(ElectronAPICMD.SetAppTheme, theme)
   },
 
-  onOpenSettings: function (callback: any): void {
-    ipcRenderer.on(ElectronAPICMD.openSettings, (_event) => callback())
+  getSysTheme(callback: any): void {
+    ipcRenderer.on(ElectronAPICMD.GetSysTheme, (theme) => callback(theme))
+  },
+
+  onOpenMockRuleMgr(callback: any): void {
+    ipcRenderer.on(ElectronAPICMD.OpenMockRuleMgr, (_event) => callback())
+  },
+
+  onOpenSettings(callback: any): void {
+    ipcRenderer.on(ElectronAPICMD.OpenSettings, (_event) => callback())
+  },
+
+  onSysThemeChanged(callback: (theme: string) => void): void {
+    ipcRenderer.on(ElectronAPICMD.SysThemeChanged, (_, theme: string) => callback(theme))
   },
 
   onDownloadUpdate(callback: (...args: any) => void) {
-    ipcRenderer.on(ElectronAPICMD.downloadUpdate, (_event, ...args: any) => callback(...args))
+    ipcRenderer.on(ElectronAPICMD.DownloadUpdate, (_, ...args: any) => callback(...args))
   }
 }
 

@@ -11,7 +11,7 @@
     <van-grid :column-num="3" clickable style="max-height: calc(100vh - 91px); overflow-y: scroll;">
       <van-grid-item v-for="item in clients" @click="showOpMenu(item)" badge="9" style="max-height: 80px">
         <template #text>
-          <div class="single-line">{{ item.uid }}</div>
+          <span class="single-line">{{ item.uid }}</span>
         </template>
         <template #icon>
           <van-icon class="iconfont icon-network-data" size="30"
@@ -88,4 +88,15 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
 }
 
 </script>
-<style scoped></style>
+<style scoped>
+.single-line {
+  max-width: 120px;
+  font-size: 0.7rem;
+  color: var(--van-text-color);
+  padding: 5px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>

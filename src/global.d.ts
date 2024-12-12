@@ -6,6 +6,7 @@ declare global {
   let __VUE_OPTIONS_API__: boolean
 
   interface Window {
+    isWeb: boolean
     electronAPI: IElectronAPI
     ipcRenderer: IpcRenderer
   }
