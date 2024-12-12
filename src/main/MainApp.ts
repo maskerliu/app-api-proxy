@@ -1,5 +1,6 @@
 import {
-  app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain, IpcMainEvent, Menu, nativeImage, nativeTheme, session, Tray
+  app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
+  Menu, nativeImage, nativeTheme, session, TitleBarOverlay, Tray
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -68,13 +69,13 @@ export default class MainApp {
       {
         label: '用例管理', click: () => {
           if (this.mainWindow == null) this.createMainWindow()
-          this.mainWindow.webContents.send(ElectronAPICMD.openMockRuleMgr)
+          this.mainWindow.webContents.send(ElectronAPICMD.OpenMockRuleMgr)
         }
       },
       {
         label: '设置', click: () => {
           if (this.mainWindow == null) this.createMainWindow()
-          this.mainWindow.webContents.send(ElectronAPICMD.openSettings)
+          this.mainWindow.webContents.send(ElectronAPICMD.OpenSettings)
         }
       },
       {
@@ -139,7 +140,7 @@ export default class MainApp {
     })
 
     this.mainWindow.on('ready-to-show', () => {
-      this.mainWindow.webContents.send(ElectronAPICMD.getSysSettings, this.mainServer.getSysSettings())
+      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
       this.mainWindow.show()
       this.mainWindow.focus()
     })
@@ -193,37 +194,44 @@ export default class MainApp {
   private timer: any
 
   private initIPCService() {
-    ipcMain.handle('updateServerPort', (event: IpcMainEvent, args?: any) => {
-      console.log(args)
-    })
-
-    ipcMain.handle(ElectronAPICMD.openDevTools, (event: IpcMainEvent, args?: any) => {
+    ipcMain.handle(ElectronAPICMD.OpenDevTools, (_, args?: any) => {
       this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
     })
 
-    ipcMain.handle(ElectronAPICMD.saveSysSettings, (event: IpcMainEvent, ...args: any) => {
+    ipcMain.handle(ElectronAPICMD.SaveSysSettings, (_, ...args: any) => {
       this.mainServer.updateSysSettings(JSON.parse(args))
       this.mainServer.stop()
       this.mainServer.start()
-      this.mainWindow.webContents.send(ElectronAPICMD.getSysSettings, this.mainServer.getSysSettings())
+      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
     })
 
-    ipcMain.handle(ElectronAPICMD.downloadUpdate, (event: IpcMainEvent, ...args: any) => {
+    ipcMain.handle(ElectronAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
+      nativeTheme.themeSource = theme
+
+      let opts: TitleBarOverlay = { color: '#f8f8f808', symbolColor: 'black' }
+      if (nativeTheme.shouldUseDarkColors) {
+        opts.color = '#272728'
+        opts.symbolColor = 'white'
+      }
+      this.mainWindow.setTitleBarOverlay(opts)
+    })
+
+    ipcMain.handle(ElectronAPICMD.DownloadUpdate, (_, ...args: any) => {
       this.timer = setInterval(() => {
         this.i += Math.random() * 20
         if (this.i > 100) this.i = 100
-        this.mainWindow.webContents.send(ElectronAPICMD.downloadUpdate, { progress: this.i })
+        this.mainWindow.webContents.send(ElectronAPICMD.DownloadUpdate, { progress: this.i })
 
         if (this.i == 100) {
           clearInterval(this.timer)
           this.i = 0
         }
       }, 1000)
-
     })
 
     nativeTheme.on("updated", () => {
-      this.mainWindow.webContents.send(ElectronAPICMD.sysThemeChanged)
+      let theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+      this.mainWindow.webContents.send(ElectronAPICMD.SysThemeChanged, theme)
     })
   }
 

@@ -125,7 +125,6 @@ const recordStore = ProxyRecordStore()
   width: calc(100% - 50px);
   font-size: 0.8rem;
   font-weight: 500;
-  color: #34495e;
   display: block;
   white-space: nowrap;
   overflow: hidden;

@@ -90,7 +90,7 @@ function addToMockRule() {
 function updated() {
   this.$refs.inspectorPanel.scrollTop = 0
   this.$nextTick(() => {
-    detailContainer.value.$el.scrollTop = detailResp.value.$el.getBoundingClientRect().top
+    // detailContainer.value.$el.scrollTop = detailResp.value.$el.getBoundingClientRect().top
   })
 }
 </script>

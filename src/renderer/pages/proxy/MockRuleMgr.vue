@@ -1,8 +1,9 @@
 <template>
   <van-row class="mgr-content">
-    <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);">
+    <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);"
+      :style="{ paddingTop: isWeb ? '0' : '25px' }">
       <van-col style="min-width: 348px; flex-grow: 1;">
-        <van-collapse accordion v-model="activeSearchResult" :border="false" style="background-color: white;">
+        <van-collapse accordion v-model="activeSearchResult" :border="false">
           <van-collapse-item name="0" :disabled="true" :is-link="false" style="padding-top: 2px;">
             <template #title>
               <van-search show-action :clearable="false" v-model="keyword" style="padding: 0;"
@@ -63,7 +64,7 @@
         </van-cell>
       </van-col>
     </van-row>
-    <van-row :style="{ width: '100%', height: 'calc(100% - 10px - ' + topBarHeight + 'px)' }">
+    <van-row :style="{ width: '100%', height: 'calc(100vh - 10px - ' + topBarHeight + 'px)' }">
       <van-list class="border-bg" style="width: 300px; height: calc(100% - 10px);"
         v-if="curRule != null && curRule.requests != null">
         <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
@@ -123,7 +124,6 @@ import { json2map, map2json } from '../../common'
 import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
-
 const recordStore = ProxyRecordStore()
 const topBar = ref<typeof Row>()
 const keyword = ref<string>('')
@@ -142,6 +142,8 @@ const maxLines = ref<number>(0)
 const showMockRuleMgr = inject<Ref<boolean>>('showMockRuleMgr')
 const withCurRecord = inject<Ref<boolean>>('withCurRecord')
 
+const isWeb = __IS_WEB__
+
 onMounted(() => {
   window.onresize = () => {
     windowHeight.value = document.body.clientHeight
@@ -154,7 +156,7 @@ onMounted(() => {
   content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
 })
 
-watch(() => showMockRuleMgr.value, (_new, _old) => {
+watch(showMockRuleMgr, (_new, _old) => {
   if (_new && withCurRecord.value) {
     content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
   } else {
@@ -162,7 +164,7 @@ watch(() => showMockRuleMgr.value, (_new, _old) => {
   }
 })
 
-watch(() => keyword.value, async () => {
+watch(keyword, async () => {
   if (keyword.value == '') {
     activeSearchResult.value = '-1'
     return
@@ -282,13 +284,12 @@ function onRecordDeleteConfirm() {
   min-width: 375px;
   height: 100vh;
   overflow: hidden;
-  background: #ebecef;
+  /* background: var(--van-gray-1); */
 }
 
 .search-result {
   min-width: 200px;
   height: 50vh;
-  background: white;
   overflow-y: scroll;
 }
 

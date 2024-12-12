@@ -8,18 +8,18 @@
           <van-icon class="iconfont icon-theme"></van-icon>
         </template>
         <template #right-icon>
-          <van-radio-group v-model="checked" direction="horizontal" style="height: 26px;">
-            <van-radio name="1">
+          <van-radio-group v-model="wrapTheme" direction="horizontal" style="height: 26px;" @change="onThemeChanged">
+            <!-- <van-radio name="sys">
               <van-icon class="iconfont icon-theme-sys theme-icon"
-                :style="{ color: checked == '1' ? '#3498db' : 'gray' }" />
-            </van-radio>
-            <van-radio name="2">
+                :style="{ color: wrapTheme == 'sys' ? '#3498db' : 'gray' }" />
+            </van-radio> -->
+            <van-radio name="light">
               <van-icon class="iconfont icon-theme-light theme-icon"
-                :style="{ color: checked == '2' ? '#3498db' : 'gray' }" />
+                :style="{ color: wrapTheme == 'light' ? '#3498db' : 'gray' }" />
             </van-radio>
-            <van-radio name="3">
+            <van-radio name="dark">
               <van-icon class="iconfont icon-theme-dark theme-icon"
-                :style="{ color: checked == '3' ? '#3498db' : 'gray' }" />
+                :style="{ color: wrapTheme == 'dark' ? '#3498db' : 'gray' }" />
             </van-radio>
           </van-radio-group>
         </template>
@@ -72,17 +72,20 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue'
+import { ConfigProviderTheme } from 'vant'
+import { inject, onMounted, ref, Ref, watch } from 'vue'
 import ClientMgr from './ClientMgr.vue'
 import LocalResourceMgr from './LocalResourceMgr.vue'
 import SysInfo from './SysInfo.vue'
 
-const checked = ref<string>('1')
 const version = ref<string>('1.0.1')
 const versionChecking = ref<boolean>(false)
 const hasNewVersion = ref<boolean>(false)
 const showDownload = ref<boolean>(false)
 const downloadProgress = ref<number>(0)
+
+const wrapTheme = ref<ConfigProviderTheme>('light')
+const theme = inject<Ref<ConfigProviderTheme>>('theme')
 
 onMounted(() => {
   if (!__IS_WEB__) {
@@ -90,15 +93,25 @@ onMounted(() => {
       downloadProgress.value = args[0].progress.toFixed(1)
     })
   }
+
+  wrapTheme.value = theme.value
 })
 
-watch(() => downloadProgress.value, () => {
-
+watch(downloadProgress, () => {
   if (downloadProgress.value == 100) {
     showDownload.value = false
     hasNewVersion.value = false
   }
 })
+
+function onThemeChanged() {
+  window.localStorage.setItem('theme', wrapTheme.value)
+  theme.value = wrapTheme.value
+
+  if (!__IS_WEB__) {
+    window.electronAPI.setAppTheme(theme.value)
+  }
+}
 
 function versionCheck() {
   versionChecking.value = true
@@ -124,18 +137,7 @@ function downloadNewVersion() {
   height: 100%;
   padding-top: 12px;
   overflow-y: auto;
-  background-color: #eee;
-}
-
-.single-line {
-  max-width: 80px;
-  font-size: 0.7rem;
-  color: #34495e;
-  padding: 5px;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  background-color: var(--van-gray-1);
 }
 
 .theme-icon {

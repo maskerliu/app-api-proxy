@@ -1,6 +1,6 @@
 <template>
-  <van-row justify="start" style="height: 100%; width: 100%; overflow-x: hidden; overflow-y: auto;">
-    <van-col class="bg-border" style="flex-grow: 1; min-width: 340px; height: calc(100% - 10px);">
+  <van-row style="height: 100vh; overflow: hidden;">
+    <van-col class="bg-border left-panel">
       <van-row style="display: flex; width:100%;" justify="space-between">
         <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal" style="width: 235px;">
           <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
@@ -36,25 +36,28 @@
         </template>
       </van-field>
 
-      <van-list class="record-snap-panel border-bg" ref="snaplist">
-        <proxy-record-snap v-for="key in [...recordStore.records.keys()].reverse()"
-          :source="recordStore.records.get(key)" />
-      </van-list>
+      <OverlayScrollbarsComponent class="record-snap-panel border-bg"
+        :options="{ scrollbars: { theme: 'os-theme-light' } }" defer>
+        <van-list ref="snaplist">
+          <proxy-record-snap v-for="key in [...recordStore.records.keys()].reverse()"
+            :source="recordStore.records.get(key)" />
+        </van-list>
+      </OverlayScrollbarsComponent>
     </van-col>
-    <van-col class="right-panel">
-      <div class="drag-bar" v-if="showDragBar"></div>
+    <OverlayScrollbarsComponent class="right-panel" :options="{ scrollbars: { theme: 'os-theme-light', } }" defer>
+      <div class="drag-bar" v-if="!isWeb"></div>
       <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type !== 5020" />
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId)?.type !== 5020" />
 
       <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId)"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId).type == 5020" />
-    </van-col>
+        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId)?.type == 5020" />
+    </OverlayScrollbarsComponent>
 
-    <van-popup v-model:show="showMockRuleMgr" position="right" closeable close-icon="close">
+    <van-popup v-model:show="showMockRuleMgr" position="right" :closeable="isWeb" close-icon="close">
       <mock-rule-mgr />
     </van-popup>
 
-    <van-popup v-model:show="showSettings" position="right" closeable close-icon="close">
+    <van-popup v-model:show="showSettings" position="right" :closeable="isWeb" close-icon="close">
       <settings />
     </van-popup>
 
@@ -70,6 +73,7 @@
 </template>
 
 <script lang="ts" setup>
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
 import { defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
@@ -86,7 +90,7 @@ const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 
-const showDragBar = !__IS_WEB__
+const isWeb = __IS_WEB__
 const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
 const showSettings = ref<boolean>(false)
@@ -115,7 +119,7 @@ onMounted(() => {
 })
 
 watch(() => recordStore.isChanged, () => {
-  snaplist.value.$el.scrollTo({ top: 0, behavior: 'smooth' })
+  // snaplist.value.$el.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
 watch(() => recordStore.filterKeyword, () => {
@@ -164,32 +168,25 @@ function onMockRecordStart() {
 <style>
 .left-panel {
   flex-grow: 1;
-  flex-shrink: 0;
-  margin: 5px;
-  min-width: 345px;
+  min-width: 340px;
   height: calc(100% - 10px);
+  margin: 5px;
 }
 
 .right-panel {
   flex-grow: 19;
   flex-basis: 50%;
   min-width: 375px;
-  height: calc(100% - 4px);
-  margin: 2px 0;
+  height: calc(100vh - 5px);
+  margin: 5px 2px;
+  overflow: hidden;
   overflow-y: auto;
-}
-
-.right-panel1 {
-  flex-grow: 19;
-  flex-shrink: 0;
-  min-width: 380px;
-  height: 100%;
 }
 
 .left-panel-icon {
   font-size: 1.4rem;
   margin: 6px;
-  color: gray
+  color: var(--van-gray-8)
 }
 
 .record-snap-panel {
@@ -207,7 +204,7 @@ function onMockRecordStart() {
 .register-url {
   text-decoration: underline;
   width: 300px;
-  color: #777;
+  color: var(--van-text-color);
   padding: 5px;
   font-size: 0.8rem;
   user-select: text;
