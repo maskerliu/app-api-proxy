@@ -6,7 +6,6 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
-import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 
@@ -140,7 +139,7 @@ class RendererConfig extends BaseConfig {
         nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
       }),
       new DefinePlugin({
-        SERVER_BASE_URL: `'${config.protocol}://localhost:${config.port}'`, PROTOCOL: `'${config.protocol}'`
+        SERVER_BASE_URL: `'${pkg.config.protocol}://localhost:${pkg.config.port}'`, PROTOCOL: `'${pkg.config.protocol}'`
       }),
     )
 

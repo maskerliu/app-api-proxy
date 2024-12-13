@@ -86,6 +86,7 @@ export interface LocalIP {
 }
 
 export interface LocalServerConfig {
+  appVersion: string
   protocol: string
   ip?: string
   port?: number

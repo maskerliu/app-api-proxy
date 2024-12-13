@@ -55,7 +55,7 @@ let _defOpts: Partial<Ace.EditorOptions> = {
   showFoldWidgets: true,
   showLineNumbers: true,
   showGutter: true,
-  showPrintMargin: true,
+  showPrintMargin: false,
   autoScrollEditorIntoView: true,
   highlightActiveLine: true,
   highlightSelectedWord: false, // 高亮选中文本
@@ -253,7 +253,7 @@ function getMatchAround(regExp: RegExp, string: string, col: number): Partial<Ma
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60%;
+  height: 70%;
   overflow: hidden;
 }
 

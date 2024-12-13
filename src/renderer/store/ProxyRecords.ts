@@ -108,7 +108,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         },
         requestData: null,
         timelineColor: "#FF9800",
-        timestamp: 5,
+        timestamp: new Date().getTime(),
         type: ProxyMock.PorxyType.REQUEST_START,
         url: "/tg-app/center/v1/config/mainPage/helloworld",
       }
@@ -151,7 +151,6 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         statusCode: 200,
         time: 406 + new Date().getMilliseconds(),
         timelineColor: "#FF9800",
-        timestamp: 5,
         type: ProxyMock.PorxyType.REQUEST_END,
         url: "/tg-app/center/v1/config/mainPage/helloworld",
       }

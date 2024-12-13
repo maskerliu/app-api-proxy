@@ -1,6 +1,6 @@
 {
   "name": "app-api-proxy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "type": "module",
   "main": "./dist/electron/main.cjs",
@@ -13,7 +13,12 @@
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
     "pub": "yarn build && electron-builder -c electron-builder.yml",
     "pkg": "yarn build && node --import tsx .build-scripts/pkg.ts",
-    "asar": "node .build-scripts/compress-asar.js"
+    "asar": "node --import tsx .build-scripts/compress-asar.ts",
+    "updateServer": "http-server build/ -p 4000 --cors -c-1"
+  },
+  "config": {
+    "port": 8884,
+    "protocol": "http"
   },
   "resolutions": {
     "leveldown": "^6.1.1",
@@ -100,7 +105,8 @@
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.1.0",
-    "webpack-hot-middleware": "^2.26.1"
+    "webpack-hot-middleware": "^2.26.1",
+    "yaml": "^2.6.1"
   },
   "packageManager": "yarn@4.5.1+sha512.341db9396b6e289fecc30cd7ab3af65060e05ebff4b3b47547b278b9e67b08f485ecd8c79006b405446262142c7a38154445ef7f17c1d5d1de7d90bf9ce7054d"
 }

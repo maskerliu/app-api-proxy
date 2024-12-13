@@ -4,41 +4,44 @@ import { ElectronAPICMD, IElectronAPI } from '../common/ipc.api'
 
 
 let apis: IElectronAPI = {
+  relaunch() {
+    ipcRenderer.invoke(ElectronAPICMD.Relaunch)
+  },
   openFile: function (...args: any): Promise<void> {
     ipcRenderer.invoke('dialog:openFile')
     return null
   },
-  openDevTools(...args: any): void {
+  openDevTools(...args: any) {
     ipcRenderer.invoke(ElectronAPICMD.OpenDevTools, args)
   },
-  saveSysSettings(...args: any): void {
+  saveSysSettings(...args: any) {
     ipcRenderer.invoke(ElectronAPICMD.SaveSysSettings, args)
   },
-  downloadUpdate(...args: any) {
-    ipcRenderer.invoke(ElectronAPICMD.DownloadUpdate, args)
+  downloadUpdate(newVersion: any) {
+    ipcRenderer.invoke(ElectronAPICMD.DownloadUpdate, newVersion)
   },
 
-  getSysSettings(callback: (result: LocalServerConfig) => void): void {
+  getSysSettings(callback: (result: LocalServerConfig) => void) {
     ipcRenderer.on(ElectronAPICMD.GetSysSettings, (_event, result: LocalServerConfig) => callback(result))
   },
 
-  setAppTheme(theme: ('system' | 'light' | 'dark')): void {
+  setAppTheme(theme: ('system' | 'light' | 'dark')) {
     ipcRenderer.invoke(ElectronAPICMD.SetAppTheme, theme)
   },
 
-  getSysTheme(callback: any): void {
+  getSysTheme(callback: any) {
     ipcRenderer.on(ElectronAPICMD.GetSysTheme, (theme) => callback(theme))
   },
 
-  onOpenMockRuleMgr(callback: any): void {
+  onOpenMockRuleMgr(callback: any) {
     ipcRenderer.on(ElectronAPICMD.OpenMockRuleMgr, (_event) => callback())
   },
 
-  onOpenSettings(callback: any): void {
+  onOpenSettings(callback: any) {
     ipcRenderer.on(ElectronAPICMD.OpenSettings, (_event) => callback())
   },
 
-  onSysThemeChanged(callback: (theme: string) => void): void {
+  onSysThemeChanged(callback: (theme: string) => void) {
     ipcRenderer.on(ElectronAPICMD.SysThemeChanged, (_, theme: string) => callback(theme))
   },
 

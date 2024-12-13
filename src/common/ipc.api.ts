@@ -2,6 +2,7 @@ import { LocalServerConfig } from "./base.models"
 
 
 export const ElectronAPICMD = {
+  Relaunch: 'relaunch',
   OpenFile: 'openFile',
   OpenDevTools: 'openDevTools',
   OpenMockRuleMgr: 'openMockRuleMgr',
@@ -15,6 +16,8 @@ export const ElectronAPICMD = {
 }
 
 export interface IElectronAPI {
+
+  relaunch(): void
 
   openFile(...args: any): Promise<void>
 

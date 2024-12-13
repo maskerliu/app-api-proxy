@@ -1,11 +1,10 @@
 <template>
-  <van-cell center @click="recordStore.curRecordId = source.id" :is-link="true" style="padding: 10px 0;" :title-style="{
-    margin: '0 10px 0 15px'
-  }">
+  <van-cell center is-link style="padding: 10px 0;" :title-style="{ margin: '0 10px 0 15px' }"
+    @click="recordStore.curRecordId = source.id">
     <template #icon>
       <div class="item-timeline">
         <div class="item-timeline-dot"
-          v-bind:style="{ borderColor: source.timelineColor, backgroundColor: recordStore.curRecordId == source.id ? '#34495e' : 'transparent' }">
+          :style="{ borderColor: source.timelineColor, backgroundColor: recordStore.curRecordId == source.id ? 'var(--van-text-color)' : 'transparent' }">
         </div>
       </div>
     </template>
@@ -82,18 +81,18 @@ const recordStore = ProxyRecordStore()
   top: 0;
   font-size: 0.5rem;
   font-weight: bold;
-  border-left: 2px dashed #d6d6d6;
-  color: white;
+  border-left: 1px dashed var(--van-gray-8);
+  /* color: white; */
 }
 
 .item-timeline-dot {
   border-radius: 7px;
-  border: 2px solid;
+  border: 2px dashed;
   border-color: #2980b9;
   width: 10px;
   height: 10px;
   margin-top: 15px;
-  margin-left: -8px;
+  margin-left: -7px;
 }
 
 .stat-snap-pid {
@@ -122,7 +121,7 @@ const recordStore = ProxyRecordStore()
 .request-snap-url {
   position: absolute;
   top: 10px;
-  width: calc(100% - 50px);
+  width: calc(100% - 55px);
   font-size: 0.8rem;
   font-weight: 500;
   display: block;

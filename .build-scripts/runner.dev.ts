@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url'
 import webpack from 'webpack'
 import WebpackDevServer from 'webpack-dev-server'
 import WebpackHotMiddleware from 'webpack-hot-middleware'
-import buildConfig from '../build.config.json' assert { type: 'json' }
+import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config.js'
 import mainConfig from './webpack.main.config'
 import rendererConfig from './webpack.renderer.config'
@@ -19,7 +19,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.NODE_ENV = Run_Mode_DEV
 
-process.env.BUILD_CONFIG = JSON.stringify(buildConfig)
+process.env.BUILD_CONFIG = JSON.stringify(pkg.config)
 
 let electronProc: ChildProcess | null = null
 let manualRestart = false
@@ -122,7 +122,7 @@ function startMain(): Promise<void> {
 }
 
 function startElectron() {
-  
+
   let args = [
     '--trace-warnings',
     '--inspect=5858',
@@ -144,7 +144,7 @@ function startElectron() {
   }
 
   electronProc = spawn('electron', args, {
-    stdio:  ['inherit', 'inherit', 'inherit'],
+    stdio: ['inherit', 'inherit', 'inherit'],
     shell: process.platform === 'win32'
   })
   electronProc.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })

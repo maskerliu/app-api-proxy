@@ -4,10 +4,8 @@ import CopyWebpackPlugin from 'copy-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack, { Configuration } from 'webpack'
-import { BaseConfig } from './webpack.base.config'
-
-import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
+import { BaseConfig } from './webpack.base.config'
 
 const { DefinePlugin, HotModuleReplacementPlugin, NoEmitOnErrorsPlugin } = webpack
 
@@ -78,7 +76,7 @@ class MainConfig extends BaseConfig {
 
     this.plugins?.push(new DefinePlugin({
       'process.env.NODE_ENV': `"${this.mode}"`,
-      'process.env.BUILD_CONFIG': `'${JSON.stringify(config)}'`
+      'process.env.BUILD_CONFIG': `'${JSON.stringify(pkg.config)}'`
     }))
 
     this.plugins?.push(

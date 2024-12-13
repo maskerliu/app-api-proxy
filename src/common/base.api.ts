@@ -4,7 +4,7 @@ import { BizCode, BizResponse } from './base.models'
 import { showNotify } from 'vant'
 
 axios.defaults.timeout = 10000
-axios.defaults.withCredentials = true
+axios.defaults.withCredentials = false
 
 let clientUID: string = null
 let BASE_DOMAIN: string = null
@@ -48,6 +48,9 @@ export async function formPost<T>(path: string, baseURL?: string, params?: {}, d
   return request<T>('POST', path, baseURL, { 'Content-Type': 'multipart/form-data' }, params, data)
 }
 
+export async function versionCheck() {
+  return request<any>('GET', '/version.json', 'http://127.0.0.1:4000')
+}
 
 export function updateClientUID(uid: string) {
   clientUID = uid

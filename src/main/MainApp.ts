@@ -1,17 +1,20 @@
+import axios from 'axios'
+import { spawn } from 'child_process'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
   Menu, nativeImage, nativeTheme, session, TitleBarOverlay, Tray
 } from 'electron'
-import fs from 'fs'
+import fse from 'fs-extra'
+import fs, { createReadStream, createWriteStream } from 'original-fs'
 import path from 'path'
+import { createGunzip } from 'zlib'
 import { ElectronAPICMD } from '../common/ipc.api'
 import { USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
 
-
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
 const IS_DEV = process.env.NODE_ENV === 'development'
-const VUE_PLUGIN = 'C:/Users/lynxc/AppData/Local/Google/Chrome/User\ Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd/7.6.5_0'
+const VUE_PLUGIN = 'D:/vue-devtools/7.6.5_0'
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
@@ -119,7 +122,7 @@ export default class MainApp {
       show: false,
       titleBarStyle: process.platform === 'win32' ? 'hidden' : 'hiddenInset',
       titleBarOverlay: {
-        color: "#f8f8f808",
+        color: "#f8f8f800",
         symbolColor: "black",
       },
       webPreferences: {
@@ -140,27 +143,29 @@ export default class MainApp {
     })
 
     this.mainWindow.on('ready-to-show', () => {
-      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
       this.mainWindow.show()
       this.mainWindow.focus()
+      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
     })
   }
 
   private initAppEnv() {
     let resPath = path.join(USER_DATA_DIR, './static')
-    fs.access(resPath, (err) => {
+    fs.access(resPath, err => {
       if (err) {
-        fs.mkdir(resPath, (err) => {
-          console.log(err)
-        })
+        fs.mkdir(resPath, err => console.log(err))
       }
     })
     let dbPath = path.join(USER_DATA_DIR, './biz_storage')
-    fs.access(dbPath, (err) => {
+    fs.access(dbPath, err => {
       if (err) {
-        fs.mkdir(dbPath, (err) => {
-          console.log(err)
-        })
+        fs.mkdir(dbPath, err => console.log(err))
+      }
+    })
+    let updatePath = path.join(USER_DATA_DIR, './update')
+    fs.access(updatePath, err => {
+      if (err) {
+        fs.mkdir(updatePath, err => console.log(err))
       }
     })
   }
@@ -190,10 +195,28 @@ export default class MainApp {
     })
   }
 
-  private i = 0
-  private timer: any
-
   private initIPCService() {
+
+    ipcMain.handle(ElectronAPICMD.Relaunch, (_) => {
+      if (fse.pathExistsSync(path.join(process.resourcesPath, './update.asar'))) {
+        const logPath = app.getPath('logs')
+        const out = fs.openSync(path.join(logPath, './out.log'), 'a')
+        const err = fs.openSync(path.join(logPath, './err.log'), 'a')
+        const child = spawn(
+          `"${path.join(process.resourcesPath, './update.exe')}"`,
+          [`"${process.resourcesPath}"`, `"${app.getPath('exe')}"`],
+          {
+            detached: true,
+            shell: true,
+            stdio: ['ignore', out, err]
+          })
+        child.unref()
+      } else {
+        app.relaunch({ execPath: app.isPackaged ? process.execPath : __dirname })
+        app.quit()
+      }
+    })
+
     ipcMain.handle(ElectronAPICMD.OpenDevTools, (_, args?: any) => {
       this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
     })
@@ -210,28 +233,47 @@ export default class MainApp {
 
       let opts: TitleBarOverlay = { color: '#f8f8f808', symbolColor: 'black' }
       if (nativeTheme.shouldUseDarkColors) {
-        opts.color = '#272728'
+        opts.color = '#27272808'
         opts.symbolColor = 'white'
       }
       this.mainWindow.setTitleBarOverlay(opts)
     })
 
-    ipcMain.handle(ElectronAPICMD.DownloadUpdate, (_, ...args: any) => {
-      this.timer = setInterval(() => {
-        this.i += Math.random() * 20
-        if (this.i > 100) this.i = 100
-        this.mainWindow.webContents.send(ElectronAPICMD.DownloadUpdate, { progress: this.i })
+    ipcMain.handle(ElectronAPICMD.DownloadUpdate, async (_, newVersion: any) => {
+      let sourceDir = `${USER_DATA_DIR}/update/app-${newVersion.version}.gz`
+      try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', err) }
 
-        if (this.i == 100) {
-          clearInterval(this.timer)
-          this.i = 0
-        }
-      }, 1000)
+      await this.downloadFile(newVersion.updateUrl, sourceDir)
+
+      let destDir = path.join(process.resourcesPath, 'update.asar')
+      // let destDir = path.join(USER_DATA_DIR, 'update.asar')
+      if (IS_DEV) return
+      try {
+        let source = createReadStream(sourceDir)
+        let dest = createWriteStream(destDir)
+        source.pipe(createGunzip()).pipe(dest)
+      } catch (err) { console.log(err) }
+      try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', err) }
     })
 
     nativeTheme.on("updated", () => {
       let theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
       this.mainWindow.webContents.send(ElectronAPICMD.SysThemeChanged, theme)
+    })
+  }
+
+  async downloadFile(url: string, dest: string) {
+    const resp = await axios({
+      url, method: 'GET', responseType: 'stream', onDownloadProgress: (event) => {
+        this.mainWindow.webContents.send(ElectronAPICMD.DownloadUpdate, { progress: Math.round((event.loaded / event.total) * 100) })
+      }
+    })
+
+    const writer = createWriteStream(dest)
+    resp.data.pipe(writer)
+    return new Promise((resolve, reject) => {
+      writer.on('finish', resolve)
+      writer.on('error', reject)
     })
   }
 
