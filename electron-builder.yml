@@ -1,7 +1,11 @@
 productName: app-api-proxy
 appId: com.github.maskerliu.AppApiProxy
 directories:
-  output: build
+  output: build/${version}
+
+publish:
+  - provider: "generic"
+    url: ""
 
 files:
   - "dist/**/*"
@@ -15,9 +19,11 @@ files:
   - "!**/node_modules/*/deps/**/*"
   - "!**/node_modules/*/prebuilds/**/*"
   - "**/node_modules/*/prebuilds/${platform}-${arch}/**/*"
+  - "./update.exe"
 
-# extraResources:
-#   -
+extraResources:
+  - from: "./update.exe"
+    to: "./"
 # extraFiles:
 #   -
 
@@ -46,6 +52,6 @@ mac:
     - target: dmg
       arch: universal
 
-# linux:
-#   icon: icons/icon.png
-#   traget: snap
+linux:
+  icon: icons/icon.png
+  # traget: snap

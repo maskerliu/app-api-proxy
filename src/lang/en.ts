@@ -58,7 +58,8 @@ export default {
       dataProxyServer: 'Data Proxy Server',
       mqttBroker: 'MQTT Broker',
       theme: 'Theme',
-      version: 'Version'
+      version: 'Version',
+      restart: 'restart'
     },
     boardcast: {
       onlineClient: 'Online Client',

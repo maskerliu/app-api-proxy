@@ -40,7 +40,7 @@
 <script lang="ts" setup>
 import { inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LocalIP } from '../../../common/base.models'
+import { LocalIP } from '../../../common'
 import { CommonStore } from '../../store'
 
 type SettingPreference = {

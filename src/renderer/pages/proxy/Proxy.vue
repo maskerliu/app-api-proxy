@@ -61,8 +61,8 @@
       <settings />
     </van-popup>
 
-    <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode">
-      <qrcode-vue :value="commonStore.registerUrl" :size="300" center style="margin: 5px" />
+    <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" round>
+      <qrcode-vue :value="commonStore.registerUrl" :size="310" center />
       <div class="register-url" @click="click2Reg">
         {{ commonStore.registerUrl }}
       </div>

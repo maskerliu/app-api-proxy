@@ -4,6 +4,7 @@ import chalk from 'chalk'
 import { deleteSync } from 'del'
 import Multispinner from 'multispinner'
 import webpack from 'webpack'
+import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 import mainConfig from './webpack.main.config'
 import rendererConfig from './webpack.renderer.config'
@@ -24,7 +25,7 @@ export function run() {
 }
 
 function clean() {
-  deleteSync(['build/**/*'])
+  deleteSync([`build/${pkg.version}/*`])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
   console.log(`\n${doneLog}\n`)
   process.exit()
@@ -32,7 +33,7 @@ function clean() {
 
 async function build() {
   greeting()
-  deleteSync(['build/**/*'])
+  deleteSync([`build/${pkg.version}/*`])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
 
   const spinner = new Multispinner([mainConfig.name, renderer.name, webConfig.name],
@@ -100,9 +101,7 @@ function greeting() {
   if (cols > 85) text = 'lets-build'
   else if (cols > 60) text = 'lets-|build'
   else text = false
-
-  console.log(chalk.green('\n  lets-build'))
-  console.log()
+  console.log(chalk.green('lets-build'))
 }
 
 run()

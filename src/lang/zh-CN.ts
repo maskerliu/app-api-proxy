@@ -58,7 +58,8 @@ export default {
       dataProxyServer: '代理数据服务地址',
       mqttBroker: 'MQTT服务地址',
       theme: '主题',
-      version: '版本'
+      version: '版本',
+      restart: '重启'
     },
     boardcast: {
       onlineClient: '在线Client',

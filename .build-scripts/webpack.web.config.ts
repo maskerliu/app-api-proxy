@@ -8,7 +8,6 @@ import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
-import config from '../build.config.json' assert { type: "json" }
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 
@@ -149,7 +148,7 @@ class WebConfig extends BaseConfig {
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(new DefinePlugin({
-        SERVER_BASE_URL: `'${config.protocol}://${localServer}:${config.port}'`,
+        SERVER_BASE_URL: `'${pkg.config.protocol}://${localServer}:${pkg.config.port}'`,
       }))
 
       this.plugins.push(

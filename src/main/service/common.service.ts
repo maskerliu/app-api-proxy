@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import { accessSync, readFileSync, writeFileSync } from 'fs'
 import { inject, injectable } from "inversify"
 import path from 'path'
@@ -40,6 +41,7 @@ export class CommonService implements ICommonService {
       let data = readFileSync(filePath, 'utf-8')
       let config = JSON.parse(data)
       this.serverConfig = {
+        appVersion: app.getVersion(),
         protocol: config.protocol,
         ip: getLocalIPs()[0].address,
         port: config.port,

@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 375px; height: 100vh;">
+  <div style="width: 375px; height: 100vh; overflow: hidden;">
     <van-form class="full-row" style="width: 100%; min-width: 375px; padding-top: 12px; " label-align="right" colon>
       <van-cell-group inset :title="$t('debug.common.title')">
         <van-cell :title="$t('debug.common.versionCheck')" clickable @click="toNew"></van-cell>

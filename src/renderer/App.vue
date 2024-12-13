@@ -21,27 +21,24 @@ onMounted(() => {
   window.isWeb = __IS_WEB__
 
   let wrapTheme = window.localStorage.getItem('theme')
-  if (wrapTheme == null) wrapTheme = 'sys'
-  if (wrapTheme !== 'sys') {
-    theme.value = wrapTheme as ConfigProviderTheme
-  } else {
-
-  }
+  theme.value = wrapTheme != null ? wrapTheme as ConfigProviderTheme : 'light'
 
   if (!__IS_WEB__) {
     window.electronAPI.getSysSettings((result) => {
       CommonStore().init(result)
     })
 
-    if (wrapTheme == 'sys') {
-      window.electronAPI.getSysTheme((data: string) => {
-        theme.value = data as ConfigProviderTheme
-      })
+    window.electronAPI.setAppTheme(theme.value)
 
-      window.electronAPI.onSysThemeChanged((data) => {
-        if (wrapTheme == 'sys') theme.value = data as ConfigProviderTheme
-      })
-    }
+    // if (wrapTheme == 'sys') {
+    //   window.electronAPI.getSysTheme((data: string) => {
+    //     theme.value = data as ConfigProviderTheme
+    //   })
+
+    //   window.electronAPI.onSysThemeChanged((data) => {
+    //     if (wrapTheme == 'sys') theme.value = data as ConfigProviderTheme
+    //   })
+    // }
   } else {
     CommonStore().init()
   }
@@ -71,7 +68,7 @@ onMounted(() => {
   --van-tag-border-radius: 5px;
   --van-cell-horizontal-padding: 10px;
   --van-popup-round-radius: 8px;
-  --van-popup-close-icon-margin: 24px;
+  --van-popup-close-icon-margin: 22px;
   --van-border-width: 1.4px;
   --van-radius-md: 8px;
   --van-dialog-radius: 8px;

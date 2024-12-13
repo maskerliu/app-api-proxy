@@ -1,4 +1,3 @@
-import { IpcRenderer } from "electron"
 import { IElectronAPI } from "./common/ipc.api"
 
 declare global {
@@ -8,7 +7,7 @@ declare global {
   interface Window {
     isWeb: boolean
     electronAPI: IElectronAPI
-    ipcRenderer: IpcRenderer
+    // ipcRenderer: IpcRenderer
   }
 
   let __IS_WEB__: boolean

@@ -95,8 +95,6 @@ export class MainServer {
       }
     }))
 
-
-
     this.httpApp.use(cors(this.corsOpt))
     this.httpApp.use(compression())
     this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
