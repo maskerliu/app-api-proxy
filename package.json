@@ -1,6 +1,6 @@
 {
   "name": "app-api-proxy",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "type": "module",
   "main": "./dist/electron/main.cjs",
@@ -11,9 +11,9 @@
     "build:clean": "cross-env BUILD_TARGET=clean node --experimental-json-modules --import tsx .build-scripts/builder.ts",
     "build:web": "cross-env BUILD_TARGET=web node --experimental-json-modules --import tsx .build-scripts/builder.ts",
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
-    "pub": "yarn build && electron-builder -c electron-builder.yml",
-    "pkg": "yarn build && node --import tsx .build-scripts/pkg.ts",
     "asar": "node --import tsx .build-scripts/compress-asar.ts",
+    "pub": "yarn build && electron-builder -c electron-builder.yml && yarn asar",
+    "pkg": "yarn build && node --import tsx .build-scripts/pkg.ts",
     "updateServer": "http-server build/ -p 4000 --cors -c-1"
   },
   "config": {
