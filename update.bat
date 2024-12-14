@@ -5,7 +5,7 @@
 ::YAwzuBVtJxjWCl3EqQJgSA==
 ::ZR4luwNxJguZRRnk
 ::Yhs/ulQjdF+5
-::cxAkpRVqdFKZSDk=
+::cxAkpRVqdFKZSzk=
 ::cBs/ulQjdF+5
 ::ZR41oxFsdFKZSDk=
 ::eBoioBt6dFKZSDk=
@@ -35,5 +35,5 @@
 timeout /T 1 /NOBREAK
 del /f /q /a %1\app-bak.asar
 ren %1\app.asar app-bak.asar
-ren %2\update.asar app.asar
+ren %1\update.asar app.asar
 start "" %2

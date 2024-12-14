@@ -213,8 +213,8 @@ export default class MainApp {
         child.unref()
       } else {
         app.relaunch({ execPath: app.isPackaged ? process.execPath : __dirname })
-        app.quit()
       }
+      app.quit()
     })
 
     ipcMain.handle(ElectronAPICMD.OpenDevTools, (_, args?: any) => {
@@ -245,15 +245,13 @@ export default class MainApp {
 
       await this.downloadFile(newVersion.updateUrl, sourceDir)
 
-      let destDir = path.join(process.resourcesPath, 'update.asar')
-      // let destDir = path.join(USER_DATA_DIR, 'update.asar')
+      let destDir = IS_DEV ? path.join(USER_DATA_DIR, 'update.asar') : path.join(process.resourcesPath, 'update.asar')
       if (IS_DEV) return
       try {
         let source = createReadStream(sourceDir)
         let dest = createWriteStream(destDir)
         source.pipe(createGunzip()).pipe(dest)
       } catch (err) { console.log(err) }
-      try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', err) }
     })
 
     nativeTheme.on("updated", () => {
