@@ -68,7 +68,7 @@ onMounted(() => {
   --van-tag-border-radius: 5px;
   --van-cell-horizontal-padding: 10px;
   --van-popup-round-radius: 8px;
-  --van-popup-close-icon-margin: 22px;
+  --van-popup-close-icon-margin: 23px;
   --van-border-width: 1.4px;
   --van-radius-md: 8px;
   --van-dialog-radius: 8px;

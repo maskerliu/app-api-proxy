@@ -13,7 +13,7 @@
             <van-icon class="iconfont icon-websocket" style="font-weight: blod" />
           </van-checkbox>
         </van-checkbox-group>
-        <div style="padding-top: 6px;">
+        <div style="padding: 1px 0;">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
           <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true" />
@@ -24,15 +24,17 @@
           <van-icon class="iconfont icon-delay" style="font-size: 16px; margin-top: 8px;" />
         </template>
         <template #button>
-          <van-button plain size="small" type="primary" @click="saveProxyDelay">
-            <van-icon class="iconfont icon-cloud-sync" style="font-size: 16px;" />
+          <van-button plain size="mini" type="primary" @click="saveProxyDelay">
+            <van-icon class="iconfont icon-cloud-sync" style="font-size: 1rem;" />
           </van-button>
         </template>
       </van-field>
       <van-field v-model="recordStore.filterKeyword" :placeholder="$t('common.searchPlaceholder')" clearable center
         left-icon="filter-o" style="margin-top: 5px">
         <template #button>
-          <van-button plain size="small" type="primary" @click="onMockRecordStart" icon="delete-o" />
+          <van-button plain size="mini" type="primary" @click="onMockRecordStart">
+            <van-icon class="iconfont icon-remove" style="font-size: 1rem;" />
+          </van-button>
         </template>
       </van-field>
 
@@ -57,7 +59,7 @@
       <mock-rule-mgr />
     </van-popup>
 
-    <van-popup v-model:show="showSettings" position="right" :closeable="isWeb" close-icon="close">
+    <van-popup v-model:show="showSettings" position="right" close-icon="close">
       <settings />
     </van-popup>
 
@@ -185,13 +187,13 @@ function onMockRecordStart() {
 
 .left-panel-icon {
   font-size: 1.4rem;
-  margin: 6px;
+  margin: 3px 6px;
   color: var(--van-gray-8)
 }
 
 .record-snap-panel {
   width: 100%;
-  height: calc(100vh - 164px);
+  height: calc(100vh - 154px);
   overflow-y: auto;
   overflow-x: hidden;
   margin: 5px 0 0 0;

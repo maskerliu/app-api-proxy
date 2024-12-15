@@ -8,16 +8,10 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted } from 'vue'
 import ClientMgr from './ClientMgr.vue'
 import LocalResourceMgr from './LocalResourceMgr.vue'
 import SysInfo from './SysInfo.vue'
 import VersionTheme from './VersionTheme.vue'
-
-
-onMounted(() => {
-
-})
 
 </script>
 <style scoped>
