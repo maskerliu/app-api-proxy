@@ -10,15 +10,15 @@
 > 这是一个集成了vue3+vant+pinia+webpack5的electron项目，应用构建使用electron-builder。
 > 使用了[electron-vue-boilerplates](https://github.com/maskerliu/electron-vue-boilerplates)，这是一个支持使用vue3来构建electron应用的脚手架，使用webpack5，参考了[electron-vue](https://github.com/SimulatedGREG/electron-vue)，升级了其老旧的脚本，并使用typescript来实现。
 
-![代理注册](./images/B4307CC9-5A8A-48E6-A63A-8DE90AD2826E.png)
+![代理注册](./images/FE5C9F9F-DB68-401e-89A2-F8B968A75677.png)
 
-![请求代理](./images/F33A7AB6-30BF-4C6F-9591-75E1B952E799.png)
+![请求代理](./images/EE317B56-1C72-4b5f-AF1D-9F38411C691B.png)
 
-![数据Mock](./images/EF91DD73-47E5-40C4-9B48-7FCA3ABADFA2.png)
+![数据预览](./images/AF5E3CD2-E9BB-40bd-A240-DD2A3FD91BA6.png)
 
-![Mock规则管理](./images/AB2F7381-D4C1-40A1-91E5-702071413295.png)
+![Mock规则管理](./images/95C0EED0-BBEC-4fbb-9ADA-A81A1CC06255.png)
 
-![设置](./images/CD881490-C0C2-468E-9F5F-9F3DE8F9FFE3.png)
+![设置](./images/F0AB5D38-FFAA-4be5-8217-E7FE7091809D.png)
 
 ### Build Setup
 
