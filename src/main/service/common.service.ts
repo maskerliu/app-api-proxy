@@ -42,6 +42,9 @@ export class CommonService implements ICommonService {
       let config = JSON.parse(data)
       this.serverConfig = {
         appVersion: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        updateServer: config.updateServer,
         protocol: config.protocol,
         ip: getLocalIPs()[0].address,
         port: config.port,
@@ -79,6 +82,7 @@ export class CommonService implements ICommonService {
     } catch (err) {
       console.log('file not exist')
     } finally {
+      this.serverConfig.updateServer = config.updateServer
       this.serverConfig.apiDefineServer = config.apiDefineServer
       this.serverConfig.statRuleServer = config.statRuleServer
       this.serverConfig.dataServer = config.dataServer

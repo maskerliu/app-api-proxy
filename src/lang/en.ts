@@ -53,6 +53,7 @@ export default {
       port: 'Server Port',
       serverDomain: 'Server Domain',
       proxySocketPort: 'Socket Port',
+      updateServer: 'App Update Server',
       apiDefineServer: 'API Define Server',
       statRuleServer: 'Stat Rule Server',
       dataProxyServer: 'Data Proxy Server',
