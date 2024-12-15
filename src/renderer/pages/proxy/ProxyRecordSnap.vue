@@ -81,7 +81,7 @@ const recordStore = ProxyRecordStore()
   top: 0;
   font-size: 0.5rem;
   font-weight: bold;
-  border-left: 1px dashed var(--van-gray-8);
+  border-left: 2px dashed var(--van-gray-8);
   /* color: white; */
 }
 
@@ -92,7 +92,7 @@ const recordStore = ProxyRecordStore()
   width: 10px;
   height: 10px;
   margin-top: 15px;
-  margin-left: -7px;
+  margin-left: -8px;
 }
 
 .stat-snap-pid {

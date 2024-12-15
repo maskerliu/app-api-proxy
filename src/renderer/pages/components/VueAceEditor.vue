@@ -1,7 +1,7 @@
 <template>
   <div style="height: 100%; position: relative;">
     <div ref="aceEditor" :class="maxLines ? null : 'ace-editor'"></div>
-    <van-popup v-model:show="showPreview" class="preview-container" closeable round>
+    <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app">
       <audio v-show="previewType == 0" controls preload="auto" style="width: 100%; height: 120px;"
         :src="audioSrc"></audio>
       <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" />

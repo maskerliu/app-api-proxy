@@ -1,7 +1,7 @@
 <template>
   <van-row class="mgr-content">
     <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);"
-      :style="{ paddingTop: isWeb ? '0' : '25px' }">
+      :style="{ paddingTop: isWeb ? '0' : '10px' }">
       <van-col style="min-width: 348px; flex-grow: 1;">
         <van-collapse accordion v-model="activeSearchResult" :border="false">
           <van-collapse-item name="0" :disabled="true" :is-link="false" style="padding-top: 2px;">
