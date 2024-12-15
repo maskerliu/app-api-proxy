@@ -62,6 +62,7 @@ const showSettings = inject<Ref<boolean>>('showSettings')
 let perferences = [
   { tooltip: t('settings.sys.serverDomain'), key: 'domain' },
   { tooltip: t('settings.sys.port'), key: 'port', readonly: __IS_WEB__ },
+  { tooltip: t('settings.sys.updateServer'), key: 'updateServer', readonly: __IS_WEB__ },
   { tooltip: t('settings.sys.proxySocketPort'), key: 'proxySocketPort', readonly: __IS_WEB__ },
   { tooltip: t('settings.sys.apiDefineServer'), key: 'apiDefineServer', readonly: __IS_WEB__ },
   { tooltip: t('settings.sys.statRuleServer'), key: 'statRuleServer', readonly: __IS_WEB__ },

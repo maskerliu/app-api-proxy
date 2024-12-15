@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { spawn } from 'child_process'
+import crypto from 'crypto'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
   Menu, nativeImage, nativeTheme, session, TitleBarOverlay, Tray
@@ -7,7 +8,9 @@ import {
 import fse from 'fs-extra'
 import fs, { createReadStream, createWriteStream } from 'original-fs'
 import path from 'path'
+import { pipeline } from 'stream/promises'
 import { createGunzip } from 'zlib'
+import { Version } from '../common'
 import { ElectronAPICMD } from '../common/ipc.api'
 import { USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
@@ -29,6 +32,7 @@ export default class MainApp {
   }
 
   public startApp() {
+    // if (!!app.getAppPath()) return
     if (process.platform === 'win32') {
       // app.disableHardwareAcceleration()
     }
@@ -239,19 +243,9 @@ export default class MainApp {
       this.mainWindow.setTitleBarOverlay(opts)
     })
 
-    ipcMain.handle(ElectronAPICMD.DownloadUpdate, async (_, newVersion: any) => {
-      let sourceDir = `${USER_DATA_DIR}/update/app-${newVersion.version}.gz`
-      try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', err) }
-
-      await this.downloadFile(newVersion.updateUrl, sourceDir)
-
-      let destDir = IS_DEV ? path.join(USER_DATA_DIR, 'update.asar') : path.join(process.resourcesPath, 'update.asar')
-      if (IS_DEV) return
-      try {
-        let source = createReadStream(sourceDir)
-        let dest = createWriteStream(destDir)
-        source.pipe(createGunzip()).pipe(dest)
-      } catch (err) { console.log(err) }
+    ipcMain.handle(ElectronAPICMD.DownloadUpdate, async (_, newVersion: Version) => {
+      if (newVersion.fullUpdate) await this.fullUpdate(newVersion)
+      else await this.incrementUpdate(newVersion)
     })
 
     nativeTheme.on("updated", () => {
@@ -260,19 +254,50 @@ export default class MainApp {
     })
   }
 
-  async downloadFile(url: string, dest: string) {
+  async fullUpdate(version: Version) {
+    let sourceDir = ''
+    switch (process.platform) {
+      case 'win32':
+        sourceDir = `${USER_DATA_DIR}/update/installer-${version.version}.exe`
+        break
+      case 'darwin':
+        sourceDir = `${USER_DATA_DIR}/update/installer-${version.version}.zip`
+        break
+    }
+    try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', sourceDir) }
     const resp = await axios({
-      url, method: 'GET', responseType: 'stream', onDownloadProgress: (event) => {
-        this.mainWindow.webContents.send(ElectronAPICMD.DownloadUpdate, { progress: Math.round((event.loaded / event.total) * 100) })
+      url: version.updateUrl, method: 'GET', responseType: 'stream',
+      onDownloadProgress: (event) => {
+        this.mainWindow.webContents.send(ElectronAPICMD.DownloadUpdate,
+          { progress: Math.round((event.loaded / event.total) * 100) })
       }
     })
-
-    const writer = createWriteStream(dest)
-    resp.data.pipe(writer)
-    return new Promise((resolve, reject) => {
-      writer.on('finish', resolve)
-      writer.on('error', reject)
-    })
+    await pipeline(resp.data, createWriteStream(sourceDir))
   }
 
+  async incrementUpdate(version: Version) {
+    let sourceDir = `${USER_DATA_DIR}/update/app-${version.version}.gz`
+    try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', sourceDir) }
+    const resp = await axios({
+      url: version.updateUrl, method: 'GET', responseType: 'stream',
+      onDownloadProgress: (event) => {
+        this.mainWindow.webContents.send(ElectronAPICMD.DownloadUpdate,
+          { progress: Math.round((event.loaded / event.total) * 100) })
+      }
+    })
+    await pipeline(resp.data, createWriteStream(sourceDir))
+    let destDir = IS_DEV ? path.join(USER_DATA_DIR, 'update.asar') : path.join(process.resourcesPath, 'update.asar')
+    // if (IS_DEV) return
+    let hash = crypto.createHash('sha512')
+    let digest = ''
+    try {
+      let source = createReadStream(sourceDir)
+      let dest = createWriteStream(destDir)
+      source.on('data', (chunk: any) => hash.update(chunk))
+      source.on('end', () => { digest = hash.digest('base64') })
+      await pipeline(source, createGunzip(), dest)
+      if (digest == version.sha512) console.log('文件校验通过, 重启安装更新')
+      else console.log('文件破损，请重新下载！！')
+    } catch (err) { console.log(err) }
+  }
 }

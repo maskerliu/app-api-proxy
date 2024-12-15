@@ -67,7 +67,7 @@
 
 import { ConfigProviderTheme, showNotify } from 'vant'
 import { inject, onMounted, ref, Ref, watch } from 'vue'
-import { versionCheck } from '../../../common'
+import { Version, versionCheck } from '../../../common'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -78,7 +78,7 @@ const showRestart = ref<boolean>(false)
 const downloadProgress = ref<number>(0)
 const theme = inject<Ref<ConfigProviderTheme>>('theme')
 const popupCloseable = __IS_WEB__
-let newVersion = null
+let newVersion: Version = null
 
 onMounted(() => {
   if (!__IS_WEB__) {
@@ -106,8 +106,8 @@ async function onVersionCheck() {
   versionChecking.value = true
   hasNewVersion.value = false
   try {
-    newVersion = await versionCheck()
-    hasNewVersion.value = true
+    newVersion = await versionCheck(commonStore.serverConfig.platform, commonStore.serverConfig.arch, commonStore.serverConfig.updateServer)
+    hasNewVersion.value = newVersion.version != commonStore.serverConfig.appVersion
   } catch (err) {
     showNotify(err)
     hasNewVersion.value = false

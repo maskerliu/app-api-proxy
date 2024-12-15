@@ -20,12 +20,6 @@ import { ConfigProviderTheme } from 'vant'
 import { inject, nextTick, onMounted, Ref, ref, watch } from 'vue'
 import { baseDomain } from '../../../common'
 
-// ace.config.setModuleUrl('ace/mode/javascript', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-javascript.js'))
-// ace.config.setModuleUrl('ace/mode/text', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-text.js'))
-// ace.config.setModuleUrl('ace/mode/json', require('file-loader?esModule=false!ace-builds/src-noconflict/mode-json.js'))
-// ace.config.setModuleUrl('ace/theme/chrome', require('file-loader?esModule=false!ace-builds/src-noconflict/theme-chrome.js'))
-// ace.config.setModuleUrl('ace/ext/language_tools', require('file-loader?esModule=false!ace-builds/src-noconflict/ext-language_tools.js'))
-
 const theme = inject<Ref<ConfigProviderTheme>>('theme')
 
 interface VueAceEditorProps {

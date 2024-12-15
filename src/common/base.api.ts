@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BizCode, BizResponse } from './base.models'
+import { BizCode, BizResponse, Version } from './base.models'
 
 import { showNotify } from 'vant'
 
@@ -48,8 +48,8 @@ export async function formPost<T>(path: string, baseURL?: string, params?: {}, d
   return request<T>('POST', path, baseURL, { 'Content-Type': 'multipart/form-data' }, params, data)
 }
 
-export async function versionCheck() {
-  return request<any>('GET', '/version.json', 'http://127.0.0.1:4000')
+export async function versionCheck(platform: string, arch: string, url?: string) {
+  return request<Version>('GET', `/version-${platform}-${arch}.json`, url ? url : 'http://127.0.0.1:4000')
 }
 
 export function updateClientUID(uid: string) {
