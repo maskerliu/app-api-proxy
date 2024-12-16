@@ -77,16 +77,14 @@ onMounted(() => {
 
 watch(downloadProgress, () => {
   if (downloadProgress.value == 100) {
-    showRestart.value = true
+    showRestart.value = !newVersion.fullUpdate
     hasNewVersion.value = false
   }
 })
 
 function onThemeChanged() {
   window.localStorage.setItem('theme', theme.value)
-  if (!__IS_WEB__) {
-    window.electronAPI.setAppTheme(theme.value)
-  }
+  if (!__IS_WEB__) window.electronAPI.setAppTheme(theme.value)
 }
 
 async function onVersionCheck() {
@@ -121,6 +119,7 @@ async function onVersionCheck() {
 function downloadNewVersion() {
   showDownload.value = true
   downloadProgress.value = 0
+  if (newVersion.fullUpdate) showRestart.value = false
   if (!__IS_WEB__) window.electronAPI.downloadUpdate(newVersion)
 }
 

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { spawn } from 'child_process'
+import { spawn, SpawnOptions, StdioOptions } from 'child_process'
 import crypto from 'crypto'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
@@ -32,6 +32,7 @@ export default class MainApp {
   }
 
   public startApp() {
+    console.log('exe', app.getPath('exe'))
     // if (!!app.getAppPath()) return
     if (process.platform === 'win32') {
       // app.disableHardwareAcceleration()
@@ -255,16 +256,23 @@ export default class MainApp {
   }
 
   async fullUpdate(version: Version) {
-    let sourceDir = ''
+    let ext = ''
     switch (process.platform) {
       case 'win32':
-        sourceDir = `${USER_DATA_DIR}/update/installer-${version.version}.exe`
+        ext = 'exe'
         break
       case 'darwin':
-        sourceDir = `${USER_DATA_DIR}/update/installer-${version.version}.zip`
+        ext = 'zip'
+        break
+      case 'linux':
+        ext = 'rpm'
         break
     }
-    try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', sourceDir) }
+
+    let downloadDir = path.join(USER_DATA_DIR, 'update', `installer-${version.version}.${ext}`)
+    if (process.platform == 'linux') downloadDir.replace(/ /g, "\\ ")
+
+    try { fs.rmSync(downloadDir) } catch (err) { console.log('fail to delete file', downloadDir) }
     const resp = await axios({
       url: version.updateUrl, method: 'GET', responseType: 'stream',
       onDownloadProgress: (event) => {
@@ -272,7 +280,75 @@ export default class MainApp {
           { progress: Math.round((event.loaded / event.total) * 100) })
       }
     })
-    await pipeline(resp.data, createWriteStream(sourceDir))
+    await pipeline(resp.data, createWriteStream(downloadDir))
+
+    await this.doInstall({
+      installerPath: downloadDir,
+      isSilent: false,
+      isForceRunAfter: false,
+      isAdminRightsRequired: false
+    })
+  }
+
+  async doInstall(options: InstallOptions) {
+    const args = ["--updated"]
+    if (options.isSilent) args.push("/S")
+    if (options.isForceRunAfter) args.push("--force-run")
+    let installDir = IS_DEV ? '' : path.dirname(app.getPath('exe'))
+    console.log('install dir:', installDir)
+    args.push(`/D=${path.dirname(app.getPath('exe'))}`)
+
+    // const pkgPath = this.downloadedUpdateHelper == null ? null : this.downloadedUpdateHelper.packageFile
+    // if (pkgPath != null) {
+    //   // only = form is supported
+    //   args.push(`--package-file=${pkgPath}`)
+    // }
+
+    const callUsingElevation = (): void => {
+      this.spawnLog(path.join(process.resourcesPath, 'elevate.exe'), [options.installerPath].concat(args)).catch(e => console.log(e))
+    }
+
+    if (options.isAdminRightsRequired) {
+      console.log('isAdminRightsRequired is set to true, run installer using elevate.exe')
+      callUsingElevation()
+      return true
+    }
+
+    this.spawnLog(options.installerPath, args).catch((e: Error) => {
+      // https://github.com/electron-userland/electron-builder/issues/1129
+      const errorCode = (e as NodeJS.ErrnoException).code
+      console.log(
+        `Cannot run installer: error code: ${errorCode}, error message: "${e.message}", will be executed again using elevate if EACCES, and will try to use electron.shell.openItem if ENOENT`
+      )
+      if (errorCode === "UNKNOWN" || errorCode === "EACCES") {
+        callUsingElevation()
+      } else if (errorCode === "ENOENT") {
+        require("electron")
+          .shell.openPath(options.installerPath)
+          .catch(err => console.log(err))
+      } else {
+        console.log(e)
+      }
+    })
+    return true
+  }
+
+  protected async spawnLog(cmd: string, args: string[] = [], env: any = undefined, stdio: StdioOptions = "ignore"): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      try {
+        const params: SpawnOptions = { stdio, env, detached: true }
+        const p = spawn(cmd, args, params)
+        p.on("error", error => {
+          reject(error)
+        })
+        p.unref()
+        if (p.pid !== undefined) {
+          resolve(true)
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
   }
 
   async incrementUpdate(version: Version) {
@@ -300,4 +376,11 @@ export default class MainApp {
       else console.log('文件破损，请重新下载！！')
     } catch (err) { console.log(err) }
   }
+}
+
+export interface InstallOptions {
+  readonly installerPath: string
+  readonly isSilent: boolean
+  readonly isForceRunAfter: boolean
+  readonly isAdminRightsRequired: boolean
 }

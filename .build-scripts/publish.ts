@@ -64,7 +64,7 @@ async function buildFullRelease() {
   let installerPath = ''
   switch (process.platform) {
     case 'win32':
-      installerPath = `${pkg.version}/${pkg.name}\ Setup\ ${pkg.version}.exe`
+      installerPath = `${pkg.version}/${pkg.name}-Setup-${pkg.version}.exe`
       break
     case 'darwin':
       installerPath = `${pkg.version}/${pkg.name}-${pkg.version}-${process.arch}-mac.zip`
@@ -73,7 +73,6 @@ async function buildFullRelease() {
       break
   }
 
-  // let digest = await compress(installerPath, `build/res/app-${process.platform}-${process.arch}-${pkg.version}.gz`)
   let file = readFileSync(`build/${pkg.version}/latest.yml`, 'utf8')
   let lst = YAML.parse(file)
   let versionData = readFileSync(`build/version.json`, 'utf-8')
@@ -87,7 +86,7 @@ async function buildFullRelease() {
     sha512: lst.sha512,
     releaseDate: lst.releaseDate
   }
-  writeFileSync(`build/version-${process.platform}-${process.arch}.json`, JSON.stringify(resp), 'utf8')
+  writeFileSync(`build/version-${process.platform}-${process.arch}.json`, JSON.stringify(resp, null, '\t'), 'utf8')
 }
 
 
