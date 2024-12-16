@@ -98,10 +98,10 @@ function greeting() {
   const cols = process.stdout.columns
   let text: String | boolean = ''
 
-  if (cols > 85) text = 'lets-build'
-  else if (cols > 60) text = 'lets-|build'
+  if (cols > 85) text = '\tlets-build'
+  else if (cols > 60) text = '\tlets-|build'
   else text = false
-  console.log(chalk.green('lets-build'))
+  console.log(chalk.green('\tlets-build'))
 }
 
 run()

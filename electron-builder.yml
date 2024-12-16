@@ -1,4 +1,4 @@
-productName: app-api-proxy
+productName: AppApiProxy
 appId: com.github.maskerliu.AppApiProxy
 directories:
   output: build/${version}
@@ -41,10 +41,13 @@ win:
       arch:
         - x64
 nsis:
+  artifactName: ${productName}-Setup-${version}.${ext}
   oneClick: false
-  deleteAppDataOnUninstall: true
-  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
   createStartMenuShortcut: true
+  allowToChangeInstallationDirectory: true
+  uninstallDisplayName: "uninstall"
 
 mac:
   icon: icons/icon.icns

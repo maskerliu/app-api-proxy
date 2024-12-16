@@ -1,4 +1,4 @@
-# app-api-proxy
+# AppApiProxy
 
 > 旨在推动前后端研发分离的效率小工具，方便前端（移动/PC/FE）同学在研发过程透过代理方便地查看请求数据/伪造数据/覆盖边界，结合接口设计可在前后端并行开发中通过数据Mock功能实现对API接口实现依赖的解耦，加速研发流程。
 > 原工程[app-mock-desktop](https://github.com/maskerliu/app-mock-desktop) 现在废弃了。
