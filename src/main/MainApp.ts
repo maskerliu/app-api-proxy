@@ -291,18 +291,28 @@ export default class MainApp {
   }
 
   async doInstall(options: InstallOptions) {
+    switch (process.platform) {
+      case 'win32':
+        return await this.doWinInstall(options)
+      case 'darwin':
+        return await this.doMacInstall(options)
+      case 'linux':
+        return await this.doLinuxInstall(options)
+    }
+  }
+
+  async doMacInstall(options: InstallOptions) {
+    // TODO implement linux rpm full update
+    return false
+  }
+
+  async doWinInstall(options: InstallOptions) {
     const args = ["--updated"]
     if (options.isSilent) args.push("/S")
     if (options.isForceRunAfter) args.push("--force-run")
     let installDir = IS_DEV ? '' : path.dirname(app.getPath('exe'))
     console.log('install dir:', installDir)
-    args.push(`/D=${path.dirname(app.getPath('exe'))}`)
-
-    // const pkgPath = this.downloadedUpdateHelper == null ? null : this.downloadedUpdateHelper.packageFile
-    // if (pkgPath != null) {
-    //   // only = form is supported
-    //   args.push(`--package-file=${pkgPath}`)
-    // }
+    args.push(`/D=${path.dirname(path.dirname(app.getPath('exe')))}`)
 
     const callUsingElevation = (): void => {
       this.spawnLog(path.join(process.resourcesPath, 'elevate.exe'), [options.installerPath].concat(args)).catch(e => console.log(e))
@@ -326,6 +336,8 @@ export default class MainApp {
         require("electron")
           .shell.openPath(options.installerPath)
           .catch(err => console.log(err))
+
+        app.quit()
       } else {
         console.log(e)
       }
@@ -333,6 +345,10 @@ export default class MainApp {
     return true
   }
 
+  async doLinuxInstall(options: InstallOptions) {
+    // TODO implement linux rpm full update
+    return false
+  }
   protected async spawnLog(cmd: string, args: string[] = [], env: any = undefined, stdio: StdioOptions = "ignore"): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       try {
@@ -345,6 +361,7 @@ export default class MainApp {
         if (p.pid !== undefined) {
           resolve(true)
         }
+        app.quit()
       } catch (error) {
         reject(error)
       }

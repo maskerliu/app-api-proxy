@@ -57,7 +57,7 @@ async function buildIncrementRelease() {
     sha512: digest,
     releaseDate: lst.releaseDate
   }
-  writeFileSync(`build/version-${process.platform}-${process.arch}.json`, JSON.stringify(resp), 'utf8')
+  writeFileSync(`build/version-${process.platform}-${process.arch}.json`, JSON.stringify(resp, null, '\t'), 'utf8')
 }
 
 async function buildFullRelease() {
@@ -90,7 +90,15 @@ async function buildFullRelease() {
 }
 
 
-if (process.env.BUILD_TARGET === 'full') buildFullRelease()
+const args = process.argv.slice(2)
+let parmas = new Map()
+args.forEach(arg => {
+  let [key, val] = arg.split('=')
+  if (!key.startsWith('--')) return
+  parmas.set(key.substring(2), val)
+})
+
+if (parmas.get('target') == 'full') buildFullRelease()
 else buildIncrementRelease()
 
 // uncompress(`build/res/app-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)
