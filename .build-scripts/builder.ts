@@ -19,9 +19,23 @@ process.env.NODE_ENV = Run_Mode_PROD
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
 export function run() {
-  if (process.env.BUILD_TARGET === 'clean') clean()
-  if (process.env.BUILD_TARGET === 'web') web()
+
+  const args = process.argv.slice(2)
+  let parmas = new Map()
+  args.forEach(arg => {
+    let [key, val] = arg.split('=')
+    if (!key.startsWith('--')) return
+    parmas.set(key.substring(2), val)
+  })
+
+  if (parmas.get('target') == 'clean') clean()
+  if (parmas.get('target') == 'web') web()
   else build()
+
+
+  // if (process.env.BUILD_TARGET === 'clean') clean()
+  // if (process.env.BUILD_TARGET === 'web') web()
+  // else build()
 }
 
 function clean() {

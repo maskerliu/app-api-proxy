@@ -7,15 +7,14 @@
   "license": "UNLICENSED",
   "scripts": {
     "test": "node --import tsx .build-scripts/test.ts",
-    "build": "node --experimental-json-modules --max_old_space_size=3500 --import tsx .build-scripts/builder.ts",
-    "build:clean": "cross-env BUILD_TARGET=clean node --experimental-json-modules --import tsx .build-scripts/builder.ts",
-    "build:web": "cross-env BUILD_TARGET=web node --experimental-json-modules --import tsx .build-scripts/builder.ts",
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
+    "build": "node --experimental-json-modules --max_old_space_size=3500 --import tsx .build-scripts/builder.ts",
+    "build:clean": "yarn build --target=clean",
+    "build:web": "yarn build --target=web",
     "publish": "node --import tsx .build-scripts/publish.ts",
-    "publish:full": "cross-env BUILD_TARGET=full node --import tsx .build-scripts/publish.ts",
-    "pub": "yarn build && electron-builder -c electron-builder.yml && yarn publish",
-    "pub:full": "yarn build && electron-builder -c electron-builder.yml && yarn publish:full",
-    "pkg": "yarn build && node --import tsx .build-scripts/pkg.ts",
+    "pkg": "yarn build && electron-builder -c electron-builder.yml",
+    "pub": "yarn pkg && yarn publish",
+    "pub:full": "yarn pkg && yarn publish --target=full",
     "updateServer": "http-server build/ -p 4000 --cors -c-1"
   },
   "config": {
