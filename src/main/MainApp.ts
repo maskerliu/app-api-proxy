@@ -42,9 +42,7 @@ export default class MainApp {
     app.commandLine.appendSwitch('disable-gpu')
     // app.commandLine.appendSwitch('disable-software-rasterizer')
     app.on('window-all-closed', () => {
-      // if (process.platform.toString() !== 'drawin') {
-      //   MainApp.app.quit()
-      // }
+      if (process.platform === 'darwin' || process.platform === 'linux') app.quit()
     })
 
     app.on('activate', () => {
@@ -59,7 +57,7 @@ export default class MainApp {
 
       if (this.mainWindow == null) {
         this.createMainWindow()
-        this.createAppMenu()
+        if (process.platform == 'win32') this.createAppMenu()
       }
     })
 
@@ -121,7 +119,7 @@ export default class MainApp {
       minHeight: 640,
       useContentSize: true,
       transparent: false,
-      frame: true,
+      frame: false,
       resizable: true,
       icon: nativeImage.createFromPath(path.join(this.trayFloder, this.trayIconName)),
       show: false,
@@ -176,7 +174,7 @@ export default class MainApp {
   }
 
   private initSessionConfig() {
-    if (IS_DEV) session.defaultSession.loadExtension(VUE_PLUGIN)
+    if (IS_DEV && process.platform == 'win32') session.defaultSession.loadExtension(VUE_PLUGIN)
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
