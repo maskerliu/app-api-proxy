@@ -134,6 +134,8 @@ function startElectron() {
 
   if (process.platform !== 'linux') {
     args.push('--remote-debugging-port=9223', '--experimental-wasm-bulk-memory')
+  } else {
+    args.push('--no-sandbox')
   }
 
   // detect yarn or npm and process commandline args accordingly

@@ -27,6 +27,9 @@ class RendererConfig extends BaseConfig {
       {
         test: /\.vue$/,
         loader: 'vue-loader',
+        resolve: {
+          fullySpecified: false,
+        },
         options: {
           reactivityTransform: true
         }
@@ -39,6 +42,9 @@ class RendererConfig extends BaseConfig {
         test: /\.tsx?$/,
         loader: 'ts-loader',
         exclude: /node_modules/,
+        resolve: {
+          fullySpecified: false,
+        },
         options: {
           transpileOnly: true
         }
@@ -72,6 +78,9 @@ class RendererConfig extends BaseConfig {
   }
 
   plugins: Configuration['plugins'] = [
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    }),
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
     new NodePolyfillPlugin(),

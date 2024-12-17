@@ -15,6 +15,8 @@ const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
+console.log('ttttt', dirname)
+
 let whiteListedModules = ['axios']
 
 class WebConfig extends BaseConfig {
@@ -36,6 +38,9 @@ class WebConfig extends BaseConfig {
       {
         test: /\.vue$/,
         loader: 'vue-loader',
+        resolve: {
+          fullySpecified: false,
+        },
         options: {
           reactivityTransform: true
         }
@@ -45,9 +50,23 @@ class WebConfig extends BaseConfig {
         use: ['vue-style-loader', 'css-loader']
       },
       {
+        test: /\.js/,
+        loader: 'ts-loader',
+        exclude: /node_modules/,
+        resolve: {
+          fullySpecified: false,
+        },
+        options: {
+          transpileOnly: true
+        }
+      },
+      {
         test: /\.ts?$/,
         loader: 'ts-loader',
         exclude: /node_modules/,
+        resolve: {
+          fullySpecified: false,
+        },
         options: {
           transpileOnly: true
         }
@@ -82,6 +101,9 @@ class WebConfig extends BaseConfig {
   }
 
   plugins: Configuration['plugins'] = [
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    }),
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
     new NodePolyfillPlugin(),
