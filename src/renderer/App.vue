@@ -13,8 +13,10 @@ import { CommonStore } from './store'
 
 const canRender = ref(true)
 const theme = ref<ConfigProviderTheme>('light')
+const lang = ref<string>('zh-CN')
 
 provide('theme', theme)
+provide('lang', lang)
 
 onMounted(() => {
   canRender.value = true
@@ -23,9 +25,13 @@ onMounted(() => {
   let wrapTheme = window.localStorage.getItem('theme')
   theme.value = wrapTheme != null ? wrapTheme as ConfigProviderTheme : 'light'
 
+  let wrapLang = window.localStorage.getItem('lang')
+  lang.vlaue = wrapLang != null ? wrapLang : 'zh-CN'
+
   if (!__IS_WEB__) {
     window.electronAPI.getSysSettings((result) => {
       CommonStore().init(result)
+      commonStore.serverConfig.lang = wrapLang
     })
 
     window.electronAPI.setAppTheme(theme.value)

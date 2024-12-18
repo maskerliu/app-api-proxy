@@ -2,7 +2,6 @@
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
 import express from 'express'
-import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack from 'webpack'
@@ -100,12 +99,7 @@ function startMain(): Promise<void> {
       if (electronProc && electronProc.kill()) {
         manualRestart = true
 
-        if (os.platform() === "darwin") {
-          process.kill(electronProc.pid!)
-          electronProc = null
-          startElectron()
-          setTimeout(() => { manualRestart = false }, 5000)
-        } else {
+        if (process.platform === "win32") {
           const pid = electronProc.pid
           exec(`TASKKILL /F /IM electron.exe`, (err, data) => {
             if (err) console.log(err)
@@ -114,6 +108,11 @@ function startMain(): Promise<void> {
             startElectron()
             manualRestart = false
           })
+        } else {
+          process.kill(electronProc.pid!)
+          electronProc = null
+          startElectron()
+          setTimeout(() => { manualRestart = false }, 5000)
         }
       }
       resolve()

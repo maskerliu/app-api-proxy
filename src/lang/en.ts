@@ -59,6 +59,7 @@ export default {
       dataProxyServer: 'Data Proxy Server',
       mqttBroker: 'MQTT Broker',
       theme: 'Theme',
+      lang: 'locales',
       version: 'Version',
       restart: 'restart'
     },

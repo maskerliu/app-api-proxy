@@ -1,6 +1,9 @@
 import path from "path"
 
 
+console.log(process.env.ELECTRON_BUILDER_BINARIES_MIRROR)
+console.log(process.release)
+
 const args = process.argv.slice(2)
 
 let parmas = new Map()
