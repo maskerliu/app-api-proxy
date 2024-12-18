@@ -3,7 +3,9 @@ import { spawn, SpawnOptions, StdioOptions } from 'child_process'
 import crypto from 'crypto'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
-  Menu, nativeImage, nativeTheme, session, TitleBarOverlay, Tray
+  Menu, nativeImage, nativeTheme,
+  session,
+  Tray
 } from 'electron'
 import fse from 'fs-extra'
 import fs, { createReadStream, createWriteStream } from 'original-fs'
@@ -22,17 +24,28 @@ const VUE_PLUGIN = 'D:/vue-devtools/7.6.5_0'
 export default class MainApp {
   private mainWindow: BrowserWindow = null
   private winURL: string = IS_DEV ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
-  private trayFloder: string = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
-  private trayIconName: string = process.platform === 'win32' ? "icon.ico" : "icon.icns"
-
+  private trayIconFile: string
   private mainServer: MainServer = new MainServer()
 
   constructor() {
+    let iconDir = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
+    let ext = ''
+    switch (process.platform) {
+      case 'win32':
+        ext = 'ico'
+        break
+      case 'darwin':
+        ext = 'icns'
+        break
+      case 'linux':
+        ext = 'png'
+        break
+    }
+    this.trayIconFile = path.join(iconDir, `icon.${ext}`)
     this.mainServer.bootstrap()
   }
 
   public startApp() {
-    console.log('exe', app.getPath('exe'))
     // if (!!app.getAppPath()) return
     if (process.platform === 'win32') {
       // app.disableHardwareAcceleration()
@@ -40,10 +53,11 @@ export default class MainApp {
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
     app.commandLine.appendSwitch('disable-gpu')
+
     // app.commandLine.appendSwitch('disable-software-rasterizer')
-    app.on('window-all-closed', () => {
-      if (process.platform === 'darwin' || process.platform === 'linux') app.quit()
-    })
+    // app.on('window-all-closed', () => {
+    //   if (process.platform === 'win32') app.quit()
+    // })
 
     app.on('activate', () => {
       if (this.mainWindow == null) {
@@ -57,7 +71,7 @@ export default class MainApp {
 
       if (this.mainWindow == null) {
         this.createMainWindow()
-        if (process.platform == 'win32') this.createAppMenu()
+        if (process.platform == 'win32') this.createTrayMenu()
       }
     })
 
@@ -69,18 +83,18 @@ export default class MainApp {
     }
   }
 
-  private createAppMenu() {
-    let tray = new Tray(`${this.trayFloder}/${this.trayIconName}`)
+  private createTrayMenu() {
+    let tray = new Tray(this.trayIconFile)
     const contextMenu = Menu.buildFromTemplate([
       {
         label: '用例管理', click: () => {
-          if (this.mainWindow == null) this.createMainWindow()
+          this.mainWindow.show()
           this.mainWindow.webContents.send(ElectronAPICMD.OpenMockRuleMgr)
         }
       },
       {
         label: '设置', click: () => {
-          if (this.mainWindow == null) this.createMainWindow()
+          this.mainWindow.show()
           this.mainWindow.webContents.send(ElectronAPICMD.OpenSettings)
         }
       },
@@ -112,22 +126,18 @@ export default class MainApp {
     Menu.setApplicationMenu(null)
 
     let winOpt: BrowserWindowConstructorOptions = {
+      icon: nativeImage.createFromPath(this.trayIconFile),
       title: "AppApiProxy",
       width: 1100,
       height: 670,
-      // minWidth: 1024,
       minHeight: 640,
       useContentSize: true,
       transparent: false,
       frame: false,
       resizable: true,
-      icon: nativeImage.createFromPath(path.join(this.trayFloder, this.trayIconName)),
       show: false,
-      titleBarStyle: process.platform === 'win32' ? 'hidden' : 'hiddenInset',
-      titleBarOverlay: {
-        color: "#f8f8f800",
-        symbolColor: "black",
-      },
+      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+      titleBarOverlay: { color: "#f8f8f800", symbolColor: "black" },
       webPreferences: {
         webSecurity: false,
         devTools: true, //process.env.NODE_ENV == 'development',
@@ -140,9 +150,9 @@ export default class MainApp {
     this.mainWindow = new BrowserWindow(winOpt)
     this.mainWindow.loadURL(this.winURL)
     this.mainWindow.webContents.frameRate = 30
+    this.mainWindow.setVibrancy('content')
     this.mainWindow.on('closed', () => {
-      this.mainWindow.destroy()
-      this.mainWindow = null
+      this.mainWindow.hide()
     })
 
     this.mainWindow.on('ready-to-show', () => {
@@ -233,13 +243,10 @@ export default class MainApp {
 
     ipcMain.handle(ElectronAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
       nativeTheme.themeSource = theme
-
-      let opts: TitleBarOverlay = { color: '#f8f8f808', symbolColor: 'black' }
-      if (nativeTheme.shouldUseDarkColors) {
-        opts.color = '#27272808'
-        opts.symbolColor = 'white'
-      }
-      this.mainWindow.setTitleBarOverlay(opts)
+      this.mainWindow.setTitleBarOverlay({
+        color: '#f8f8f800',
+        symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'
+      })
     })
 
     ipcMain.handle(ElectronAPICMD.DownloadUpdate, async (_, newVersion: Version) => {

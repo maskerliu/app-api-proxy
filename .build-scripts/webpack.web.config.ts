@@ -15,8 +15,6 @@ const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-console.log('ttttt', dirname)
-
 let whiteListedModules = ['axios']
 
 class WebConfig extends BaseConfig {

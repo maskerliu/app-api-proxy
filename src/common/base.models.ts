@@ -86,7 +86,7 @@ export interface LocalIP {
 }
 
 export interface LocalServerConfig {
-  appVersion: string
+
   platform: string
   arch: string
   updateServer?: string
@@ -101,6 +101,10 @@ export interface LocalServerConfig {
   status?: boolean // 流量代理服务是否开启
   versionCheckServer?: string // 应用版本更新检查服务
   mqttBroker?: string // MQTT Broker地址
+
+  appVersion: string
+  theme: string
+  locales: string
 }
 
 export interface Version {

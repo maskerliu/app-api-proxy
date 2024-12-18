@@ -1,7 +1,11 @@
 {
   "name": "AppApiProxy",
   "version": "1.0.2",
-  "description": "",
+  "author": {
+    "name": "maskerliu",
+    "email": "lynx.chrisliu@gmail.com"
+  },
+  "description": "this is a mobile dev api request proxy application",
   "type": "module",
   "main": "./dist/electron/main.cjs",
   "license": "UNLICENSED",

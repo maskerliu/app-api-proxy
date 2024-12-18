@@ -59,6 +59,7 @@ export default {
       dataProxyServer: '代理数据服务地址',
       mqttBroker: 'MQTT服务地址',
       theme: '主题',
+      lang: '语言',
       version: '版本',
       restart: '重启'
     },

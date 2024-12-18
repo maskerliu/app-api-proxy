@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, nativeTheme } from 'electron'
 import { accessSync, readFileSync, writeFileSync } from 'fs'
 import { inject, injectable } from "inversify"
 import path from 'path'
@@ -42,6 +42,8 @@ export class CommonService implements ICommonService {
       let config = JSON.parse(data)
       this.serverConfig = {
         appVersion: app.getVersion(),
+        theme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
+        locales: app.getLocale(),
         platform: process.platform,
         arch: process.arch,
         updateServer: config.updateServer,

@@ -17,6 +17,7 @@
         </van-radio-group>
       </template>
     </van-field>
+
     <van-field center input-align="right" :label="$t('settings.sys.version')" label-width="5rem" :readonly="true">
       <template #left-icon>
         <van-icon class="iconfont icon-info"></van-icon>
@@ -31,6 +32,29 @@
         <van-loading v-if="versionChecking" />
         <van-button v-if="hasNewVersion" type="warning" plain size="small" @click="downloadNewVersion">
           <van-icon class="iconfont icon-version-update"></van-icon>
+        </van-button>
+      </template>
+    </van-field>
+
+    <van-field center input-align="right" :label="$t('settings.sys.lang')" label-width="5rem" :readonly="true">
+      <template #left-icon>
+        <van-icon class="iconfont icon-lang" />
+      </template>
+      <template #input>
+        <van-popover v-model:show="showLangs" placement="bottom-end" style="min-width: 140px">
+          <van-cell v-for="item in langs" :title="item" clickable is-link @click="onSelectLang(item)">
+          </van-cell>
+          <template #reference>
+            <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
+              {{ lang }}
+            </div>
+          </template>
+        </van-popover>
+      </template>
+      <template #right-icon>
+        <van-loading v-if="versionChecking" />
+        <van-button v-if="hasNewVersion" type="warning" plain size="small" @click="downloadNewVersion">
+          <van-icon class="iconfont icon-version-update" />
         </van-button>
       </template>
     </van-field>
@@ -56,16 +80,25 @@ import { ConfigProviderTheme, showNotify } from 'vant'
 import { inject, onMounted, ref, Ref, watch } from 'vue'
 import { Version, versionCheck } from '../../../common'
 import { CommonStore } from '../../store'
+import { useI18n } from 'vue-i18n'
 
 const commonStore = CommonStore()
+const i18n = useI18n()
 const versionChecking = ref<boolean>(false)
 const hasNewVersion = ref<boolean>(false)
+const showLangs = ref<boolean>(false)
 const showDownload = ref<boolean>(false)
 const showRestart = ref<boolean>(false)
 const downloadProgress = ref<number>(0)
+
+const lang = inject<Ref<string>>('lang')
 const theme = inject<Ref<ConfigProviderTheme>>('theme')
+
 const popupCloseable = __IS_WEB__
 let newVersion: Version = null
+
+const value1 = ref(0)
+const langs = ['en', 'zh-CN']
 
 onMounted(() => {
   if (!__IS_WEB__) {
@@ -81,6 +114,13 @@ watch(downloadProgress, () => {
     hasNewVersion.value = false
   }
 })
+
+function onSelectLang(_lang: string) {
+  lang.value = _lang
+  showLangs.value = false
+  i18n.locale.value = lang.value
+  window.localStorage.setItem('locale', _lang)
+}
 
 function onThemeChanged() {
   window.localStorage.setItem('theme', theme.value)

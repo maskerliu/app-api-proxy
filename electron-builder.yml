@@ -21,14 +21,11 @@ files:
   - "**/node_modules/*/prebuilds/${platform}-${arch}/**/*"
   - "./update.exe"
 
-extraResources:
-  - from: "./update.exe"
-    to: "./"
+# extraResources:
+#   - from: "./update.exe"
+#     to: "./"
 # extraFiles:
 #   -
-
-pkg:
-  installLocation: /Applications
 
 electronLanguages:
   - en-US
@@ -36,6 +33,9 @@ electronLanguages:
 
 win:
   icon: icons/icon.ico
+  extraFiles:
+    - from: "./update.exe"
+      to: "./"
   target:
     - target: nsis
       arch:
@@ -55,6 +55,11 @@ mac:
     - target: dmg
       arch: universal
 
+pkg:
+  installLocation: /Applications
+
 linux:
   icon: icons/icon.png
-  # traget: snap
+  # traget: 
+  #   - snap
+  #   - appImage
