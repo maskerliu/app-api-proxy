@@ -50,6 +50,7 @@ export class CommonService implements ICommonService {
         protocol: config.protocol,
         ip: getLocalIPs()[0].address,
         port: config.port,
+        portValid: config.portValid,
         domain: config.domain,
         ips: getLocalIPs(),
         mqttBroker: Lynx_Mqtt_Broker
@@ -90,6 +91,7 @@ export class CommonService implements ICommonService {
       this.serverConfig.dataServer = config.dataServer
       this.serverConfig.domain = config.domain
       this.serverConfig.port = Number.parseInt(config.port as any)
+      this.serverConfig.portValid = config.portValid as boolean
       this.serverConfig.ip = config.ip
       writeFileSync(filePath, JSON.stringify(this.serverConfig), 'utf-8')
     }

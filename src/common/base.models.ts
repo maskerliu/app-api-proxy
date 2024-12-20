@@ -93,6 +93,7 @@ export interface LocalServerConfig {
   protocol: string
   ip?: string
   port?: number
+  portValid: boolean
   domain?: string
   ips?: Array<LocalIP>
   apiDefineServer?: string // API定义服务地址

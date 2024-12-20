@@ -123,11 +123,11 @@ function startMain(): Promise<void> {
 function startElectron() {
 
   let args = [
-    '--trace-warnings',
-    '--inspect=5858',
-    '--experimental-worker',
-    '--experimental-wasm-threads',
-    '--unhandled-rejections=strict',
+    // '--trace-warnings',
+    // '--inspect=5858',
+    // '--experimental-worker',
+    // '--experimental-wasm-threads',
+    // '--unhandled-rejections=strict',
     path.join(dirname, '../dist/electron/main.cjs')
   ]
 

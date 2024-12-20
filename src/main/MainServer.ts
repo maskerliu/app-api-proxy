@@ -40,7 +40,10 @@ export class MainServer {
   public async start() {
 
     let portUsed = await tcpPortUsed.check(this.commonService.serverConfig.port, '127.0.0.1')
-    console.group("port used", portUsed)
+
+    let config = this.commonService.serverConfig
+    config.portValid = portUsed
+    this.commonService.saveServerConfig(config)
 
     this.initHttpServer()
 
@@ -131,14 +134,26 @@ export class MainServer {
       console.log('close http server')
     })
 
-    this.httpServer.addListener('error', (err: Error) => {
-      console.log(err)
+    this.httpServer.addListener('error', (e: any) => {
+      if (e.code === 'EADDRINUSE') {
+        console.log(`port[${this.commonService.serverConfig.port}] ${e.code}`)
+
+        let config = this.commonService.serverConfig
+        config.portValid = false
+        this.commonService.saveServerConfig(config)
+        this.httpServer.close()
+      }
     })
 
     this.httpServer.listen(
       this.commonService.serverConfig.port,
       '0.0.0.0',
-      () => console.log(`--启动本地代理Http服务[${this.commonService.serverConfig.port}]`)
+      () => {
+        console.log(`--启动本地代理Http服务[${this.commonService.serverConfig.port}]`)
+        let config = this.commonService.serverConfig
+        config.portValid = true
+        this.commonService.saveServerConfig(config)
+      }
     )
 
   }
