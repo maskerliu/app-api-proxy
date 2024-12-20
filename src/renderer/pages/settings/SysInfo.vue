@@ -1,5 +1,5 @@
 <template>
-  <van-cell-group inset :title="$t('settings.sys.title')">
+  <van-cell-group inset :title="$t('settings.sys.title')" :style="{ paddingTop: isWeb ? '0' : '10px' }">
     <van-field :label="$t('settings.sys.server')" label-width="10rem" readonly>
       <template #input>
         <van-popover v-model:show="showPopover" placement="bottom-start" style="min-width: 300px"
@@ -29,7 +29,7 @@
       </template>
     </van-field>
 
-    <van-cell v-if="canSave">
+    <van-cell v-if="!isWeb">
       <template #value>
         <van-button plain type="primary" size="normal" block @click="onSave">
           {{ $t('common.save') }}
@@ -56,8 +56,7 @@ const { t } = useI18n()
 const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
 const showPopover = ref<boolean>(false)
-const canSave = !__IS_WEB__
-
+const isWeb = __IS_WEB__
 const showSettings = inject<Ref<boolean>>('showSettings')
 
 let perferences = [

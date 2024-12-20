@@ -18,8 +18,8 @@ import VersionTheme from './VersionTheme.vue'
 .settings {
   width: 80vw;
   min-width: 375px;
-  height: 100%;
-  padding-top: 12px 0 20px 0;
+  height: 100vh;
+  /* padding-top: 12px 0 20px 0; */
   overflow-y: auto;
   background-color: var(--van-gray-1);
 }

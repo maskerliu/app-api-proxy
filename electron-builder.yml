@@ -60,6 +60,6 @@ pkg:
 
 linux:
   icon: icons/icon.png
-  # traget: 
-  #   - snap
-  #   - appImage
+  category: "Utils"
+  target:
+    - target: appImage

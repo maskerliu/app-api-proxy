@@ -3,12 +3,11 @@ import { spawn, SpawnOptions, StdioOptions } from 'child_process'
 import crypto from 'crypto'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
-  Menu, nativeImage, nativeTheme,
-  session,
-  Tray
+  Menu, nativeImage, nativeTheme, session, Tray
 } from 'electron'
 import fse from 'fs-extra'
 import fs, { createReadStream, createWriteStream } from 'original-fs'
+import os from 'os'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import { createGunzip } from 'zlib'
@@ -45,19 +44,30 @@ export default class MainApp {
     this.mainServer.bootstrap()
   }
 
-  public startApp() {
-    // if (!!app.getAppPath()) return
-    if (process.platform === 'win32') {
-      // app.disableHardwareAcceleration()
+  public async startApp() {
+    console.log(os.platform(), os.release())
+    if (process.env.NODE_ENV == 'development') {
+      app.commandLine.appendSwitch('trace-warnings')
+      app.commandLine.appendSwitch('experimental-worker')
+      app.commandLine.appendSwitch('experimental-wasm-threads')
+      app.commandLine.appendSwitch('inspect', '5858')
+      app.commandLine.appendSwitch('unhandled-rejections', 'strict')
     }
+
+
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
     app.commandLine.appendSwitch('disable-gpu')
-
     // app.commandLine.appendSwitch('disable-software-rasterizer')
-    // app.on('window-all-closed', () => {
-    //   if (process.platform === 'win32') app.quit()
-    // })
+    app.disableHardwareAcceleration()
+
+    if (os.platform() == 'linux' && os.userInfo().username == 'root') {
+      app.commandLine.appendSwitch('disable-chromium-sandbox')
+      app.commandLine.appendSwitch('disable-gpu-sandbox')
+      app.commandLine.appendSwitch('no-sandbox')
+    }
+
+    console.log(app.commandLine.getSwitchValue)
 
     app.on('activate', () => {
       if (this.mainWindow == null) {
@@ -65,22 +75,99 @@ export default class MainApp {
       }
     })
 
-    app.whenReady().then(() => {
+    app.on('ready', () => {
+      let lock = app.requestSingleInstanceLock()
+      if (!lock) app.quit()
+
       this.initSessionConfig()
       this.initIPCService()
 
       if (this.mainWindow == null) {
         this.createMainWindow()
-        if (process.platform == 'win32') this.createTrayMenu()
       }
+      if (process.platform == 'win32') this.createTrayMenu()
     })
+
+    app.on('second-instance', (_, args, workDir) => {
+      console.log(args, workDir)
+    })
+
+    app.on('before-quit', () => {
+      app.releaseSingleInstanceLock()
+    })
+
+    app.on('window-all-closed', () => {
+      console.log('window all closed')
+      this.mainWindow?.destroy()
+      this.mainWindow = null
+      if (os.platform() !== 'win32') app.quit()
+    })
+
+    Menu.setApplicationMenu(null)
 
     this.initAppEnv()
     try {
-      this.mainServer.start()
+      await this.mainServer.start()
     } catch (error) {
       console.error(error)
     }
+  }
+
+  private createMainWindow() {
+
+    if (this.mainWindow != null) {
+      this.mainWindow.show()
+      return
+    }
+
+    let winOpt: BrowserWindowConstructorOptions = {
+      icon: nativeImage.createFromPath(this.trayIconFile),
+      title: "AppApiProxy",
+      width: 1100,
+      height: 670,
+      minHeight: 640,
+      useContentSize: true,
+      transparent: false,
+      frame: true,
+      resizable: true,
+      show: false,
+      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+      titleBarOverlay: { color: "#f8f8f800", symbolColor: "black" },
+      webPreferences: {
+        webSecurity: false,
+        devTools: true, //process.env.NODE_ENV == 'development',
+        nodeIntegration: true,
+        sandbox: false,
+        preload: path.join(__dirname, 'preload.cjs')
+      },
+    }
+
+    this.mainWindow = new BrowserWindow(winOpt)
+    this.mainWindow.loadURL(this.winURL)
+    this.mainWindow.webContents.frameRate = 30
+    this.mainWindow.setVibrancy('window')
+
+    // this.mainWindow.on('close', (e) => {
+    //   console.log('hide mainWindow')
+    //   if (process.platform == 'win32') {
+    //     this.mainWindow.hide()
+    //   } else {
+    //     if (BrowserWindow.getAllWindows.length > 0) {
+    //       this.mainWindow.hide()
+    //     }
+    //   }
+    //   e.preventDefault()
+    // })
+
+    this.mainWindow.on('closed', () => {
+      console.log(this.mainWindow)
+    })
+
+    this.mainWindow.on('ready-to-show', () => {
+      this.mainWindow.show()
+      this.mainWindow.focus()
+      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
+    })
   }
 
   private createTrayMenu() {
@@ -114,52 +201,6 @@ export default class MainApp {
 
     tray.setToolTip('AppApiProxy')
     tray.setContextMenu(contextMenu)
-  }
-
-  private createMainWindow() {
-
-    if (this.mainWindow != null) {
-      this.mainWindow.show()
-      return
-    }
-
-    Menu.setApplicationMenu(null)
-
-    let winOpt: BrowserWindowConstructorOptions = {
-      icon: nativeImage.createFromPath(this.trayIconFile),
-      title: "AppApiProxy",
-      width: 1100,
-      height: 670,
-      minHeight: 640,
-      useContentSize: true,
-      transparent: false,
-      frame: false,
-      resizable: true,
-      show: false,
-      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-      titleBarOverlay: { color: "#f8f8f800", symbolColor: "black" },
-      webPreferences: {
-        webSecurity: false,
-        devTools: true, //process.env.NODE_ENV == 'development',
-        nodeIntegration: true,
-        sandbox: false,
-        preload: path.join(__dirname, 'preload.cjs')
-      },
-    }
-
-    this.mainWindow = new BrowserWindow(winOpt)
-    this.mainWindow.loadURL(this.winURL)
-    this.mainWindow.webContents.frameRate = 30
-    this.mainWindow.setVibrancy('content')
-    this.mainWindow.on('closed', () => {
-      this.mainWindow.hide()
-    })
-
-    this.mainWindow.on('ready-to-show', () => {
-      this.mainWindow.show()
-      this.mainWindow.focus()
-      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
-    })
   }
 
   private initAppEnv() {
@@ -270,7 +311,7 @@ export default class MainApp {
         ext = 'zip'
         break
       case 'linux':
-        ext = 'rpm'
+        ext = 'AppImage'
         break
     }
 

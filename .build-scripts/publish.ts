@@ -2,6 +2,7 @@
 
 import crypto from 'crypto'
 import fs, { createReadStream, createWriteStream, readFileSync, writeFileSync } from 'fs'
+import path from 'path'
 import { pipeline } from 'stream/promises'
 import YAML from 'yaml'
 import { createGunzip, createGzip } from 'zlib'
@@ -18,9 +19,10 @@ async function compress(sourceDir: string, destDir: string) {
   let check = createReadStream(destDir)
   check.on('data', (chunk: any) => hash.update(chunk))
   check.on('end', () => { digest = hash.digest('base64') })
-  let test = createWriteStream('./build/res/tmp')
+  let tmp = path.join('build', 'res', 'tmp')
+  let test = createWriteStream(tmp)
   await pipeline(check, createGunzip(), test)
-  fs.rmSync('./build/res/tmp')
+  fs.rmSync(tmp)
   return digest
 }
 
@@ -30,23 +32,12 @@ function uncompress(sourceDir: string, destDir: string) {
   source.pipe(createGunzip()).pipe(dest)
 }
 
-async function buildIncrementRelease() {
-  let asarPath = ''
-  switch (process.platform) {
-    case 'win32':
-      asarPath = `build/${pkg.version}/win-unpacked/resources/app.asar`
-      break
-    case 'darwin':
-      asarPath = `build/${pkg.version}/${pkg.name}.app/Contents/Resources/app.asar`
-      break
-    case 'linux':
-      break
-  }
-
-  let digest = await compress(asarPath, `build/res/app-${process.platform}-${process.arch}-${pkg.version}.gz`)
-  let file = readFileSync(`build/${pkg.version}/latest.yml`, 'utf8')
+async function buildIncrementRelease(asarPath: string, ymlName: string) {
+  let digest = await compress(asarPath,
+    path.join('build', 'res', `app-${process.platform}-${process.arch}-${pkg.version}.gz`))
+  let file = readFileSync(path.join('build', pkg.version, ymlName), 'utf8')
   let lst = YAML.parse(file)
-  let versionData = readFileSync(`build/version.json`, 'utf-8')
+  let versionData = readFileSync(path.join('build', 'version.json'), 'utf-8')
   let resp = JSON.parse(versionData)
   resp.data = {
     forceUpdate: true,
@@ -57,25 +48,14 @@ async function buildIncrementRelease() {
     sha512: digest,
     releaseDate: lst.releaseDate
   }
-  writeFileSync(`build/version-${process.platform}-${process.arch}.json`, JSON.stringify(resp, null, '\t'), 'utf8')
+  writeFileSync(path.join('build', `version-${process.platform}-${process.arch}.json`),
+    JSON.stringify(resp, null, '\t'), 'utf8')
 }
 
-async function buildFullRelease() {
-  let installerPath = ''
-  switch (process.platform) {
-    case 'win32':
-      installerPath = `${pkg.version}/${pkg.name}-Setup-${pkg.version}.exe`
-      break
-    case 'darwin':
-      installerPath = `${pkg.version}/${pkg.name}-${pkg.version}-${process.arch}-mac.zip`
-      break
-    case 'linux':
-      break
-  }
-
-  let file = readFileSync(`build/${pkg.version}/latest.yml`, 'utf8')
+async function buildFullRelease(installerPath: string, ymlName: string) {
+  let file = readFileSync(path.join('build', pkg.version, ymlName), 'utf8')
   let lst = YAML.parse(file)
-  let versionData = readFileSync(`build/version.json`, 'utf-8')
+  let versionData = readFileSync(path.join('build', 'version.json'), 'utf-8')
   let resp = JSON.parse(versionData)
   resp.data = {
     forceUpdate: true,
@@ -86,7 +66,9 @@ async function buildFullRelease() {
     sha512: lst.sha512,
     releaseDate: lst.releaseDate
   }
-  writeFileSync(`build/version-${process.platform}-${process.arch}.json`, JSON.stringify(resp, null, '\t'), 'utf8')
+
+  writeFileSync(path.join('build', `version-${process.platform}-${process.arch}.json`),
+    JSON.stringify(resp, null, '\t'), 'utf8')
 }
 
 
@@ -98,7 +80,28 @@ args.forEach(arg => {
   parmas.set(key.substring(2), val)
 })
 
-if (parmas.get('target') == 'full') buildFullRelease()
-else buildIncrementRelease()
+let asarPath = ''
+let ymlName = ''
+let installerPath = ''
+switch (process.platform) {
+  case 'win32':
+    asarPath = path.join('build', pkg.version, 'win-unpacked', 'resources', 'app.asar')
+    installerPath = `${pkg.version}/${pkg.name}-Setup-${pkg.version}.exe`
+    ymlName = 'latest.yml'
+    break
+  case 'darwin':
+    asarPath = path.join('build', pkg.version, `${pkg.name}.app`, 'Contents', 'Resources', 'app.asar')
+    installerPath = `${pkg.version}/${pkg.name}-${pkg.version}-${process.arch}-mac.zip`
+    ymlName = 'latest-mac.yml'
+    break
+  case 'linux':
+    installerPath = `${pkg.version}/${pkg.name}-${pkg.version}.AppImage`
+    asarPath = path.join('build', pkg.version, 'linux-unpacked', 'resources', 'app.asar')
+    ymlName = 'latest-linux.yml'
+    break
+}
+
+if (parmas.get('target') == 'full') buildFullRelease(installerPath, ymlName)
+else buildIncrementRelease(asarPath, ymlName)
 
 // uncompress(`build/res/app-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)
