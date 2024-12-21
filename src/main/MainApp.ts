@@ -249,12 +249,13 @@ export default class MainApp {
   private initIPCService() {
 
     ipcMain.handle(ElectronAPICMD.Relaunch, (_) => {
+      console.log(process.resourcesPath)
       if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
         const logPath = app.getPath('logs')
         const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
         const err = fs.openSync(path.join(logPath, 'err.log'), 'a')
         const child = spawn(
-          `"${path.join(process.resourcesPath, process.platform == 'win32' ? 'update.exe' : 'update.sh')}"`,
+          `${process.platform == 'win32' ? 'cmd.exe' : 'sh'} "${path.join(process.resourcesPath, process.platform == 'win32' ? 'update.exe' : 'update.sh')}"`,
           [`"${process.resourcesPath}"`, `"${app.getPath('exe')}"`],
           {
             detached: true,
