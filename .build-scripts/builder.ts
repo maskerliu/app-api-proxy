@@ -31,11 +31,6 @@ export function run() {
   if (parmas.get('target') == 'clean') clean()
   if (parmas.get('target') == 'web') web()
   else build()
-
-
-  // if (process.env.BUILD_TARGET === 'clean') clean()
-  // if (process.env.BUILD_TARGET === 'web') web()
-  // else build()
 }
 
 function clean() {
@@ -90,7 +85,8 @@ function pack(config: BaseConfig): Promise<string> {
           .forEach(line => { err += `    ${line}\n` })
         reject(err)
       } else {
-        resolve(stats.toString({ chunks: false, colors: true }))
+        resolve(`${config.name} build success`)
+        // resolve(stats.toString({ chunks: false, colors: true}))
       }
     })
   })

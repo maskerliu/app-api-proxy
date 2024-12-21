@@ -51,6 +51,7 @@ export default {
       title: 'System Info',
       server: 'Server',
       port: 'Server Port',
+      porterror: "Port has been used",
       serverDomain: 'Server Domain',
       proxySocketPort: 'Socket Port',
       updateServer: 'App Update Server',

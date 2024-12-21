@@ -11,7 +11,7 @@ export abstract class BaseConfig implements Configuration {
   mode: Configuration["mode"] = "production"
   node: Configuration['node'] = {}
   plugins: Configuration['plugins'] = []
-  stats: Configuration['stats'] = 'errors-only'
+  stats: Configuration['stats'] = 'none'
 
   init(localServer?: string) {
     this.plugins.push(new DefinePlugin({ __DEV__: process.env.NODE_ENV !== 'production' }))

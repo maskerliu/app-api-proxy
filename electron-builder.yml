@@ -21,12 +21,6 @@ files:
   - "**/node_modules/*/prebuilds/${platform}-${arch}/**/*"
   - "./update.exe"
 
-# extraResources:
-#   - from: "./update.exe"
-#     to: "./"
-# extraFiles:
-#   -
-
 electronLanguages:
   - en-US
   - zh-CN
@@ -61,5 +55,8 @@ pkg:
 linux:
   icon: icons/icon.png
   category: "Utils"
+  extraFiles:
+    - from: "./update.sh"
+      to: "./"
   target:
     - target: appImage
