@@ -29,7 +29,7 @@ win:
   icon: icons/icon.ico
   extraFiles:
     - from: "./update.exe"
-      to: "./"
+      to: "./resources/"
   target:
     - target: nsis
       arch:
@@ -45,6 +45,9 @@ nsis:
 
 mac:
   icon: icons/icon.icns
+  extraFiles:
+    - from: "./update.sh"
+      to: "./resources/"
   target:
     - target: dmg
       arch: universal

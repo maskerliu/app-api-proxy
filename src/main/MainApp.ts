@@ -254,8 +254,15 @@ export default class MainApp {
         const logPath = app.getPath('logs')
         const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
         const err = fs.openSync(path.join(logPath, 'err.log'), 'a')
+        let updateBash = `update.${process.platform == 'win32' ? 'exe' : 'sh'}`
+
+        if (process.platform == 'win32') {
+          updateBash = `${path.join(process.resourcesPath, updateBash)}`
+        } else {
+          updateBash = `sh ${path.join(process.resourcesPath, updateBash)}`
+        }
         const child = spawn(
-          `${process.platform == 'win32' ? 'cmd.exe' : 'sh'} "${path.join(process.resourcesPath, process.platform == 'win32' ? 'update.exe' : 'update.sh')}"`,
+          updateBash,
           [`"${process.resourcesPath}"`, `"${app.getPath('exe')}"`],
           {
             detached: true,
