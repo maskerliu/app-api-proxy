@@ -51,12 +51,6 @@
           </template>
         </van-popover>
       </template>
-      <template #right-icon>
-        <van-loading v-if="versionChecking" />
-        <van-button v-if="hasNewVersion" type="warning" plain size="small" @click="downloadNewVersion">
-          <van-icon class="iconfont icon-version-update" />
-        </van-button>
-      </template>
     </van-field>
 
     <van-popup round v-model:show="showDownload" :closeable="popupCloseable" :close-on-click-overlay="false"

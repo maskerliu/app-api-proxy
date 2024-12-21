@@ -57,6 +57,6 @@ linux:
   category: "Utils"
   extraFiles:
     - from: "./update.sh"
-      to: "./"
+      to: "./resources/"
   target:
     - target: appImage
