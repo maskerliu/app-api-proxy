@@ -23,7 +23,8 @@
     </van-field>
 
     <van-field center :label="$t(item.tooltip)" label-width="10rem" v-for="item in perferences"
-      v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly">
+      v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly"
+      :error-message="!commonStore.serverConfig['portValid'] && item.tooltip == 'settings.sys.port' ? $t('settings.sys.porterror') : null">
       <template #right-icon>
         <van-switch v-if="item.hasStatus" style="margin-top: 5px;"></van-switch>
       </template>

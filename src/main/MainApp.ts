@@ -54,7 +54,6 @@ export default class MainApp {
       app.commandLine.appendSwitch('unhandled-rejections', 'strict')
     }
 
-
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
     app.commandLine.appendSwitch('disable-gpu')
@@ -66,8 +65,6 @@ export default class MainApp {
       app.commandLine.appendSwitch('disable-gpu-sandbox')
       app.commandLine.appendSwitch('no-sandbox')
     }
-
-    console.log(app.commandLine.getSwitchValue)
 
     app.on('activate', () => {
       if (this.mainWindow == null) {
@@ -160,7 +157,7 @@ export default class MainApp {
     // })
 
     this.mainWindow.on('closed', () => {
-      console.log(this.mainWindow)
+      // console.log(this.mainWindow)
     })
 
     this.mainWindow.on('ready-to-show', () => {
@@ -252,12 +249,12 @@ export default class MainApp {
   private initIPCService() {
 
     ipcMain.handle(ElectronAPICMD.Relaunch, (_) => {
-      if (fse.pathExistsSync(path.join(process.resourcesPath, './update.asar'))) {
+      if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
         const logPath = app.getPath('logs')
-        const out = fs.openSync(path.join(logPath, './out.log'), 'a')
-        const err = fs.openSync(path.join(logPath, './err.log'), 'a')
+        const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
+        const err = fs.openSync(path.join(logPath, 'err.log'), 'a')
         const child = spawn(
-          `"${path.join(process.resourcesPath, './update.exe')}"`,
+          `"${path.join(process.resourcesPath, process.platform == 'win32' ? 'update.exe' : 'update.sh')}"`,
           [`"${process.resourcesPath}"`, `"${app.getPath('exe')}"`],
           {
             detached: true,
@@ -400,9 +397,7 @@ export default class MainApp {
       try {
         const params: SpawnOptions = { stdio, env, detached: true }
         const p = spawn(cmd, args, params)
-        p.on("error", error => {
-          reject(error)
-        })
+        p.on("error", error => reject(error))
         p.unref()
         if (p.pid !== undefined) {
           resolve(true)
@@ -415,7 +410,7 @@ export default class MainApp {
   }
 
   async incrementUpdate(version: Version) {
-    let sourceDir = `${USER_DATA_DIR}/update/app-${version.version}.gz`
+    let sourceDir = path.join(USER_DATA_DIR, 'update', `app-${version.version}.gz`)
     try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', sourceDir) }
     const resp = await axios({
       url: version.updateUrl, method: 'GET', responseType: 'stream',
@@ -425,7 +420,7 @@ export default class MainApp {
       }
     })
     await pipeline(resp.data, createWriteStream(sourceDir))
-    let destDir = IS_DEV ? path.join(USER_DATA_DIR, 'update.asar') : path.join(process.resourcesPath, 'update.asar')
+    let destDir = path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar')
     // if (IS_DEV) return
     let hash = crypto.createHash('sha512')
     let digest = ''

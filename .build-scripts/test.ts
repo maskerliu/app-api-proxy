@@ -1,5 +1,15 @@
+import clui from 'clui'
 import path from "path"
 
+var Progress = clui.Progress
+
+var thisProgressBar = new Progress(20)
+console.log(thisProgressBar.update(10, 30))
+
+// or
+
+var thisPercentBar = new Progress(20)
+console.log(thisPercentBar.update(0.4))
 
 console.log(process.env.ELECTRON_BUILDER_BINARIES_MIRROR)
 console.log(process.release)

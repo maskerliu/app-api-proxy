@@ -7,11 +7,12 @@
 <script lang="ts" setup>
 import { ConfigProviderTheme } from 'vant'
 import { onMounted, provide, ref } from 'vue'
-
+import { useI18n } from 'vue-i18n'
 import BizMain from './pages/BizMain.vue'
 import { CommonStore } from './store'
 
 const canRender = ref(true)
+const i18n = useI18n()
 const theme = ref<ConfigProviderTheme>('light')
 const lang = ref<string>('zh-CN')
 
@@ -26,12 +27,12 @@ onMounted(() => {
   theme.value = wrapTheme != null ? wrapTheme as ConfigProviderTheme : 'light'
 
   let wrapLang = window.localStorage.getItem('lang')
-  lang.vlaue = wrapLang != null ? wrapLang : 'zh-CN'
+  lang.value = wrapLang != null ? wrapLang : 'zh-CN'
+  i18n.locale.value = lang.value
 
   if (!__IS_WEB__) {
     window.electronAPI.getSysSettings((result) => {
       CommonStore().init(result)
-      commonStore.serverConfig.lang = wrapLang
     })
 
     window.electronAPI.setAppTheme(theme.value)

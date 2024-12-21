@@ -78,9 +78,9 @@
 
 import { ConfigProviderTheme, showNotify } from 'vant'
 import { inject, onMounted, ref, Ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Version, versionCheck } from '../../../common'
 import { CommonStore } from '../../store'
-import { useI18n } from 'vue-i18n'
 
 const commonStore = CommonStore()
 const i18n = useI18n()
@@ -119,7 +119,7 @@ function onSelectLang(_lang: string) {
   lang.value = _lang
   showLangs.value = false
   i18n.locale.value = lang.value
-  window.localStorage.setItem('locale', _lang)
+  window.localStorage.setItem('lang', _lang)
 }
 
 function onThemeChanged() {

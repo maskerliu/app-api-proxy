@@ -52,6 +52,7 @@ export default {
       server: '服务IP地址',
       serverDomain: '服务域名',
       port: '代理Http服务端口',
+      porterror: "端口已被占用，请更换",
       updateServer: '应用更新服务地址',
       proxySocketPort: '代理长连服务端口',
       apiDefineServer: 'API定义服务地址',
