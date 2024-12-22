@@ -48,7 +48,7 @@ export class CommonService implements ICommonService {
         arch: process.arch,
         updateServer: config.updateServer,
         protocol: config.protocol,
-        ip: getLocalIPs()[0].address,
+        ip: getLocalIPs()[0]?.address,
         port: config.port,
         portValid: config.portValid,
         domain: config.domain,

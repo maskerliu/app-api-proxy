@@ -14,6 +14,7 @@ export function getLocalIPs(): LocalIP[] {
         !ipRegex.test(alias.address) &&
         (devName.toLowerCase().indexOf('wlan') !== -1 ||
           devName.toLowerCase().indexOf('eth') !== -1 ||
+          devName.toLowerCase().indexOf('en') !== -1 ||
           devName.indexOf('以太网') !== -1)) {
         ips.push({
           name: devName,
