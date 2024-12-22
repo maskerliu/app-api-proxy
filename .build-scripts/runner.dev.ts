@@ -182,8 +182,8 @@ function greeting() {
   else if (cols > 76) text = 'electron-|vue'
   else text = false
 
-  console.log(chalk.green('\n  electron-vue'))
-  console.log(chalk.blue('  getting ready...') + '\n')
+  console.log(chalk.bgGreen.green('    electron-vue'.padEnd(process.stdout.columns - 40, ' ')))
+  console.log(chalk.bgGreen.white('    getting ready...'.padEnd(process.stdout.columns - 40, ' ')))
 }
 
 async function start() {

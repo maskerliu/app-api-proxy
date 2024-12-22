@@ -18,7 +18,7 @@ import { MainServer } from './MainServer'
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
 const IS_DEV = process.env.NODE_ENV === 'development'
-const VUE_PLUGIN = 'D:/vue-devtools/7.6.5_0'
+const VUE_PLUGIN = os.platform() == 'darwin' ? '/Users/chris/Downloads/vue-devtools/7.6.8_0' : 'D:/vue-devtools/7.6.5_0'
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
@@ -29,13 +29,11 @@ export default class MainApp {
   constructor() {
     let iconDir = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
     let ext = ''
-    switch (process.platform) {
+    switch (os.platform()) {
       case 'win32':
         ext = 'ico'
         break
       case 'darwin':
-        ext = 'icns'
-        break
       case 'linux':
         ext = 'png'
         break
@@ -82,7 +80,8 @@ export default class MainApp {
       if (this.mainWindow == null) {
         this.createMainWindow()
       }
-      if (process.platform == 'win32') this.createTrayMenu()
+
+      this.createTrayMenu()
     })
 
     app.on('second-instance', (_, args, workDir) => {
@@ -128,8 +127,9 @@ export default class MainApp {
       frame: true,
       resizable: true,
       show: false,
-      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+      titleBarStyle: os.platform() === 'darwin' ? 'hidden' : 'hidden',
       titleBarOverlay: { color: "#f8f8f800", symbolColor: "black" },
+      trafficLightPosition: { x: os.platform() == 'darwin' ? 1030 : 10, y: 10 },
       webPreferences: {
         webSecurity: false,
         devTools: true, //process.env.NODE_ENV == 'development',
@@ -144,17 +144,10 @@ export default class MainApp {
     this.mainWindow.webContents.frameRate = 30
     this.mainWindow.setVibrancy('window')
 
-    // this.mainWindow.on('close', (e) => {
-    //   console.log('hide mainWindow')
-    //   if (process.platform == 'win32') {
-    //     this.mainWindow.hide()
-    //   } else {
-    //     if (BrowserWindow.getAllWindows.length > 0) {
-    //       this.mainWindow.hide()
-    //     }
-    //   }
-    //   e.preventDefault()
-    // })
+    this.mainWindow.on('resize', () => {
+      if (os.platform() == 'darwin')
+        this.mainWindow.setWindowButtonPosition({ x: this.mainWindow.getBounds().width - 70, y: 10 })
+    })
 
     this.mainWindow.on('closed', () => {
       // console.log(this.mainWindow)
@@ -201,19 +194,19 @@ export default class MainApp {
   }
 
   private initAppEnv() {
-    let resPath = path.join(USER_DATA_DIR, './static')
+    let resPath = path.join(USER_DATA_DIR, 'static')
     fs.access(resPath, err => {
       if (err) {
         fs.mkdir(resPath, err => console.log(err))
       }
     })
-    let dbPath = path.join(USER_DATA_DIR, './biz_storage')
+    let dbPath = path.join(USER_DATA_DIR, 'biz_storage')
     fs.access(dbPath, err => {
       if (err) {
         fs.mkdir(dbPath, err => console.log(err))
       }
     })
-    let updatePath = path.join(USER_DATA_DIR, './update')
+    let updatePath = path.join(USER_DATA_DIR, 'update')
     fs.access(updatePath, err => {
       if (err) {
         fs.mkdir(updatePath, err => console.log(err))
@@ -222,7 +215,7 @@ export default class MainApp {
   }
 
   private initSessionConfig() {
-    if (IS_DEV && process.platform == 'win32') session.defaultSession.loadExtension(VUE_PLUGIN)
+    if (IS_DEV && os.platform() != 'linux') session.defaultSession.loadExtension(VUE_PLUGIN)
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
@@ -254,9 +247,9 @@ export default class MainApp {
         const logPath = app.getPath('logs')
         const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
         const err = fs.openSync(path.join(logPath, 'err.log'), 'a')
-        let updateBash = `update.${process.platform == 'win32' ? 'exe' : 'sh'}`
+        let updateBash = `update.${os.platform() == 'win32' ? 'exe' : 'sh'}`
 
-        if (process.platform == 'win32') {
+        if (os.platform() == 'win32') {
           updateBash = `${path.join(process.resourcesPath, updateBash)}`
         } else {
           updateBash = `sh ${path.join(process.resourcesPath, updateBash)}`
@@ -308,7 +301,7 @@ export default class MainApp {
 
   async fullUpdate(version: Version) {
     let ext = ''
-    switch (process.platform) {
+    switch (os.platform()) {
       case 'win32':
         ext = 'exe'
         break
@@ -321,7 +314,7 @@ export default class MainApp {
     }
 
     let downloadDir = path.join(USER_DATA_DIR, 'update', `installer-${version.version}.${ext}`)
-    if (process.platform == 'linux') downloadDir.replace(/ /g, "\\ ")
+    if (os.platform() == 'linux') downloadDir.replace(/ /g, "\\ ")
 
     try { fs.rmSync(downloadDir) } catch (err) { console.log('fail to delete file', downloadDir) }
     const resp = await axios({
@@ -342,7 +335,7 @@ export default class MainApp {
   }
 
   async doInstall(options: InstallOptions) {
-    switch (process.platform) {
+    switch (os.platform()) {
       case 'win32':
         return await this.doWinInstall(options)
       case 'darwin':
