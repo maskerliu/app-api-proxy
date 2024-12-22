@@ -2,7 +2,8 @@
 
 import chalk from 'chalk'
 import { deleteSync } from 'del'
-import Multispinner from 'multispinner'
+import minimist from 'minimist'
+import Spinnies from 'spinnies'
 import webpack from 'webpack'
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config'
@@ -11,32 +12,21 @@ import rendererConfig from './webpack.renderer.config'
 import webConfig from './webpack.web.config'
 
 const Run_Mode_PROD = 'production'
-const doneLog = chalk.bgGreen.white(' DONE ') + ' '
-const errorLog = chalk.bgRed.white(' ERROR ') + ' '
-const okayLog = chalk.bgBlue.white(' OKAY ') + ' '
 
 process.env.NODE_ENV = Run_Mode_PROD
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
 export function run() {
-
-  const args = process.argv.slice(2)
-  let parmas = new Map()
-  args.forEach(arg => {
-    let [key, val] = arg.split('=')
-    if (!key.startsWith('--')) return
-    parmas.set(key.substring(2), val)
-  })
-
-  if (parmas.get('target') == 'clean') clean()
-  if (parmas.get('target') == 'web') web()
+  let argv = minimist(process.argv.slice(2))
+  if (argv['target'] == 'clean') clean()
+  if (argv['target'] == 'web') web()
   else build()
 }
 
 function clean() {
   deleteSync([`build/${pkg.version}/*`])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
-  console.log(`\n${doneLog}\n`)
+  console.log(`\n${chalk.bgGreen.white(' DONE ') + ' '}\n`)
   process.exit()
 }
 
@@ -45,31 +35,21 @@ async function build() {
   deleteSync([`build/${pkg.version}/*`])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
 
-  const spinner = new Multispinner([mainConfig.name, renderer.name, webConfig.name],
-    { preText: 'building', postText: 'process' })
+  let spinner = { interval: 80, frames: ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'] }
+  let spinnies = new Spinnies({ color: 'blue', succeedColor: 'green', spinner })
+  addSpinnerTask(spinnies, mainConfig)
+  addSpinnerTask(spinnies, webConfig)
+  addSpinnerTask(spinnies, rendererConfig)
+}
 
-  let results = ''
-  spinner.on('success', () => {
-    process.stdout.write('\x1B[2J\x1B[0f')
-    console.log(`\n\n${results}`)
-    console.log(`${okayLog}take it away ${chalk.yellow('`electron-builder`')}\n`)
-    process.exit()
-  })
-
-  let tasks = [mainConfig, rendererConfig, webConfig]
-
-  tasks.forEach(async (config) => {
-    try {
-      let result = await pack(config)
-      results += result + '\n\n'
-      spinner.success(config.name)
-    } catch (err) {
-      spinner.error(config.name)
-      console.log(`\n  ${errorLog} failed to build ${config.target} process`)
-      console.error(`\n${err}\n`)
-      process.exit(1)
-    }
-  })
+async function addSpinnerTask(spinnies: Spinnies, config: BaseConfig) {
+  spinnies.add(config.name, { text: `  build ${config.name}...` })
+  try {
+    let result = await pack(config)
+    spinnies.succeed(config.name, { text: `  ${result}` })
+  } catch (err) {
+    spinnies.fail(config.name, { text: `  ${err}` })
+  }
 }
 
 function pack(config: BaseConfig): Promise<string> {
@@ -105,13 +85,7 @@ function web() {
 }
 
 function greeting() {
-  const cols = process.stdout.columns
-  let text: String | boolean = ''
-
-  if (cols > 85) text = '\tlets-build'
-  else if (cols > 60) text = '\tlets-|build'
-  else text = false
-  console.log(chalk.green('\tlets-build'))
+  console.log(chalk.bgGreen.white('    lets-build'.padEnd(process.stdout.columns - 40, ' ')))
 }
 
 run()

@@ -2,12 +2,12 @@
 
 import crypto from 'crypto'
 import fs, { createReadStream, createWriteStream, readFileSync, writeFileSync } from 'fs'
+import minimist from 'minimist'
 import path from 'path'
 import { pipeline } from 'stream/promises'
 import YAML from 'yaml'
 import { createGunzip, createGzip } from 'zlib'
 import pkg from '../package.json'
-
 
 async function compress(sourceDir: string, destDir: string) {
   let hash = crypto.createHash('sha512')
@@ -71,14 +71,7 @@ async function buildFullRelease(installerPath: string, ymlName: string) {
     JSON.stringify(resp, null, '\t'), 'utf8')
 }
 
-
-const args = process.argv.slice(2)
-let parmas = new Map()
-args.forEach(arg => {
-  let [key, val] = arg.split('=')
-  if (!key.startsWith('--')) return
-  parmas.set(key.substring(2), val)
-})
+let argv = minimist(process.argv.slice(2))
 
 let asarPath = ''
 let ymlName = ''
@@ -101,7 +94,7 @@ switch (process.platform) {
     break
 }
 
-if (parmas.get('target') == 'full') buildFullRelease(installerPath, ymlName)
+if (argv['target'] == 'full') buildFullRelease(installerPath, ymlName)
 else buildIncrementRelease(asarPath, ymlName)
 
 // uncompress(`build/res/app-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)
