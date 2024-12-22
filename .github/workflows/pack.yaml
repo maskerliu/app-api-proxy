@@ -1,19 +1,19 @@
 name: CI
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
     runs-on: macOS-latest
-  
+
     steps:
       - uses: actions/checkout@v3
 
       - name: install dependencies
-        run: yarn
+        run: corepack enable && yarn install
 
       - name: build
         run: yarn build
