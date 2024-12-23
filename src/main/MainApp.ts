@@ -3,7 +3,8 @@ import { spawn, SpawnOptions, StdioOptions } from 'child_process'
 import crypto from 'crypto'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
-  Menu, nativeImage, nativeTheme, session, Tray
+  Menu,
+  nativeTheme, session, Tray
 } from 'electron'
 import fse from 'fs-extra'
 import fs, { createReadStream, createWriteStream } from 'original-fs'
@@ -23,11 +24,12 @@ const VUE_PLUGIN = os.platform() == 'darwin' ? '/Users/chris/Downloads/vue-devto
 export default class MainApp {
   private mainWindow: BrowserWindow = null
   private winURL: string = IS_DEV ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
+  private iconDir: string
   private trayIconFile: string
   private mainServer: MainServer = new MainServer()
 
   constructor() {
-    let iconDir = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
+    this.iconDir = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
     let ext = ''
     switch (os.platform()) {
       case 'win32':
@@ -38,7 +40,7 @@ export default class MainApp {
         ext = 'png'
         break
     }
-    this.trayIconFile = path.join(iconDir, `icon.${ext}`)
+    this.trayIconFile = path.join(this.iconDir, `icon.${ext}`)
     this.mainServer.bootstrap()
   }
 
@@ -117,7 +119,7 @@ export default class MainApp {
     }
 
     let winOpt: BrowserWindowConstructorOptions = {
-      icon: nativeImage.createFromPath(this.trayIconFile),
+      icon: this.trayIconFile,
       title: "AppApiProxy",
       width: 1100,
       height: 670,
@@ -164,18 +166,23 @@ export default class MainApp {
     let tray = new Tray(this.trayIconFile)
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: '用例管理', click: () => {
+        icon: path.join(this.iconDir, 'ic-rule.png'),
+        label: '用例管理',
+        click: () => {
           this.mainWindow.show()
           this.mainWindow.webContents.send(ElectronAPICMD.OpenMockRuleMgr)
         }
       },
       {
-        label: '设置', click: () => {
+        icon: path.join(this.iconDir, 'ic-setting.png'),
+        label: '设置',
+        click: () => {
           this.mainWindow.show()
           this.mainWindow.webContents.send(ElectronAPICMD.OpenSettings)
         }
       },
       {
+        icon: path.join(this.iconDir, 'ic-exit.png'),
         label: '退出', click: () => {
           this.mainServer.stop()
           app.quit()
