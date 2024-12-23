@@ -83,9 +83,9 @@ onMounted(() => {
 }
 
 #app {
-  /* font-family: "Consolas,Monaco,Menlo,Bitstream Vera Sans Mono,monospace"; */
+  /* font-family: "Consolas"; */
   background: var(--van-gray-1);
-  letter-spacing: 1.3px;
+  letter-spacing: 1px;
   /* -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;

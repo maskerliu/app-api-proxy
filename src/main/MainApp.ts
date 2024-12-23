@@ -147,6 +147,7 @@ export default class MainApp {
     this.mainWindow.setVibrancy('window')
 
     this.mainWindow.on('resize', () => {
+
       if (os.platform() == 'darwin')
         this.mainWindow.setWindowButtonPosition({ x: this.mainWindow.getBounds().width - 70, y: 10 })
     })
@@ -163,7 +164,7 @@ export default class MainApp {
   }
 
   private createTrayMenu() {
-    let tray = new Tray(this.trayIconFile)
+    let tray = new Tray(path.join(this.iconDir, 'icon-tray.png'))
     const contextMenu = Menu.buildFromTemplate([
       {
         icon: path.join(this.iconDir, 'ic-rule.png'),
