@@ -1,8 +1,8 @@
 <template>
   <van-cell-group inset title=" ">
-    <van-field center :label="$t('settings.sys.theme')" label-width="5rem" :readonly="true">
+    <van-field center :label="$t('settings.sys.theme')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-theme"></van-icon>
+        <van-icon class="iconfont icon-theme" style="margin-left: 15px;" />
       </template>
       <template #right-icon>
         <van-radio-group v-model="theme" direction="horizontal" style="height: 26px;" @change="onThemeChanged">
@@ -18,9 +18,9 @@
       </template>
     </van-field>
 
-    <van-field center input-align="right" :label="$t('settings.sys.version')" label-width="5rem" :readonly="true">
+    <van-field center input-align="right" :label="$t('settings.sys.version')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-info"></van-icon>
+        <van-icon class="iconfont icon-info" style="margin-left: 15px;" />
       </template>
       <template #input>
         <div style="height: 33px;display: flex; align-items: center; justify-content: center;" @click="onVersionCheck">
@@ -31,14 +31,14 @@
       <template #right-icon>
         <van-loading v-if="versionChecking" />
         <van-button v-if="hasNewVersion" type="warning" plain size="small" @click="downloadNewVersion">
-          <van-icon class="iconfont icon-version-update"></van-icon>
+          <van-icon class="iconfont icon-version-update" style="margin-left: 15px;" />
         </van-button>
       </template>
     </van-field>
 
-    <van-field center input-align="right" :label="$t('settings.sys.lang')" label-width="5rem" :readonly="true">
+    <van-field center input-align="right" :label="$t('settings.sys.lang')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-lang" />
+        <van-icon class="iconfont icon-lang" style="margin-left: 15px;" />
       </template>
       <template #input>
         <van-popover v-model:show="showLangs" placement="bottom-end" style="min-width: 140px">
