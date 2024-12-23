@@ -65,10 +65,9 @@
       </van-col>
     </van-row>
     <van-row :style="{ width: '100%', height: 'calc(100vh - 10px - ' + topBarHeight + 'px)' }">
-      <van-list class="border-bg" style="width: 300px; height: calc(100% - 10px);"
-        v-if="curRule != null && curRule.requests != null">
-        <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)" clickable
-          is-link>
+      <van-list class="border-bg" style="width: 300px; height: calc(100% - 10px);">
+        <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)"
+          v-if="curRule != null && curRule.requests != null" clickable is-link>
           <template #title>
             <div class="record-snap">{{ record.url }}</div>
           </template>

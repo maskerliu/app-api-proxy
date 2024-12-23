@@ -1,18 +1,15 @@
 <template>
   <section>
     <OverlayScrollbarsComponent v-if="overlayScrollbarsApplied" class="overlayscrollbars-vue" ref="osRef"
-      :style="{ display: elementHidden ? 'none' : undefined }" :options="{
-        scrollbars: {
-          theme: 'os-theme-light',
-        },
-      }" :events="{
+      :style="{ display: elementHidden ? 'none' : undefined }" :options="{ scrollbars: { theme: 'os-theme-light' } }"
+      :events="{
         initialized: () => activateEvent('initialized'),
         destroyed: () => activateEvent('destroyed'),
         updated: () => activateEvent('updated'),
         scroll: () => activateEvent('scroll'),
       }" defer>
       <div v-if="!contentHidden" class="logo">
-        <img alt="Vue logo" src="logo.svg" />
+
       </div>
     </OverlayScrollbarsComponent>
   </section>

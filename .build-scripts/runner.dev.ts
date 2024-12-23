@@ -17,7 +17,6 @@ const Run_Mode_DEV = 'development'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.NODE_ENV = Run_Mode_DEV
-
 process.env.BUILD_CONFIG = JSON.stringify(pkg.config)
 
 let electronProc: ChildProcess | null = null
@@ -166,28 +165,14 @@ function consoleLog(proc: string, data: any, color?: string) {
     log += `${data}\n`
   }
 
-  if (color) {
-    log = chalk[color](log)
-  }
+  if (color) log = chalk[color](log)
 
   log += chalk[color ? color : 'yellow'](`┗ ${new Array(process.stdout.columns - 3).join('-')} ┛`) + '\n'
   console.log(log)
 }
 
-function greeting() {
-  const cols = process.stdout.columns
-  let text: String | boolean = ''
-
-  if (cols > 104) text = 'electron-vue'
-  else if (cols > 76) text = 'electron-|vue'
-  else text = false
-
-  console.log(chalk.bgGreen.green('    electron-vue'.padEnd(process.stdout.columns - 40, ' ')))
-  console.log(chalk.bgGreen.white('    getting ready...'.padEnd(process.stdout.columns - 40, ' ')))
-}
-
 async function start() {
-  greeting()
+  console.log(chalk.bgGreen.white('    getting ready...'.padEnd(process.stdout.columns - 20, ' ')))
 
   try {
     let localIPv4 = WebpackDevServer.internalIPSync('v4')
