@@ -45,13 +45,14 @@ export default class MainApp {
   }
 
   public async startApp() {
-    console.log(os.platform(), os.release())
+    console.log(os.platform(), os.release(), process.version, process.electron)
     if (process.env.NODE_ENV == 'development') {
       app.commandLine.appendSwitch('trace-warnings')
       app.commandLine.appendSwitch('experimental-worker')
       app.commandLine.appendSwitch('experimental-wasm-threads')
       app.commandLine.appendSwitch('inspect', '5858')
       app.commandLine.appendSwitch('unhandled-rejections', 'strict')
+      app.commandLine.appendSwitch('trace-deprecation')
     }
 
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
@@ -290,10 +291,14 @@ export default class MainApp {
 
     ipcMain.handle(ElectronAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
       nativeTheme.themeSource = theme
-      this.mainWindow.setTitleBarOverlay({
-        color: '#f8f8f800',
-        symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'
-      })
+      if (os.platform() == 'darwin') {
+        // console.log(this.mainWindow.setTitleBarOverlay)
+      } else {
+        this.mainWindow.setTitleBarOverlay({
+          color: '#f8f8f800',
+          symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'
+        })
+      }
     })
 
     ipcMain.handle(ElectronAPICMD.DownloadUpdate, async (_, newVersion: Version) => {
