@@ -1,7 +1,7 @@
 export enum BizCode {
   SUCCESS = 8000,
-  FAIL = 4000,
-  ERROR = 1000,
+  FAIL = 9000,
+  ERROR = 4000,
 }
 
 export interface BizResponse<T> {
@@ -18,7 +18,7 @@ export class BizFail {
   msg: string
 
   constructor(code: number, msg: string) {
-    if (code < BizCode.FAIL || code > 5000) throw 'biz code must between 4000~5000'
+    if (code < 10000 || code >= BizCode.FAIL) throw 'biz code must between 9000~10000'
     this.code = code
     this.msg = msg
   }
@@ -53,7 +53,7 @@ export interface BizContext {
   token?: string,
   uid?: string, // 用户ID
   did: string, // 设备ID
-  ua: string, // UserAgent example: mapi/1.0 (Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)
+  scheme: string, // UserAgent example: mapi/1.0
   network: UserNetwork,
   deviceInfo: UserDevice,
   appId: string,

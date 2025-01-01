@@ -1,5 +1,7 @@
-export { ICommonService } from './common.service'
-export { IMockService } from './mock.service'
-export { IProxyService } from './proxy.service'
-export { IPushService } from './push.service'
+export * from './common.service'
+export * from './mock.service'
+export * from './proxy.service'
+export * from './push.service'
+
+export * from './mapi.service'
 
