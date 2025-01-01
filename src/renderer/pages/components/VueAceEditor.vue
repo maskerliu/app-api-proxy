@@ -4,7 +4,11 @@
     <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app">
       <audio v-show="previewType == 0" controls preload="auto" style="width: 100%; height: 120px;"
         :src="audioSrc"></audio>
-      <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" />
+      <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" show-loading>
+        <template v-slot:loading>
+          <van-loading type="spinner" size="20" />
+        </template>
+      </van-image>
       <video v-show="previewType == 2" controls width="100%" :src="videoSrc"></video>
     </van-popup>
   </div>
@@ -90,8 +94,7 @@ onMounted(() => {
   _editor.session.setOptions({
     mode: `ace/mode/${props.lang}`,
     tabSize: _defOpts.tabSize,
-    foldStyle: _defOpts.foldStyle,
-    useWrapMode: true,
+    foldStyle: _defOpts.foldStyle
   })
 
   if (props.fold) _editor.session.foldAll()

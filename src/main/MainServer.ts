@@ -10,7 +10,7 @@ import tcpPortUsed from 'tcp-port-used'
 import { LocalServerConfig } from '../common/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, USER_DATA_DIR } from './MainConst'
-import { AppMockRouter } from './router/AppMockRouter'
+import { AppMockRouter, MapiRouter } from './router'
 import { ICommonService, IProxyService, IPushService } from './service'
 
 export class MainServer {
@@ -20,6 +20,7 @@ export class MainServer {
   private httpServer: Server
   private httpApp: Application
 
+  private mapiRouter: MapiRouter
   private appmockRouter: AppMockRouter
   private commonService: ICommonService
   private proxyService: IProxyService
@@ -27,6 +28,7 @@ export class MainServer {
 
   bootstrap() {
     this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
+    this.mapiRouter = bizContainer.get(IocTypes.MapiRouter)
     this.commonService = bizContainer.get(IocTypes.CommonService)
     this.pushService = bizContainer.get(IocTypes.PushService)
     this.proxyService = bizContainer.get(IocTypes.ProxyService)
@@ -106,6 +108,8 @@ export class MainServer {
     this.httpApp.use(fileUpload())
 
     this.httpApp.use('/appmock', this.appmockRouter.router)
+
+    this.httpApp.use('/mapi', this.mapiRouter.router)
 
     this.httpApp.use('/mediaproxy', (req: any, resp: Response) => {
       this.proxyCorsMedia(req, resp)
