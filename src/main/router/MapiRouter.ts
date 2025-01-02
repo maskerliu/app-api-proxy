@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from "../MainConst"
 import { IMapiService } from "../service"
-import { BaseRouter, ParamType } from "./BaseRouter"
+import { ApiInfo, BaseRouter, ParamType } from "./BaseRouter"
 
 @injectable()
 export class MapiRouter extends BaseRouter {
@@ -11,33 +11,39 @@ export class MapiRouter extends BaseRouter {
   @inject(IocTypes.MapiService)
   private mapiService: IMapiService
 
+  private apiInfos: Array<ApiInfo> = [
+    {
+      method: 'post', path: '/login', func: 'login', target: 'mapiService',
+      params: [
+        { key: 'username', val: ParamType.Query },
+        { key: 'password', val: ParamType.Query }]
+    },
+    {
+      method: 'post', path: '/logout', func: 'logout', target: 'mapiService',
+      params: [{ key: 'x-token', val: ParamType.Header }]
+    },
+    {
+      method: 'post', path: '/register', func: 'register', target: 'mapiService',
+      params: [
+        { key: 'username', val: ParamType.Query },
+        { key: 'password', val: ParamType.Query },
+        { key: 'userInfo', val: ParamType.JsonBody }]
+    },
+    {
+      method: 'get', path: '/user/:uid', func: 'getUserInfo', target: 'mapiService',
+      params: [{ key: 'uid', val: ParamType.Path }]
+    }
+  ]
+
+
   constructor() {
     super()
 
-    this.router.post('/login', (req: Request, resp: Response) => {
-      let paramInfos = [{ key: 'username', val: ParamType.Query }, { key: 'password', val: ParamType.Query }]
-      this.route(req, resp, this.mapiService.login, this.mapiService, paramInfos)
-    })
 
-    this.router.post('/logout', (req: Request, resp: Response) => {
-      let paramInfos = [{ key: 'x-token', val: ParamType.Header }]
-      this.route(req, resp, this.mapiService.logout, this.mapiService, paramInfos)
+    this.apiInfos.forEach(item => {
+      this.router[item.method](item.path, (req: Request, resp: Response) => {
+        this.route(req, resp, item.func, this.mapiService, item.params, true)
+      })
     })
-
-    this.router.post('/register', (req: Request, resp: Response) => {
-      let paramInfos = [
-        { key: 'username', val: ParamType.Query },
-        { key: 'password', val: ParamType.Query },
-        { key: 'userInfo', val: ParamType.JsonBody }
-      ]
-      this.route(req, resp, this.mapiService.register, this.mapiService, paramInfos)
-    })
-
-    this.router.get('/user/:uid', (req: Request, resp: Response) => {
-      let paramInfos = [{ key: 'uid', val: ParamType.Path }]
-      this.route(req, resp, this.mapiService.getUserInfo, this.mapiService, paramInfos)
-    })
-
   }
-
 }

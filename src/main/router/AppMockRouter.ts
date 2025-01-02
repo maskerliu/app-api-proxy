@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from '../MainConst'
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
-import { BaseRouter, ParamType } from './BaseRouter'
+import { ApiInfo, BaseRouter, ParamType } from './BaseRouter'
 
 @injectable()
 export class AppMockRouter extends BaseRouter {
@@ -17,49 +17,47 @@ export class AppMockRouter extends BaseRouter {
   @inject(IocTypes.ProxyService)
   private proxyService: IProxyService
 
-  constructor() {
-    super()
 
-    this.router.post('/register', async (req: any, resp: Response) => {
-      let paramInfos = [{ key: 'uid', val: ParamType.Query }]
-      await this.route(req, resp, this.commonService.register, this.commonService, paramInfos)
-    })
-
-    this.router.get('/getAllPushClients', (req: any, resp: Response) => {
-      this.route(req, resp, this.pushService.getAllPushClients, this.pushService, [])
-    })
-
-    this.router.get('/getServerConfig', (req: Request, resp: Response) => {
-      this.route(req, resp, this.commonService.getServerConfig, this.commonService, [])
-    })
-
-    this.router.post('/saveProxyConfig', (req: any, resp: Response) => {
-      let paramInfos = [{ key: 'uid', val: ParamType.Query }, { key: 'config', val: ParamType.JsonBody }]
-      this.route(req, resp, this.proxyService.saveProxyConfig, this.proxyService, paramInfos)
-    })
-
-    this.router.get('/searchMockRules', (req: any, resp: Response) => {
-      let paramInfos = [{ key: 'uid', val: ParamType.Query }, { key: 'keyword', val: ParamType.Query }]
-      this.route(req, resp, this.mockService.searchMockRules, this.mockService, paramInfos)
-    })
-
-    this.router.get('/getMockRuleDetail', (req: Request, resp: Response) => {
-      let paramInfos = [{ key: 'uid', val: ParamType.Query }, { key: 'ruleId', val: ParamType.Query }]
-      this.route(req, resp, this.mockService.getMockRuleDetail, this.mockService, paramInfos)
-    })
-
-    this.router.post('/saveMockRule', (req: Request, resp: Response) => {
-      let paramInfos = [
+  private apiInfo: Array<ApiInfo> = [
+    {
+      method: 'post', path: '/register', func: 'register', target: 'commonService',
+      params: [{ key: 'uid', val: ParamType.Query }]
+    },
+    { method: 'get', path: '/getAllPushClients', func: 'getAllPushClients', target: 'pushService' },
+    { method: 'get', path: '/getServerConfig', func: 'getServerConfig', target: 'commonService' },
+    {
+      method: 'post', path: '/saveProxyConfig', func: 'saveProxyConfig', target: 'proxyService',
+      params: [{ key: 'uid', val: ParamType.Query }, { key: 'config', val: ParamType.JsonBody }]
+    },
+    {
+      method: 'get', path: '/searchMockRules', func: 'searchMockRules', target: 'mockService',
+      params: [{ key: 'uid', val: ParamType.Query }, { key: 'keyword', val: ParamType.Query }]
+    },
+    {
+      method: 'get', path: '/getMockRuleDetail', func: 'getMockRuleDetail', target: 'mockService',
+      params: [{ key: 'uid', val: ParamType.Query }, { key: 'ruleId', val: ParamType.Query }]
+    },
+    {
+      method: 'post', path: '/saveMockRule', func: 'saveMockRule', target: 'mockService',
+      params: [
         { key: 'uid', val: ParamType.Query },
         { key: 'onlySnap', val: ParamType.Query },
         { key: 'rule', val: ParamType.JsonBody }
       ]
-      this.route(req, resp, this.mockService.saveMockRule, this.mockService, paramInfos)
-    })
+    },
+    {
+      method: 'post', path: '/deleteMockRule', func: 'deleteMockRule', target: 'mockService',
+      params: [{ key: 'uid', val: ParamType.Query }, { key: 'ruleId', val: ParamType.Query }]
+    },
+  ]
 
-    this.router.post('/deleteMockRule', (req: any, resp: Response) => {
-      let paramInfos = [{ key: 'uid', val: ParamType.Query }, { key: 'ruleId', val: ParamType.Query }]
-      this.route(req, resp, this.mockService.deleteMockRule, this.mockService, paramInfos)
+  constructor() {
+    super()
+
+    this.apiInfo.forEach(item => {
+      this.router[item.method](item.path, (req: Request, resp: Response) => {
+        this.route(req, resp, item.func, item.target, item.params, false)
+      })
     })
   }
 }
