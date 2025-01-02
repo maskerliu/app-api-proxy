@@ -16,36 +16,55 @@ export enum ParamType {
   FileBody,
 }
 
+export interface ParamInfo {
+  key: string
+  type: ParamType
+}
+
 export interface ApiInfo {
   func: string,
   method: string,
   target: string,
   path: string
   desc?: string
-  params?: Array<{ key: string, val: ParamType }>
+  params?: Array<ParamInfo>
 }
 
-export class BaseRouter {
+export abstract class BaseRouter {
 
   private _router: Router
+  private _apiInfos: Array<ApiInfo> = []
 
   constructor() {
     this._router = express.Router()
+
+    this.initApiInfos()
+
+    this._apiInfos.forEach(item => {
+      this.router[item.method](item.path, (req: Request, resp: Response) => {
+        this.route(req, resp, item.func, item.target, item.params, true)
+      })
+    })
+  }
+
+  protected abstract initApiInfos(): void
+
+  protected addApiInfo(apiInfo: ApiInfo): void {
+    this._apiInfos.push(apiInfo)
   }
 
   public get router() { return this._router }
 
   protected async route(req: Request, resp: Response, func: string, target: any,
-    paramInfos?: Array<{ key: string, val: ParamType }>, hasContext: boolean = false) {
+    paramInfos?: Array<ParamInfo>, hasContext: boolean = false) {
 
-    let params = paramInfos?.map(item => this.parseParam(req, item.key, item.val))
+    let params = paramInfos?.map(item => this.parseParam(req, item.key, item.type))
     if (params == null) params = []
     if (hasContext) { params.push(this.parseContext(req)) }
     let bizResp: BizResponse<any>
     try {
       let instance = await Reflect.get(this, target)
-      let fun = await Reflect.get(instance, func)
-      let result = await Reflect.apply(fun, instance, params)
+      let result = await Reflect.apply(Reflect.get(instance, func), instance, params)
       if (result == null) {
         bizResp = { code: BizCode.FAIL, msg: 'biz inner error, no result found' }
       } else {
@@ -117,7 +136,6 @@ export class BaseRouter {
       let [brand, model] = regArr[3].split(':')
       let [appId, appVersion] = regArr[2].split(' ')
       channel = regArr[4]
-
       deviceInfo = { os, version, brand, model }
     }
     let context: BizContext = {

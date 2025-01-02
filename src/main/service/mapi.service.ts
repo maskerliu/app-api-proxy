@@ -64,6 +64,7 @@ export class MapiService implements IMapiService {
   register(username: string, password: string, useInfo: Mapi.UserInfo): String {
     try {
 
+      console.log('register', useInfo)
       return 'register success'
     } catch (err) {
       console.error(err)
