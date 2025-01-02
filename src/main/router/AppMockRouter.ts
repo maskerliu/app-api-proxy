@@ -1,9 +1,8 @@
-import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from '../MainConst'
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
-import { ApiInfo, BaseRouter, ParamType } from './BaseRouter'
+import { BaseRouter, ParamType } from './BaseRouter'
 
 @injectable()
 export class AppMockRouter extends BaseRouter {
@@ -17,47 +16,45 @@ export class AppMockRouter extends BaseRouter {
   @inject(IocTypes.ProxyService)
   private proxyService: IProxyService
 
-
-  private apiInfo: Array<ApiInfo> = [
-    {
+  override initApiInfos(): void {
+    this.addApiInfo({
       method: 'post', path: '/register', func: 'register', target: 'commonService',
-      params: [{ key: 'uid', val: ParamType.Query }]
-    },
-    { method: 'get', path: '/getAllPushClients', func: 'getAllPushClients', target: 'pushService' },
-    { method: 'get', path: '/getServerConfig', func: 'getServerConfig', target: 'commonService' },
-    {
+      params: [{ key: 'uid', type: ParamType.Query }]
+    })
+    this.addApiInfo({
+      method: 'get', path: '/getAllPushClients', func: 'getAllPushClients', target: 'pushService'
+    })
+    this.addApiInfo({
+      method: 'get', path: '/getServerConfig', func: 'getServerConfig', target: 'commonService'
+    })
+    this.addApiInfo({
       method: 'post', path: '/saveProxyConfig', func: 'saveProxyConfig', target: 'proxyService',
-      params: [{ key: 'uid', val: ParamType.Query }, { key: 'config', val: ParamType.JsonBody }]
-    },
-    {
+      params: [{ key: 'uid', type: ParamType.Query }, { key: 'config', type: ParamType.JsonBody }]
+    })
+
+    this.addApiInfo({
       method: 'get', path: '/searchMockRules', func: 'searchMockRules', target: 'mockService',
-      params: [{ key: 'uid', val: ParamType.Query }, { key: 'keyword', val: ParamType.Query }]
-    },
-    {
+      params: [{ key: 'uid', type: ParamType.Query }, { key: 'keyword', type: ParamType.Query }]
+    })
+
+    this.addApiInfo({
       method: 'get', path: '/getMockRuleDetail', func: 'getMockRuleDetail', target: 'mockService',
-      params: [{ key: 'uid', val: ParamType.Query }, { key: 'ruleId', val: ParamType.Query }]
-    },
-    {
+      params: [{ key: 'uid', type: ParamType.Query }, { key: 'ruleId', type: ParamType.Query }]
+    })
+
+    this.addApiInfo({
       method: 'post', path: '/saveMockRule', func: 'saveMockRule', target: 'mockService',
       params: [
-        { key: 'uid', val: ParamType.Query },
-        { key: 'onlySnap', val: ParamType.Query },
-        { key: 'rule', val: ParamType.JsonBody }
+        { key: 'uid', type: ParamType.Query },
+        { key: 'onlySnap', type: ParamType.Query },
+        { key: 'rule', type: ParamType.JsonBody }
       ]
-    },
-    {
-      method: 'post', path: '/deleteMockRule', func: 'deleteMockRule', target: 'mockService',
-      params: [{ key: 'uid', val: ParamType.Query }, { key: 'ruleId', val: ParamType.Query }]
-    },
-  ]
-
-  constructor() {
-    super()
-
-    this.apiInfo.forEach(item => {
-      this.router[item.method](item.path, (req: Request, resp: Response) => {
-        this.route(req, resp, item.func, item.target, item.params, false)
-      })
     })
+
+    this.addApiInfo({
+      method: 'post', path: '/deleteMockRule', func: 'deleteMockRule', target: 'mockService',
+      params: [{ key: 'uid', type: ParamType.Query }, { key: 'ruleId', type: ParamType.Query }]
+    })
+
   }
 }

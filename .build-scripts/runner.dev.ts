@@ -8,6 +8,7 @@ import webpack from 'webpack'
 import WebpackDevServer from 'webpack-dev-server'
 import WebpackHotMiddleware from 'webpack-hot-middleware'
 import pkg from '../package.json' assert { type: "json" }
+import { getLocalIPs } from './misc'
 import { BaseConfig } from './webpack.base.config.js'
 import mainConfig from './webpack.main.config'
 import rendererConfig from './webpack.renderer.config'
@@ -23,14 +24,13 @@ let electronProc: ChildProcess | null = null
 let manualRestart = false
 let hotMiddleware: any
 
-function startDevServer(config: BaseConfig, port: number): Promise<void> {
+function startDevServer(config: BaseConfig, host: string, port: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     config.mode = Run_Mode_DEV
     const compiler = webpack(config)
 
     let serverConfig: WebpackDevServer.Configuration = {
-      port: port,
-      hot: true,
+      host, port, hot: true,
       liveReload: true,
       allowedHosts: "all",
       client: { logging: 'none' },
@@ -175,10 +175,12 @@ async function start() {
   console.log(chalk.bgGreen.white('    getting ready...'.padEnd(process.stdout.columns - 20, ' ')))
 
   try {
-    let localIPv4 = WebpackDevServer.internalIPSync('v4')
+    let ips = getLocalIPs()
+    let localIPv4 = ips[0].address
+
     await Promise.all([
-      startDevServer(webConfig.init(localIPv4), 9081),
-      startDevServer(rendererConfig.init(localIPv4), 9080),
+      startDevServer(webConfig.init(localIPv4), localIPv4, 9081),
+      startDevServer(rendererConfig.init(localIPv4), 'localhost', 9080),
       startMain()
     ])
 

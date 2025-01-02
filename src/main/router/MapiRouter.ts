@@ -1,9 +1,8 @@
-import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from "../MainConst"
 import { IMapiService } from "../service"
-import { ApiInfo, BaseRouter, ParamType } from "./BaseRouter"
+import { BaseRouter, ParamType } from "./BaseRouter"
 
 @injectable()
 export class MapiRouter extends BaseRouter {
@@ -11,39 +10,33 @@ export class MapiRouter extends BaseRouter {
   @inject(IocTypes.MapiService)
   private mapiService: IMapiService
 
-  private apiInfos: Array<ApiInfo> = [
-    {
+  override initApiInfos(): void {
+
+    console.log(this.mapiService)
+
+    this.addApiInfo({
       method: 'post', path: '/login', func: 'login', target: 'mapiService',
       params: [
-        { key: 'username', val: ParamType.Query },
-        { key: 'password', val: ParamType.Query }]
-    },
-    {
+        { key: 'username', type: ParamType.Query },
+        { key: 'password', type: ParamType.Query }]
+    })
+
+    this.addApiInfo({
       method: 'post', path: '/logout', func: 'logout', target: 'mapiService',
-      params: [{ key: 'x-token', val: ParamType.Header }]
-    },
-    {
+      params: [{ key: 'x-token', type: ParamType.Header }]
+    })
+
+    this.addApiInfo({
       method: 'post', path: '/register', func: 'register', target: 'mapiService',
       params: [
-        { key: 'username', val: ParamType.Query },
-        { key: 'password', val: ParamType.Query },
-        { key: 'userInfo', val: ParamType.JsonBody }]
-    },
-    {
+        { key: 'username', type: ParamType.Query },
+        { key: 'password', type: ParamType.Query },
+        { key: 'userInfo', type: ParamType.JsonBody }]
+    })
+
+    this.addApiInfo({
       method: 'get', path: '/user/:uid', func: 'getUserInfo', target: 'mapiService',
-      params: [{ key: 'uid', val: ParamType.Path }]
-    }
-  ]
-
-
-  constructor() {
-    super()
-
-
-    this.apiInfos.forEach(item => {
-      this.router[item.method](item.path, (req: Request, resp: Response) => {
-        this.route(req, resp, item.func, this.mapiService, item.params, true)
-      })
+      params: [{ key: 'uid', type: ParamType.Path }]
     })
   }
 }
