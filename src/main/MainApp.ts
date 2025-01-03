@@ -30,36 +30,26 @@ export default class MainApp {
 
   constructor() {
     this.iconDir = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
-    let ext = ''
-    switch (os.platform()) {
-      case 'win32':
-        ext = 'ico'
-        break
-      case 'darwin':
-      case 'linux':
-        ext = 'png'
-        break
-    }
+    let ext = os.platform() == 'win32' ? 'ico' : 'png'
     this.trayIconFile = path.join(this.iconDir, `icon.${ext}`)
     this.mainServer.bootstrap()
   }
 
   public async startApp() {
-    console.log(os.platform(), os.release(), process.version, process.electron)
-    if (process.env.NODE_ENV == 'development') {
-      app.commandLine.appendSwitch('trace-warnings')
-      app.commandLine.appendSwitch('experimental-worker')
-      app.commandLine.appendSwitch('experimental-wasm-threads')
-      app.commandLine.appendSwitch('inspect', '5858')
-      app.commandLine.appendSwitch('unhandled-rejections', 'strict')
-      app.commandLine.appendSwitch('trace-deprecation')
-    }
-
+    app.disableHardwareAcceleration()
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
     app.commandLine.appendSwitch('disable-gpu')
-    // app.commandLine.appendSwitch('disable-software-rasterizer')
-    app.disableHardwareAcceleration()
+    app.commandLine.appendSwitch('disable-software-rasterizer')
+
+    if (process.env.NODE_ENV == 'development') {
+      app.commandLine.appendSwitch('trace-deprecation')
+      app.commandLine.appendSwitch('trace-warnings')
+      app.commandLine.appendSwitch('experimental-worker')
+      app.commandLine.appendSwitch('experimental-wasm-threads')
+      app.commandLine.appendSwitch('unhandled-rejections', 'strict')
+      app.commandLine.appendSwitch('inspect', '5858')
+    }
 
     if (os.platform() == 'linux' && os.userInfo().username == 'root') {
       app.commandLine.appendSwitch('disable-chromium-sandbox')
@@ -134,6 +124,7 @@ export default class MainApp {
       titleBarOverlay: { color: "#f8f8f800", symbolColor: "black" },
       trafficLightPosition: { x: os.platform() == 'darwin' ? 1030 : 10, y: 10 },
       webPreferences: {
+        offscreen: false,
         webSecurity: false,
         devTools: true, //process.env.NODE_ENV == 'development',
         nodeIntegration: true,
@@ -144,7 +135,6 @@ export default class MainApp {
 
     this.mainWindow = new BrowserWindow(winOpt)
     this.mainWindow.loadURL(this.winURL)
-    this.mainWindow.webContents.frameRate = 30
     this.mainWindow.setVibrancy('window')
 
     this.mainWindow.on('resize', () => {
@@ -171,16 +161,16 @@ export default class MainApp {
         icon: path.join(this.iconDir, 'ic-rule.png'),
         label: '用例管理',
         click: () => {
-          this.mainWindow.show()
-          this.mainWindow.webContents.send(ElectronAPICMD.OpenMockRuleMgr)
+          this.mainWindow?.show()
+          this.mainWindow?.webContents.send(ElectronAPICMD.OpenMockRuleMgr)
         }
       },
       {
         icon: path.join(this.iconDir, 'ic-setting.png'),
         label: '设置',
         click: () => {
-          this.mainWindow.show()
-          this.mainWindow.webContents.send(ElectronAPICMD.OpenSettings)
+          this.mainWindow?.show()
+          this.mainWindow?.webContents.send(ElectronAPICMD.OpenSettings)
         }
       },
       {
@@ -251,7 +241,6 @@ export default class MainApp {
   private initIPCService() {
 
     ipcMain.handle(ElectronAPICMD.Relaunch, (_) => {
-      console.log(process.resourcesPath)
       if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
         const logPath = app.getPath('logs')
         const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
@@ -313,19 +302,7 @@ export default class MainApp {
   }
 
   async fullUpdate(version: Version) {
-    let ext = ''
-    switch (os.platform()) {
-      case 'win32':
-        ext = 'exe'
-        break
-      case 'darwin':
-        ext = 'zip'
-        break
-      case 'linux':
-        ext = 'AppImage'
-        break
-    }
-
+    let ext = os.platform() == 'linux' ? 'AppImage' : os.platform() == 'darwin' ? 'zip' : 'exe'
     let downloadDir = path.join(USER_DATA_DIR, 'update', `installer-${version.version}.${ext}`)
     if (os.platform() == 'linux') downloadDir.replace(/ /g, "\\ ")
 
@@ -385,7 +362,10 @@ export default class MainApp {
       // https://github.com/electron-userland/electron-builder/issues/1129
       const errorCode = (e as NodeJS.ErrnoException).code
       console.log(
-        `Cannot run installer: error code: ${errorCode}, error message: "${e.message}", will be executed again using elevate if EACCES, and will try to use electron.shell.openItem if ENOENT`
+        `Cannot run installer: 
+        error code: ${errorCode}, 
+        error message: "${e.message}", 
+        will be executed again using elevate if EACCES, and will try to use electron.shell.openItem if ENOENT`
       )
       if (errorCode === "UNKNOWN" || errorCode === "EACCES") {
         callUsingElevation()

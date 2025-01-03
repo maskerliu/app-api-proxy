@@ -1,5 +1,7 @@
 import express, { Request, Response, Router } from "express"
+import formidable from 'formidable'
 import JSONBig from 'json-bigint'
+import multer from 'multer'
 import { BizCode, BizContext, BizFail, BizResponse, UserDevice, UserNetwork } from "../../common/base.models"
 
 const BIZ_HEADER_TOKEN = 'x-token'
@@ -29,6 +31,17 @@ export interface ApiInfo {
   desc?: string
   params?: Array<ParamInfo>
 }
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, '/tmp/my-uploads')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, file.fieldname + '-' + uniqueSuffix)
+  }
+})
+const upload = multer({ storage: storage })
 
 export abstract class BaseRouter {
 
@@ -122,13 +135,7 @@ export abstract class BaseRouter {
       scheme = regArr[0].trim() // Mozilla/5.0 
       const os = regArr[1].trim().substring(1, regArr[1].length - 1).split(';')[0] // (Windows NT 10.0; Win64; x64)
       const [brand, _] = regArr[4].trim().split(' ') // Chrome/131.0.0.0 Safari/537.36
-      console.log(scheme, os, platform)
-      deviceInfo = {
-        os,
-        version: '',
-        brand,
-        model: ''
-      }
+      deviceInfo = { os, version: '', brand, model: '' }
     } else {
       let regArr = ua.match(/[0-9A-Za-z\/\.\s:-]+/g)
       scheme = regArr[0]
@@ -175,15 +182,30 @@ export abstract class BaseRouter {
   }
 
   protected parseBody(req: Request, name: string) {
-    let contentType = req.headers['content-type']
+    let [contentType, charset, _] = req.headers['content-type'].match(/[\da-zA-Z\:\/\-\=]+/g)
     let body: any
-    if (contentType.indexOf('multipart/form-data') !== -1) {
+    console.log(contentType, charset, req.path)
+    if (contentType == 'multipart/form-data') {
+
+      const form = formidable({ multiples: true })
       try {
+
+        form.parse(req, (err, fields, files) => {
+
+          if (err) {
+            console.error(err)
+            return
+          }
+          console.log(fields, files)
+        })
+        console.log(name, req.files)
         body = JSONBig.parse(req.body[name]) // try parse as JSON object
+        console.log('parseBody', body)
       } catch (err) {
+        console.log(err)
         body = req.body[name] // just as plain text
       }
-    } else if (contentType.indexOf('application/json') !== -1) {
+    } else if (contentType == 'application/json') {
       body = JSONBig.parse(req.body)
     } else {
       body = null
@@ -193,7 +215,3 @@ export abstract class BaseRouter {
   }
 
 }
-
-
-
-

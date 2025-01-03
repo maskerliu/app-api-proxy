@@ -53,7 +53,6 @@ export class MapiService implements IMapiService {
   }
 
   login(username: string, password: string, context: BizContext): String {
-    console.log('login', context)
     return 'token11111'
   }
 
@@ -61,10 +60,10 @@ export class MapiService implements IMapiService {
     return 'logout success'
   }
 
-  register(username: string, password: string, useInfo: Mapi.UserInfo): String {
+  register(username: string, password: string, userInfo: Mapi.UserInfo): String {
     try {
 
-      console.log('register', useInfo)
+      console.log('register', userInfo)
       return 'register success'
     } catch (err) {
       console.error(err)

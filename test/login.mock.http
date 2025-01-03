@@ -1,0 +1,11 @@
+@baseUrl="http://localhost:8884/mapi/"
+
+
+POST http://localhost:8884/mapi/login
+x-ua: mapi/1.0(Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)
+Content-Type: application/json
+
+{
+  "username": "test",
+  "password": "test"
+}

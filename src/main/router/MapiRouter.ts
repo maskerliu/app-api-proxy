@@ -10,10 +10,11 @@ export class MapiRouter extends BaseRouter {
   @inject(IocTypes.MapiService)
   private mapiService: IMapiService
 
+  constructor() {
+    super()
+  }
+
   override initApiInfos(): void {
-
-    console.log(this.mapiService)
-
     this.addApiInfo({
       method: 'post', path: '/login', func: 'login', target: 'mapiService',
       params: [
