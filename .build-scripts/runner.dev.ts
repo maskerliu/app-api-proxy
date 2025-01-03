@@ -101,8 +101,8 @@ function startMain(): Promise<void> {
         if (process.platform === "win32") {
           const pid = electronProc.pid
           exec(`TASKKILL /F /IM electron.exe`, (err, data) => {
-            if (err) console.log(err)
-            else console.log(chalk['green']("kill pid: " + pid + " success!"))
+            if (err) console.log(chalk.bgRed.white(err))
+            else console.log(chalk.bgRedBright.whiteBright(`    kill pid: ${pid} success!`.padEnd(process.stdout.columns - 20, ' ')))
             electronProc = null
             startElectron()
             manualRestart = false
@@ -122,16 +122,11 @@ function startMain(): Promise<void> {
 function startElectron() {
 
   let args = [
-    // '--trace-warnings',
-    // '--inspect=5858',
-    // '--experimental-worker',
-    // '--experimental-wasm-threads',
-    // '--unhandled-rejections=strict',
     path.join(dirname, '../dist/electron/main.cjs')
   ]
 
   if (process.platform !== 'linux') {
-    args.push('--remote-debugging-port=9223', '--experimental-wasm-bulk-memory')
+    // args.push('--remote-debugging-port=9223', '--experimental-wasm-bulk-memory')
   } else {
     args.push('--no-sandbox')
   }
@@ -144,12 +139,16 @@ function startElectron() {
   }
 
   electronProc = spawn('electron', args, {
-    stdio: ['inherit', 'inherit', 'inherit'],
+    detached: false,
+    stdio: 'inherit',
     shell: process.platform === 'win32'
   })
-  electronProc.stdout?.on('data', data => { consoleLog('Electron', data, 'blue') })
-  electronProc.stderr?.on('data', data => { consoleLog('Electron', data, 'red') })
-  electronProc.on('close', () => { if (!manualRestart) process.exit() })
+  // electronProc.stdout.on('data', data => { consoleLog('Electron', data, 'blue') })
+  // electronProc.stderr.on('data', data => { consoleLog('Electron', data, 'red') })
+  electronProc.on('close', (code) => {
+    console.log(chalk.bgYellow.blue(`    Electron Process Closed[${code}]`.padEnd(process.stdout.columns - 20, ' ')))
+    if (!manualRestart) process.exit()
+  })
 }
 
 function consoleLog(proc: string, data: any, color?: string) {
@@ -172,7 +171,7 @@ function consoleLog(proc: string, data: any, color?: string) {
 }
 
 async function start() {
-  console.log(chalk.bgGreen.white('    getting ready...'.padEnd(process.stdout.columns - 20, ' ')))
+  console.log(chalk.bgGreen.yellowBright('    getting ready...'.padEnd(process.stdout.columns - 20, ' ')))
 
   try {
     let ips = getLocalIPs()

@@ -24,10 +24,10 @@ export interface IMockService {
 export class MockService implements IMockService {
 
   @inject(IocTypes.PushService)
-  private readonly pushService: IPushService
+  private pushService: IPushService
 
   @inject(IocTypes.MockRepo)
-  private readonly mockRepo: IMockRepo
+  private mockRepo: IMockRepo
 
   private clientMockStatus: Map<string, string> = new Map()
 

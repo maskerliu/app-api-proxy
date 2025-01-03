@@ -27,10 +27,10 @@ export class ProxyService implements IProxyService {
   private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
   @inject(IocTypes.MocksService)
-  private readonly mockService: IMockService
+  private mockService: IMockService
 
   @inject(IocTypes.PushService)
-  private readonly pushService: IPushService
+  private pushService: IPushService
 
   constructor() {
     this._sessionId = 0
@@ -93,6 +93,7 @@ export class ProxyService implements IProxyService {
   }
 
   public async handleRequest(req: Request, resp: Response) {
+    console.log('proxy service:', req.path)
     let uid = req.header('mock-uid')
     // 清理无效配置
     if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
@@ -129,6 +130,7 @@ export class ProxyService implements IProxyService {
       bizResp = await this.mockService.mock(sessionId, req.header['mock-uid'], req.url, startTime, delay)
     } catch (err) {
       bizResp = await this.proxy(sessionId, req, startTime, delay)
+      console.log('proxy', bizResp)
     } finally {
       setTimeout(() => {
         resp.send(bizResp)
@@ -154,6 +156,8 @@ export class ProxyService implements IProxyService {
     }
 
     let requestUrl = originHost + req.path
+
+    console.log('proxy++:', requestUrl)
     if (this.proxyConfigs.has(uid)
       && this.proxyConfigs.get(uid).status
       && this.proxyConfigs.get(uid).dataServer != null) {
@@ -182,6 +186,7 @@ export class ProxyService implements IProxyService {
     let data: ProxyMock.ProxyRequestRecord
     try {
       let resp = await axios(options)
+      console.log('proxy--:', resp.data)
       data = {
         id: sessionId,
         type: ProxyMock.PorxyType.REQUEST_END,
@@ -193,7 +198,7 @@ export class ProxyService implements IProxyService {
       }
       return resp.data
     } catch (err: any) {
-      // console.error('axios', err.code)
+      console.error('axios', err.code)
       let resp = err.response
       let respData = !!resp ? resp.data : err.message
       data = {

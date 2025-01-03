@@ -2,7 +2,7 @@ import axios, { AxiosRequestConfig, HttpStatusCode, Method } from 'axios'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Request, Response } from 'express'
-import fileUpload from 'express-fileupload'
+// import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import { Server } from 'http'
 import path from 'path'
@@ -105,23 +105,21 @@ export class MainServer {
     this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
     this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
     this.httpApp.use(express.json())
-    this.httpApp.use(fileUpload())
+    // this.httpApp.use(fileUpload())
 
     this.httpApp.use('/appmock', this.appmockRouter.router)
 
     this.httpApp.use('/mapi', this.mapiRouter.router)
 
-    this.httpApp.use('/mediaproxy', (req: any, resp: Response) => {
-      this.proxyCorsMedia(req, resp)
-    })
+    this.httpApp.use('/mediaproxy', this.proxyCorsMedia)
+    this.httpApp.use('/_proxy', (req, resp: Response) => this.proxyService.handleRequest(req, resp))
 
-    this.httpApp.all('*', (req: any, resp: Response) => { this.handleRequest(req, resp) })
+    this.httpApp.all('*', (req: any, resp: Response) => this.handleRequest(req, resp))
   }
 
   private async startHttpServer() {
     let HTTP: any
     let baseDir = process.env.NODE_ENV == 'development' ? '' : __dirname + '/'
-    // console.log(this.buildConfig, baseDir)
     if (this.buildConfig.protocol == 'https') {
       HTTP = await import('https')
       var key = fs.readFileSync(baseDir + 'cert/private.key')
@@ -151,9 +149,8 @@ export class MainServer {
 
     this.httpServer.listen(
       this.commonService.serverConfig.port,
-      '0.0.0.0',
       () => {
-        console.log(`--启动本地代理Http服务[${this.commonService.serverConfig.port}]`)
+        console.log(`    http server bootstrap[${this.commonService.serverConfig.port}]`)
         let config = this.commonService.serverConfig
         config.portValid = true
         this.commonService.saveServerConfig(config)
@@ -163,7 +160,7 @@ export class MainServer {
   }
 
   private handleRequest(req: any, resp: Response) {
-    if (/^\/appmock\//.test(req.path)) return
+    // if (/^\/appmock\//.test(req.path)) return
     if (/^\/burying-point\//.test(req.path)) {
       let buf = []
       req.on('data', (data: any) => { buf.push(data) })
@@ -171,9 +168,10 @@ export class MainServer {
         req.rawbody = Buffer.concat(buf)
         this.proxyService.handleStatRequest(req, resp)
       })
-    } else {
-      this.proxyService.handleRequest(req, resp)
     }
+    //  else {
+    //   this.proxyService.handleRequest(req, resp)
+    // }
   }
 
   private async proxyCorsMedia(req: Request, resp: Response) {

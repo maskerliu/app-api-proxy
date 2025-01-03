@@ -1,7 +1,7 @@
 
 'use strict'
-import { install } from 'source-map-support'
 import path from 'path'
+import { install } from 'source-map-support'
 import MainApp from './MainApp'
 
 install()
@@ -11,8 +11,5 @@ if (process.env.NODE_ENV !== 'development') {
 }
 
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
-
-
 let mainApp = new MainApp()
-
 mainApp.startApp()
