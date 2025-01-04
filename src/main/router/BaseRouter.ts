@@ -1,5 +1,6 @@
 import express, { Request, Response, Router } from "express"
 import formidable from 'formidable'
+import { readFileSync } from "fs"
 import JSONBig from 'json-bigint'
 import { BizCode, BizContext, BizFail, BizResponse, UserDevice, UserNetwork } from "../../common/base.models"
 
@@ -14,15 +15,14 @@ const BIZ_HEADER_MOCK_UID = 'x-mock-uid'
 const MIME_MULTIPART = 'multipart/form-data'
 const MIME_JSON = 'application/json'
 const MIME_TEXT = 'text/plain'
+const MIME_IMAGE = 'image/jpeg'
 const MIME_FORM = 'application/x-www-form-urlencoded'
-type MIME_IMAGE = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
 
 export enum ParamType {
   Header,
   Path,
   Query,
-  JsonBody,
-  FileBody,
+  FormBody
 }
 
 export interface ParamInfo {
@@ -43,18 +43,17 @@ export abstract class BaseRouter {
 
   private _router: Router
   private _apiInfos: Array<ApiInfo> = []
-  private _form = formidable({ multiples: true })
+  private _form = formidable()
 
   constructor() {
     this._router = express.Router()
-
     this.initApiInfos()
 
-    this._apiInfos.forEach(item => {
-      this.router[item.method](item.path, async (req: Request, resp: Response) => {
-        await this.route(req, resp, item.func, item.target, item.params, true)
+    for (const item of this._apiInfos) {
+      this.router[item.method](item.path, (req: Request, resp: Response) => {
+        this.route(req, resp, item.func, item.target, item.params, true)
       })
-    })
+    }
   }
 
   protected abstract initApiInfos(): void
@@ -69,10 +68,12 @@ export abstract class BaseRouter {
     paramInfos?: Array<ParamInfo>, hasContext: boolean = false) {
 
     let params = []
-    paramInfos?.forEach(async (item) => {
-      let value = await this.parseParam(req, item.key, item.type)
-      params.push(value)
-    })
+    if (paramInfos != null) {
+      for (const item of paramInfos) {
+        let value = await this.parseParam(req, item.key, item.type)
+        params.push(value)
+      }
+    }
     if (hasContext) { params.push(this.parseContext(req)) }
     let bizResp: BizResponse<any>
     try {
@@ -166,8 +167,7 @@ export abstract class BaseRouter {
       case ParamType.Query:
         value = req.query[paramName]
         break
-      case ParamType.JsonBody:
-      case ParamType.FileBody:
+      case ParamType.FormBody:
         value = await this.parseBody(req, paramName)
         break
     }
@@ -180,10 +180,27 @@ export abstract class BaseRouter {
     let body: any
     if (contentType == MIME_MULTIPART) {
       try {
-        const _form = formidable()
-        let [fields, files] = await _form.parse(req)
-        console.log(fields)
-        console.log(name, files[name][0].toString(), files[name][0].mimetype)
+        // let _form = formidable({ multiples: true })
+        let [_, files] = await this._form.parse(req)
+        this._form.once('end', () => { this._form.removeAllListeners() })
+        let file = files[name][0]
+        switch (file.mimetype) {
+          case MIME_JSON:
+            let data = readFileSync(file.filepath, 'utf-8')
+            body = JSON.parse(data)
+            break
+          case MIME_TEXT:
+            body = readFileSync(file.filepath, 'utf-8')
+            break
+          case MIME_IMAGE:
+            body = file.filepath
+            break
+        }
+
+
+        // console.log(name, body)
+        // this._form.parse(req).then(([fields, files]) => {
+        // })
       } catch (err) {
         console.log(err)
         body = req.body[name] // just as plain text

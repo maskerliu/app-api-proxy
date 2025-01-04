@@ -30,9 +30,10 @@ export class MapiRouter extends BaseRouter {
     this.addApiInfo({
       method: 'post', path: '/register', func: 'register', target: 'mapiService',
       params: [
-        { key: 'username', type: ParamType.Query },
-        { key: 'password', type: ParamType.Query },
-        { key: 'userInfo', type: ParamType.JsonBody },
+        { key: 'username', type: ParamType.FormBody },
+        { key: 'password', type: ParamType.FormBody },
+        { key: 'userInfo', type: ParamType.FormBody },
+        { key: 'avatar', type: ParamType.FormBody }
       ]
     })
 

@@ -9,7 +9,7 @@ export interface IMapiService {
 
   logout(token: string): String
 
-  register(username: string, password: string, useInfo: Mapi.UserInfo): String
+  register(username: string, password: string, useInfo: Mapi.UserInfo): Mapi.UserInfo
 
   getUserInfo(uid: string, context: BizContext): Mapi.UserInfo
 }
@@ -53,17 +53,16 @@ export class MapiService implements IMapiService {
   }
 
   login(username: string, password: string, context: BizContext): String {
-    return 'token11111'
+    return `token11111${username}-${password}`
   }
 
   logout(token: string): String {
     return 'logout success'
   }
 
-  register(username: string, password: string, userInfo: Mapi.UserInfo): String {
+  register(username: string, password: string, userInfo: Mapi.UserInfo): Mapi.UserInfo {
     try {
-      // console.log('register', userInfo)
-      return 'register success'
+      return userInfo
     } catch (err) {
       console.error(err)
       throw new Error('register failed')
