@@ -62,8 +62,7 @@ export class MapiService implements IMapiService {
 
   register(username: string, password: string, userInfo: Mapi.UserInfo): String {
     try {
-
-      console.log('register', userInfo)
+      // console.log('register', userInfo)
       return 'register success'
     } catch (err) {
       console.error(err)
@@ -72,7 +71,6 @@ export class MapiService implements IMapiService {
   }
 
   getUserInfo(uid: string, context: BizContext): Mapi.UserInfo {
-    console.log('getUserInfo', context)
     return {
       username: 'test',
       email: 'lynx.chrisliu@live.com',

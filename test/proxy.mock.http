@@ -1,6 +1,49 @@
+@BaseUrl=http://192.168.31.185:8884/_proxy
+@HostUrl=http://192.168.31.185:8884/mapi
+@UA=mapi/1.0(Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)
+@MultiPartContent=multipart/form-data; charset=utf-8; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+@JsonContent=application/json; charset=utf-8
+@MockUid=XiKuSdUc1735915202741o
 
-POST http://192.168.41.111:8884/_proxy/user/XiKuSdUc1735915202741o
-x-ua: mapi/1.0(Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)
-mock-host: http://192.168.41.111:8884/mapi
-mock-uid: XiKuSdUc1735915202741o
-Content-Type: multipart/form-data; charset=utf-8; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+### get user info
+GET {{BaseUrl}}/user/XiKuSdUc1735915202741o
+x-ua: {{UA}}
+mock-host: {{HostUrl}}
+mock-uid: {{MockUid}}
+Content-Type: {{MultiPartContent}}
+
+
+### login
+POST {{BaseUrl}}/login
+x-ua: {{UA}}
+mock-host: {{HostUrl}}
+mock-uid: {{MockUid}}
+Content-Type: {{JsonContent}}
+
+### register
+POST {{{{BaseUrl}}}}/register
+x-ua: {{UA}}
+mock-host: {{HostUrl}}
+mock-uid: {{MockUid}}
+Content-Type: {{{MultiPartContent}}
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="username"; 
+Content-Type: text/plain
+
+christmas
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="password";
+Content-Type: text/plain
+
+123456
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="userInfo";
+Content-Type: text/plain
+
+"{\"nickname\":\"christmas\",\"password\":\"123456\",\"email\":\"avatar.jpg\"}"
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="avatar"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./avatar.jpeg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
