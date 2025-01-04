@@ -14,33 +14,32 @@
 @Token=eyJ
 @DevideId=123456
 @Network=4G
-@BaseUrl={{ProxyUrl}}
+@BaseUrl={{HostUrl}}
 @MockUid=XiKuSdUc1735915202741o
-
 @MimeJson=application/json
 @MimeText=text/plain
 @MimeImage=image/jpeg
 
 ### get user info
 GET {{BaseUrl}}/user/XiKuSdUc1735915202741o
-User-Agent: {{UA}}
 x-ua: {{MobiUA}}
 x-token: {{Token}}
 x-did: {{DevideId}}
 x-network: {{Network}}
 x-mock-host: {{HostUrl}}
 x-mock-uid: {{MockUid}}
+User-Agent: {{UA}}
 Content-Type: {{MultiPartContent}}
 
 ### login
 POST {{BaseUrl}}/login
-User-Agent: {{UA}}
 x-ua: {{MobiUA}}
 x-token: {{Token}}
 x-did: {{DevideId}}
 x-network: {{Network}}
 x-mock-host: {{HostUrl}}
 x-mock-uid: {{MockUid}}
+User-Agent: {{UA}}
 Content-Type: {{JsonContent}}
 
 {
@@ -49,14 +48,14 @@ Content-Type: {{JsonContent}}
 }
 
 ### register
-POST {{BaseUrl}}/register
-User-Agent: {{UA}}
+POST {{BaseUrl}}/register 
 x-ua: {{MobiUA}}
 x-token: {{Token}}
 x-did: {{DevideId}}
 x-network: {{Network}}
 x-mock-host: {{HostUrl}}
 x-mock-uid: {{MockUid}}
+User-Agent: {{UA}}
 Content-Type: {{MultiPartContent}}
   
 --{{Boundary}}
@@ -73,7 +72,7 @@ Content-Type: {{MimeText}}
 Content-Disposition: form-data; name="userInfo";
 Content-Type: {{MimeJson}}
 
-{"name":"christmas","age":18}
+{"name":"christmas","age":"{{$datetime iso8601}}"}
 --{{Boundary}}
 Content-Disposition: form-data; name="avatar"; filename="avatar.png"
 Content-Type: {{MimeImage}}
