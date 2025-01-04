@@ -32,7 +32,8 @@ export class MapiRouter extends BaseRouter {
       params: [
         { key: 'username', type: ParamType.Query },
         { key: 'password', type: ParamType.Query },
-        { key: 'userInfo', type: ParamType.JsonBody }]
+        { key: 'userInfo', type: ParamType.JsonBody },
+      ]
     })
 
     this.addApiInfo({

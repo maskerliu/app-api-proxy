@@ -145,8 +145,8 @@ function startElectron() {
   })
   // electronProc.stdout.on('data', data => { consoleLog('Electron', data, 'blue') })
   // electronProc.stderr.on('data', data => { consoleLog('Electron', data, 'red') })
-  electronProc.on('close', (code) => {
-    console.log(chalk.bgYellow.blue(`    Electron Process Closed[${code}]`.padEnd(process.stdout.columns - 20, ' ')))
+  electronProc.on('close', (code, signal) => {
+    console.log(chalk.bgYellow.blue(`    Electron Process Closed[${signal}]`.padEnd(process.stdout.columns - 20, ' ')))
     if (!manualRestart) process.exit()
   })
 }

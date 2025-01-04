@@ -1,7 +1,6 @@
 import express, { Request, Response, Router } from "express"
 import formidable from 'formidable'
 import JSONBig from 'json-bigint'
-import multer from 'multer'
 import { BizCode, BizContext, BizFail, BizResponse, UserDevice, UserNetwork } from "../../common/base.models"
 
 const BIZ_HEADER_TOKEN = 'x-token'
@@ -9,6 +8,14 @@ const BIZ_HEADER_UA = 'x-ua'
 const BIZ_HEADER_DEVICE = 'x-did'
 const BIZ_HEADER_AUTH = 'x-auth'
 const BIZ_HEADER_NETWORK = 'x-network'
+const BIZ_HEADER_MOCK_HOST = 'x-mock-host'
+const BIZ_HEADER_MOCK_UID = 'x-mock-uid'
+
+const MIME_MULTIPART = 'multipart/form-data'
+const MIME_JSON = 'application/json'
+const MIME_TEXT = 'text/plain'
+const MIME_FORM = 'application/x-www-form-urlencoded'
+type MIME_IMAGE = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
 
 export enum ParamType {
   Header,
@@ -32,21 +39,11 @@ export interface ApiInfo {
   params?: Array<ParamInfo>
 }
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, '/tmp/my-uploads')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix)
-  }
-})
-const upload = multer({ storage: storage })
-
 export abstract class BaseRouter {
 
   private _router: Router
   private _apiInfos: Array<ApiInfo> = []
+  private _form = formidable({ multiples: true })
 
   constructor() {
     this._router = express.Router()
@@ -54,8 +51,8 @@ export abstract class BaseRouter {
     this.initApiInfos()
 
     this._apiInfos.forEach(item => {
-      this.router[item.method](item.path, (req: Request, resp: Response) => {
-        this.route(req, resp, item.func, item.target, item.params, true)
+      this.router[item.method](item.path, async (req: Request, resp: Response) => {
+        await this.route(req, resp, item.func, item.target, item.params, true)
       })
     })
   }
@@ -71,8 +68,11 @@ export abstract class BaseRouter {
   protected async route(req: Request, resp: Response, func: string, target: any,
     paramInfos?: Array<ParamInfo>, hasContext: boolean = false) {
 
-    let params = paramInfos?.map(item => this.parseParam(req, item.key, item.type))
-    if (params == null) params = []
+    let params = []
+    paramInfos?.forEach(async (item) => {
+      let value = await this.parseParam(req, item.key, item.type)
+      params.push(value)
+    })
     if (hasContext) { params.push(this.parseContext(req)) }
     let bizResp: BizResponse<any>
     try {
@@ -123,18 +123,14 @@ export abstract class BaseRouter {
         netType = UserNetwork.UNKNOWN
     }
 
-    // let ua = 'mapi/1.0(Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)'
     let ua = req.headers[BIZ_HEADER_UA] as string
-    let scheme: string, platform: string, appId: string, appVersion: string, deviceInfo: UserDevice, channel: string
+    let scheme: string, appId: string, appVersion: string, deviceInfo: UserDevice, channel: string
     if (ua == null) {
       ua = req.headers['user-agent'] as string
-      // Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.118 Electron/33.2.0 Safari/537.36
-      // Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
-      let regArr = ua.match(/([a-zA-Z]+\/[0-9.]+)\s\(([^)]+)\)\s([a-zA-Z]+\/[0-9.]+)\s\(([^)]+)\)(\s([a-zA-Z]+\/[0-9.]+))/)
-      regArr = ua.match(/[\(]*[0-9A-Za-z;,_.\s\/]+[\)]*/g)
-      scheme = regArr[0].trim() // Mozilla/5.0 
-      const os = regArr[1].trim().substring(1, regArr[1].length - 1).split(';')[0] // (Windows NT 10.0; Win64; x64)
-      const [brand, _] = regArr[4].trim().split(' ') // Chrome/131.0.0.0 Safari/537.36
+      let regArr = ua.match(/[\(]*[0-9A-Za-z;,_.\s\/]+[\)]*/g)
+      scheme = regArr[0].trim()
+      const os = regArr[1].trim().substring(1, regArr[1].length - 1).split(';')[0]
+      const [brand, _] = regArr[4].trim().split(' ')
       deviceInfo = { os, version: '', brand, model: '' }
     } else {
       let regArr = ua.match(/[0-9A-Za-z\/\.\s:-]+/g)
@@ -158,7 +154,7 @@ export abstract class BaseRouter {
     return context
   }
 
-  protected parseParam(req: Request, paramName: string, type: ParamType) {
+  protected async parseParam(req: Request, paramName: string, type: ParamType) {
     let value: any
     switch (type) {
       case ParamType.Header:
@@ -171,41 +167,28 @@ export abstract class BaseRouter {
         value = req.query[paramName]
         break
       case ParamType.JsonBody:
-        value = this.parseBody(req, paramName)
-        break
       case ParamType.FileBody:
-        value = req.files[paramName]
+        value = await this.parseBody(req, paramName)
         break
     }
 
     return value
   }
 
-  protected parseBody(req: Request, name: string) {
+  protected async parseBody(req: Request, name: string) {
     let [contentType, charset, _] = req.headers['content-type'].match(/[\da-zA-Z\:\/\-\=]+/g)
     let body: any
-    console.log(contentType, charset, req.path)
-    if (contentType == 'multipart/form-data') {
-
-      const form = formidable({ multiples: true })
+    if (contentType == MIME_MULTIPART) {
       try {
-
-        form.parse(req, (err, fields, files) => {
-
-          if (err) {
-            console.error(err)
-            return
-          }
-          console.log(fields, files)
-        })
-        console.log(name, req.files)
-        body = JSONBig.parse(req.body[name]) // try parse as JSON object
-        console.log('parseBody', body)
+        const _form = formidable()
+        let [fields, files] = await _form.parse(req)
+        console.log(fields)
+        console.log(name, files[name][0].toString(), files[name][0].mimetype)
       } catch (err) {
         console.log(err)
         body = req.body[name] // just as plain text
       }
-    } else if (contentType == 'application/json') {
+    } else if (contentType == MIME_JSON) {
       body = JSONBig.parse(req.body)
     } else {
       body = null

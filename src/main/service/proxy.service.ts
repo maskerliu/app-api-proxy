@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from 'axios'
 import { Request, Response } from 'express'
 import { IncomingHttpHeaders } from 'http'
 import { inject, injectable } from 'inversify'
+import JSONBig from 'json-bigint'
 import "reflect-metadata"
 import zlib from 'zlib'
 import { ProxyMock } from '../../common'
@@ -9,8 +10,10 @@ import { IocTypes } from '../MainConst'
 import { IMockService } from './mock.service'
 import { IPushService } from './push.service'
 
-const JSONBigInt = require('json-bigint')
 let MockKey = null
+
+const MOCK_HOST = 'x-mock-host'
+const MOCK_UID = 'x-mock-uid'
 
 export interface IProxyService {
   getDataProxyServer(uid: string): ProxyMock.ProxyConfig
@@ -70,13 +73,13 @@ export class ProxyService implements IProxyService {
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
-        this.pushService.sendProxyMessage(req.header('mock-uid'), record)
+        this.pushService.sendProxyMessage(req.header(MOCK_UID), record)
 
-        let originHost = req.header('mock-host') != null ? req.header('mock-host') : req.header('host')
+        let originHost = req.header(MOCK_HOST) != null ? req.header(MOCK_HOST) : req.header('host')
         let headers = Object.assign({}, req.headers)
         delete headers['host']
-        delete headers['mock-host']
-        delete headers['mock-uid']
+        delete headers[MOCK_HOST]
+        delete headers[MOCK_UID]
 
         let options = {
           url: originHost + req.path,
@@ -93,8 +96,7 @@ export class ProxyService implements IProxyService {
   }
 
   public async handleRequest(req: Request, resp: Response) {
-    console.log('proxy service:', req.path)
-    let uid = req.header('mock-uid')
+    let uid = req.header(MOCK_UID)
     // 清理无效配置
     if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
 
@@ -106,7 +108,7 @@ export class ProxyService implements IProxyService {
       requestData = !!req.query ? req.query : null
     } else {
       try {
-        requestData = !!req.body && Object.keys(req.body).length > 0 ? JSONBigInt.parse(req.body) : null
+        requestData = !!req.body && Object.keys(req.body).length > 0 ? JSONBig.parse(req.body) : null
       } catch (err) {
         console.error('handleRequest', err)
       }
@@ -127,10 +129,9 @@ export class ProxyService implements IProxyService {
 
     let bizResp = null
     try {
-      bizResp = await this.mockService.mock(sessionId, req.header['mock-uid'], req.url, startTime, delay)
+      bizResp = await this.mockService.mock(sessionId, req.header[MOCK_UID], req.url, startTime, delay)
     } catch (err) {
       bizResp = await this.proxy(sessionId, req, startTime, delay)
-      console.log('proxy', bizResp)
     } finally {
       setTimeout(() => {
         resp.send(bizResp)
@@ -140,14 +141,14 @@ export class ProxyService implements IProxyService {
   }
 
   private async proxy(sessionId: number, req: Request, startTime: number, delay: number) {
-    let uid = req.header('mock-uid')
-    let originHost = req.header('mock-host') ? req.header('mock-host') : req.header('host')
+    let uid = req.header(MOCK_UID)
+    let originHost = req.header(MOCK_HOST) ? req.header(MOCK_HOST) : req.header('host')
     let headers = Object.assign({}, req.headers)
 
     headers['Mock-Key'] = MockKey
     delete headers['host']
-    delete headers['mock-host']
-    delete headers['mock-uid']
+    delete headers[MOCK_HOST]
+    delete headers[MOCK_UID]
 
     let axiosHeaders = {} as AxiosRequestHeaders
     let keys: keyof IncomingHttpHeaders
@@ -156,8 +157,6 @@ export class ProxyService implements IProxyService {
     }
 
     let requestUrl = originHost + req.path
-
-    console.log('proxy++:', requestUrl)
     if (this.proxyConfigs.has(uid)
       && this.proxyConfigs.get(uid).status
       && this.proxyConfigs.get(uid).dataServer != null) {
@@ -170,7 +169,7 @@ export class ProxyService implements IProxyService {
       headers: axiosHeaders,
       transformResponse: [
         (data: any) => {
-          return JSONBigInt.parse(data)
+          return JSONBig.parse(data)
         },
       ],
       timeout: ProxyService.PROXY_DEF_TIMEOUT,
@@ -186,9 +185,9 @@ export class ProxyService implements IProxyService {
     let data: ProxyMock.ProxyRequestRecord
     try {
       let resp = await axios(options)
-      console.log('proxy--:', resp.data)
       data = {
         id: sessionId,
+        url: req.url,
         type: ProxyMock.PorxyType.REQUEST_END,
         statusCode: resp.status,
         responseHeaders: !!resp.headers ? resp.headers : null,

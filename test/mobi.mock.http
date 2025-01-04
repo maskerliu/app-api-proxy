@@ -1,0 +1,82 @@
+
+@ProxyUrl=http://localhost:8884/_proxy
+@HostUrl=http://192.168.31.185:8884/mapi
+@UA_Win=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+@UA_Linux=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.118 Electron/33.2.0 Safari/537.36
+@UA_MAC=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.118 Safari/537.36
+@UA_Android=map/1.0(Android 12;com.github.lynxchina.argus 1.0.1;vivo:V2171A;huaiwei)
+@UA_IOS=map/1.0(iOS 12;com.github.lynxchina.argus 1.0.1;iphone:6s;appstore)
+@Boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+@MultiPartContent=multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+@JsonContent=application/json; charset=utf-8
+@UA={{UA_Win}}
+@MobiUA={{UA_Android}}
+@Token=eyJ
+@DevideId=123456
+@Network=4G
+@BaseUrl={{ProxyUrl}}
+@MockUid=XiKuSdUc1735915202741o
+
+@MimeJson=application/json
+@MimeText=text/plain
+@MimeImage=image/jpeg
+
+### get user info
+GET {{BaseUrl}}/user/XiKuSdUc1735915202741o
+User-Agent: {{UA}}
+x-ua: {{MobiUA}}
+x-token: {{Token}}
+x-did: {{DevideId}}
+x-network: {{Network}}
+x-mock-host: {{HostUrl}}
+x-mock-uid: {{MockUid}}
+Content-Type: {{MultiPartContent}}
+
+### login
+POST {{BaseUrl}}/login
+User-Agent: {{UA}}
+x-ua: {{MobiUA}}
+x-token: {{Token}}
+x-did: {{DevideId}}
+x-network: {{Network}}
+x-mock-host: {{HostUrl}}
+x-mock-uid: {{MockUid}}
+Content-Type: {{JsonContent}}
+
+{
+  "username": "test",
+  "password": "test"
+}
+
+### register
+POST {{BaseUrl}}/register
+User-Agent: {{UA}}
+x-ua: {{MobiUA}}
+x-token: {{Token}}
+x-did: {{DevideId}}
+x-network: {{Network}}
+x-mock-host: {{HostUrl}}
+x-mock-uid: {{MockUid}}
+Content-Type: {{MultiPartContent}}
+  
+--{{Boundary}}
+Content-Disposition: form-data; name="username";
+Content-Type: {{MimeText}}
+
+christmas
+--{{Boundary}}
+Content-Disposition: form-data; name="password";
+Content-Type: {{MimeText}}
+
+12345678
+--{{Boundary}}
+Content-Disposition: form-data; name="userInfo";
+Content-Type: {{MimeJson}}
+
+{"name":"christmas","age":18}
+--{{Boundary}}
+Content-Disposition: form-data; name="avatar"; filename="avatar.png"
+Content-Type: {{MimeImage}}
+
+< ./avatar.png
+--{{Boundary}}--
