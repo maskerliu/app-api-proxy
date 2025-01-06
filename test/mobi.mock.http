@@ -1,6 +1,6 @@
 
 @ProxyUrl=http://localhost:8884/_proxy
-@HostUrl=http://192.168.31.185:8884/mapi
+@HostUrl=http://localhost:8884/mapi
 @UA_Win=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
 @UA_Linux=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.118 Electron/33.2.0 Safari/537.36
 @UA_MAC=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.118 Safari/537.36
@@ -9,13 +9,16 @@
 @Boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 @MultiPartContent=multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 @JsonContent=application/json; charset=utf-8
+@EncodeForm=application/x-www-form-urlencoded
 @UA={{UA_Win}}
 @MobiUA={{UA_Android}}
 @Token=eyJ
 @DevideId=123456
 @Network=4G
 @BaseUrl={{HostUrl}}
-@MockUid=XiKuSdUc1735915202741o
+@WebMockUid=qBjXCoba1736156088718o
+@ElectronMockUid=OXientnX1733193062155o
+@MockUid={{WebMockUid}}
 @MimeJson=application/json
 @MimeText=text/plain
 @MimeImage=image/jpeg
@@ -29,7 +32,7 @@ x-network: {{Network}}
 x-mock-host: {{HostUrl}}
 x-mock-uid: {{MockUid}}
 User-Agent: {{UA}}
-Content-Type: {{MultiPartContent}}
+
 
 ### login
 POST {{BaseUrl}}/login
@@ -47,8 +50,22 @@ Content-Type: {{JsonContent}}
   "password": "test"
 }
 
+### logout
+POST {{BaseUrl}}/logout
+x-ua: {{MobiUA}}
+x-token: {{Token}}
+x-did: {{DevideId}}
+x-network: {{Network}}
+x-mock-host: {{HostUrl}}
+x-mock-uid: {{MockUid}}
+User-Agent: {{UA}}
+Content-Type: {{EncodeForm}}
+
+name=foo
+&password=bar
+
 ### register
-POST {{BaseUrl}}/register 
+POST {{ProxyUrl}}/register 
 x-ua: {{MobiUA}}
 x-token: {{Token}}
 x-did: {{DevideId}}

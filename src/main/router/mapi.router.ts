@@ -1,8 +1,9 @@
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from "../MainConst"
+import { BizNetwork } from '../misc/network.utils'
 import { IMapiService } from "../service"
-import { BaseRouter, ParamType } from "./BaseRouter"
+import { BaseRouter, ParamType } from "./base.router"
 
 @injectable()
 export class MapiRouter extends BaseRouter {
@@ -10,25 +11,22 @@ export class MapiRouter extends BaseRouter {
   @inject(IocTypes.MapiService)
   private mapiService: IMapiService
 
-  constructor() {
-    super()
-  }
-
   override initApiInfos(): void {
     this.addApiInfo({
-      method: 'post', path: '/login', func: 'login', target: 'mapiService',
+      method: BizNetwork.Method_Get, path: '/login', func: 'login', target: 'mapiService',
+      params: [{ key: 'loginInfo', type: ParamType.FormBody }]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post, path: '/logout', func: 'logout', target: 'mapiService',
       params: [
-        { key: 'username', type: ParamType.Query },
-        { key: 'password', type: ParamType.Query }]
+        { key: 'name', type: ParamType.FormBody },
+        { key: 'password', type: ParamType.FormBody }
+      ]
     })
 
     this.addApiInfo({
-      method: 'post', path: '/logout', func: 'logout', target: 'mapiService',
-      params: [{ key: 'x-token', type: ParamType.Header }]
-    })
-
-    this.addApiInfo({
-      method: 'post', path: '/register', func: 'register', target: 'mapiService',
+      method: BizNetwork.Method_Post, path: '/register', func: 'register', target: 'mapiService',
       params: [
         { key: 'username', type: ParamType.FormBody },
         { key: 'password', type: ParamType.FormBody },
@@ -38,7 +36,7 @@ export class MapiRouter extends BaseRouter {
     })
 
     this.addApiInfo({
-      method: 'get', path: '/user/:uid', func: 'getUserInfo', target: 'mapiService',
+      method: BizNetwork.Method_Get, path: '/user/:uid', func: 'getUserInfo', target: 'mapiService',
       params: [{ key: 'uid', type: ParamType.Path }]
     })
   }

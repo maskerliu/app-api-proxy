@@ -1637,6 +1637,7 @@ __metadata:
     electron-debug: "npm:^4.1.0"
     express: "npm:^4.21.1"
     express-fileupload: "npm:^1.5.1"
+    express-http-proxy: "npm:^2.1.1"
     file-loader: "npm:^6.2.0"
     formidable: "npm:^3.5.2"
     html-webpack-plugin: "npm:^5.6.2"
@@ -3244,7 +3245,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"debug@npm:^3.2.7":
+"debug@npm:^3.0.1, debug@npm:^3.2.7":
   version: 3.2.7
   resolution: "debug@npm:3.2.7"
   dependencies:
@@ -3935,6 +3936,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"es6-promise@npm:^4.1.1":
+  version: 4.2.8
+  resolution: "es6-promise@npm:4.2.8"
+  checksum: 10c0/2373d9c5e9a93bdd9f9ed32ff5cb6dd3dd785368d1c21e9bbbfd07d16345b3774ae260f2bd24c8f836a6903f432b4151e7816a7fa8891ccb4e1a55a028ec42c3
+  languageName: node
+  linkType: hard
+
 "es6-symbol@npm:^3.1.1, es6-symbol@npm:^3.1.3":
   version: 3.1.4
   resolution: "es6-symbol@npm:3.1.4"
@@ -4192,6 +4200,17 @@ __metadata:
   dependencies:
     busboy: "npm:^1.6.0"
   checksum: 10c0/6d2cae43958bd6bc7710a45ce71dfd1bb378611ea99c7c81aaa45655eff837ce969af8062b9c882ed05bbf179b4185b01b2d53f41ce5c242f7eac59cf280b1d1
+  languageName: node
+  linkType: hard
+
+"express-http-proxy@npm:^2.1.1":
+  version: 2.1.1
+  resolution: "express-http-proxy@npm:2.1.1"
+  dependencies:
+    debug: "npm:^3.0.1"
+    es6-promise: "npm:^4.1.1"
+    raw-body: "npm:^2.3.0"
+  checksum: 10c0/c8e21f621e607c7b12d74df105d78b336f0e39b91b16e5a881e0905736f519aab0c5e5d41929ee210a595211127a420618ddb6a52f46f7f9770f0ca3ea9ead7c
   languageName: node
   linkType: hard
 
@@ -7534,7 +7553,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"raw-body@npm:2.5.2":
+"raw-body@npm:2.5.2, raw-body@npm:^2.3.0":
   version: 2.5.2
   resolution: "raw-body@npm:2.5.2"
   dependencies:

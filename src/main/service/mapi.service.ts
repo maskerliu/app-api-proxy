@@ -5,9 +5,9 @@ import { BizContext, Mapi } from "../../common"
 
 export interface IMapiService {
 
-  login(username: string, password: string, context: BizContext): String
+  login(loginInfo: { username: string, password: string }, context: BizContext): String
 
-  logout(token: string): String
+  logout(user: string, password: string, context: BizContext): String
 
   register(username: string, password: string, useInfo: Mapi.UserInfo): Mapi.UserInfo
 
@@ -52,16 +52,19 @@ export class MapiService implements IMapiService {
     )
   }
 
-  login(username: string, password: string, context: BizContext): String {
-    return `token11111${username}-${password}`
+  login(loginInfo: { username: string, password: string }, context: BizContext): String {
+    console.log(loginInfo)
+    return `token11111${loginInfo.username}-${loginInfo.password}`
   }
 
-  logout(token: string): String {
+  logout(user: string, password: string, context: BizContext): String {
+    console.log(user)
     return 'logout success'
   }
 
   register(username: string, password: string, userInfo: Mapi.UserInfo): Mapi.UserInfo {
     try {
+      console.log(userInfo)
       return userInfo
     } catch (err) {
       console.error(err)
