@@ -38,6 +38,7 @@ export namespace ProxyMock {
     isMock?: boolean // 是否为Mock数据
     headers?: any // 请求头
     requestData?: any // 请求参数
+    data?: any
     responseHeaders?: any // 响应头
     responseData?: any // 响应数据
   }

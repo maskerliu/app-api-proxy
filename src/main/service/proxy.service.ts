@@ -1,5 +1,8 @@
 import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from 'axios'
 import { Request, Response } from 'express'
+import formidable from 'formidable'
+import IncomingForm from 'formidable/Formidable'
+import { readFileSync } from 'fs'
 import { IncomingHttpHeaders } from 'http'
 import { inject, injectable } from 'inversify'
 import JSONBig from 'json-bigint'
@@ -7,13 +10,11 @@ import "reflect-metadata"
 import zlib from 'zlib'
 import { ProxyMock } from '../../common'
 import { IocTypes } from '../MainConst'
+import { BizNetwork } from '../misc/network.utils'
 import { IMockService } from './mock.service'
 import { IPushService } from './push.service'
 
 let MockKey = null
-
-const MOCK_HOST = 'x-mock-host'
-const MOCK_UID = 'x-mock-uid'
 
 export interface IProxyService {
   getDataProxyServer(uid: string): ProxyMock.ProxyConfig
@@ -27,6 +28,7 @@ export interface IProxyService {
 export class ProxyService implements IProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
+  private _form: IncomingForm
   private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
   @inject(IocTypes.MocksService)
@@ -37,6 +39,8 @@ export class ProxyService implements IProxyService {
 
   constructor() {
     this._sessionId = 0
+    this._form = formidable()
+
     this.proxyConfigs = new Map()
     // axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
     //   MockKey = resp.data
@@ -73,13 +77,13 @@ export class ProxyService implements IProxyService {
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
-        this.pushService.sendProxyMessage(req.header(MOCK_UID), record)
+        this.pushService.sendProxyMessage(req.header(BizNetwork.BIZ_HEADER_MOCK_UID), record)
 
-        let originHost = req.header(MOCK_HOST) != null ? req.header(MOCK_HOST) : req.header('host')
+        let originHost = req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) != null ? req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) : req.header('host')
         let headers = Object.assign({}, req.headers)
         delete headers['host']
-        delete headers[MOCK_HOST]
-        delete headers[MOCK_UID]
+        delete headers[BizNetwork.BIZ_HEADER_MOCK_HOST]
+        delete headers[BizNetwork.BIZ_HEADER_MOCK_UID]
 
         let options = {
           url: originHost + req.path,
@@ -96,23 +100,33 @@ export class ProxyService implements IProxyService {
   }
 
   public async handleRequest(req: Request, resp: Response) {
-    let uid = req.header(MOCK_UID)
+    let uid = req.header(BizNetwork.BIZ_HEADER_MOCK_UID)
     // 清理无效配置
     if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
 
     let startTime = new Date().getTime()
     let sessionId = startTime
 
-    let requestData = null
-    if (req.method === 'GET') {
+    let requestData = null, proxyBody: any
+    if (req.method.toLocaleLowerCase() === 'get') {
       requestData = !!req.query ? req.query : null
     } else {
-      try {
-        requestData = !!req.body && Object.keys(req.body).length > 0 ? JSONBig.parse(req.body) : null
-      } catch (err) {
-        console.error('handleRequest', err)
+      let [contentType, charset, _] = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
+      if (contentType == BizNetwork.MIME_MULTIPART) {
+        let [_, files] = await this._form.parse(req)
+        req['files'] = files
+        proxyBody = new FormData()
+        for (const key in files) {
+          let file = files[key][0]
+          let data = readFileSync(file.filepath, 'utf-8')
+          let blob = new Blob([data], { type: file.mimetype })
+          proxyBody.set(key, blob)
+        }
+      } else if (contentType == BizNetwork.MIME_JSON || contentType == BizNetwork.MIME_FORM) {
+        proxyBody = req.body
       }
     }
+
     let data: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
       type: ProxyMock.PorxyType.REQUEST_START,
@@ -120,6 +134,7 @@ export class ProxyService implements IProxyService {
       method: req.method,
       headers: req.headers,
       requestData: requestData,
+      data: proxyBody,
       timestamp: new Date().getSeconds(),
     }
 
@@ -129,7 +144,7 @@ export class ProxyService implements IProxyService {
 
     let bizResp = null
     try {
-      bizResp = await this.mockService.mock(sessionId, req.header[MOCK_UID], req.url, startTime, delay)
+      bizResp = await this.mockService.mock(sessionId, req.header[BizNetwork.BIZ_HEADER_MOCK_UID], req.url, startTime, delay)
     } catch (err) {
       bizResp = await this.proxy(sessionId, req, startTime, delay)
     } finally {
@@ -141,19 +156,36 @@ export class ProxyService implements IProxyService {
   }
 
   private async proxy(sessionId: number, req: Request, startTime: number, delay: number) {
-    let uid = req.header(MOCK_UID)
-    let originHost = req.header(MOCK_HOST) ? req.header(MOCK_HOST) : req.header('host')
+    let uid = req.header(BizNetwork.BIZ_HEADER_MOCK_UID)
+    let originHost = req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) ? req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) : req.header('host')
     let headers = Object.assign({}, req.headers)
 
     headers['Mock-Key'] = MockKey
     delete headers['host']
-    delete headers[MOCK_HOST]
-    delete headers[MOCK_UID]
+    delete headers[BizNetwork.BIZ_HEADER_MOCK_HOST]
+    delete headers[BizNetwork.BIZ_HEADER_MOCK_UID]
 
     let axiosHeaders = {} as AxiosRequestHeaders
     let keys: keyof IncomingHttpHeaders
     for (keys in headers) {
       axiosHeaders[keys] = String(headers[keys])
+    }
+
+    let proxyBody: any
+    if (req.method.toLocaleLowerCase() == 'post') {
+      let [contentType, charset, _] = req.headers['content-type'].match(/[\da-zA-Z\:\/\-\=]+/g)
+      if (contentType == BizNetwork.MIME_MULTIPART) {
+        proxyBody = new FormData()
+        for (const key in req['files']) {
+          let file = req['files'][key][0]
+          let data = readFileSync(file.filepath, 'utf-8')
+          let blob = new Blob([data], { type: file.mimetype })
+          proxyBody.set(key, blob)
+          console.log(key, file.mimetype)
+        }
+      } else if (contentType == BizNetwork.MIME_JSON || contentType == BizNetwork.MIME_FORM) {
+        proxyBody = req.body
+      }
     }
 
     let requestUrl = originHost + req.path
@@ -173,17 +205,16 @@ export class ProxyService implements IProxyService {
         },
       ],
       timeout: ProxyService.PROXY_DEF_TIMEOUT,
+      data: proxyBody
     }
 
     if (JSON.stringify(req.query) !== '{}') {
-      options['params'] = req.query
-    }
-    if (JSON.stringify(req.body) !== '{}') {
-      options['data'] = req.body
+      options.params = req.query
     }
 
     let data: ProxyMock.ProxyRequestRecord
     try {
+      console.log(options)
       let resp = await axios(options)
       data = {
         id: sessionId,
@@ -199,13 +230,14 @@ export class ProxyService implements IProxyService {
     } catch (err: any) {
       console.error('axios', err.code)
       let resp = err.response
-      let respData = !!resp ? resp.data : err.message
+      let respData = err.message
       data = {
         id: sessionId,
+        url: req.url,
         type: ProxyMock.PorxyType.REQUEST_END,
         statusCode: -100,
         headers: !!resp && !!resp.headers ? resp.headers : null,
-        responseData: !!resp && !!respData ? JSON.stringify(respData) : JSON.stringify(err),
+        responseData: { error: err.message },
         time: new Date().getTime() - startTime,
         isMock: false,
       }

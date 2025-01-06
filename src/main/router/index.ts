@@ -1,4 +1,4 @@
-export * from './AppMockRouter'
-export * from './MapiRouter'
-export * from './ProxyRouter'
+export * from './appmock.router'
+export * from './mapi.router'
+export * from './proxy.router'
 

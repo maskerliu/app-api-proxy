@@ -5,7 +5,7 @@ import path from 'path'
 import "reflect-metadata"
 import { LocalServerConfig, ProxyMock } from '../../common'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
-import { getLocalIPs } from '../utils/NetworkUtils'
+import { getLocalIPs } from '../misc/network.utils'
 import { IProxyService } from './proxy.service'
 import { IPushService } from './push.service'
 

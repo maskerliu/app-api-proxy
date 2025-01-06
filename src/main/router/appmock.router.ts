@@ -1,8 +1,9 @@
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from '../MainConst'
+import { BizNetwork } from '../misc/network.utils'
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
-import { BaseRouter, ParamType } from './BaseRouter'
+import { BaseRouter, ParamType } from './base.router'
 
 @injectable()
 export class AppMockRouter extends BaseRouter {
@@ -18,41 +19,41 @@ export class AppMockRouter extends BaseRouter {
 
   override initApiInfos(): void {
     this.addApiInfo({
-      method: 'post', path: '/register', func: 'register', target: 'commonService',
+      method: BizNetwork.Method_Post, path: '/register', func: 'register', target: 'commonService',
       params: [{ key: 'uid', type: ParamType.Query }]
     })
     this.addApiInfo({
-      method: 'get', path: '/getAllPushClients', func: 'getAllPushClients', target: 'pushService'
+      method: BizNetwork.Method_Get, path: '/getAllPushClients', func: 'getAllPushClients', target: 'pushService'
     })
     this.addApiInfo({
-      method: 'get', path: '/getServerConfig', func: 'getServerConfig', target: 'commonService'
+      method: BizNetwork.Method_Get, path: '/getServerConfig', func: 'getServerConfig', target: 'commonService'
     })
     this.addApiInfo({
       method: 'post', path: '/saveProxyConfig', func: 'saveProxyConfig', target: 'proxyService',
-      params: [{ key: 'uid', type: ParamType.Query }, { key: 'config', type: ParamType.JsonBody }]
+      params: [{ key: 'uid', type: ParamType.Query }, { key: 'config', type: ParamType.FormBody }]
     })
 
     this.addApiInfo({
-      method: 'get', path: '/searchMockRules', func: 'searchMockRules', target: 'mockService',
+      method: BizNetwork.Method_Get, path: '/searchMockRules', func: 'searchMockRules', target: 'mockService',
       params: [{ key: 'uid', type: ParamType.Query }, { key: 'keyword', type: ParamType.Query }]
     })
 
     this.addApiInfo({
-      method: 'get', path: '/getMockRuleDetail', func: 'getMockRuleDetail', target: 'mockService',
+      method: BizNetwork.Method_Get, path: '/getMockRuleDetail', func: 'getMockRuleDetail', target: 'mockService',
       params: [{ key: 'uid', type: ParamType.Query }, { key: 'ruleId', type: ParamType.Query }]
     })
 
     this.addApiInfo({
-      method: 'post', path: '/saveMockRule', func: 'saveMockRule', target: 'mockService',
+      method: BizNetwork.Method_Post, path: '/saveMockRule', func: 'saveMockRule', target: 'mockService',
       params: [
         { key: 'uid', type: ParamType.Query },
         { key: 'onlySnap', type: ParamType.Query },
-        { key: 'rule', type: ParamType.JsonBody }
+        { key: 'rule', type: ParamType.FormBody }
       ]
     })
 
     this.addApiInfo({
-      method: 'post', path: '/deleteMockRule', func: 'deleteMockRule', target: 'mockService',
+      method: BizNetwork.Method_Post, path: '/deleteMockRule', func: 'deleteMockRule', target: 'mockService',
       params: [{ key: 'uid', type: ParamType.Query }, { key: 'ruleId', type: ParamType.Query }]
     })
 
