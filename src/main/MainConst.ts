@@ -6,12 +6,13 @@ export const Lynx_Mqtt_Broker = 'f9cc4cbec7c54744b1448fe4e6bfd274.s2.eu.hivemq.c
 export const USER_DATA_DIR = app.getPath('userData')
 
 export const IocTypes = {
-  MapiRouter: Symbol.for("MapiRouter"),
-  MapiService: Symbol.for("MapiService"),
-  AppMockRouter: Symbol.for("AppMockRouter"),
-  CommonService: Symbol.for("CommonService"),
-  PushService: Symbol.for("PushService"),
-  MocksService: Symbol.for("MockService"),
-  ProxyService: Symbol.for("ProxyService"),
-  MockRepo: Symbol.for("MockRepo")
+  AppMockRouter: Symbol.for('AppMockRouter'),
+  MapiRouter: Symbol.for('MapiRouter'),
+  ProxyRouter: Symbol.for('ProxyRouter'),
+  MapiService: Symbol.for('MapiService'),
+  CommonService: Symbol.for('CommonService'),
+  PushService: Symbol.for('PushService'),
+  MocksService: Symbol.for('MockService'),
+  ProxyService: Symbol.for('ProxyService'),
+  MockRepo: Symbol.for('MockRepo')
 }

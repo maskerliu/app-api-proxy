@@ -1,21 +1,22 @@
-import express, { Router } from "express"
-import proxy from 'express-http-proxy'
+import { inject, injectable } from "inversify"
+import { IocTypes } from "../MainConst"
+import { IProxyService } from "../service"
+import { BaseRouter } from "./base.router"
 
-export class ProxyRouter {
-  private _router: Router
+@injectable()
+export class ProxyRouter extends BaseRouter {
+
+  @inject(IocTypes.ProxyService)
+  private proxyService: IProxyService
 
   constructor() {
-    this._router = express.Router()
+    super()
 
-
-    this.router.all('/_proxy', proxy('', {
-      userResDecorator: function (proxyRes, proxyResData, userReq, userRes) {
-        let data = JSON.parse(proxyResData.toString('utf8'))
-        data.newProperty = 'exciting data'
-        return JSON.stringify(data)
-      }
-    }))
+    this.router.all('*', async (req, resp) => {
+      let instance = Reflect.get(this, 'proxyService')
+      await Reflect.apply(Reflect.get(instance, 'handleRequest'), instance, [req, resp])
+    })
   }
 
-  public get router() { return this._router }
+  protected initApiInfos() { }
 }

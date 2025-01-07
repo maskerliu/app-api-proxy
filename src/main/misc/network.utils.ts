@@ -19,6 +19,7 @@ export namespace BizNetwork {
   export const BIZ_HEADER_MOCK_HOST = 'x-mock-host'
   export const BIZ_HEADER_MOCK_UID = 'x-mock-uid'
 
+  export const MIME_EVENT_STREAM = 'text/event-stream'
   export const MIME_MULTIPART = 'multipart/form-data'
   export const MIME_JSON = 'application/json'
   export const MIME_TEXT = 'text/plain'

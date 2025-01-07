@@ -110,23 +110,10 @@ export class ProxyService implements IProxyService {
     let requestData = null, proxyBody: any
     if (req.method.toLocaleLowerCase() === 'get') {
       requestData = !!req.query ? req.query : null
-    } else {
-      let [contentType, charset, _] = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
-      if (contentType == BizNetwork.MIME_MULTIPART) {
-        let [_, files] = await this._form.parse(req)
-        req['files'] = files
-        proxyBody = new FormData()
-        for (const key in files) {
-          let file = files[key][0]
-          let data = readFileSync(file.filepath, 'utf-8')
-          let blob = new Blob([data], { type: file.mimetype })
-          proxyBody.set(key, blob)
-        }
-      } else if (contentType == BizNetwork.MIME_JSON || contentType == BizNetwork.MIME_FORM) {
-        proxyBody = req.body
-      }
     }
 
+    let [_, files] = await this._form.parse(req)
+    req['files'] = files
     let data: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
       type: ProxyMock.PorxyType.REQUEST_START,
@@ -134,7 +121,7 @@ export class ProxyService implements IProxyService {
       method: req.method,
       headers: req.headers,
       requestData: requestData,
-      data: proxyBody,
+      data: this.parseBody(req),
       timestamp: new Date().getSeconds(),
     }
 
@@ -171,23 +158,6 @@ export class ProxyService implements IProxyService {
       axiosHeaders[keys] = String(headers[keys])
     }
 
-    let proxyBody: any
-    if (req.method.toLocaleLowerCase() == 'post') {
-      let [contentType, charset, _] = req.headers['content-type'].match(/[\da-zA-Z\:\/\-\=]+/g)
-      if (contentType == BizNetwork.MIME_MULTIPART) {
-        proxyBody = new FormData()
-        for (const key in req['files']) {
-          let file = req['files'][key][0]
-          let data = readFileSync(file.filepath, 'utf-8')
-          let blob = new Blob([data], { type: file.mimetype })
-          proxyBody.set(key, blob)
-          console.log(key, file.mimetype)
-        }
-      } else if (contentType == BizNetwork.MIME_JSON || contentType == BizNetwork.MIME_FORM) {
-        proxyBody = req.body
-      }
-    }
-
     let requestUrl = originHost + req.path
     if (this.proxyConfigs.has(uid)
       && this.proxyConfigs.get(uid).status
@@ -205,7 +175,7 @@ export class ProxyService implements IProxyService {
         },
       ],
       timeout: ProxyService.PROXY_DEF_TIMEOUT,
-      data: proxyBody
+      data: this.parseBody(req)
     }
 
     if (JSON.stringify(req.query) !== '{}') {
@@ -214,7 +184,6 @@ export class ProxyService implements IProxyService {
 
     let data: ProxyMock.ProxyRequestRecord
     try {
-      console.log(options)
       let resp = await axios(options)
       data = {
         id: sessionId,
@@ -246,5 +215,24 @@ export class ProxyService implements IProxyService {
         this.pushService.sendProxyMessage(uid, data)
       }, delay)
     }
+  }
+
+  private parseBody(req: Request) {
+    let body: any
+    if (req.method.toLocaleLowerCase() == 'post') {
+      let [contentType, charset, _] = req.headers['content-type'].match(/[\da-zA-Z\:\/\-\=]+/g)
+      if (contentType == BizNetwork.MIME_MULTIPART) {
+        body = new FormData()
+        for (const key in req['files']) {
+          let file = req['files'][key][0]
+          let data = readFileSync(file.filepath, 'utf-8')
+          let blob = new Blob([data], { type: file.mimetype })
+          body.set(key, blob)
+        }
+      } else if (contentType == BizNetwork.MIME_JSON || contentType == BizNetwork.MIME_FORM) {
+        body = req.body
+      }
+    }
+    return body
   }
 }

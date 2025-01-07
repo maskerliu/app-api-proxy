@@ -1,5 +1,5 @@
 <template>
-  <van-row style="height: 100vh; overflow: hidden;">
+  <van-row>
     <van-col class="bg-border left-panel">
       <van-row style="display: flex; width:100%;" justify="space-between">
         <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal" style="width: 235px;">
@@ -38,15 +38,16 @@
         </template>
       </van-field>
 
-      <OverlayScrollbarsComponent class="record-snap-panel border-bg"
-        :options="{ scrollbars: { theme: 'os-theme-light' } }" defer>
+      <OverlayScrollbarsComponent class="snap-panel border-bg"
+        :options="{ scrollbars: { theme: `os-theme-${reverseTheme}` } }" defer>
         <van-list ref="snaplist">
           <proxy-record-snap v-for="key in [...recordStore.records.keys()].reverse()"
             :source="recordStore.records.get(key)" />
         </van-list>
       </OverlayScrollbarsComponent>
     </van-col>
-    <OverlayScrollbarsComponent class="right-panel" :options="{ scrollbars: { theme: 'os-theme-light', } }" defer>
+    <OverlayScrollbarsComponent class="right-panel" :options="{ scrollbars: { theme: `os-theme-${reverseTheme}`, } }"
+      defer>
       <div class="drag-bar" v-if="!isWeb"></div>
       <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId)?.type !== 5020" />
@@ -77,8 +78,8 @@
 <script lang="ts" setup>
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
-import { List, showNotify } from 'vant'
-import { defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
+import { ConfigProviderTheme, List, showNotify } from 'vant'
+import { defineAsyncComponent, inject, onMounted, provide, Ref, ref, watch } from 'vue'
 import { ProxyMock } from '../../../common'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
@@ -97,6 +98,10 @@ const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
 const showSettings = ref<boolean>(false)
 
+const theme = inject<Ref<ConfigProviderTheme>>('theme')
+
+const reverseTheme = ref<string>(theme.value == 'dark' ? 'light' : 'dark')
+
 provide('showMockRuleMgr', showMockRuleMgr)
 provide('withCurRecord', withCurRecord)
 provide('showSettings', showSettings)
@@ -104,8 +109,6 @@ provide('showSettings', showSettings)
 let mockRecordId = -1
 
 onMounted(() => {
-  // console.log(/(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/.test('192.168.59.1'))
-
   if (!__IS_WEB__) {
     window.electronAPI.onOpenMockRuleMgr(() => {
       showMockRuleMgr.value = true
@@ -118,6 +121,11 @@ onMounted(() => {
       showSettings.value = true
     })
   }
+})
+
+watch(() => theme.value, () => {
+  console.log('proxy', theme.value)
+  reverseTheme.value = theme.value == 'dark' ? 'light' : 'dark'
 })
 
 watch(() => recordStore.isChanged, () => {
@@ -148,7 +156,7 @@ async function saveProxyDelay() {
 
 async function click2Reg() {
   try {
-    let resp = await ProxyMock.mockRegister()
+    let resp = await ProxyMock.mockRegister(commonStore.uid)
     showNotify({ message: resp, type: 'success', duration: 500 })
     commonStore.showQrCode = resp == null
   } catch (err: any) {
@@ -179,7 +187,7 @@ function onMockRecordStart() {
   flex-grow: 19;
   flex-basis: 50%;
   min-width: 375px;
-  height: calc(100vh - 5px);
+  height: calc(100vh - 10px);
   margin: 5px 2px;
   overflow: hidden;
   overflow-y: auto;
@@ -191,17 +199,13 @@ function onMockRecordStart() {
   color: var(--van-gray-8)
 }
 
-.record-snap-panel {
+.snap-panel {
   width: 100%;
   height: calc(100vh - 154px);
   overflow-y: auto;
   overflow-x: hidden;
   margin: 5px 0 0 0;
 }
-
-/* .record-snap-panel::-webkit-scrollbar {
-  display: none;
-} */
 
 .register-url {
   text-decoration: underline;

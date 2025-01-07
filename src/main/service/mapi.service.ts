@@ -64,7 +64,7 @@ export class MapiService implements IMapiService {
 
   register(username: string, password: string, userInfo: Mapi.UserInfo): Mapi.UserInfo {
     try {
-      console.log(userInfo)
+      console.log('register', userInfo)
       return userInfo
     } catch (err) {
       console.error(err)
@@ -83,5 +83,27 @@ export class MapiService implements IMapiService {
 
   private generateToken(username: string): string {
     return 'token11111'
+  }
+}
+
+
+import { createServer, Server as SockServer } from 'sockjs'
+
+export interface INotficationService {
+
+}
+
+@injectable()
+export class NotficationService implements INotficationService {
+  private sockjsServer: SockServer
+
+  constructor() {
+    // this.pushClients = new Map()
+    this.sockjsServer = createServer({ prefix: '/notification', websocket: true })
+    // this.sockjsServer.on('connection', (conn: any) => {
+    //   conn.on('data', (data: any) => { this.handleMsg(conn, data) })
+    //   conn.on('close', () => { this.handleClose(conn) })
+    //   conn.on("error", () => { this.handleError(conn) })
+    // })
   }
 }
