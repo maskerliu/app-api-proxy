@@ -10,7 +10,7 @@ import tcpPortUsed from 'tcp-port-used'
 import { LocalServerConfig } from '../common/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, USER_DATA_DIR } from './MainConst'
-import { AppMockRouter, MapiRouter } from './router'
+import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
 import { ICommonService, IProxyService, IPushService } from './service'
 
 export class MainServer {
@@ -22,6 +22,7 @@ export class MainServer {
 
   private mapiRouter: MapiRouter
   private appmockRouter: AppMockRouter
+  private proxyRouter: ProxyRouter
   private commonService: ICommonService
   private proxyService: IProxyService
   private pushService: IPushService
@@ -29,6 +30,7 @@ export class MainServer {
   bootstrap() {
     this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
     this.mapiRouter = bizContainer.get(IocTypes.MapiRouter)
+    this.proxyRouter = bizContainer.get(IocTypes.ProxyRouter)
     this.commonService = bizContainer.get(IocTypes.CommonService)
     this.pushService = bizContainer.get(IocTypes.PushService)
     this.proxyService = bizContainer.get(IocTypes.ProxyService)
@@ -108,13 +110,10 @@ export class MainServer {
     // this.httpApp.use(fileUpload())
 
     this.httpApp.use('/appmock', this.appmockRouter.router)
-
     this.httpApp.use('/mapi', this.mapiRouter.router)
-
+    this.httpApp.use('/_proxy', this.proxyRouter.router)
     this.httpApp.use('/mediaproxy', this.proxyCorsMedia)
-    this.httpApp.use('/_proxy', (req, resp: Response) => this.proxyService.handleRequest(req, resp))
-
-    this.httpApp.all('*', (req: any, resp: Response) => this.handleRequest(req, resp))
+    // this.httpApp.use('/burying-point', this.buryPointRouter.router)
   }
 
   private async startHttpServer() {

@@ -57,7 +57,10 @@ export abstract class BaseRouter {
     if (paramInfos != null) {
 
       if (req.method.toLowerCase() == 'post') {
-        [contentType, _, _] = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
+        // console.log('content-type', req.headers['content-type'])
+        // let matchs = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
+        // console.log(matchs)
+        [contentType, _] = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
         if (contentType == BizNetwork.MIME_MULTIPART) {
           let [_, files] = await this._form.parse(req)
           req['files'] = files
@@ -70,7 +73,6 @@ export abstract class BaseRouter {
         if (item.type == ParamType.FormBody) {
           if (contentType == BizNetwork.MIME_MULTIPART) {
             params.push(fetchFormFile(filesBody[item.key][0]))
-            console.log(params)
           } else if (contentType == BizNetwork.MIME_JSON) {
             params.push(jsonBody)
           } else if (contentType == BizNetwork.MIME_FORM) {

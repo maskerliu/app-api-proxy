@@ -140,8 +140,8 @@ export namespace ProxyMock {
     return get<Array<ProxyMock.MsgPushClient>>('/appmock/getAllPushClients')
   }
 
-  export function mockRegister() {
-    return post<string>('/appmock/register')
+  export function mockRegister(uid: string) {
+    return get<string>('/appmock/register', null, { uid })
   }
 
 }

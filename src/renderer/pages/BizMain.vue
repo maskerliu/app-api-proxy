@@ -71,6 +71,6 @@ function onOpenDebugPanel() {
   min-width: 375px;
   height: 100vh;
   background: var(--van-gray-1);
-  overflow-y: hidden;
+  overflow: hidden auto;
 }
 </style>

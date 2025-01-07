@@ -19,7 +19,7 @@ export class AppMockRouter extends BaseRouter {
 
   override initApiInfos(): void {
     this.addApiInfo({
-      method: BizNetwork.Method_Post, path: '/register', func: 'register', target: 'commonService',
+      method: BizNetwork.Method_Get, path: '/register', func: 'register', target: 'commonService',
       params: [{ key: 'uid', type: ParamType.Query }]
     })
     this.addApiInfo({
