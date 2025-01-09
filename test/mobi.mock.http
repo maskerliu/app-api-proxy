@@ -1,4 +1,5 @@
 
+@MockUrl=http://localhost:8884/appmock
 @ProxyUrl=http://localhost:8884/_proxy
 @HostUrl=http://localhost:8884/mapi
 @UA_Win=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
@@ -18,7 +19,7 @@
 @BaseUrl={{HostUrl}}
 @WebMockUid=qBjXCoba1736156088718o
 @ElectronMockUid=OXientnX1733193062155o
-@MockUid={{WebMockUid}}
+@MockUid={{ElectronMockUid}}
 @MimeJson=application/json
 @MimeText=text/plain
 @MimeImage=image/jpeg
@@ -96,3 +97,22 @@ Content-Type: {{MimeImage}}
 
 < ./avatar.png
 --{{Boundary}}--
+
+
+### sse
+POST {{MockUrl}}/sse
+x-ua: {{MobiUA}}
+x-token: {{Token}}
+x-did: {{DevideId}}
+x-network: {{Network}}
+x-mock-host: {{HostUrl}}
+x-mock-uid: {{MockUid}}
+User-Agent: {{UA}}
+Content-Type: {{JsonContent}}
+
+{
+  "eventName": "message",
+  "data": {
+    "message": "Hello, world!" 
+  }
+}

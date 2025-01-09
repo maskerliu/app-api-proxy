@@ -1,10 +1,10 @@
+import { EventSource } from 'eventsource'
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/network.utils'
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
 import { BaseRouter, ParamType } from './base.router'
-
 @injectable()
 export class AppMockRouter extends BaseRouter {
 
@@ -16,6 +16,36 @@ export class AppMockRouter extends BaseRouter {
   private mockService: IMockService
   @inject(IocTypes.ProxyService)
   private proxyService: IProxyService
+
+  private _eventSource: EventSource
+
+  constructor() {
+    super()
+
+    this.router.get('/sse', (req, resp) => {
+      resp.setHeader('Content-Type', 'text/event-stream')
+      resp.setHeader('Cache-Control', 'no-cache')
+      resp.setHeader('Connection', 'keep-alive')
+      resp.flushHeaders()
+
+      this._eventSource = new EventSource(req.url)
+
+      this._eventSource.onmessage = event => {
+        resp.write(`data: ${JSON.stringify(event.data)}\n\n`)
+      }
+    })
+
+    this.router.post('/sse', (req, res) => {
+      if (this._eventSource) {
+        this._eventSource.dispatchEvent(new CustomEvent(req.body.eventName, {
+          detail: req.body.data
+        }))
+        res.status(200).send('Event sent successfully')
+      } else {
+        res.status(500).send('No active event source found')
+      }
+    })
+  }
 
   override initApiInfos(): void {
     this.addApiInfo({

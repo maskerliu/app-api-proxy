@@ -31,7 +31,7 @@
       <template #right-icon>
         <van-loading v-if="versionChecking" />
         <van-button v-if="hasNewVersion" type="warning" plain size="small" @click="downloadNewVersion">
-          <van-icon class="iconfont icon-version-update" style="margin-left: 15px;" />
+          <van-icon class="iconfont icon-version-update" />
         </van-button>
       </template>
     </van-field>

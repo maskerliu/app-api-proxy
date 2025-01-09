@@ -31,9 +31,9 @@
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset :title="$t('proxy.requestBody')">
+    <van-cell-group inset :title="$t('proxy.requestBody')" v-if="record.method == 'POST'">
       <van-cell class="detail-content">
-        <proxy-request-body />
+        <proxy-request-body :data="record.data" />
       </van-cell>
     </van-cell-group>
 

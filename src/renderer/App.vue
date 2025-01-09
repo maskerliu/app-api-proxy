@@ -19,8 +19,8 @@ const lang = ref<string>('zh-CN')
 provide('theme', theme)
 provide('lang', lang)
 
-onMounted(() => {
-  canRender.value = true
+onMounted(async () => {
+
   window.isWeb = __IS_WEB__
 
   let wrapTheme = window.localStorage.getItem('theme')
@@ -31,24 +31,16 @@ onMounted(() => {
   i18n.locale.value = lang.value
 
   if (!__IS_WEB__) {
-    window.electronAPI.getSysSettings((result) => {
-      CommonStore().init(result)
+    window.electronAPI.getSysSettings(async (result) => {
+      await CommonStore().init(result)
     })
 
     window.electronAPI.setAppTheme(theme.value)
-
-    // if (wrapTheme == 'sys') {
-    //   window.electronAPI.getSysTheme((data: string) => {
-    //     theme.value = data as ConfigProviderTheme
-    //   })
-
-    //   window.electronAPI.onSysThemeChanged((data) => {
-    //     if (wrapTheme == 'sys') theme.value = data as ConfigProviderTheme
-    //   })
-    // }
   } else {
-    CommonStore().init()
+    await CommonStore().init()
   }
+
+  canRender.value = true
 })
 
 </script>

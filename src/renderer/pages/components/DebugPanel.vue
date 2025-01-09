@@ -8,18 +8,39 @@
 
       <van-cell-group inset :title="$t('debug.virtualClient.title')">
         <van-cell :title="'Virtual Client'" clickable @click="virtualClient"></van-cell>
+
+        <lab />
       </van-cell-group>
 
-      <lab />
+      <van-cell-group inset title="Event Source">
+        <van-cell title="trigger server notification" is-link @click="onSSE"></van-cell>
+      </van-cell-group>
     </van-form>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { inject, Ref } from 'vue'
+import { fetchEventSource } from '@microsoft/fetch-event-source'
+import { inject, onMounted, Ref } from 'vue'
+import { baseDomain } from '../../../common'
 import Lab from '../lab/Lab.vue'
-
 const showDebugPanel = inject<Ref<boolean>>('showDebugPanel')
+
+
+onMounted(async () => {
+  await fetchEventSource(`${baseDomain()}/appmock/sse`, {
+    onmessage(ev) {
+      console.log('incoming', ev.data)
+    },
+    onclose() {
+      console.log('closed')
+    },
+    onerror(err) {
+      console.log(err)
+    },
+  })
+})
+
 
 function toNew() {
   alert('去新版')
@@ -36,6 +57,11 @@ function openDevTools() {
   }
 }
 
+function onSSE() {
+  if (!__IS_WEB__) {
+    window.electronAPI.sendServerEvent()
+  }
+}
 </script>
 
 <style scoped>

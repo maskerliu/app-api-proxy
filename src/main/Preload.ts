@@ -21,6 +21,10 @@ let apis: IElectronAPI = {
     ipcRenderer.invoke(ElectronAPICMD.DownloadUpdate, newVersion)
   },
 
+  sendServerEvent: function (): void {
+    ipcRenderer.invoke(ElectronAPICMD.SendServerEvent)
+  },
+
   getSysSettings(callback: (result: LocalServerConfig) => void) {
     ipcRenderer.on(ElectronAPICMD.GetSysSettings, (_event, result: LocalServerConfig) => callback(result))
   },
@@ -47,7 +51,7 @@ let apis: IElectronAPI = {
 
   onDownloadUpdate(callback: (...args: any) => void) {
     ipcRenderer.on(ElectronAPICMD.DownloadUpdate, (_, ...args: any) => callback(...args))
-  }
+  },
 }
 
 contextBridge.exposeInMainWorld('electronAPI', apis)
