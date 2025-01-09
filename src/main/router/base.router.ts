@@ -60,6 +60,7 @@ export abstract class BaseRouter {
         // console.log('content-type', req.headers['content-type'])
         // let matchs = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
         // console.log(matchs)
+        // if (req.)
         [contentType, _] = req.headers['content-type']?.match(/[\da-zA-Z\:\/\-\=]+/g)
         if (contentType == BizNetwork.MIME_MULTIPART) {
           let [_, files] = await this._form.parse(req)

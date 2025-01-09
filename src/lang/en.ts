@@ -14,6 +14,7 @@ export default {
     scanQrCode: 'scan QrCode to visit:',
     requestHeader: 'Request Headers',
     requestParams: 'Request Parameters',
+    requestBody: 'Request Body',
     responseHeader: 'Response Headers',
     responseBody: 'Response Body',
     preview: 'Preview'

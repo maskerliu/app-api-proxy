@@ -14,6 +14,7 @@ export default {
     scanQrCode: '扫描二维码访问：',
     requestHeader: '请求头',
     requestParams: '请求参数',
+    requestBody: '请求体',
     responseHeader: '响应头',
     responseBody: '响应数据',
     preview: '预览'
