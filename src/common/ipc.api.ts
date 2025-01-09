@@ -13,6 +13,7 @@ export const ElectronAPICMD = {
   GetSysTheme: 'getSysTheme',
   SysThemeChanged: 'sysThemeChanged',
   DownloadUpdate: 'downloadUpdate',
+  SendServerEvent: 'sendServerEvent'
 }
 
 export interface IElectronAPI {
@@ -24,6 +25,8 @@ export interface IElectronAPI {
   openDevTools(...args: any): void
 
   saveSysSettings(...args: any): void
+
+  sendServerEvent(): void
 
   downloadUpdate(...args: any): void
 

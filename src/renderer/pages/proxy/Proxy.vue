@@ -124,7 +124,6 @@ onMounted(() => {
 })
 
 watch(() => theme.value, () => {
-  console.log('proxy', theme.value)
   reverseTheme.value = theme.value == 'dark' ? 'light' : 'dark'
 })
 
