@@ -31,6 +31,12 @@
       </van-cell>
     </van-cell-group>
 
+    <van-cell-group inset :title="$t('proxy.requestBody')">
+      <van-cell class="detail-content">
+        <proxy-request-body />
+      </van-cell>
+    </van-cell-group>
+
     <van-cell-group inset :title="$t('proxy.responseHeader')">
       <van-cell class="detail-content">
         <vue-ace-editor :fold="false" :max-lines="22"
@@ -55,6 +61,7 @@ import { Form, showToast } from 'vant'
 import { inject, PropType, Ref, ref } from 'vue'
 import { ProxyMock } from '../../../common'
 import VueAceEditor from '../components/VueAceEditor.vue'
+import ProxyRequestBody from './ProxyRequestBody.vue'
 
 const topOffset = __IS_WEB__ ? 5 : 30
 

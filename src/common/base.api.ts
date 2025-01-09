@@ -9,6 +9,7 @@ axios.defaults.withCredentials = false
 let clientUID: string = null
 let BASE_DOMAIN: string = null
 
+const ContentType_Multipar = 'multipart/form-data;charset=UTF-8;'
 
 async function request<T>(method: string, path: string, baseURL?: string, headers?: any, params?: {}, data?: any) {
   const resp = await axios.request<BizResponse<T>>({
