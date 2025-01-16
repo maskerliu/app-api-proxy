@@ -42,7 +42,6 @@ export class MainServer {
   }
 
   public async start() {
-
     let portUsed = await tcpPortUsed.check(this.commonService.serverConfig.port, '127.0.0.1')
 
     let config = this.commonService.serverConfig
@@ -59,7 +58,7 @@ export class MainServer {
   }
 
   public getSysSettings() {
-    return this.commonService.getServerConfig()
+    return this.commonService.serverConfig
   }
 
   public updateSysSettings(config: LocalServerConfig) {
@@ -73,12 +72,12 @@ export class MainServer {
   private initHttpServer() {
     this.httpApp = express()
     this.corsOpt.origin = [
-      `${this.buildConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
-      `${this.buildConfig.protocol}://localhost:9080`,
-      `${this.buildConfig.protocol}://localhost:9081`,
-      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:${this.commonService.serverConfig.port}`,
-      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9080`,
-      `${this.buildConfig.protocol}://${this.commonService.serverConfig.ip}:9081`,
+      `${this.commonService.serverConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
+      `${this.commonService.serverConfig.protocol}://localhost:9080`,
+      `${this.commonService.serverConfig.protocol}://localhost:9081`,
+      `${this.commonService.serverConfig.protocol}://${this.commonService.serverConfig.ip}:${this.commonService.serverConfig.port}`,
+      `${this.commonService.serverConfig.protocol}://${this.commonService.serverConfig.ip}:9080`,
+      `${this.commonService.serverConfig.protocol}://${this.commonService.serverConfig.ip}:9081`,
     ]
 
     this.httpApp.use(express.static(path.resolve(__dirname, '../web'), {
@@ -119,7 +118,7 @@ export class MainServer {
   private async startHttpServer() {
     let HTTP: any
     let baseDir = process.env.NODE_ENV == 'development' ? '' : __dirname + '/'
-    if (this.buildConfig.protocol == 'https') {
+    if (this.commonService.serverConfig.protocol == 'https') {
       HTTP = await import('https')
       var key = fs.readFileSync(baseDir + 'cert/private.key')
       var cert = fs.readFileSync(baseDir + 'cert/mydomain.crt')

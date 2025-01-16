@@ -15,10 +15,10 @@ async function request<T>(method: string, path: string, baseURL?: string, header
   const resp = await axios.request<BizResponse<T>>({
     baseURL: baseURL ? baseURL : BASE_DOMAIN,
     url: path,
-    method: method,
-    params: Object.assign({ uid: clientUID }, params),
-    data: data,
-    headers: headers
+    method, params, data,
+    headers: Object.assign({
+      'x-mock-uid': clientUID
+    }, headers)
   })
 
   let bizResp = resp.data

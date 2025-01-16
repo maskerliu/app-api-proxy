@@ -1638,12 +1638,12 @@ __metadata:
     cors: "npm:^2.8.5"
     cross-env: "npm:^7.0.3"
     css-loader: "npm:^7.1.2"
+    date-fns: "npm:^4.1.0"
     del: "npm:^8.0.0"
     electron: "npm:33.2.0"
     electron-builder: "npm:^25.1.8"
     electron-builder-squirrel-windows: "npm:^25.1.8"
     electron-debug: "npm:^4.1.0"
-    eventsource: "npm:^3.0.2"
     express: "npm:^4.21.1"
     express-fileupload: "npm:^1.5.1"
     express-http-proxy: "npm:^2.1.1"
@@ -3214,6 +3214,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"date-fns@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "date-fns@npm:4.1.0"
+  checksum: 10c0/b79ff32830e6b7faa009590af6ae0fb8c3fd9ffad46d930548fbb5acf473773b4712ae887e156ba91a7b3dc30591ce0f517d69fd83bd9c38650fdc03b4e0bac8
+  languageName: node
+  linkType: hard
+
 "debounce@npm:^1.2.1":
   version: 1.2.1
   resolution: "debounce@npm:1.2.1"
@@ -4178,26 +4185,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eventsource-parser@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "eventsource-parser@npm:3.0.0"
-  checksum: 10c0/74ded91ff93330bd95243bd5a8fc61c805ea1843dd7ffac8e8ac36287fff419a7eec21b2fadf50d4e554ce0506de72f47928513e3c5b886fa4613fd49ef0024f
-  languageName: node
-  linkType: hard
-
 "eventsource@npm:^2.0.2":
   version: 2.0.2
   resolution: "eventsource@npm:2.0.2"
   checksum: 10c0/0b8c70b35e45dd20f22ff64b001be9d530e33b92ca8bdbac9e004d0be00d957ab02ef33c917315f59bf2f20b178c56af85c52029bc8e6cc2d61c31d87d943573
-  languageName: node
-  linkType: hard
-
-"eventsource@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "eventsource@npm:3.0.2"
-  dependencies:
-    eventsource-parser: "npm:^3.0.0"
-  checksum: 10c0/04e3439149d3b8ecdfe99f444169a7afbda9165497232a401304db4fb8b73f1481380efae6d37db08e375c0312c39d5183c6b392653318ed186d0fd15150f6f7
   languageName: node
   linkType: hard
 

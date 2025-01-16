@@ -10,20 +10,28 @@ import { IProxyService } from './proxy.service'
 import { IPushService } from './push.service'
 
 export interface ICommonService {
-  serverConfig: LocalServerConfig
+  get serverConfig(): LocalServerConfig
+  set serverConfig(config: LocalServerConfig)
 
   register(uid: string): string
 
   getServerConfig(): LocalServerConfig
 
   saveServerConfig(config: LocalServerConfig): void
-
 }
 
 @injectable()
 export class CommonService implements ICommonService {
 
-  serverConfig: LocalServerConfig
+  private _serverConfig: LocalServerConfig
+
+  get serverConfig() {
+    return this._serverConfig
+  }
+
+  set serverConfig(config: LocalServerConfig) {
+    this._serverConfig = config
+  }
 
   @inject(IocTypes.ProxyService)
   private proxyService: IProxyService
@@ -47,15 +55,18 @@ export class CommonService implements ICommonService {
         platform: process.platform,
         arch: process.arch,
         updateServer: config.updateServer,
-        protocol: config.protocol,
+        protocol: config.protocol ? config.protocol : 'http',
         ip: getLocalIPs()[0]?.address,
-        port: config.port,
+        port: config.port ? config.port : 8884,
         portValid: config.portValid,
         domain: config.domain,
         ips: getLocalIPs(),
         mqttBroker: Lynx_Mqtt_Broker
       }
     }
+  }
+  getServerConfig(): LocalServerConfig {
+    return this._serverConfig
   }
 
   public register(uid: string) {
@@ -74,9 +85,7 @@ export class CommonService implements ICommonService {
     }
   }
 
-  getServerConfig() {
-    return this.serverConfig
-  }
+
 
   saveServerConfig(config: LocalServerConfig) {
     let filePath = path.join(USER_DATA_DIR, 'local.config.json')

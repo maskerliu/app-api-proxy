@@ -36,21 +36,11 @@ export default {
       },
     }
   },
-  iot: {
-    device: {
-      name: '设备名',
-      address: '地址',
-      delete: {
-        title: '警告❗️',
-        confirm: '确定要从系统中移除【{deviceId}】这台设备吗？',
-        confirm1: '设备移除后，设备上的数据将在系统中无法收集，请谨慎操作！！！'
-      }
-    }
-  },
   settings: {
     sys: {
       title: '系统信息',
       server: '服务IP地址',
+      protocol: 'Http协议',
       serverDomain: '服务域名',
       port: '代理Http服务端口',
       porterror: "端口已被占用，请更换",

@@ -61,7 +61,7 @@ export const CommonStore = defineStore('Common', {
       this.serverConfig = config ? config : this.serverConfig
       updateClientUID(this.uid)
 
-      this.registerUrl = `${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register?uid=${this.uid}`
+      this.registerUrl = `${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register/${this.uid}`
       if (__IS_WEB__) {
         pushClient.start(`${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}`, this.uid)
       } else {

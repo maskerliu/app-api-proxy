@@ -1,3 +1,4 @@
+
 export default {
   common: {
     done: 'Done',
@@ -36,20 +37,10 @@ export default {
       },
     }
   },
-  iot: {
-    device: {
-      name: 'Name',
-      address: 'Address',
-      delete: {
-        title: 'Warning',
-        confirm: 'Are you sure to remove the device [{deviceId}]？',
-        confirm1: 'After remove from system, the data of device will not collect, please be careful to do this！！！'
-      }
-    }
-  },
   settings: {
     sys: {
       title: 'System Info',
+      protocol: 'Protocol',
       server: 'Server',
       port: 'Server Port',
       porterror: "Port has been used",
