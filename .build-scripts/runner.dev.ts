@@ -2,6 +2,7 @@
 import chalk from 'chalk'
 import { ChildProcess, exec, spawn } from 'child_process'
 import express from 'express'
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack from 'webpack'
@@ -45,15 +46,18 @@ function startDevServer(config: BaseConfig, host: string, port: number): Promise
         })
         devServer.middleware?.waitUntilValid(() => { resolve() })
         return middlewares
-      }
+      },
     }
 
-    // if (buildConfig.protocol == 'https') {
-    //   serverConfig.https = {
-    //     key: fs.readFileSync('cert/private.key'),
-    //     cert: fs.readFileSync('cert/mydomain.crt')
-    //   }
-    // }
+    if (pkg.config.protocol == 'https') {
+      serverConfig.server = {
+        type: 'http2',
+        options: {
+          key: fs.readFileSync('cert/private.key'),
+          cert: fs.readFileSync('cert/mydomain.crt')
+        }
+      }
+    }
 
     compiler.watch({}, (err, stats) => {
       if (err) {

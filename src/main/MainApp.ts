@@ -234,14 +234,21 @@ export default class MainApp {
 
   private initIPCService() {
     ipcMain.handle(ElectronAPICMD.SaveSysSettings, (_, ...args: any) => {
+      let curSettings = this.mainServer.getSysSettings()
+      let newSettings = JSON.parse(args)
+
       this.mainServer.updateSysSettings(JSON.parse(args))
-      this.mainServer.stop()
-      this.mainServer.start()
+
+      if (newSettings.port !== curSettings.port || newSettings.protocol !== curSettings.protocol) {
+        this.mainServer.stop()
+        this.mainServer.start()
+      }
+
       this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
     })
 
     ipcMain.handle(ElectronAPICMD.SendServerEvent, () => {
-      console.log('send sse')
+      // console.log('send sse')
     })
   }
 }

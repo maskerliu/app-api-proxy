@@ -1,5 +1,14 @@
 <template>
   <van-cell-group inset :title="$t('settings.sys.title')" :style="{ paddingTop: isWeb ? '0' : '10px' }">
+    <van-field center :label="$t('settings.sys.protocol')" label-width="10rem" readonly>
+      <template #input>
+        <van-tabs v-model:active="protocol" type="card" style="margin: 0;">
+          <van-tab title="https[2]" :title-style="{ width: '10rem' }"></van-tab>
+          <van-tab title="http" :title-style="{ width: '10rem' }"></van-tab>
+        </van-tabs>
+      </template>
+    </van-field>
+
     <van-field :label="$t('settings.sys.server')" label-width="10rem" readonly>
       <template #input>
         <van-popover v-model:show="showPopover" placement="bottom-start" style="min-width: 300px"
@@ -59,6 +68,7 @@ const curServerIp = ref<LocalIP>(null)
 const showPopover = ref<boolean>(false)
 const isWeb = __IS_WEB__
 const showSettings = inject<Ref<boolean>>('showSettings')
+const protocol = ref(0)
 
 let perferences = [
   { tooltip: 'settings.sys.serverDomain', key: 'domain' },
@@ -74,18 +84,21 @@ let perferences = [
     hasStatus: true,
     statusKey: 'dataProxyStatus',
   },
-  {
-    tooltip: 'settings.sys.mqttBroker',
-    key: 'mqttBroker',
-  },
+  { tooltip: 'settings.sys.mqttBroker', key: 'mqttBroker', },
 ] as Array<SettingPreference>
 
 onMounted(() => {
   if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
+
+  protocol.value = commonStore.serverConfig.protocol == 'https' ? 0 : 1
 })
 
 watch(() => commonStore.serverConfig, () => {
   if (commonStore.serverConfig.ips) curServerIp.value = commonStore.serverConfig.ips[0]
+})
+
+watch(() => protocol.value, () => {
+  commonStore.serverConfig.protocol = protocol.value == 0 ? 'https' : 'http'
 })
 
 function onSelectIP(ip: LocalIP) {

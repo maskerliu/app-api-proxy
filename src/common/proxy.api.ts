@@ -141,7 +141,10 @@ export namespace ProxyMock {
   }
 
   export function mockRegister(uid: string) {
-    return get<string>('/appmock/register', null, { uid })
+    return get<string>(`/appmock/register/${uid}`)
   }
 
+  export function broadcast(uid: string) {
+    return get<string>(`/appmock/sse/broadcast/${uid}`)
+  }
 }
