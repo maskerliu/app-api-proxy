@@ -50,7 +50,7 @@ export class AppMockRouter extends BaseRouter {
         this._clients.set(uid, { req, resp })
       }
 
-      req.on('error', (err) => {
+      req.on('error', (err: any) => {
         console.log(`${logDate(new Date())}\terror: ${err}`, err.code)
       })
 

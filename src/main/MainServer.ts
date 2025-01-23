@@ -1,10 +1,10 @@
 import axios, { AxiosRequestConfig, HttpStatusCode, Method } from 'axios'
-import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Request, Response } from 'express'
 // import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import { Server } from 'http'
+import http2express from 'http2-express'
 import path from 'path'
 import tcpPortUsed from 'tcp-port-used'
 import { LocalServerConfig } from '../common/base.models'
@@ -70,7 +70,7 @@ export class MainServer {
   }
 
   private initHttpServer() {
-    this.httpApp = express()
+    this.httpApp = http2express(express)
     this.corsOpt.origin = [
       `${this.commonService.serverConfig.protocol}://localhost:${this.commonService.serverConfig.port}`,
       `${this.commonService.serverConfig.protocol}://localhost:9080`,
@@ -102,7 +102,7 @@ export class MainServer {
     }))
 
     this.httpApp.use(cors(this.corsOpt))
-    this.httpApp.use(compression())
+    // this.httpApp.use(compression())
     this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
     this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
     this.httpApp.use(express.json())
@@ -116,14 +116,23 @@ export class MainServer {
   }
 
   private async startHttpServer() {
+
+    // this.httpServer.on('stream', (stream, headers) => {
+    //   const req = new Request(stream)
+    //   req.headers = headers
+    //   req.url = headers[':path']
+    //   const res = new Response(stream, req)
+    //   this.httpApp(req, res, () => { stream.end() })
+    // })
+
     let HTTP: any
     let baseDir = process.env.NODE_ENV == 'development' ? '' : __dirname + '/'
     if (this.commonService.serverConfig.protocol == 'https') {
-      HTTP = await import('https')
-      var key = fs.readFileSync(baseDir + 'cert/private.key')
-      var cert = fs.readFileSync(baseDir + 'cert/mydomain.crt')
-      let opt = { key, cert }
-      this.httpServer = HTTP.createServer(opt, this.httpApp)
+      HTTP = await import('http2')
+      var key = fs.readFileSync(baseDir + 'cert/server.key')
+      var cert = fs.readFileSync(baseDir + 'cert/server.crt')
+      let opt = { key, cert, allowHTTP1: true }
+      this.httpServer = HTTP.createSecureServer(opt, this.httpApp)
     } else {
       HTTP = await import('http')
       this.httpServer = HTTP.createServer(this.httpApp)

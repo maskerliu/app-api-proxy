@@ -51,10 +51,12 @@ function startDevServer(config: BaseConfig, host: string, port: number): Promise
 
     if (pkg.config.protocol == 'https') {
       serverConfig.server = {
-        type: 'http2',
+        type: 'https',
         options: {
-          key: fs.readFileSync('cert/private.key'),
-          cert: fs.readFileSync('cert/mydomain.crt')
+          key: fs.readFileSync('cert/server.key'),
+          cert: fs.readFileSync('cert/server.crt'),
+          requestCert: true,
+          rejectUnauthorized: false
         }
       }
     }

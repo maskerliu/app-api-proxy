@@ -23,7 +23,7 @@
   },
   "config": {
     "port": 8884,
-    "protocol": "http"
+    "protocol": "https"
   },
   "resolutions": {
     "leveldown": "^6.1.1",
@@ -41,6 +41,7 @@
     "express-fileupload": "^1.5.1",
     "express-http-proxy": "^2.1.1",
     "formidable": "^3.5.2",
+    "http2-express": "^1.0.1",
     "inversify": "^6.0.3",
     "json-bigint": "^1.0.0",
     "pouchdb-adapter-leveldb": "^9.0.0",

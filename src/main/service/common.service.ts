@@ -85,8 +85,6 @@ export class CommonService implements ICommonService {
     }
   }
 
-
-
   saveServerConfig(config: LocalServerConfig) {
     let filePath = path.join(USER_DATA_DIR, 'local.config.json')
     try {
@@ -102,6 +100,7 @@ export class CommonService implements ICommonService {
       this.serverConfig.port = Number.parseInt(config.port as any)
       this.serverConfig.portValid = config.portValid as boolean
       this.serverConfig.ip = config.ip
+      this.serverConfig.protocol = config.protocol
       writeFileSync(filePath, JSON.stringify(this.serverConfig), 'utf-8')
     }
   }

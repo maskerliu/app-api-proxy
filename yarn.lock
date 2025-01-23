@@ -1650,6 +1650,7 @@ __metadata:
     file-loader: "npm:^6.2.0"
     formidable: "npm:^3.5.2"
     html-webpack-plugin: "npm:^5.6.2"
+    http2-express: "npm:^1.0.1"
     inversify: "npm:^6.0.3"
     json-bigint: "npm:^1.0.0"
     md5: "npm:^2.3.0"
@@ -5083,6 +5084,13 @@ __metadata:
     follow-redirects: "npm:^1.0.0"
     requires-port: "npm:^1.0.0"
   checksum: 10c0/148dfa700a03fb421e383aaaf88ac1d94521dfc34072f6c59770528c65250983c2e4ec996f2f03aa9f3fe46cd1270a593126068319311e3e8d9e610a37533e94
+  languageName: node
+  linkType: hard
+
+"http2-express@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "http2-express@npm:1.0.1"
+  checksum: 10c0/949ec0cdb0c86572f9cbf5935399fcb08a7b594e6097210bd727a2e36d834375ecdec1d233f18e03cee8615e2b1997eb04e73d7c27b899fbcb375a9ae2c6212e
   languageName: node
   linkType: hard
 
