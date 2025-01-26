@@ -15,6 +15,7 @@ const Run_Mode_PROD = 'production'
 
 process.env.NODE_ENV = Run_Mode_PROD
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+process.env.DEBUG = 'electron-builder'
 
 export function run() {
   let argv = minimist(process.argv.slice(2))
@@ -60,7 +61,7 @@ function pack(config: BaseConfig): Promise<string> {
         reject(err.stack || err)
       } else if (stats.hasErrors()) {
         let err = ''
-        stats.toString({ chunks: false, colors: true })
+        stats.toString({ chunks: true, colors: true })
           .split(/\r?\n/)
           .forEach(line => { err += `    ${line}\n` })
         reject(err)

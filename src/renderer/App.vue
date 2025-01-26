@@ -137,4 +137,13 @@ onMounted(async () => {
 .rule-mgr-cell-value {
   flex: 0 0 120px !important;
 }
+
+.van-tabs__nav--card {
+
+  box-sizing: border-box;
+  height: var(--van-tabs-card-height);
+  margin: 0;
+  border: var(--van-border-width) solid var(--van-tabs-default-color);
+  border-radius: var(--van-radius-sm);
+}
 </style>

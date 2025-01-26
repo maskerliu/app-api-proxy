@@ -11,6 +11,8 @@ const { DefinePlugin, HotModuleReplacementPlugin, NoEmitOnErrorsPlugin } = webpa
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
+let whiteListedModules = ['level-transcoder']
+
 class MainConfig extends BaseConfig {
 
   // devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
@@ -21,7 +23,7 @@ class MainConfig extends BaseConfig {
     main: path.join(dirname, '../src/main/index.ts'),
     preload: path.join(dirname, '../src/main/Preload.ts')
   }
-  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies)]
+  externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
 
   module: Configuration['module'] = {
     rules: [
@@ -83,7 +85,7 @@ class MainConfig extends BaseConfig {
       new CopyWebpackPlugin({
         patterns: [{
           from: path.join(dirname, '../cert'),
-          to: path.join(dirname, '../dist/electron/'),
+          to: path.join(dirname, '../dist/electron/cert/'),
         }]
       }),
       // new CopyWebpackPlugin({

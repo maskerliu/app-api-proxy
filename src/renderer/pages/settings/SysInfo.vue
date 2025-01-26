@@ -3,8 +3,8 @@
     <van-field center :label="$t('settings.sys.protocol')" label-width="10rem" readonly>
       <template #input>
         <van-tabs v-model:active="protocol" type="card" style="margin: 0;">
-          <van-tab title="https[2]" :title-style="{ width: '10rem' }"></van-tab>
-          <van-tab title="http" :title-style="{ width: '10rem' }"></van-tab>
+          <van-tab title="https[2]" :title-style="{ width: '5rem' }"></van-tab>
+          <van-tab title="http" :title-style="{ width: '5rem' }"></van-tab>
         </van-tabs>
       </template>
     </van-field>

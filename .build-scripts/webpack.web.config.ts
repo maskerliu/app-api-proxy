@@ -1,6 +1,5 @@
 'use strict'
 
-import CopyWebpackPlugin from 'copy-webpack-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
@@ -187,12 +186,12 @@ class WebConfig extends BaseConfig {
       )
     } else {
       this.plugins?.push(
-        new CopyWebpackPlugin({
-          patterns: [{
-            from: path.join(dirname, '../static/favicon.ico'),
-            to: path.join(dirname, '../dist/web/static/favicon.ico'),
-          }]
-        }),
+        // new CopyWebpackPlugin({
+        //   patterns: [{
+        //     from: path.join(dirname, '../static/favicon.ico'),
+        //     to: path.join(dirname, '../dist/web/static/favicon.ico'),
+        //   }]
+        // }),
         new LoaderOptionsPlugin({ minimize: true }),
       )
       this.output!.publicPath = './'
