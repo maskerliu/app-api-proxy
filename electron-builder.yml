@@ -12,18 +12,25 @@ files:
   - "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
   - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
   - "!**/node_modules/*/{LICENSE,README,readme,.eslintignore,.nycrc}"
-  - "!**/node_modules/*/*.map"
-  - "!**/node_modules/*/*.md"
+  - "!**/node_modules/**/*.map"
+  - "!**/node_modules/**/*.md"
+  - "!**/node_modules/**/build/**/*"
+  - "!**/node_modules/**/bin/**/*"
   - "!**/node_modules/*/doc/**/*"
   - "!**/node_modules/*/.github/*"
   - "!**/node_modules/*/deps/**/*"
   - "!**/node_modules/*/prebuilds/**/*"
   - "**/node_modules/*/prebuilds/${platform}-${arch}/**/*"
   - "./update.exe"
+  - "**/node_modules/level-transcoder/**/*"
 
 electronLanguages:
   - en-US
   - zh-CN
+
+# asarUnpack:
+#   - "node_modules/classic-level/**/*"
+#   - "node_modules/level-down/**/*"
 
 win:
   icon: icons/icon.ico

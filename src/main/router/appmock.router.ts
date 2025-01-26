@@ -33,11 +33,11 @@ export class AppMockRouter extends BaseRouter {
   constructor() {
     super()
 
-    this.router.get('/sse', (req, resp) => {
+    this.router.get('/sse/:uid', (req, resp) => {
       resp.setHeader('Content-Type', 'text/event-stream')
       resp.setHeader('Cache-Control', 'no-cache')
-      resp.setHeader('Connection', 'keep-alive')
-      resp.setHeader('Keep-Alive', 'max=10,timeout=15000')
+      // resp.setHeader('Connection', 'keep-alive')
+      // resp.setHeader('Keep-Alive', 'max=10,timeout=15000')
       resp.setHeader('Access-Control-Allow-Origin', '*')
       resp.flushHeaders()
 

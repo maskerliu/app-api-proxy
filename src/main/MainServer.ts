@@ -106,7 +106,6 @@ export class MainServer {
     this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
     this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
     this.httpApp.use(express.json())
-    // this.httpApp.use(fileUpload())
 
     this.httpApp.use('/appmock', this.appmockRouter.router)
     this.httpApp.use('/mapi', this.mapiRouter.router)

@@ -48,14 +48,13 @@ onMounted(async () => {
   // }
 
 
-  await fetchEventSource(`${baseDomain()}/appmock/sse`, {
+  await fetchEventSource(`${baseDomain()}/appmock/sse/${commonStore.uid}`, {
     headers: {
       'x-mock-uid': commonStore.uid
     },
     async onopen(resp) {
-      console.log('open', resp.status)
+      console.log('open', resp.status, new Date().toISOString())
       if (resp.ok && resp.headers.get('content-type') === EventStreamContentType) {
-        console.log(resp.body)
         return // everything's good
       } else if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) {
         // client-side errors are usually non-retriable:
@@ -65,7 +64,7 @@ onMounted(async () => {
       }
     },
     onmessage(ev) {
-      console.log('incoming', ev.data)
+      sseData.value = ev.data
     },
     onclose() {
       console.log('closed')
