@@ -94,7 +94,7 @@ switch (process.platform) {
     break
 }
 
-// if (argv['target'] == 'full') buildFullRelease(installerPath, ymlName)
-// else buildIncrementRelease(asarPath, ymlName)
+if (argv['target'] == 'full') buildFullRelease(installerPath, ymlName)
+else buildIncrementRelease(asarPath, ymlName)
 
-uncompress(`build/res/app-${process.platform}-${process.arch}-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)
+// uncompress(`build/res/app-${process.platform}-${process.arch}-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)

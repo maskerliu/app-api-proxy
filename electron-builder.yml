@@ -48,7 +48,7 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: false
   allowToChangeInstallationDirectory: false
-  uninstallDisplayName: ${productName}-uninstaller
+  uninstallDisplayName: ${productName}
 
 mac:
   icon: icons/icon.icns

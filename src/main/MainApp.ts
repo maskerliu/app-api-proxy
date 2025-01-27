@@ -1,7 +1,9 @@
 import {
-  app, BrowserWindow, BrowserWindowConstructorOptions, ipcMain,
-  Menu,
-  session, Tray
+  app, BrowserWindow, BrowserWindowConstructorOptions,
+  globalShortcut,
+  ipcMain,
+  Menu, session,
+  Tray
 } from 'electron'
 import fs from 'original-fs'
 import os from 'os'
@@ -66,6 +68,10 @@ export default class MainApp {
     })
 
     app.on('ready', () => {
+      globalShortcut.register('CommandOrControl+q', () => {
+        app.quit()
+      })
+
       let lock = app.requestSingleInstanceLock()
       if (!lock) app.quit()
 
