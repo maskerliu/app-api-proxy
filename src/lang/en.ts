@@ -54,7 +54,8 @@ export default {
       theme: 'Theme',
       lang: 'locales',
       version: 'Version',
-      restart: 'restart'
+      restart: 'restart',
+      noNewVersion: 'No New Version'
     },
     boardcast: {
       onlineClient: 'Online Client',

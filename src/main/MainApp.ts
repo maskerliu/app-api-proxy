@@ -27,6 +27,13 @@ export default class MainApp {
     let ext = os.platform() == 'win32' ? 'ico' : 'png'
     this.trayIconFile = path.join(this.iconDir, `icon.${ext}`)
     this.mainServer.bootstrap()
+
+    console.log('home', app.getPath('home'))
+    console.log('appData', app.getPath('appData'))
+    console.log('userData', app.getPath('userData'))
+    console.log('temp', app.getPath('temp'))
+    console.log('exe', app.getPath('exe'))
+    console.log('module', app.getPath('module'))
   }
 
   public async startApp() {
