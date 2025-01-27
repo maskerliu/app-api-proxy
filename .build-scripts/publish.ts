@@ -26,10 +26,10 @@ async function compress(sourceDir: string, destDir: string) {
   return digest
 }
 
-function uncompress(sourceDir: string, destDir: string) {
+async function uncompress(sourceDir: string, destDir: string) {
   let source = createReadStream(sourceDir)
   let dest = createWriteStream(destDir)
-  source.pipe(createGunzip()).pipe(dest)
+  await pipeline(source, createGunzip(), dest)
 }
 
 async function buildIncrementRelease(asarPath: string, ymlName: string) {
@@ -94,7 +94,7 @@ switch (process.platform) {
     break
 }
 
-if (argv['target'] == 'full') buildFullRelease(installerPath, ymlName)
-else buildIncrementRelease(asarPath, ymlName)
+// if (argv['target'] == 'full') buildFullRelease(installerPath, ymlName)
+// else buildIncrementRelease(asarPath, ymlName)
 
-// uncompress(`build/res/app-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)
+uncompress(`build/res/app-${process.platform}-${process.arch}-${pkg.version}.gz`, `build/res/app-${pkg.version}.asar`)

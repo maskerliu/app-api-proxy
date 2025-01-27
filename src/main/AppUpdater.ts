@@ -21,8 +21,8 @@ export interface InstallOptions {
 
 
 export async function incrementUpdate(version: Version) {
-  let sourceDir = path.join(USER_DATA_DIR, 'update', `app-${version.version}.gz`)
-  try { fs.rmSync(sourceDir) } catch (err) { console.log('fail to delete file', sourceDir) }
+  let sourceFile = path.join(USER_DATA_DIR, 'update', `app-${version.version}.gz`)
+  try { fs.rmSync(sourceFile) } catch (err) { console.log('fail to delete file', sourceFile) }
   const resp = await axios({
     url: version.updateUrl, method: 'GET', responseType: 'stream',
     onDownloadProgress: (event) => {
@@ -32,18 +32,21 @@ export async function incrementUpdate(version: Version) {
           { progress: Math.round((event.loaded / event.total) * 100) })
     }
   })
-  await pipeline(resp.data, createWriteStream(sourceDir))
-  let destDir = path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar')
+  await pipeline(resp.data, createWriteStream(sourceFile))
+  let destFile = path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'tmp-update')
   // if (IS_DEV) return
   let hash = crypto.createHash('sha512')
   let digest = ''
   try {
-    let source = createReadStream(sourceDir)
-    let dest = createWriteStream(destDir)
+    let source = createReadStream(sourceFile)
+    let dest = createWriteStream(destFile)
     source.on('data', (chunk: any) => hash.update(chunk))
     source.on('end', () => { digest = hash.digest('base64') })
     await pipeline(source, createGunzip(), dest)
-    if (digest == version.sha512) console.log('文件校验通过, 重启安装更新')
+    if (digest == version.sha512) {
+      console.log('文件校验通过, 重启安装更新')
+      fs.renameSync(destFile, path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar'))
+    }
     else console.log('文件破损，请重新下载！！')
   } catch (err) { console.log(err) }
 }
