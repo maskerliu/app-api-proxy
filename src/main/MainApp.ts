@@ -30,6 +30,7 @@ export default class MainApp {
   }
 
   public async startApp() {
+    app.setName('AppApiProxy')
     app.disableHardwareAcceleration()
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')

@@ -1678,6 +1678,7 @@ __metadata:
     axios: "npm:^1.7.7"
     buffer: "npm:^6.0.3"
     chalk: "npm:^5.3.0"
+    classic-level: "npm:2.0.0"
     clui: "npm:^0.3.6"
     compression: "npm:^1.7.4"
     copy-webpack-plugin: "npm:^12.0.2"
@@ -1699,6 +1700,7 @@ __metadata:
     http2-express: "npm:^1.0.1"
     inversify: "npm:^6.0.3"
     json-bigint: "npm:^1.0.0"
+    level-transcoder: "npm:1.0.1"
     md5: "npm:^2.3.0"
     minimist: "npm:^1.2.8"
     node-loader: "npm:^2.0.0"
@@ -2749,7 +2751,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"classic-level@npm:^2.0.0":
+"classic-level@npm:2.0.0, classic-level@npm:^2.0.0":
   version: 2.0.0
   resolution: "classic-level@npm:2.0.0"
   dependencies:
@@ -5885,7 +5887,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"level-transcoder@npm:^1.0.1":
+"level-transcoder@npm:1.0.1, level-transcoder@npm:^1.0.1":
   version: 1.0.1
   resolution: "level-transcoder@npm:1.0.1"
   dependencies:
