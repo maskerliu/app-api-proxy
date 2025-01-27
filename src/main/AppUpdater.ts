@@ -88,7 +88,7 @@ async function doInstall(options: InstallOptions) {
 }
 
 async function doMacInstall(options: InstallOptions) {
-  // TODO implement linux rpm full update
+  // TODO implement Mac full update
   return false
 }
 
@@ -98,7 +98,7 @@ async function doWinInstall(options: InstallOptions) {
   if (options.isForceRunAfter) args.push("--force-run")
   let installDir = IS_DEV ? '' : path.dirname(app.getPath('exe'))
   console.log('install dir:', installDir)
-  args.push(`/D=${path.dirname(path.dirname(app.getPath('exe')))}`)
+  args.push(`/D=${installDir}`)
 
   const callUsingElevation = (): void => {
     spawnLog(path.join(process.resourcesPath, 'elevate.exe'), [options.installerPath].concat(args)).catch(e => console.log(e))
