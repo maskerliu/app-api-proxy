@@ -57,7 +57,6 @@ export async function fullUpdate(version: Version) {
   const resp = await axios({
     url: version.updateUrl, method: 'GET', responseType: 'stream',
     onDownloadProgress: (event) => {
-
       BrowserWindow.getAllWindows()
         .find((it, idx, _) => { return it.title == 'AppApiProxy' })
         .webContents.send(ElectronAPICMD.DownloadUpdate,

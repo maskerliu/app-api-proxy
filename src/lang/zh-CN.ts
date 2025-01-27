@@ -53,7 +53,8 @@ export default {
       theme: '主题',
       lang: '语言',
       version: '版本',
-      restart: '重启'
+      restart: '重启',
+      noNewVersion: '当前已是最新版本',
     },
     boardcast: {
       onlineClient: '在线Client',

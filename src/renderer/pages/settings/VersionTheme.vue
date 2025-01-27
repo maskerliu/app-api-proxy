@@ -69,8 +69,7 @@
   </van-cell-group>
 </template>
 <script lang="ts" setup>
-
-import { ConfigProviderTheme, showNotify } from 'vant'
+import { ConfigProviderTheme, showNotify, showToast } from 'vant'
 import { inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Version, versionCheck } from '../../../common'
@@ -142,6 +141,10 @@ async function onVersionCheck() {
       "\n" +
       "\nQQ9将功能赋能，打造轻松欢乐的社交、娱乐与生活体验。"
     hasNewVersion.value = newVersion.version != commonStore.serverConfig.appVersion
+
+    if (!hasNewVersion.value) {
+      showToast(i18n.t('settings.sys.noNewVersion'))
+    }
   } catch (err) {
     showNotify(err)
     hasNewVersion.value = false

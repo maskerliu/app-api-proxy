@@ -16,7 +16,10 @@
         <div style="padding: 1px 0;">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
-          <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true" />
+          <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true">
+            <span class="badge-dot"></span>
+          </van-icon>
+
         </div>
       </van-row>
       <van-field v-model="proxyDelay" type="number">
@@ -175,6 +178,18 @@ function onMockRecordStart() {
 </script>
 
 <style>
+.badge-dot {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  font-size: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--van-danger-color);
+  top: -3px;
+  right: -3px;
+}
+
 .left-panel {
   flex-grow: 1;
   min-width: 340px;
