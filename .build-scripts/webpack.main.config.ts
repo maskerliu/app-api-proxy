@@ -11,7 +11,7 @@ const { DefinePlugin, HotModuleReplacementPlugin, NoEmitOnErrorsPlugin } = webpa
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-let whiteListedModules = ['level-transcoder']
+let whiteListedModules = []
 
 class MainConfig extends BaseConfig {
 
