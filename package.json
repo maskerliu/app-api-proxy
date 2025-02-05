@@ -58,7 +58,6 @@
     "tcp-port-used": "^1.0.2"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.7.1",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@types/clui": "^0.3.4",
     "@types/compression": "^1.7.5",

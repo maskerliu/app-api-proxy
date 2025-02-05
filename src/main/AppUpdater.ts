@@ -68,22 +68,20 @@ export async function fullUpdate(version: Version) {
   })
   await pipeline(resp.data, createWriteStream(downloadDir))
 
-  await doInstall({
+  let opt = {
     installerPath: downloadDir,
     isSilent: false,
     isForceRunAfter: false,
     isAdminRightsRequired: false
-  })
-}
+  }
 
-async function doInstall(options: InstallOptions) {
   switch (os.platform()) {
     case 'win32':
-      return await doWinInstall(options)
+      return await doWinInstall(opt)
     case 'darwin':
-      return await doMacInstall(options)
+      return await doMacInstall(opt)
     case 'linux':
-      return await doLinuxInstall(options)
+      return await doLinuxInstall(opt)
   }
 }
 
@@ -97,11 +95,11 @@ async function doWinInstall(options: InstallOptions) {
   if (options.isSilent) args.push("/S")
   if (options.isForceRunAfter) args.push("--force-run")
   let installDir = IS_DEV ? '' : path.dirname(app.getPath('exe'))
-  console.log('install dir:', installDir)
   args.push(`/D=${installDir}`)
 
   const callUsingElevation = (): void => {
-    spawnLog(path.join(process.resourcesPath, 'elevate.exe'), [options.installerPath].concat(args)).catch(e => console.log(e))
+    spawnLog(path.join(process.resourcesPath, 'elevate.exe'),
+      [options.installerPath].concat(args)).catch(e => console.log(e))
   }
 
   if (options.isAdminRightsRequired) {
