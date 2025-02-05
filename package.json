@@ -19,6 +19,7 @@
     "pkg": "yarn build && electron-builder -c electron-builder.yml",
     "pub": "yarn pkg && yarn publish",
     "pub:full": "yarn pkg && yarn publish --target=full",
+    "postinstall": "yarn electron-builder install-app-deps",
     "updateServer": "http-server build/ -p 4000 --cors -c-1"
   },
   "config": {
