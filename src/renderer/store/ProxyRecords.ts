@@ -135,7 +135,8 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
             webp: 'https://gd-hbimg.huaban.com/cf3c8a7d9e2a329af80ff0ec49589c7438e86c3d50fef-2z1q8n_fw658',
             apng: 'https://jamesqi.com/sites/jamesqi.com/files/1f975.png',
             video: 'https://baikevideo.cdn.bcebos.com/media/mda-OxHkzPA8lgXMtZ6Q/e413b6455b3c432b6f65d1d08efaf3fc.mp4',
-            audio: 'https://bqq.gtimg.com/CDN/source/audio/ring.mp3'
+            audio: 'https://bqq.gtimg.com/CDN/source/audio/ring.mp3',
+            zhibo: 'https://iovliveplay.radio.cn/fm/1600000001173.m3u8'
           },
         },
         tid: '0712ed382aff47e4877b5f55fce0832f'

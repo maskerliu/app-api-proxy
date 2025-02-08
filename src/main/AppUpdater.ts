@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { spawn, SpawnOptions, StdioOptions } from 'child_process'
 import crypto from 'crypto'
-import { app, BrowserWindow } from 'electron'
+import { app, autoUpdater, BrowserWindow } from 'electron'
 import fs, { createReadStream, createWriteStream } from 'fs'
 import os from 'os'
 import path from 'path'
@@ -52,6 +52,17 @@ export async function incrementUpdate(version: Version) {
 }
 
 export async function fullUpdate(version: Version) {
+  if (os.platform() == 'darwin') {
+    autoUpdater.on("error", it => {
+      this._logger.warn(it)
+      this.emit("error", it)
+    })
+    autoUpdater.on("update-downloaded", () => {
+      console.log('received update-downloaded event')
+      autoUpdater.quitAndInstall()
+    })
+  }
+
   let ext = os.platform() == 'linux' ? 'AppImage' : os.platform() == 'darwin' ? 'zip' : 'exe'
   let downloadDir = path.join(USER_DATA_DIR, 'update', `installer-${version.version}.${ext}`)
   if (os.platform() == 'linux') downloadDir.replace(/ /g, "\\ ")
@@ -60,10 +71,12 @@ export async function fullUpdate(version: Version) {
   const resp = await axios({
     url: version.updateUrl, method: 'GET', responseType: 'stream',
     onDownloadProgress: (event) => {
-      BrowserWindow.getAllWindows()
+      let window = BrowserWindow.getAllWindows()
         .find((it, idx, _) => { return it.title == 'AppApiProxy' })
-        .webContents.send(ElectronAPICMD.DownloadUpdate,
+      if (window) {
+        window.webContents.send(ElectronAPICMD.DownloadUpdate,
           { progress: Math.round((event.loaded / event.total) * 100) })
+      }
     }
   })
   await pipeline(resp.data, createWriteStream(downloadDir))
@@ -75,19 +88,20 @@ export async function fullUpdate(version: Version) {
     isAdminRightsRequired: false
   }
 
-  switch (os.platform()) {
-    case 'win32':
-      return await doWinInstall(opt)
-    case 'darwin':
-      return await doMacInstall(opt)
-    case 'linux':
-      return await doLinuxInstall(opt)
-  }
+  // switch (os.platform()) {
+  //   case 'win32':
+  //     return await doWinInstall(opt)
+  //   case 'darwin':
+  //     return await doMacInstall(opt)
+  //   case 'linux':
+  //     return await doLinuxInstall(opt)
+  // }
 }
 
 async function doMacInstall(options: InstallOptions) {
-  // TODO implement Mac full update
-  return false
+  autoUpdater.setFeedURL({ url: `file://${options.installerPath}` })
+  autoUpdater.checkForUpdates()
+  autoUpdater.emit('update-downloaded')
 }
 
 async function doWinInstall(options: InstallOptions) {
@@ -133,7 +147,10 @@ async function doWinInstall(options: InstallOptions) {
 }
 
 async function doLinuxInstall(options: InstallOptions) {
-  // TODO implement linux rpm full update
+  // TODO implement linux AppImage full update
+
+
+
   return false
 }
 

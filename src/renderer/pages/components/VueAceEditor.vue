@@ -1,7 +1,7 @@
 <template>
-  <div style="height: 100%; position: relative;">
+  <div ref="previewContainer" style="position: relative;">
     <div ref="aceEditor" :class="maxLines ? null : 'ace-editor'"></div>
-    <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app">
+    <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app" @close="preClose">
       <audio v-show="previewType == 0" controls preload="auto" style="width: 100%; height: 120px;"
         :src="audioSrc"></audio>
       <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" show-loading>
@@ -10,6 +10,11 @@
         </template>
       </van-image>
       <video v-show="previewType == 2" controls width="100%" :src="videoSrc"></video>
+
+      <div v-show="previewType == 3" style="width: 30rem; height: 120px;">
+        <van-icon :name="playStatus ? 'pause-circle-o' : 'play-circle-o'" size="36" color="white"
+          style="margin-left: 50px;" @click="playStatus ? tcplayer.pause() : tcplayer.play()" />
+      </div>
     </van-popup>
   </div>
 </template>
@@ -20,9 +25,13 @@ import 'ace-builds/src-min-noconflict/mode-json'
 import 'ace-builds/src-min-noconflict/theme-cloud_editor'
 import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
+import TCPlayer from 'tcplayer.js'
+import 'tcplayer.js/dist/tcplayer.min.css'
 import { ConfigProviderTheme } from 'vant'
-import { inject, nextTick, onMounted, Ref, ref, watch } from 'vue'
+import { inject, nextTick, onMounted, Ref, ref, useTemplateRef, watch } from 'vue'
 import { baseDomain } from '../../../common'
+
+const licenseUrl = 'https://license.vod2.myqcloud.com/license/v2/1340452115_1/v_cube.license'
 
 const theme = inject<Ref<ConfigProviderTheme>>('theme')
 
@@ -80,9 +89,13 @@ const aceEditor = ref<HTMLElement>()
 const showPreview = ref<boolean>(false)
 const previewType = ref<number>(0)
 
+const previewContainer = useTemplateRef<HTMLElement>('previewContainer')
 const imgSrc = ref<string>()
 const audioSrc = ref<string>()
 const videoSrc = ref<string>()
+const playStatus = ref<boolean>(false)
+const loadStatus = ref<boolean>(false)
+let tcplayer: any
 
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
@@ -154,8 +167,71 @@ function onMouseOut() {
   clearMarker()
 }
 
+async function preClose() {
+  previewType.value = -1
+
+  if (tcplayer) {
+    tcplayer.unload()
+    playStatus.value = false
+    loadStatus.value = false
+  }
+
+  videoSrc.value = null
+  audioSrc.value = null
+  imgSrc.value = null
+
+}
+
 async function onClick() {
   if (!link) return
+
+  showPreview.value = true
+  if (/^https?:\/\/.*\.m3u8/.test(link)) {
+    previewType.value = 3
+    let video: HTMLVideoElement
+    if (previewContainer.value.getElementsByTagName('video').length == 0) {
+      video = document.createElement<'video'>('video')
+      video.setAttribute("id", 'player-container-id')
+      video.setAttribute('width', '100%')
+      video.setAttribute('height', '0')
+      video.style.display = 'none'
+      video.style.visibility = 'hidden'
+
+      previewContainer.value.appendChild(video)
+    } else {
+      video = previewContainer.value.getElementsByTagName('video')[0]
+      video.setAttribute("id", 'player-container-id')
+      console.log(video)
+    }
+
+    if (tcplayer == null) {
+      tcplayer = TCPlayer('player-container-id', { autoplay: true, licenseUrl })
+    }
+
+    tcplayer.src(link)
+
+    tcplayer.on('error', function (e) {
+      console.log(e)
+    })
+
+    tcplayer.on('play', function () {
+      playStatus.value = true
+    })
+
+    tcplayer.on('pause', function () {
+      playStatus.value = false
+    })
+
+    tcplayer.on('loadstart', function () {
+      loadStatus.value = true
+    })
+
+    tcplayer.on('loadeddata', function () {
+      loadStatus.value = false
+    })
+
+    return
+  }
 
   try {
     let resp = await axios.get(`${baseDomain()}/mediaproxy?target=${link}`,
@@ -170,6 +246,7 @@ async function onClick() {
     } else if (/video.*/.test(contentType)) {
       previewType.value = 2
       videoSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+
     }
   } catch (err) {
     console.log(err)

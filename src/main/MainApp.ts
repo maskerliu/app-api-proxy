@@ -30,12 +30,7 @@ export default class MainApp {
     this.trayIconFile = path.join(this.iconDir, `icon.${ext}`)
     this.mainServer.bootstrap()
 
-    console.log('home', app.getPath('home'))
-    console.log('appData', app.getPath('appData'))
-    console.log('userData', app.getPath('userData'))
-    console.log('temp', app.getPath('temp'))
-    console.log('exe', app.getPath('exe'))
-    console.log('module', app.getPath('module'))
+    console.log('home', app.getPath('temp'))
   }
 
   public async startApp() {
@@ -226,12 +221,14 @@ export default class MainApp {
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
-        || details.url.indexOf('alicdn.com') !== -1) {
+        || details.url.indexOf('alicdn.com') !== -1
+        || details.url.indexOf('qcloud.com')) {
         callback({
           responseHeaders: {
             ...details.responseHeaders,
             'Cross-Origin-Opener-Policy': 'same-origin',
-            'Cross-Origin-Resource-Policy': 'cross-origin'
+            'Cross-Origin-Resource-Policy': 'cross-origin',
+            'Access-Control-Allow-Origin': '*'
           },
         })
       } else {
@@ -240,6 +237,7 @@ export default class MainApp {
             ...details.responseHeaders,
             'Cross-Origin-Opener-Policy': 'same-origin',
             'Cross-Origin-Embedder-Policy': 'require-corp',
+
           }
         })
       }
