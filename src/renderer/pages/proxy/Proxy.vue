@@ -1,7 +1,8 @@
 <template>
   <van-row>
+
     <van-col class="bg-border left-panel">
-      <van-row style="display: flex; width:100%;" justify="space-between">
+      <van-row justify="space-between">
         <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal" style="width: 235px;">
           <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
             <i class="iconfont icon-api" style="font-weight: blod"></i>
@@ -16,10 +17,9 @@
         <div style="padding: 1px 0;">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
-          <van-icon class="iconfont icon-setting left-panel-icon" @click="showSettings = true">
+          <van-icon class="iconfont icon-setting left-panel-icon" @click="openSettings">
             <span class="badge-dot"></span>
           </van-icon>
-
         </div>
       </van-row>
       <van-field v-model="proxyDelay" type="number">
@@ -52,19 +52,15 @@
     <OverlayScrollbarsComponent class="right-panel" :options="{ scrollbars: { theme: `os-theme-${reverseTheme}`, } }"
       defer>
       <div class="drag-bar" v-if="!isWeb"></div>
-      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId)?.type !== 5020" />
-
+      <span v-if="recordStore.curRecord() == null"></span>
       <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId)"
-        v-if="recordStore.curRecordId != -1 && recordStore.records.get(recordStore.curRecordId)?.type == 5020" />
+        v-else-if="recordStore.curRecord()?.type == 5020" />
+      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)" v-else />
     </OverlayScrollbarsComponent>
 
-    <van-popup v-model:show="showMockRuleMgr" position="right" :closeable="isWeb" close-icon="close">
-      <mock-rule-mgr />
-    </van-popup>
-
-    <van-popup v-model:show="showSettings" position="right" close-icon="close">
-      <settings />
+    <van-popup v-model:show="showPopup" position="right" :closeable="isWeb" close-icon="close">
+      <mock-rule-mgr v-if="showMockRuleMgr" />
+      <settings v-if="showSettings" />
     </van-popup>
 
     <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" round>
@@ -73,9 +69,7 @@
         {{ commonStore.registerUrl }}
       </div>
     </van-popup>
-
   </van-row>
-
 </template>
 
 <script lang="ts" setup>
@@ -97,6 +91,7 @@ const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 
 const isWeb = __IS_WEB__
+const showPopup = ref(false)
 const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
 const showSettings = ref<boolean>(false)
@@ -113,16 +108,8 @@ let mockRecordId = -1
 
 onMounted(() => {
   if (!__IS_WEB__) {
-    window.electronAPI.onOpenMockRuleMgr(() => {
-      showMockRuleMgr.value = true
-      withCurRecord.value = false
-      showSettings.value = false
-    })
-
-    window.electronAPI.onOpenSettings(() => {
-      showMockRuleMgr.value = false
-      showSettings.value = true
-    })
+    window.electronAPI.onOpenMockRuleMgr(() => { openRuleMgr() })
+    window.electronAPI.onOpenSettings(() => { openSettings() })
   }
 })
 
@@ -143,8 +130,16 @@ watch(() => recordStore.proxyTypes, () => {
 })
 
 function openRuleMgr() {
+  showPopup.value = true
   showMockRuleMgr.value = true
   withCurRecord.value = false
+  showSettings.value = false
+}
+
+function openSettings() {
+  showPopup.value = true
+  showMockRuleMgr.value = false
+  showSettings.value = true
 }
 
 async function saveProxyDelay() {

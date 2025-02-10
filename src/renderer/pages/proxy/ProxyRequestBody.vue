@@ -61,7 +61,6 @@ onMounted(async () => {
   for (let i = 0; i < imgBase64.length; ++i) arrBuf[i] = imgBase64.charCodeAt(i)
   let imgBlob = new Blob([imgBase64], { type: 'image/jpeg' })
   form.append('avatar', imgBlob)
-  console.log(data.value)
   if (data.value) parseForm(data.value)
 })
 

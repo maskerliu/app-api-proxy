@@ -1,6 +1,17 @@
 <template>
-  <van-config-provider :theme="theme">
-    <biz-main v-if="canRender" />
+  <van-config-provider :theme="theme" class="full-row">
+    <router-view class="biz-content" v-slot="{ Component, route }">
+      <transition name="fade">
+        <component :is="Component" :key="route.path" />
+      </transition>
+    </router-view>
+
+    <van-floating-bubble v-if="enableDebug" :offset="{ x: 10, y: 500 }" axis="xy" :gap="10" magnetic="x" icon="fire-o"
+      @click="onOpenDebugPanel" />
+
+    <van-popup v-model:show="showDebugPanel" position="left" closeable close-icon="close">
+      <debug-panel />
+    </van-popup>
   </van-config-provider>
 </template>
 
@@ -8,20 +19,31 @@
 import { ConfigProviderTheme } from 'vant'
 import { onMounted, provide, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import BizMain from './pages/BizMain.vue'
+import { useRouter } from 'vue-router'
+import DebugPanel from './pages/components/DebugPanel.vue'
 import { CommonStore } from './store'
 
-const canRender = ref(true)
 const i18n = useI18n()
+const canRender = ref(true)
 const theme = ref<ConfigProviderTheme>('light')
 const lang = ref<string>('zh-CN')
+const active = ref<number>(0)
+const showDebugPanel = ref<boolean>(false)
+const enableDebug = true // !__IS_WEB__
 
 provide('theme', theme)
 provide('lang', lang)
+provide('showDebugPanel', showDebugPanel)
 
 onMounted(async () => {
 
   window.isWeb = __IS_WEB__
+  useRouter().beforeEach((to: any, from: any) => {
+    return true
+  })
+
+  useRouter().replace("/proxy")
+  active.value = 1
 
   let wrapTheme = window.localStorage.getItem('theme')
   theme.value = wrapTheme != null ? wrapTheme as ConfigProviderTheme : 'light'
@@ -42,6 +64,10 @@ onMounted(async () => {
 
   canRender.value = true
 })
+
+function onOpenDebugPanel() {
+  showDebugPanel.value = true
+}
 
 </script>
 
@@ -103,13 +129,6 @@ onMounted(async () => {
   background: var(--van-gray-8);
 }
 
-::-webkit-scrollbar-track {
-  box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
-  -webkit-box-shadow: inset 0 0 5px rgba(125, 125, 125, 0.2);
-  border-radius: 2px;
-  background: var(--van-gray-1);
-}
-
 .full-row {
   width: 100%;
   height: 100%;
@@ -125,13 +144,21 @@ onMounted(async () => {
   box-shadow: 0px 12px 8px -12px #000;
 }
 
+.biz-content {
+  width: 100%;
+  min-width: 375px;
+  height: 100vh;
+  background: var(--van-gray-1);
+  overflow: hidden auto;
+}
+
 .drag-bar {
   width: 100%;
   height: 30px;
-  position: absolute;
+  position: fixed;
   background: linear-gradient(to bottom, var(--van-gray-1), transparent);
   -webkit-app-region: drag;
-  z-index: 9999;
+  z-index: -1;
 }
 
 .rule-mgr-cell-value {
@@ -139,7 +166,6 @@ onMounted(async () => {
 }
 
 .van-tabs__nav--card {
-
   box-sizing: border-box;
   height: var(--van-tabs-card-height);
   margin: 0;
