@@ -12,8 +12,9 @@
       <video v-show="previewType == 2" controls width="100%" :src="videoSrc"></video>
 
       <div v-show="previewType == 3" style="width: 30rem; height: 120px;">
-        <van-icon :name="playStatus ? 'pause-circle-o' : 'play-circle-o'" size="36" color="white"
-          style="margin-left: 50px;" @click="playStatus ? tcplayer.pause() : tcplayer.play()" />
+        <van-icon :name="playStatus ? 'pause-circle-o' : 'play-circle-o'" size="36"
+          style="margin-left: 50px; color: var(--van-gray-8);"
+          @click="playStatus ? tcplayer.pause() : tcplayer.play()" />
       </div>
     </van-popup>
   </div>
