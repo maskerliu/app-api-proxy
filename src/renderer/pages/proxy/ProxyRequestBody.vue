@@ -1,10 +1,10 @@
 <template>
-  <van-tabs v-model:active="bodyType" shrink sticky style="width: 100%; height: 10rem;">
-    <van-tab title="JSON">
-      <vue-ace-editor style="width: 100%;" :max-lines="22" :data="JSON.stringify(body, null, '\t')" />
-    </van-tab>
-    <van-tab title="Form">
-      <van-row style="height:calc(10rem - 50px); overflow-y: auto;">
+  <van-tabs v-model:active="bodyType" shrink sticky style="width: 100%; height: 10rem; overflow-y: auto;">
+
+    <van-tab v-for="tab in types" :title="tab">
+      <vue-ace-editor v-if="tab == 'JSON'" style="width: 100%; height:calc(10rem - 50px); overflow-y: auto;"
+        :max-lines="20" :data="JSON.stringify(body, null, '\t')" />
+      <van-row v-else-if="tab == 'Form'" style="height:calc(10rem - 50px); overflow-y: auto;">
         <van-field v-for="item in formBody" readonly :label="item.key">
           <template #input>
             <span v-if="item.type == 'text/plain'">
@@ -18,6 +18,8 @@
           </template>
         </van-field>
       </van-row>
+      <vue-ace-editor v-else-if="tab == 'XML'" style="width: 100%; height:calc(10rem - 50px); overflow-y: auto;"
+        :max-lines="20" :data="xmlData" />
     </van-tab>
   </van-tabs>
 </template>
@@ -48,6 +50,20 @@ const body = {
 const data = defineModel<FormData>('data')
 const form: FormData = new FormData()
 const formBody = ref<Array<FormField>>([])
+const xmlData = ref<string>(`
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.aliyun</groupId>
+  <artifactId>dysmsapi20170525</artifactId>
+  <version>2.0.24</version>
+  <packaging>jar</packaging>
+  <name>dysmsapi20170525</name>
+  <description>Alibaba Cloud Dysmsapi (20170525) SDK for Java
+    </description>
+  <url>https://github.com/aliyun/alibabacloud-sdk</url>
+</project>
+   `)
 
 onMounted(async () => {
   form.append('username', 'helloworld')
@@ -61,6 +77,7 @@ onMounted(async () => {
   for (let i = 0; i < imgBase64.length; ++i) arrBuf[i] = imgBase64.charCodeAt(i)
   let imgBlob = new Blob([imgBase64], { type: 'image/jpeg' })
   form.append('avatar', imgBlob)
+  data.value = form
   if (data.value) parseForm(data.value)
 })
 
