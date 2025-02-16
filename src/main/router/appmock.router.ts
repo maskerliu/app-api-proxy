@@ -58,7 +58,7 @@ export class AppMockRouter extends BaseRouter {
         console.log(`${logDate(new Date())}\treq close: ${uid}\t ${req.closed}`)
         this._clients.delete(uid)
       })
-      console.log(`${logDate(new Date())}\t${req.headers['x-mock-uid']} connected\t ${req.closed}`)
+      // console.log(`${logDate(new Date())}\t${req.headers['x-mock-uid']} connected\t ${req.closed}`)
     })
 
     this.router.get('/sse/broadcast/:uid', (req, resp) => {

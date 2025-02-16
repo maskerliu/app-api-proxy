@@ -89,7 +89,6 @@ export default class MainApp {
     })
 
     app.on('window-all-closed', () => {
-      console.log('window all closed')
       this.mainWindow?.destroy()
       this.mainWindow = null
       if (os.platform() !== 'win32') app.quit()
