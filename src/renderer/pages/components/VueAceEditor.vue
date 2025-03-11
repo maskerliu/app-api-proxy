@@ -257,7 +257,7 @@ async function onClick() {
 
 function update() {
   var canvasPos = _editor.renderer.scroller.getBoundingClientRect()
-  var offset = (x + _editor.renderer.scrollLeft - canvasPos.left - _editor.renderer.$padding) / _editor.renderer.characterWidth
+  var offset = (x + _editor.renderer.scrollLeft - canvasPos.left - (_editor.renderer as any).$padding) / _editor.renderer.characterWidth
   row = Math.floor((y + _editor.renderer.scrollTop - canvasPos.top) / _editor.renderer.lineHeight)
   col = Math.round(offset)
   var screenPos = { row: row, column: col, side: offset - col > 0 ? 1 : -1 }
