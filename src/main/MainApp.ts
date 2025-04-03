@@ -1,3 +1,4 @@
+import cv from '@u4/opencv4nodejs'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions,
   globalShortcut,
@@ -25,12 +26,19 @@ export default class MainApp {
   private mainServer: MainServer = new MainServer()
 
   constructor() {
-    this.iconDir = IS_DEV ? path.join(__dirname, '../../icons') : path.join(__dirname, './static')
+    this.iconDir = path.join(__dirname, IS_DEV ? '../../icons' : './static')
     let ext = os.platform() == 'win32' ? 'ico' : 'png'
     this.trayIconFile = path.join(this.iconDir, `icon.${ext}`)
     this.mainServer.bootstrap()
 
     console.log('home', app.getPath('temp'))
+  }
+
+  private testCV() {
+    let imgPath = path.join(__dirname, IS_DEV ? '../../images/opencv-logo.png' : './static/opencv-logo.png')
+    cv.imreadAsync(imgPath).then((img) => {
+      cv.imshow('image', img)
+    }).catch(error => console.error(error))
   }
 
   public async startApp() {
@@ -63,6 +71,8 @@ export default class MainApp {
     })
 
     app.on('ready', () => {
+      // this.testCV()
+
       globalShortcut.register('CommandOrControl+q', () => {
         app.quit()
       })
@@ -128,8 +138,9 @@ export default class MainApp {
       webPreferences: {
         offscreen: false,
         webSecurity: false,
-        devTools: true, //process.env.NODE_ENV == 'development',
-        nodeIntegration: true,
+        devTools: process.env.NODE_ENV == 'development',
+        contextIsolation: true,
+        nodeIntegration: false,
         sandbox: false,
         preload: path.join(__dirname, 'preload.cjs')
       },
@@ -149,6 +160,11 @@ export default class MainApp {
       // console.log(this.mainWindow)
     })
 
+    this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
+
+    this.mainWindow.webContents.on('preload-error', (event, preloadPath, error) => {
+      console.error('preload error', error)
+    })
     this.mainWindow.on('ready-to-show', () => {
       this.mainWindow.show()
       this.mainWindow.focus()
@@ -176,6 +192,14 @@ export default class MainApp {
         }
       },
       {
+        icon: path.join(this.iconDir, 'ic-setting.png'),
+        label: '开发者面板',
+        click: () => {
+          this.mainWindow?.show()
+          this.mainWindow?.webContents.send(ElectronAPICMD.OpenDevTools)
+        }
+      },
+      {
         icon: path.join(this.iconDir, 'ic-exit.png'),
         label: '退出', click: () => {
           this.mainServer.stop()
@@ -197,21 +221,22 @@ export default class MainApp {
   private initAppEnv() {
     let resPath = path.join(USER_DATA_DIR, 'static')
     fs.access(resPath, err => {
-      if (err) {
-        fs.mkdir(resPath, err => console.log(err))
-      }
+      if (err) fs.mkdir(resPath, err => console.log(err))
     })
+
     let dbPath = path.join(USER_DATA_DIR, 'biz_storage')
     fs.access(dbPath, err => {
-      if (err) {
-        fs.mkdir(dbPath, err => console.log(err))
-      }
+      if (err) fs.mkdir(dbPath, err => console.log(err))
     })
+
     let updatePath = path.join(USER_DATA_DIR, 'update')
     fs.access(updatePath, err => {
-      if (err) {
-        fs.mkdir(updatePath, err => console.log(err))
-      }
+      if (err) fs.mkdir(updatePath, err => console.log(err))
+    })
+
+    let dataPath = path.join(USER_DATA_DIR, 'data')
+    fs.access(dataPath, err => {
+      if (err) fs.mkdir(dataPath, err => console.log(err))
     })
   }
 

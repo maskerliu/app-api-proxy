@@ -1,37 +1,50 @@
 <template>
-  <div style="width: 375px; height: 100vh; overflow: hidden auto;">
-    <van-form class="full-row" style="width: 100%; min-width: 375px; padding: 15px 0; " label-align="right" colon>
-      <van-cell-group inset :title="$t('debug.common.title')">
-        <van-cell :title="$t('debug.common.versionCheck')" clickable @click="toNew"></van-cell>
-        <van-cell :title="$t('debug.common.devTools')" clickable @click="openDevTools"></van-cell>
-      </van-cell-group>
+  <van-form class="debug-panel" label-align="right" colon>
+    <van-cell-group inset :title="$t('debug.common.title')">
+      <van-cell :title="$t('debug.common.versionCheck')" clickable @click="toNew"></van-cell>
+      <van-cell :title="$t('debug.common.devTools')" clickable @click="openDevTools"></van-cell>
+    </van-cell-group>
 
-      <van-cell-group inset title="Event Source">
-        <van-cell title="trigger server notification" :label="sseData" is-link @click="onSSE"></van-cell>
-      </van-cell-group>
+    <van-cell-group inset title="Event Source">
+      <van-cell title="trigger server notification" :label="sseData" is-link @click="onSSE"></van-cell>
+    </van-cell-group>
 
-      <van-cell-group inset title="HLS">
-        <van-field center placeholder="HLS URL" label-width="3rem" v-model="streamUrl">
-          <template #left-icon>
-            <div style="display: flex; justify-content: center;">
-              <van-icon class="iconfont icon-link" style="color: var(--van-gray-8)" />
-              <div style="position: absolute; bottom: -5px; left: 0; font-size: 10px; color: red;">{{ bandwidth }}kbps
-              </div>
+    <van-cell-group inset title="HLS">
+      <van-field center placeholder="HLS URL" label-width="3rem" v-model="streamUrl">
+        <template #left-icon>
+          <div style="display: flex; justify-content: center;">
+            <van-icon class="iconfont icon-link" style="color: var(--van-gray-8)" />
+            <div style="position: absolute; bottom: -5px; left: 0; font-size: 10px; color: red;">{{ bandwidth }}kbps
             </div>
-          </template>
-          <template #button>
-            <van-button size="small" type="primary" icon="play" @click="onHlsClick" :loading="playerLoading">
-              <template #icon>
-                <van-icon class="iconfont" :class="playerStatus ? 'icon-player-pause' : 'icon-player-play'"
-                  style="color: var(--van-gray-8)" />
-              </template>
-            </van-button>
-          </template>
-        </van-field>
-        <video ref="hlsPlayer" width="100%" height="100px" controls></video>
-      </van-cell-group>
-    </van-form>
-  </div>
+          </div>
+        </template>
+        <template #button>
+          <van-button size="small" type="primary" icon="play" @click="onHlsClick" :loading="playerLoading">
+            <template #icon>
+              <van-icon class="iconfont" :class="playerStatus ? 'icon-player-pause' : 'icon-player-play'"
+                style="color: var(--van-gray-8)" />
+            </template>
+          </van-button>
+        </template>
+      </van-field>
+      <video ref="hlsPlayer" width="100%" height="100px" controls></video>
+    </van-cell-group>
+
+    <van-cell-group inset title="OpenCV" align="center">
+      <van-cell title="OpenCV">
+        <template #right-icon>
+          <van-button plain size="small" type="primary" @click="openCamera">
+            <template #icon>
+              <van-icon class="iconfont icon-camera" style="color: var(--van-gray-8)" />
+            </template>
+          </van-button>
+        </template>
+      </van-cell>
+      <canvas ref="canvas"></canvas>
+      <canvas ref="offscreen" style="display: none;"></canvas>
+      <video ref="preview" autoplay style="display: none;"></video>
+    </van-cell-group>
+  </van-form>
 </template>
 
 <script lang="ts" setup>
@@ -47,18 +60,34 @@ const sseData = ref<string>('hello world')
 const playerStatus = ref<boolean>(false)
 const playerLoading = ref<boolean>(false)
 const streamUrl = ref<string>('https://iovliveplay.radio.cn/fm/1600000001173.m3u8')
+const preview = ref<HTMLVideoElement>()
+const canvas = ref<HTMLCanvasElement>()
+const offscreen = ref<HTMLCanvasElement>()
+
 
 const bandwidth = ref<string>('0')
 const hlsPlayer = useTemplateRef<HTMLMediaElement>('hlsPlayer')
 let hls: Hls
 let timer: any
+let animationId: number
+let ctx: CanvasRenderingContext2D
+let offscreenCtx: CanvasRenderingContext2D
 
 onMounted(async () => {
   await registerSSE()
 
+  canvas.value.getContext('2d').imageSmoothingEnabled = true
+  canvas.value.getContext('2d').imageSmoothingQuality = 'high'
+
   if (hls == null) hls = new Hls()
 
-  console.log('init hls')
+  window.addEventListener('beforeunload', () => {
+    closeCamera()
+  })
+
+  ctx = canvas.value.getContext('2d')
+  offscreenCtx = offscreen.value.getContext('2d')
+
 })
 
 watch(showDebugPanel, (val, old) => {
@@ -207,6 +236,87 @@ function onHlsClick() {
   }
 }
 
+function openOpenCV() {
+  if (!__IS_WEB__) {
+    const result = window.cv.imread('../images/opencv-logo.png')
+    const img = new ImageData(result.data, result.cols, result.rows)
+    const ctx = canvas.value.getContext('2d')
+    offscreen.value.width = img.width
+    offscreen.value.height = img.height
+    const offscreenCtx = offscreen.value.getContext('2d')
+    offscreenCtx.putImageData(img, 0, 0)
+
+    canvas.value.width = img.width * 0.5
+    canvas.value.height = img.height * 0.5
+    ctx.drawImage(offscreen.value, 0, 0, img.width, img.height, 0, 0, img.width * 0.5, img.height * 0.5)
+  }
+}
+
+let frames = 0
+let faces: Array<{ x: number, y: number, width: number, height: number }> = []
+
+function processFrame() {
+  if (preview.value.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) return
+
+  offscreen.value.width = canvas.value.width = preview.value.videoWidth * 0.5
+  offscreen.value.height = canvas.value.height = preview.value.videoHeight * 0.5
+  offscreenCtx.drawImage(preview.value, 0, 0, canvas.value.width, canvas.value.height)
+
+  const imageData = offscreenCtx.getImageData(0, 0, offscreen.value.width, offscreen.value.height)
+
+  if (frames < 3) frames++
+  else {
+    frames = 0
+    const result = window.cv.faceRecognize(imageData, imageData.width, imageData.height)
+    faces = result.faces
+  }
+  // const img = new ImageData(result.data, result.cols, result.rows)
+  offscreenCtx.putImageData(imageData, 0, 0)
+  ctx.drawImage(offscreen.value, 0, 0, imageData.width, imageData.height, 0, 0, imageData.width, imageData.height)
+
+  updateFaceRec(ctx, faces)
+}
+
+function updateFaceRec(context: CanvasRenderingContext2D, faces: Array<{ x: number, y: number, width: number, height: number }>) {
+  context.strokeStyle = '#2ecc71'
+  context.lineWidth = 3
+  faces?.forEach(face => {
+    context.strokeRect(face.x, face.y, face.width, face.height)
+  })
+}
+
+async function openCamera() {
+  if (__IS_WEB__) return
+
+  if (preview.value.srcObject) {
+    canvas.value.getContext('2d').clearRect(0, 0, canvas.value.width, canvas.value.height)
+    closeCamera()
+    preview.value.srcObject = null
+    return
+  }
+
+  try {
+    if (offscreenCtx == null) offscreenCtx = offscreen.value.getContext('2d')
+    if (ctx == null) ctx = canvas.value.getContext('2d')
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+    preview.value.srcObject = stream
+
+    animationId = requestAnimationFrame(function loop() {
+      processFrame()
+      animationId = requestAnimationFrame(loop)
+    })
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function closeCamera() {
+  if (animationId) cancelAnimationFrame(animationId)
+  if (preview.value.srcObject) {
+    (preview.value.srcObject as MediaStream).getTracks().forEach(track => track.stop())
+  }
+}
+
 function openDevTools() {
   if (!__IS_WEB__) {
     window.electronAPI.openDevTools()
@@ -240,5 +350,13 @@ async function onSSE() {
   align-items: center;
   justify-content: center;
   user-select: none;
+}
+
+.debug-panel {
+  width: 100%;
+  min-width: 375px;
+  height: 100%;
+  padding: 10px 0;
+  background-color: var(--van-gray-1);
 }
 </style>

@@ -7,6 +7,7 @@ declare global {
   interface Window {
     isWeb: boolean
     electronAPI: IElectronAPI
+    cv: any
     // ipcRenderer: IpcRenderer
   }
 

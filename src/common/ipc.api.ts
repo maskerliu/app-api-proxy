@@ -44,3 +44,8 @@ export interface IElectronAPI {
 
   onDownloadUpdate(callback: any): void
 }
+
+export interface IOpencvAPI {
+  imread(path: string): any
+  imwrite(path: string, img: any): void
+}
