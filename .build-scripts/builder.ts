@@ -25,6 +25,7 @@ export function run() {
 }
 
 function clean() {
+  console.log('cleaning...')
   deleteSync([`build/${pkg.version}/*`])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
   console.log(`\n${chalk.bgGreen.white(' DONE ') + ' '}\n`)
