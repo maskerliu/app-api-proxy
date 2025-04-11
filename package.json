@@ -28,13 +28,6 @@
     "port": 8884,
     "protocol": "https"
   },
-  "opencv4nodejs": {
-    "opencvVersion": "4.11.0",
-    "disableAutoBuild": "0",
-    "opencvIncludeDir": "D:/opencv/build/include",
-    "opencvLibDir": "D:/opencv/build/x64/vc16/lib",
-    "opencvBinDir": "D:/opencv/build/x64/vc16/bin"
-  },
   "permissions": {
     "video-capture": {
       "description": "Required to access camera"
@@ -50,7 +43,6 @@
     "make-fetch-happen": "14.0.3"
   },
   "dependencies": {
-    "@u4/opencv4nodejs": "^7.1.2",
     "axios": "^1.7.7",
     "classic-level": "2.0.0",
     "compression": "^1.7.4",

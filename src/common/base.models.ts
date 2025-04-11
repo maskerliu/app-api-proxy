@@ -100,7 +100,6 @@ export interface LocalServerConfig {
   statRuleServer?: string // 埋点定义服务地址
   dataServer?: string // 流量代理服务地址
   status?: boolean // 流量代理服务是否开启
-  versionCheckServer?: string // 应用版本更新检查服务
   mqttBroker?: string // MQTT Broker地址
 
   appVersion: string

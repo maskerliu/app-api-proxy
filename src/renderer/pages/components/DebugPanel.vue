@@ -30,7 +30,7 @@
       <video ref="hlsPlayer" width="100%" height="100px" controls></video>
     </van-cell-group>
 
-    <van-cell-group inset title="OpenCV" align="center">
+    <van-cell-group inset title="Camera" style="text-align: center;">
       <van-cell title="OpenCV">
         <template #right-icon>
           <van-button plain size="small" type="primary" @click="openCamera">
@@ -40,9 +40,9 @@
           </van-button>
         </template>
       </van-cell>
-      <canvas ref="canvas"></canvas>
+      <canvas ref="preview"></canvas>
       <canvas ref="offscreen" style="display: none;"></canvas>
-      <video ref="preview" autoplay style="display: none;"></video>
+      <video ref="preVideo" autoplay style="display: none;"></video>
     </van-cell-group>
   </van-form>
 </template>
@@ -60,24 +60,21 @@ const sseData = ref<string>('hello world')
 const playerStatus = ref<boolean>(false)
 const playerLoading = ref<boolean>(false)
 const streamUrl = ref<string>('https://iovliveplay.radio.cn/fm/1600000001173.m3u8')
-const preview = ref<HTMLVideoElement>()
-const canvas = ref<HTMLCanvasElement>()
-const offscreen = ref<HTMLCanvasElement>()
-
-
 const bandwidth = ref<string>('0')
+
 const hlsPlayer = useTemplateRef<HTMLMediaElement>('hlsPlayer')
+const preVideo = useTemplateRef<HTMLVideoElement>('preVideo')
+const preview = useTemplateRef<HTMLCanvasElement>('preview')
+const offscreen = useTemplateRef<HTMLCanvasElement>('offscreen')
+
 let hls: Hls
 let timer: any
 let animationId: number
-let ctx: CanvasRenderingContext2D
+let previewCtx: CanvasRenderingContext2D
 let offscreenCtx: CanvasRenderingContext2D
+let frames = 0
 
 onMounted(async () => {
-  await registerSSE()
-
-  canvas.value.getContext('2d').imageSmoothingEnabled = true
-  canvas.value.getContext('2d').imageSmoothingQuality = 'high'
 
   if (hls == null) hls = new Hls()
 
@@ -85,9 +82,13 @@ onMounted(async () => {
     closeCamera()
   })
 
-  ctx = canvas.value.getContext('2d')
-  offscreenCtx = offscreen.value.getContext('2d')
+  previewCtx = preview.value.getContext('2d', { willReadFrequently: true })
+  offscreenCtx = offscreen.value.getContext('2d', { willReadFrequently: true })
 
+  previewCtx.imageSmoothingEnabled = true
+  previewCtx.imageSmoothingQuality = 'high'
+
+  await registerSSE()
 })
 
 watch(showDebugPanel, (val, old) => {
@@ -236,70 +237,42 @@ function onHlsClick() {
   }
 }
 
-function openOpenCV() {
-  if (!__IS_WEB__) {
-    const result = window.cv.imread('../images/opencv-logo.png')
-    const img = new ImageData(result.data, result.cols, result.rows)
-    const ctx = canvas.value.getContext('2d')
-    offscreen.value.width = img.width
-    offscreen.value.height = img.height
-    const offscreenCtx = offscreen.value.getContext('2d')
-    offscreenCtx.putImageData(img, 0, 0)
-
-    canvas.value.width = img.width * 0.5
-    canvas.value.height = img.height * 0.5
-    ctx.drawImage(offscreen.value, 0, 0, img.width, img.height, 0, 0, img.width * 0.5, img.height * 0.5)
-  }
-}
-
-let frames = 0
-let faces: Array<{ x: number, y: number, width: number, height: number }> = []
 
 function processFrame() {
-  if (preview.value.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) return
+  if (preVideo.value.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) return
 
-  offscreen.value.width = canvas.value.width = preview.value.videoWidth * 0.5
-  offscreen.value.height = canvas.value.height = preview.value.videoHeight * 0.5
-  offscreenCtx.drawImage(preview.value, 0, 0, canvas.value.width, canvas.value.height)
+  offscreen.value.width = preview.value.width = preVideo.value.videoWidth * 0.5
+  offscreen.value.height = preview.value.height = preVideo.value.videoHeight * 0.5
+
+  offscreenCtx.drawImage(preVideo.value, 0, 0, offscreen.value.width, offscreen.value.height)
 
   const imageData = offscreenCtx.getImageData(0, 0, offscreen.value.width, offscreen.value.height)
 
   if (frames < 3) frames++
   else {
     frames = 0
-    const result = window.cv.faceRecognize(imageData, imageData.width, imageData.height)
-    faces = result.faces
+
   }
-  // const img = new ImageData(result.data, result.cols, result.rows)
   offscreenCtx.putImageData(imageData, 0, 0)
-  ctx.drawImage(offscreen.value, 0, 0, imageData.width, imageData.height, 0, 0, imageData.width, imageData.height)
+  previewCtx.drawImage(offscreen.value, 0, 0, imageData.width, imageData.height, 0, 0, imageData.width, imageData.height)
 
-  updateFaceRec(ctx, faces)
-}
-
-function updateFaceRec(context: CanvasRenderingContext2D, faces: Array<{ x: number, y: number, width: number, height: number }>) {
-  context.strokeStyle = '#2ecc71'
-  context.lineWidth = 3
-  faces?.forEach(face => {
-    context.strokeRect(face.x, face.y, face.width, face.height)
-  })
+  previewCtx.scale(-1, 1)
 }
 
 async function openCamera() {
   if (__IS_WEB__) return
 
-  if (preview.value.srcObject) {
-    canvas.value.getContext('2d').clearRect(0, 0, canvas.value.width, canvas.value.height)
+  if (preVideo.value.srcObject) {
+    previewCtx.clearRect(0, 0, preview.value.width, preview.value.height)
+    offscreenCtx.clearRect(0, 0, offscreen.value.width, offscreen.value.height)
     closeCamera()
-    preview.value.srcObject = null
+    preVideo.value.srcObject = null
     return
   }
 
   try {
-    if (offscreenCtx == null) offscreenCtx = offscreen.value.getContext('2d')
-    if (ctx == null) ctx = canvas.value.getContext('2d')
     const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    preview.value.srcObject = stream
+    preVideo.value.srcObject = stream
 
     animationId = requestAnimationFrame(function loop() {
       processFrame()
@@ -312,8 +285,8 @@ async function openCamera() {
 
 async function closeCamera() {
   if (animationId) cancelAnimationFrame(animationId)
-  if (preview.value.srcObject) {
-    (preview.value.srcObject as MediaStream).getTracks().forEach(track => track.stop())
+  if (preVideo.value.srcObject) {
+    (preVideo.value.srcObject as MediaStream).getTracks().forEach(track => track.stop())
   }
 }
 

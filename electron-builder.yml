@@ -3,6 +3,9 @@ appId: com.github.maskerliu.AppApiProxy
 directories:
   output: build/${version}
 
+asarUnpack:
+  - "**/node_modules/@u4/opencv4nodejs/**/*"
+
 publish:
   - provider: "generic"
     url: ""
@@ -15,6 +18,7 @@ files:
   - "!**/node_modules/**/*.map"
   - "!**/node_modules/**/*.md"
   - "!**/node_modules/**/build/**/*"
+  - "**/node_modules/@u4/opencv4nodejs/build/Release/*.node"
   - "!**/node_modules/**/bin/**/*"
   - "!**/node_modules/*/doc/**/*"
   - "!**/node_modules/*/.github/*"
