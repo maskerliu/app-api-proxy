@@ -5,10 +5,10 @@ import fse from 'fs-extra'
 import os from 'os'
 import path from "path"
 import { Version } from "../common"
-import { ElectronAPICMD } from "../common/ipc.api"
+import { MainAPICMD } from "../common/ipc.api"
 import { fullUpdate, incrementUpdate } from "./AppUpdater"
 
-ipcMain.handle(ElectronAPICMD.Relaunch, (_) => {
+ipcMain.handle(MainAPICMD.Relaunch, (_) => {
   if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
     const logPath = app.getPath('logs')
     const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
@@ -35,7 +35,7 @@ ipcMain.handle(ElectronAPICMD.Relaunch, (_) => {
   app.quit()
 })
 
-ipcMain.handle(ElectronAPICMD.OpenDevTools, (_, args?: any) => {
+ipcMain.handle(MainAPICMD.OpenDevTools, (_, args?: any) => {
   BrowserWindow.getAllWindows()
     .find((it, idx, _) => { return it.title == 'AppApiProxy' })
     .webContents.openDevTools({ mode: 'detach', activate: false })
@@ -43,7 +43,7 @@ ipcMain.handle(ElectronAPICMD.OpenDevTools, (_, args?: any) => {
 
 
 
-ipcMain.handle(ElectronAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
+ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
   nativeTheme.themeSource = theme
   if (os.platform() == 'darwin') {
     // console.log(this.mainWindow.setTitleBarOverlay)
@@ -57,7 +57,7 @@ ipcMain.handle(ElectronAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dar
   }
 })
 
-ipcMain.handle(ElectronAPICMD.DownloadUpdate, async (_, newVersion: Version) => {
+ipcMain.handle(MainAPICMD.DownloadUpdate, async (_, newVersion: Version) => {
   if (newVersion.fullUpdate) await fullUpdate(newVersion)
   else await incrementUpdate(newVersion)
 })

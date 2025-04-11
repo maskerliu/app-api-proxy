@@ -1,7 +1,8 @@
+
 import { LocalServerConfig } from "./base.models"
 
 
-export const ElectronAPICMD = {
+export const MainAPICMD = {
   Relaunch: 'relaunch',
   OpenFile: 'openFile',
   OpenDevTools: 'openDevTools',
@@ -16,7 +17,7 @@ export const ElectronAPICMD = {
   SendServerEvent: 'sendServerEvent'
 }
 
-export interface IElectronAPI {
+export interface IMainAPI {
 
   relaunch(): void
 
@@ -43,9 +44,4 @@ export interface IElectronAPI {
   onSysThemeChanged(callback: (theme: string) => void): void
 
   onDownloadUpdate(callback: any): void
-}
-
-export interface IOpencvAPI {
-  imread(path: string): any
-  imwrite(path: string, img: any): void
 }

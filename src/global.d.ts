@@ -1,4 +1,4 @@
-import { IElectronAPI } from "./common/ipc.api"
+import { IMainAPI } from "./common/ipc.api"
 
 declare global {
   let __DEV__: boolean
@@ -6,9 +6,7 @@ declare global {
 
   interface Window {
     isWeb: boolean
-    electronAPI: IElectronAPI
-    cv: any
-    // ipcRenderer: IpcRenderer
+    electronAPI: IMainAPI
   }
 
   let __IS_WEB__: boolean

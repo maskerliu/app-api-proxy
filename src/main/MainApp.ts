@@ -1,4 +1,3 @@
-import cv from '@u4/opencv4nodejs'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions,
   globalShortcut,
@@ -9,7 +8,7 @@ import {
 import fs from 'original-fs'
 import os from 'os'
 import path from 'path'
-import { ElectronAPICMD } from '../common/ipc.api'
+import { MainAPICMD } from '../common/ipc.api'
 import './IPCServices'
 import { IS_DEV, USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
@@ -32,13 +31,6 @@ export default class MainApp {
     this.mainServer.bootstrap()
 
     console.log('home', app.getPath('temp'))
-  }
-
-  private testCV() {
-    let imgPath = path.join(__dirname, IS_DEV ? '../../images/opencv-logo.png' : './static/opencv-logo.png')
-    cv.imreadAsync(imgPath).then((img) => {
-      cv.imshow('image', img)
-    }).catch(error => console.error(error))
   }
 
   public async startApp() {
@@ -138,7 +130,7 @@ export default class MainApp {
       webPreferences: {
         offscreen: false,
         webSecurity: false,
-        devTools: process.env.NODE_ENV == 'development',
+        devTools: true,
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false,
@@ -168,7 +160,7 @@ export default class MainApp {
     this.mainWindow.on('ready-to-show', () => {
       this.mainWindow.show()
       this.mainWindow.focus()
-      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
+      this.mainWindow.webContents.send(MainAPICMD.GetSysSettings, this.mainServer.getSysSettings())
     })
   }
 
@@ -180,7 +172,7 @@ export default class MainApp {
         label: '用例管理',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(ElectronAPICMD.OpenMockRuleMgr)
+          this.mainWindow?.webContents.send(MainAPICMD.OpenMockRuleMgr)
         }
       },
       {
@@ -188,7 +180,7 @@ export default class MainApp {
         label: '设置',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(ElectronAPICMD.OpenSettings)
+          this.mainWindow?.webContents.send(MainAPICMD.OpenSettings)
         }
       },
       {
@@ -196,7 +188,7 @@ export default class MainApp {
         label: '开发者面板',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(ElectronAPICMD.OpenDevTools)
+          this.mainWindow?.webContents.send(MainAPICMD.OpenDevTools)
         }
       },
       {
@@ -269,7 +261,7 @@ export default class MainApp {
   }
 
   private initIPCService() {
-    ipcMain.handle(ElectronAPICMD.SaveSysSettings, (_, ...args: any) => {
+    ipcMain.handle(MainAPICMD.SaveSysSettings, (_, ...args: any) => {
       let curSettings = this.mainServer.getSysSettings()
       let newSettings = JSON.parse(args)
 
@@ -280,10 +272,10 @@ export default class MainApp {
         this.mainServer.start()
       }
 
-      this.mainWindow.webContents.send(ElectronAPICMD.GetSysSettings, this.mainServer.getSysSettings())
+      this.mainWindow.webContents.send(MainAPICMD.GetSysSettings, this.mainServer.getSysSettings())
     })
 
-    ipcMain.handle(ElectronAPICMD.SendServerEvent, () => {
+    ipcMain.handle(MainAPICMD.SendServerEvent, () => {
       // console.log('send sse')
     })
   }
