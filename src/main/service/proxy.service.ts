@@ -6,7 +6,6 @@ import { readFileSync } from 'fs'
 import { IncomingHttpHeaders } from 'http'
 import { inject, injectable } from 'inversify'
 import JSONBig from 'json-bigint'
-import "reflect-metadata"
 import zlib from 'zlib'
 import { ProxyMock } from '../../common'
 import { IocTypes } from '../MainConst'

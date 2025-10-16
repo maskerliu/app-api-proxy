@@ -1,6 +1,7 @@
 import { Connection } from "sockjs"
 import { get, post } from './base.api'
 import { LocalServerConfig } from './base.models'
+import { API_URL } from "./api.const"
 
 export namespace ProxyMock {
 
@@ -113,23 +114,23 @@ export namespace ProxyMock {
 
 
   export function searchMockRules(keyword: string) {
-    return get<Array<ProxyMock.MockRule>>('/appmock/searchMockRules', null, { keyword })
+    return get<Array<ProxyMock.MockRule>>(`${API_URL.AppMock}${API_URL.SearchMockRules}`, null, { keyword })
   }
 
   export function getMockRuleDetail(ruleId: string) {
-    return get<ProxyMock.MockRule>('/appmock/getMockRuleDetail', null, { ruleId })
+    return get<ProxyMock.MockRule>(`${API_URL.AppMock}${API_URL.GetMockRuleDetail}`, null, { ruleId })
   }
 
   export function saveMockRule(mockRule: ProxyMock.MockRule, onlySnap: boolean) {
-    return post<string>('/appmock/saveMockRule', null, { onlySnap }, mockRule)
+    return post<string>(`${API_URL.AppMock}${API_URL.SaveMockRule}`, null, { onlySnap }, mockRule)
   }
 
   export function deleteMockRule(ruleId: string) {
-    return post<string>('/appmock/deleteMockRule', null, { ruleId })
+    return post<string>(`${API_URL.AppMock}${API_URL.DeleteMockRule}`, null, { ruleId })
   }
 
   export function getServerConfig() {
-    return get<LocalServerConfig>('/appmock/getServerConfig')
+    return get<LocalServerConfig>(`${API_URL.AppMock}${API_URL.GetServerConfig}`)
   }
 
   export async function saveProxyConfig(config: Partial<ProxyMock.ProxyConfig>) {

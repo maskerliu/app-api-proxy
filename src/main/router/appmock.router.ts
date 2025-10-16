@@ -1,11 +1,11 @@
 import { format } from 'date-fns'
 import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
-import 'reflect-metadata'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/network.utils'
 import { ICommonService, IMockService, IProxyService, IPushService } from '../service'
 import { BaseRouter, ParamType } from './base.router'
+import { API_URL } from '../../common/api.const'
 
 interface ReqResp {
   req: Request
@@ -76,32 +76,48 @@ export class AppMockRouter extends BaseRouter {
 
   override initApiInfos(): void {
     this.addApiInfo({
-      method: BizNetwork.Method_Get, path: '/register/:uid', func: 'register', target: 'commonService',
+      method: BizNetwork.Method_Get,
+      path: `${API_URL.MockRegister}/:uid`, func: 'register', target: 'commonService',
       params: [{ key: 'uid', type: ParamType.Path }]
     })
     this.addApiInfo({
-      method: BizNetwork.Method_Get, path: '/getAllPushClients', func: 'getAllPushClients', target: 'pushService'
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetAllPushClients, func: 'getAllPushClients', target: 'pushService'
     })
     this.addApiInfo({
-      method: BizNetwork.Method_Get, path: '/getServerConfig', func: 'getServerConfig', target: 'commonService'
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetServerConfig, func: 'getServerConfig', target: 'commonService'
     })
     this.addApiInfo({
-      method: 'post', path: '/saveProxyConfig', func: 'saveProxyConfig', target: 'proxyService',
-      params: [{ key: 'uid', type: ParamType.Query }, { key: 'config', type: ParamType.FormBody }]
-    })
-
-    this.addApiInfo({
-      method: BizNetwork.Method_Get, path: '/searchMockRules', func: 'searchMockRules', target: 'mockService',
-      params: [{ key: 'uid', type: ParamType.Query }, { key: 'keyword', type: ParamType.Query }]
-    })
-
-    this.addApiInfo({
-      method: BizNetwork.Method_Get, path: '/getMockRuleDetail', func: 'getMockRuleDetail', target: 'mockService',
-      params: [{ key: 'uid', type: ParamType.Query }, { key: 'ruleId', type: ParamType.Query }]
+      method: BizNetwork.Method_Post,
+      path: API_URL.SaveProxyConfig, func: 'saveProxyConfig', target: 'proxyService',
+      params: [
+        { key: 'uid', type: ParamType.Query },
+        { key: 'config', type: ParamType.FormBody }
+      ]
     })
 
     this.addApiInfo({
-      method: BizNetwork.Method_Post, path: '/saveMockRule', func: 'saveMockRule', target: 'mockService',
+      method: BizNetwork.Method_Get,
+      path: API_URL.SearchMockRules, func: 'searchMockRules', target: 'mockService',
+      params: [
+        { key: 'uid', type: ParamType.Query },
+        { key: 'keyword', type: ParamType.Query }
+      ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetMockRuleDetail, func: 'getMockRuleDetail', target: 'mockService',
+      params: [
+        { key: 'uid', type: ParamType.Query },
+        { key: 'ruleId', type: ParamType.Query }
+      ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.SaveMockRule, func: 'saveMockRule', target: 'mockService',
       params: [
         { key: 'uid', type: ParamType.Query },
         { key: 'onlySnap', type: ParamType.Query },
@@ -110,8 +126,21 @@ export class AppMockRouter extends BaseRouter {
     })
 
     this.addApiInfo({
-      method: BizNetwork.Method_Post, path: '/deleteMockRule', func: 'deleteMockRule', target: 'mockService',
-      params: [{ key: 'uid', type: ParamType.Query }, { key: 'ruleId', type: ParamType.Query }]
+      method: BizNetwork.Method_Post,
+      path: API_URL.DeleteMockRule, func: 'deleteMockRule', target: 'mockService',
+      params: [
+        { key: 'uid', type: ParamType.Query },
+        { key: 'ruleId', type: ParamType.Query }
+      ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: '/upload', func: 'upload', target: 'mockService',
+      params: [
+        { key: 'uid', type: ParamType.Query },
+        { key: 'file', type: ParamType.FormBody }
+      ]
     })
 
   }

@@ -1,8 +1,8 @@
 import { app, nativeTheme } from 'electron'
 import { accessSync, readFileSync, writeFileSync } from 'fs'
-import { inject, injectable } from "inversify"
+import { inject, injectable } from 'inversify'
 import path from 'path'
-import "reflect-metadata"
+import 'reflect-metadata'
 import { LocalServerConfig, ProxyMock } from '../../common'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../misc/network.utils'

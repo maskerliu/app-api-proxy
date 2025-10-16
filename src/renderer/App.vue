@@ -98,6 +98,9 @@ function onOpenDebugPanel() {
   --van-radius-md: 8px;
   --van-dialog-radius: 8px;
   --van-floating-bubble-background: #f04b1e;
+  --van-tabs-line-height: 1.8rem;
+  --van-tab-font-size: 0.9rem;
+  --van-tab-line-height: 1rem;
 }
 
 #app {

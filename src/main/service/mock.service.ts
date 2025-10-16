@@ -1,5 +1,4 @@
-import { inject, injectable } from "inversify"
-import "reflect-metadata"
+import { inject, injectable } from 'inversify'
 import { ProxyMock } from '../../common'
 import { IocTypes } from "../MainConst"
 import { IMockRepo } from '../repository/mock.repo'

@@ -1,8 +1,7 @@
-import { injectable } from "inversify"
+import { injectable } from 'inversify'
 import path from 'path'
 import PouchFind from 'pouchdb-find'
 import PouchDB from 'pouchdb-node'
-import "reflect-metadata"
 import { ProxyMock } from '../../common/proxy.api'
 import { USER_DATA_DIR } from '../MainConst'
 import BaseRepo from './base.repo'

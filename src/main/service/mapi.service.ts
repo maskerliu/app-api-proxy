@@ -1,7 +1,5 @@
-import { injectable } from "inversify"
-import "reflect-metadata"
-import { BizContext, Mapi } from "../../common"
-
+import { injectable } from 'inversify'
+import { BizContext, Mapi } from '../../common'
 
 export interface IMapiService {
 
