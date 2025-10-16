@@ -10,6 +10,7 @@
   "main": "./dist/electron/main.cjs",
   "license": "UNLICENSED",
   "scripts": {
+    "setup": "yarn dlx @yarnpkg/sdks vscode",
     "test": "node --import tsx .build-scripts/test.ts --target=clean --pid=1000",
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
     "build": "node --experimental-json-modules --max_old_space_size=3500 --import tsx .build-scripts/builder.ts",
@@ -49,11 +50,11 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "express": "^4.21.2",
-    "express-fileupload": "^1.5.1",
+    "express-fileupload": "^1.5.2",
     "express-http-proxy": "^2.1.2",
     "formidable": "^3.5.4",
     "http2-express": "^1.0.1",
-    "inversify": "^6.0.3",
+    "inversify": "^7.10.2",
     "json-bigint": "^1.0.0",
     "level-transcoder": "1.0.1",
     "pouchdb-adapter-leveldb": "^9.0.0",
@@ -122,21 +123,24 @@
     "tcplayer.js": "^4.9.1",
     "ts-loader": "^9.5.1",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2",
+    "typescript": "^5.9.3",
     "url-loader": "^4.1.1",
     "vant": "^4.9.21",
-    "vue": "^3.5.21",
+    "vue": "^3.5.22",
     "vue-i18n": "^11.1.12",
     "vue-loader": "^17.4.2",
     "vue-router": "^4.5.1",
     "vue-style-loader": "^4.1.3",
     "vue3-infinite-list": "^0.2.5",
-    "webpack": "^5.101.3",
+    "webpack": "^5.102.1",
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2",
     "webpack-hot-middleware": "^2.26.1",
     "yaml": "^2.8.1"
   },
-  "packageManager": "yarn@4.7.0"
+  "packageManager": "yarn@4.7.0",
+  "installConfig": {
+    "pnp": true
+  }
 }

@@ -12,6 +12,7 @@ import { bizContainer } from './IocContainer'
 import { IocTypes, USER_DATA_DIR } from './MainConst'
 import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
 import { ICommonService, IProxyService, IPushService } from './service'
+import { API_URL } from '../common/api.const'
 
 export class MainServer {
 
@@ -107,7 +108,7 @@ export class MainServer {
     this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
     this.httpApp.use(express.json())
 
-    this.httpApp.use('/appmock', this.appmockRouter.router)
+    this.httpApp.use(API_URL.AppMock, this.appmockRouter.router)
     this.httpApp.use('/mapi', this.mapiRouter.router)
     this.httpApp.use('/_proxy', this.proxyRouter.router)
     this.httpApp.use('/mediaproxy', this.proxyCorsMedia)

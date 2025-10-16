@@ -1,14 +1,15 @@
 <template>
-  <div ref="previewContainer" style="position: relative;">
-    <div ref="aceEditor" :class="maxLines ? null : 'ace-editor'"></div>
+  <div ref="aceEditor" :class="maxLines ? null : 'ace-editor'">
     <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app" @close="preClose">
       <audio v-show="previewType == 0" controls preload="auto" style="width: 100%; height: 120px;"
         :src="audioSrc"></audio>
+
       <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" show-loading>
         <template v-slot:loading>
           <van-loading type="spinner" size="20" />
         </template>
       </van-image>
+
       <video v-show="previewType == 2" controls width="100%" :src="videoSrc"></video>
 
       <div v-show="previewType == 3" style="width: 30rem; height: 120px;">
@@ -61,18 +62,20 @@ let _defOpts: Partial<Ace.EditorOptions> = {
   useWorker: false,
   wrap: 'free',
   showFoldWidgets: true,
+  fadeFoldWidgets: true,
   showLineNumbers: true,
   showGutter: true,
   showPrintMargin: false,
   autoScrollEditorIntoView: true,
   highlightActiveLine: true,
   highlightSelectedWord: false, // 高亮选中文本
-  enableLiveAutocompletion: true, // 启用实时自动完成
+  enableLiveAutocompletion: false, // 启用实时自动完成
   wrapBehavioursEnabled: true,
   enableBasicAutocompletion: true,
   enableSnippets: true,
+  useSoftTabs: true,
   tabSize: 2,
-  useSvgGutterIcons: true,
+  useSvgGutterIcons: false,
   enableMobileMenu: false,
   readOnly: false,
   foldStyle: 'markbeginend',
@@ -90,7 +93,7 @@ const aceEditor = ref<HTMLElement>()
 const showPreview = ref<boolean>(false)
 const previewType = ref<number>(0)
 
-const previewContainer = useTemplateRef<HTMLElement>('previewContainer')
+// const previewContainer = useTemplateRef<HTMLElement>('previewContainer')
 const imgSrc = ref<string>()
 const audioSrc = ref<string>()
 const videoSrc = ref<string>()
@@ -128,7 +131,7 @@ watch(theme, () => {
 })
 
 watch(() => props.maxLines, () => {
-  _editor.setOption('maxLines', props.maxLines)
+  // _editor.setOption('maxLines', props.maxLines)
   _editor.resize()
 })
 
@@ -190,7 +193,7 @@ async function onClick() {
   if (/^https?:\/\/.*\.m3u8/.test(link)) {
     previewType.value = 3
     let video: HTMLVideoElement
-    if (previewContainer.value.getElementsByTagName('video').length == 0) {
+    if (aceEditor.value.getElementsByTagName('video').length == 0) {
       video = document.createElement<'video'>('video')
       video.setAttribute("id", 'player-container-id')
       video.setAttribute('width', '100%')
@@ -198,9 +201,9 @@ async function onClick() {
       video.style.display = 'none'
       video.style.visibility = 'hidden'
 
-      previewContainer.value.appendChild(video)
+      aceEditor.value.appendChild(video)
     } else {
-      video = previewContainer.value.getElementsByTagName('video')[0]
+      video = aceEditor.value.getElementsByTagName('video')[0]
       video.setAttribute("id", 'player-container-id')
       console.log(video)
     }

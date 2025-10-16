@@ -1,7 +1,6 @@
 
 import { injectable } from 'inversify'
 import 'pouchdb-node'
-import "reflect-metadata"
 
 @injectable()
 export default class BaseRepo<T extends PouchDB.Core.RemoveDocument> {
