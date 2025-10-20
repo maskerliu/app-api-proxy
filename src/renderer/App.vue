@@ -9,7 +9,7 @@
     <van-floating-bubble v-if="enableDebug" :offset="{ x: 10, y: 500 }" axis="xy" :gap="10" magnetic="x" icon="fire-o"
       @click="onOpenDebugPanel" />
 
-    <van-popup v-model:show="showDebugPanel" position="left" closeable close-icon="close">
+    <van-popup v-model:show="showDebugPanel" position="left">
       <debug-panel />
     </van-popup>
   </van-config-provider>
