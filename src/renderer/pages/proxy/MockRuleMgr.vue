@@ -89,7 +89,7 @@
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
 
-      <van-col style="flex: 1; ">
+      <van-col style="flex: 1; position: relative;">
         <vue-ace-editor :read-only="false" :data="content" />
       </van-col>
     </van-row>
