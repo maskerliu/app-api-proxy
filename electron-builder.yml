@@ -47,12 +47,17 @@ win:
         - x64
 nsis:
   artifactName: ${productName}-Setup-${version}.${ext}
-  oneClick: true
+  oneClick: false
   deleteAppDataOnUninstall: false
   createDesktopShortcut: true
   createStartMenuShortcut: false
   allowToChangeInstallationDirectory: false
   uninstallDisplayName: ${productName}
+  installerIcon: windows_installer.ico
+  installerHeaderIcon: windows_installer.ico
+  installerHeader: windows_installer_header.bmp
+  installerSidebar: sidebar.bmp
+  uninstallerIcon: windows_uninstaller.ico
 
 mac:
   icon: icons/icon.icns
