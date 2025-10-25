@@ -184,7 +184,7 @@ export default class MainApp {
         }
       },
       {
-        icon: path.join(this.iconDir, 'ic-setting.png'),
+        icon: path.join(this.iconDir, 'ic-debug.png'),
         label: '开发者面板',
         click: () => {
           this.mainWindow?.show()
