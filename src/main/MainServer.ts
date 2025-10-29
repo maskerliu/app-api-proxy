@@ -11,7 +11,7 @@ import { LocalServerConfig } from '../common/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, USER_DATA_DIR } from './MainConst'
 import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
-import { ICommonService, IProxyService, IPushService } from './service'
+import { CommonService, ProxyService, PushService } from './service'
 import { API_URL } from '../common/api.const'
 
 export class MainServer {
@@ -24,9 +24,9 @@ export class MainServer {
   private mapiRouter: MapiRouter
   private appmockRouter: AppMockRouter
   private proxyRouter: ProxyRouter
-  private commonService: ICommonService
-  private proxyService: IProxyService
-  private pushService: IPushService
+  private commonService: CommonService
+  private proxyService: ProxyService
+  private pushService: PushService
 
   bootstrap() {
     this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
@@ -109,10 +109,9 @@ export class MainServer {
     this.httpApp.use(express.json())
 
     this.httpApp.use(API_URL.AppMock, this.appmockRouter.router)
-    this.httpApp.use('/mapi', this.mapiRouter.router)
-    this.httpApp.use('/_proxy', this.proxyRouter.router)
-    this.httpApp.use('/mediaproxy', this.proxyCorsMedia)
-    // this.httpApp.use('/burying-point', this.buryPointRouter.router)
+    this.httpApp.use(API_URL.MApi, this.mapiRouter.router)
+    this.httpApp.use(API_URL.Proxy, this.proxyRouter.router)
+    this.httpApp.use(API_URL.CorsMediaProxy, this.proxyCorsMedia)
   }
 
   private async startHttpServer() {
@@ -176,9 +175,6 @@ export class MainServer {
         this.proxyService.handleStatRequest(req, resp)
       })
     }
-    //  else {
-    //   this.proxyService.handleRequest(req, resp)
-    // }
   }
 
   private async proxyCorsMedia(req: Request, resp: Response) {

@@ -37,7 +37,7 @@ function startDevServer(config: BaseConfig, host: string, port: number): Promise
       client: { logging: 'none' },
       static: { directory: path.join(dirname, '../src/'), },
       setupMiddlewares(middlewares, devServer) {
-        devServer.app?.use('/node_modules/', express.static(path.resolve(dirname, '../node_modules')))
+        devServer.app?.use('/node_modules/', express.static(path.resolve(dirname, '../node_modules')) as any)
         devServer.app?.use((_, res, next) => {
           res.setHeader('Access-Control-Allow-Origin', '*')
           res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')

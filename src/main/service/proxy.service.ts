@@ -10,12 +10,11 @@ import zlib from 'zlib'
 import { ProxyMock } from '../../common'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/network.utils'
-import { IMockService } from './mock.service'
-import { IPushService } from './push.service'
+import { MockService, PushService } from './'
 
 let MockKey = null
 
-export interface IProxyService {
+interface IProxyService {
   getDataProxyServer(uid: string): ProxyMock.ProxyConfig
   setDataProxyServer(uid: string, proxyPref: ProxyMock.ProxyConfig): void
   saveProxyConfig(uid: string, config: ProxyMock.ProxyConfig): void
@@ -24,17 +23,17 @@ export interface IProxyService {
 }
 
 @injectable()
-export class ProxyService implements IProxyService {
+export class ProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private _sessionId: number
   private _form: IncomingForm
   private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
   @inject(IocTypes.MocksService)
-  private mockService: IMockService
+  private mockService: MockService
 
   @inject(IocTypes.PushService)
-  private pushService: IPushService
+  private pushService: PushService
 
   constructor() {
     this._sessionId = 0

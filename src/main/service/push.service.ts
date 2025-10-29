@@ -5,7 +5,7 @@ import { ProxyMock } from '../../common'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
-export interface IPushService {
+interface IPushService {
   bindServer(httpServer: Server): void
   closeWebSocketServer(callback: any): void
   sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>): void
@@ -15,7 +15,7 @@ export interface IPushService {
 }
 
 @injectable()
-export class PushService implements IPushService {
+export class PushService {
   pushClients: Map<String, PushClient>
   private sockjsServer: SockServer
 

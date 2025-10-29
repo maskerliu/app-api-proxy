@@ -70,12 +70,12 @@ class MainConfig extends BaseConfig {
 
   init() {
     super.init()
-
     this.node = {
       // __dirname: process.env.NODE_ENV !== 'production',
       // __filename: process.env.NODE_ENV !== 'production'
     }
 
+    let suffix = process.platform == 'win32' ? '.ico' : process.platform == 'darwin' ? '.icns' : '.png'
     this.plugins?.push(new DefinePlugin({
       'process.env.NODE_ENV': `"${this.mode}"`,
       'process.env.BUILD_CONFIG': `'${JSON.stringify(pkg.config)}'`
@@ -88,18 +88,18 @@ class MainConfig extends BaseConfig {
           to: path.join(dirname, '../dist/electron/cert/'),
         }]
       }),
-      // new CopyWebpackPlugin({
-      //   patterns: [{
-      //     from: path.join(dirname, '../icons/'),
-      //     to: path.join(dirname, '../build/icons/'),
-      //   }]
-      // }),
       new CopyWebpackPlugin({
         patterns: [{
-          from: path.join(dirname, '../icons/'),
+          from: path.join(dirname, `../icons/common/`),
           to: path.join(dirname, '../dist/electron/static/'),
         }]
       }),
+      new CopyWebpackPlugin({
+        patterns: [{
+          from: path.join(dirname, `../icons/icon${suffix}`),
+          to: path.join(dirname, '../dist/electron/static/'),
+        }]
+      })
     )
 
     if (process.env.NODE_ENV !== 'production') {

@@ -8,6 +8,7 @@ import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config'
+import TerserPlugin from "terser-webpack-plugin"
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
@@ -105,6 +106,15 @@ class RendererConfig extends BaseConfig {
   }
 
   optimization: Configuration['optimization'] = {
+    minimize: true,
+    minimizer: ['...', new TerserPlugin({
+      extractComments: false,
+      terserOptions: {
+        compress: {
+          drop_console: true
+        }
+      }
+    })],
     splitChunks: {
       chunks: 'all',
       cacheGroups: {

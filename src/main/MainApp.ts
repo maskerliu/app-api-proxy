@@ -48,6 +48,7 @@ export default class MainApp {
       app.commandLine.appendSwitch('experimental-wasm-threads')
       app.commandLine.appendSwitch('unhandled-rejections', 'strict')
       app.commandLine.appendSwitch('inspect', '5858')
+      app.commandLine.appendSwitch('enable-feature', 'AutofillFeature')
     }
 
     if (os.platform() == 'linux' && os.userInfo().username == 'root') {
@@ -141,6 +142,7 @@ export default class MainApp {
     this.mainWindow = new BrowserWindow(winOpt)
     this.mainWindow.loadURL(this.winURL)
     this.mainWindow.setVibrancy('window')
+    this.mainWindow.webContents.session.setSpellCheckerEnabled(false)
 
     this.mainWindow.on('resize', () => {
 
@@ -233,7 +235,8 @@ export default class MainApp {
   }
 
   private initSessionConfig() {
-    if (IS_DEV && os.platform() != 'linux') session.defaultSession.loadExtension(VUE_PLUGIN)
+    
+    if (IS_DEV && os.platform() != 'linux') session.defaultSession.extensions.loadExtension(VUE_PLUGIN)
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
