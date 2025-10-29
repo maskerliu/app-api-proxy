@@ -1,7 +1,7 @@
 import { injectable } from 'inversify'
 import { BizContext, Mapi } from '../../common'
 
-export interface IMapiService {
+interface IMapiService {
 
   login(loginInfo: { username: string, password: string }, context: BizContext): String
 
@@ -16,7 +16,7 @@ export interface IMapiService {
  * this is a mock service for mapi
  */
 @injectable()
-export class MapiService implements IMapiService {
+export class MapiService {
 
   private users: Mapi.UserInfo[] = []
 
@@ -87,7 +87,7 @@ export class MapiService implements IMapiService {
 
 import { createServer, Server as SockServer } from 'sockjs'
 
-export interface INotficationService {
+interface INotficationService {
 
 }
 

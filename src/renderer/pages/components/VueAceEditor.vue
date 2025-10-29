@@ -238,7 +238,7 @@ async function onClick() {
   }
 
   try {
-    let resp = await axios.get(`${baseDomain()}/mediaproxy?target=${link}`,
+    let resp = await axios.get(`${baseDomain()}/corsMediaProxy?target=${link}`,
       { withCredentials: false, responseType: 'arraybuffer' })
     let contentType = resp.headers['content-type'] as string
     if (/image.*/.test(contentType)) {

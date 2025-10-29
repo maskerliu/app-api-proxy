@@ -1,10 +1,10 @@
 import { inject, injectable } from 'inversify'
 import { ProxyMock } from '../../common'
 import { IocTypes } from "../MainConst"
-import { IMockRepo } from '../repository/mock.repo'
-import { IPushService } from './push.service'
+import { MockRepo } from '../repository/mock.repo'
+import { PushService } from './'
 
-export interface IMockService {
+interface IMockService {
 
   mock(sessionId: number, uid: string, url: string, startTime: number, delay: number): Promise<any>
 
@@ -20,13 +20,13 @@ export interface IMockService {
 
 
 @injectable()
-export class MockService implements IMockService {
+export class MockService {
 
   @inject(IocTypes.PushService)
-  private pushService: IPushService
+  private pushService: PushService
 
   @inject(IocTypes.MockRepo)
-  private mockRepo: IMockRepo
+  private mockRepo: MockRepo
 
   private clientMockStatus: Map<string, string> = new Map()
 

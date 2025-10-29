@@ -2,14 +2,14 @@ import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from "../MainConst"
 import { BizNetwork } from '../misc/network.utils'
-import { IMapiService } from "../service"
+import { MapiService } from "../service"
 import { BaseRouter, ParamType } from "./base.router"
 
 @injectable()
 export class MapiRouter extends BaseRouter {
 
   @inject(IocTypes.MapiService)
-  private mapiService: IMapiService
+  private mapiService: MapiService
 
   override initApiInfos(): void {
     this.addApiInfo({

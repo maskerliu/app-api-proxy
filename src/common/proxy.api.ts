@@ -134,18 +134,18 @@ export namespace ProxyMock {
   }
 
   export async function saveProxyConfig(config: Partial<ProxyMock.ProxyConfig>) {
-    return post<string>('/appmock/saveProxyConfig', null, null, config)
+    return post<string>(`${API_URL.AppMock}${API_URL.SaveProxyConfig}`, null, null, config)
   }
 
   export function getAllPushClients() {
-    return get<Array<ProxyMock.MsgPushClient>>('/appmock/getAllPushClients')
+    return get<Array<ProxyMock.MsgPushClient>>(`${API_URL.AppMock}${API_URL.GetAllPushClients}`)
   }
 
   export function mockRegister(uid: string) {
-    return get<string>(`/appmock/register/${uid}`)
+    return get<string>(`${API_URL.AppMock}${API_URL.MockRegister}/${uid}`)
   }
 
   export function broadcast(uid: string) {
-    return get<string>(`/appmock/sse/broadcast/${uid}`)
+    return get<string>(`${API_URL.AppMock}${API_URL.Broadcast}/${uid}`)
   }
 }

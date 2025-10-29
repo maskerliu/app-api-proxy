@@ -8,7 +8,7 @@ import BaseRepo from './base.repo'
 
 PouchDB.plugin(PouchFind)
 
-export interface IMockRepo {
+interface IMockRepo {
   search(field?: string, query?: string, returnFields?: Array<string>): Promise<ProxyMock.MockRule[]>
   find(request: PouchDB.Find.FindRequest<ProxyMock.MockRule>): Promise<ProxyMock.MockRule[]>
   get(field: string, query: string, returnFields?: Array<string>): Promise<ProxyMock.MockRule>
@@ -19,7 +19,7 @@ export interface IMockRepo {
 
 // @Repository(USER_DATA_DIR + '/biz_storage', 'Mock.Rules', ['name'])
 @injectable()
-export class MockRepo extends BaseRepo<ProxyMock.MockRule> implements IMockRepo {
+export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
   constructor() {
     super()

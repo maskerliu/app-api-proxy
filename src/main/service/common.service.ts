@@ -6,10 +6,9 @@ import 'reflect-metadata'
 import { LocalServerConfig, ProxyMock } from '../../common'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../misc/network.utils'
-import { IProxyService } from './proxy.service'
-import { IPushService } from './push.service'
+import { ProxyService, PushService } from './'
 
-export interface ICommonService {
+interface ICommonService {
   get serverConfig(): LocalServerConfig
   set serverConfig(config: LocalServerConfig)
 
@@ -34,9 +33,9 @@ export class CommonService implements ICommonService {
   }
 
   @inject(IocTypes.ProxyService)
-  private proxyService: IProxyService
+  private proxyService: ProxyService
   @inject(IocTypes.PushService)
-  private pushService: IPushService
+  private pushService: PushService
 
   constructor() {
     let filePath = path.join(USER_DATA_DIR, 'local.config.json')

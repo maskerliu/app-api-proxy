@@ -1,5 +1,5 @@
 export const API_URL = {
-    AppMock: '/appmock',
+    AppMock: '/_appmock',
     SearchMockRules: '/searchMockRules',
     GetMockRuleDetail: '/getMockRuleDetail',
     SaveMockRule: '/saveMockRule',
@@ -8,5 +8,9 @@ export const API_URL = {
     SaveProxyConfig: '/saveProxyConfig',
     GetAllPushClients: '/getAllPushClients',
     MockRegister: '/register',
-    Broadcast: '/broadcast'
+    Broadcast: '/broadcast',
+
+    MApi: '/mapi',
+    Proxy: '/_proxy',
+    CorsMediaProxy: '/corsMediaProxy'
 }
