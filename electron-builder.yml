@@ -34,7 +34,6 @@ electronLanguages:
   - zh-CN
 
 # asarUnpack:
-#   - "node_modules/classic-level/**/*"
 #   - "node_modules/level-down/**/*"
 
 win:

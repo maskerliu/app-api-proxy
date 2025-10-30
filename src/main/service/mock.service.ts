@@ -2,7 +2,7 @@ import { inject, injectable } from 'inversify'
 import { ProxyMock } from '../../common'
 import { IocTypes } from "../MainConst"
 import { MockRepo } from '../repository/mock.repo'
-import { PushService } from './'
+import { PushService } from './push.service'
 
 interface IMockService {
 
