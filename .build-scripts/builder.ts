@@ -87,7 +87,7 @@ function web() {
 }
 
 function greeting() {
-  console.log(chalk.bgGreen.white('    lets-build'.padEnd(process.stdout.columns, ' ')))
+  console.log(chalk.bgGreen.white('    lets-build'.padEnd(process.stdout.columns - 20, ' ')))
 }
 
 run()

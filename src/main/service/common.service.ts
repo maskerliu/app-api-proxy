@@ -6,7 +6,8 @@ import 'reflect-metadata'
 import { LocalServerConfig, ProxyMock } from '../../common'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../misc/network.utils'
-import { ProxyService, PushService } from './'
+import { ProxyService } from './proxy.service'
+import { PushService } from './push.service'
 
 interface ICommonService {
   get serverConfig(): LocalServerConfig

@@ -10,7 +10,8 @@ import zlib from 'zlib'
 import { ProxyMock } from '../../common'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/network.utils'
-import { MockService, PushService } from './'
+import { MockService } from './mock.service'
+import { PushService } from './push.service'
 
 let MockKey = null
 

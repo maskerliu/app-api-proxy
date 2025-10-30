@@ -20,14 +20,14 @@ const VUE_PLUGIN = os.platform() == 'darwin' ? '~/Downloads/vue-devtools/7.6.8_0
 export default class MainApp {
   private mainWindow: BrowserWindow = null
   private winURL: string = IS_DEV ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
-  private iconDir: string
-  private trayIconFile: string
+  private staticDir: string
+  private dockerIconFile: string
   private mainServer: MainServer = new MainServer()
 
   constructor() {
-    this.iconDir = path.join(__dirname, IS_DEV ? '../../icons' : './static')
+    this.staticDir = path.join(__dirname, IS_DEV ? '../../icons' : './static')
     let ext = os.platform() == 'win32' ? 'ico' : 'png'
-    this.trayIconFile = path.join(this.iconDir, `icon.${ext}`)
+    this.dockerIconFile = path.join(this.staticDir, `icon.${ext}`)
     this.mainServer.bootstrap()
 
     console.log('home', app.getPath('temp'))
@@ -115,7 +115,7 @@ export default class MainApp {
     }
 
     let winOpt: BrowserWindowConstructorOptions = {
-      icon: this.trayIconFile,
+      icon: this.dockerIconFile,
       title: "AppApiProxy",
       width: 1100,
       height: 670,
@@ -167,10 +167,12 @@ export default class MainApp {
   }
 
   private createTrayMenu() {
-    let tray = new Tray(path.join(this.iconDir, 'icon-tray.png'))
+
+    let iconDir = IS_DEV ? path.join(this.staticDir, 'common') : this.staticDir
+    let tray = new Tray(path.join(iconDir, 'icon-tray.png'))
     const contextMenu = Menu.buildFromTemplate([
       {
-        icon: path.join(this.iconDir, 'ic-rule.png'),
+        icon: path.join(iconDir, 'ic-rule.png'),
         label: '用例管理',
         click: () => {
           this.mainWindow?.show()
@@ -178,7 +180,7 @@ export default class MainApp {
         }
       },
       {
-        icon: path.join(this.iconDir, 'ic-setting.png'),
+        icon: path.join(iconDir, 'ic-setting.png'),
         label: '设置',
         click: () => {
           this.mainWindow?.show()
@@ -186,7 +188,7 @@ export default class MainApp {
         }
       },
       {
-        icon: path.join(this.iconDir, 'ic-debug.png'),
+        icon: path.join(iconDir, 'ic-debug.png'),
         label: '开发者面板',
         click: () => {
           this.mainWindow?.show()
@@ -194,7 +196,7 @@ export default class MainApp {
         }
       },
       {
-        icon: path.join(this.iconDir, 'ic-exit.png'),
+        icon: path.join(iconDir, 'ic-exit.png'),
         label: '退出', click: () => {
           this.mainServer.stop()
           app.quit()
@@ -235,7 +237,7 @@ export default class MainApp {
   }
 
   private initSessionConfig() {
-    
+
     if (IS_DEV && os.platform() != 'linux') session.defaultSession.extensions.loadExtension(VUE_PLUGIN)
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
