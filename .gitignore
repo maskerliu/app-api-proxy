@@ -2,6 +2,8 @@
 dist/*
 build/*
 !build/version.json
+!build/installer.nsh
+!build/windows_installer.ico
 node_modules/*
 npm-debug.log
 npm-debug.log.*

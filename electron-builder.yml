@@ -5,6 +5,7 @@ directories:
 
 asarUnpack:
   - "**/node_modules/@u4/opencv4nodejs/**/*"
+  - "node_modules/leveldown/**/*"
 
 publish:
   - provider: "generic"
@@ -33,8 +34,6 @@ electronLanguages:
   - en-US
   - zh-CN
 
-# asarUnpack:
-#   - "node_modules/level-down/**/*"
 
 win:
   icon: icons/icon.ico
