@@ -1,9 +1,6 @@
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions,
-  globalShortcut,
-  ipcMain,
-  Menu, session,
-  Tray
+  globalShortcut, ipcMain, Menu, nativeImage, session, screen, Tray
 } from 'electron'
 import fs from 'original-fs'
 import os from 'os'
@@ -35,7 +32,7 @@ export default class MainApp {
 
   public async startApp() {
     app.setName('AppApiProxy')
-    app.disableHardwareAcceleration()
+    // app.disableHardwareAcceleration()
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
     app.commandLine.appendSwitch('disable-gpu')
@@ -55,6 +52,7 @@ export default class MainApp {
       app.commandLine.appendSwitch('disable-chromium-sandbox')
       app.commandLine.appendSwitch('disable-gpu-sandbox')
       app.commandLine.appendSwitch('no-sandbox')
+      app.commandLine.appendSwitch('force-device-scale-factor', '2')
     }
 
     app.on('activate', () => {
@@ -64,7 +62,13 @@ export default class MainApp {
     })
 
     app.on('ready', () => {
-      // this.testCV()
+      console.log(`screen info: ${screen.getPrimaryDisplay().scaleFactor}`)
+      let display = screen.getPrimaryDisplay()
+      console.log(`screen width: ${display.workAreaSize.width} \t height: ${display.workAreaSize.height}`)
+
+
+      let icon = nativeImage.createFromPath(path.join(this.staticDir, 'icon.png'))
+      console.log(`\t\t ${icon.getScaleFactors().length}\t ${icon.getScaleFactors()}`)
 
       globalShortcut.register('CommandOrControl+q', () => {
         app.quit()
