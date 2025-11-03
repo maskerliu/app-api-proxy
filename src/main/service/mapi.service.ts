@@ -1,17 +1,6 @@
 import { injectable } from 'inversify'
 import { BizContext, Mapi } from '../../common'
 
-interface IMapiService {
-
-  login(loginInfo: { username: string, password: string }, context: BizContext): String
-
-  logout(user: string, password: string, context: BizContext): String
-
-  register(username: string, password: string, useInfo: Mapi.UserInfo): Mapi.UserInfo
-
-  getUserInfo(uid: string, context: BizContext): Mapi.UserInfo
-}
-
 /**
  * this is a mock service for mapi
  */
