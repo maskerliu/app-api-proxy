@@ -9,19 +9,8 @@ import { getLocalIPs } from '../misc/network.utils'
 import { ProxyService } from './proxy.service'
 import { PushService } from './push.service'
 
-interface ICommonService {
-  get serverConfig(): LocalServerConfig
-  set serverConfig(config: LocalServerConfig)
-
-  register(uid: string): string
-
-  getServerConfig(): LocalServerConfig
-
-  saveServerConfig(config: LocalServerConfig): void
-}
-
 @injectable()
-export class CommonService implements ICommonService {
+export class CommonService {
 
   private _serverConfig: LocalServerConfig
 

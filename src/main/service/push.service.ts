@@ -5,15 +5,6 @@ import { ProxyMock } from '../../common'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
-interface IPushService {
-  bindServer(httpServer: Server): void
-  closeWebSocketServer(callback: any): void
-  sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>): void
-  sendProxyMessage(clientUid: String, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): void
-  hasProxy(uid: string): boolean
-  getAllPushClients(): ProxyMock.MsgPushClient[]
-}
-
 @injectable()
 export class PushService {
   pushClients: Map<String, PushClient>

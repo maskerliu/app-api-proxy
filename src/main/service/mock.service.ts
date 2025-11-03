@@ -4,20 +4,6 @@ import { IocTypes } from "../MainConst"
 import { MockRepo } from '../repository/mock.repo'
 import { PushService } from './push.service'
 
-interface IMockService {
-
-  mock(sessionId: number, uid: string, url: string, startTime: number, delay: number): Promise<any>
-
-  searchMockRules(uid: string, keyword: string): Promise<ProxyMock.MockRule[]>
-
-  getMockRuleDetail(uid: string, ruleId: string): Promise<ProxyMock.MockRule>
-
-  saveMockRule(uid: string, onlySnap: boolean, rule?: ProxyMock.MockRule): Promise<string>
-
-  deleteMockRule(uid: string, ruleId: string): Promise<string>
-
-}
-
 
 @injectable()
 export class MockService {

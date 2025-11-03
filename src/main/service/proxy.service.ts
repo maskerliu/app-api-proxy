@@ -15,13 +15,6 @@ import { PushService } from './push.service'
 
 let MockKey = null
 
-interface IProxyService {
-  getDataProxyServer(uid: string): ProxyMock.ProxyConfig
-  setDataProxyServer(uid: string, proxyPref: ProxyMock.ProxyConfig): void
-  saveProxyConfig(uid: string, config: ProxyMock.ProxyConfig): void
-  handleStatRequest(req: any, resp: Response): Promise<void>
-  handleRequest(req: Request, resp: Response): Promise<void>
-}
 
 @injectable()
 export class ProxyService {
