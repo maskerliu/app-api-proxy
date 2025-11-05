@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron'
 import { LocalServerConfig } from '../common/base.models'
 import { IMainAPI, MainAPICMD } from '../common/ipc.api'
 
-let mainApis: IMainAPI = {
+let mainApi: IMainAPI = {
   relaunch() {
     ipcRenderer.invoke(MainAPICMD.Relaunch)
   },
@@ -53,4 +53,4 @@ let mainApis: IMainAPI = {
   },
 }
 
-export default mainApis
+export default mainApi
