@@ -1,4 +1,4 @@
 import { contextBridge } from 'electron'
-import mainApis from './MainApis'
+import mainApi from './MainApi'
 
-contextBridge.exposeInMainWorld('electronAPI', mainApis)
+contextBridge.exposeInMainWorld('electronAPI', mainApi)

@@ -6,7 +6,7 @@ declare global {
 
   interface Window {
     isWeb: boolean
-    electronAPI: IMainAPI
+    mainApi: IMainAPI
   }
 
   let __IS_WEB__: boolean
