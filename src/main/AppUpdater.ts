@@ -9,8 +9,8 @@ import process from 'process'
 import { pipeline } from 'stream/promises'
 import { createGunzip } from 'zlib'
 import { Version } from '../common'
-import { ElectronAPICMD } from '../common/ipc.api'
-import { IS_DEV, USER_DATA_DIR } from './MainConst'
+import { MainAPICMD } from '../common/ipc.api'
+import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
 
 export interface InstallOptions {
   readonly installerPath: string
@@ -27,8 +27,8 @@ export async function incrementUpdate(version: Version) {
     url: version.updateUrl, method: 'GET', responseType: 'stream',
     onDownloadProgress: (event) => {
       BrowserWindow.getAllWindows()
-        .find((it, idx, _) => { return it.title == 'AppApiProxy' })
-        .webContents.send(ElectronAPICMD.DownloadUpdate,
+        .find((it, idx, _) => { return it.title == AppName })
+        .webContents.send(MainAPICMD.DownloadUpdate,
           { progress: Math.round((event.loaded / event.total) * 100) })
     }
   })
@@ -72,9 +72,9 @@ export async function fullUpdate(version: Version) {
     url: version.updateUrl, method: 'GET', responseType: 'stream',
     onDownloadProgress: (event) => {
       let window = BrowserWindow.getAllWindows()
-        .find((it, idx, _) => { return it.title == 'AppApiProxy' })
+        .find((it, idx, _) => { return it.title == AppName })
       if (window) {
-        window.webContents.send(ElectronAPICMD.DownloadUpdate,
+        window.webContents.send(MainAPICMD.DownloadUpdate,
           { progress: Math.round((event.loaded / event.total) * 100) })
       }
     }

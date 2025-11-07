@@ -19,7 +19,7 @@ let whiteListedModules = ['axios']
 class RendererConfig extends BaseConfig {
   devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
   name: Configuration['name'] = 'renderer'
-  // target: Configuration['target'] = 'electron-renderer'
+  target: Configuration['target'] = 'web' // 'electron-renderer'
   entry: Configuration['entry'] = { renderer: path.join(dirname, '../src/renderer/index.ts') }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
 
