@@ -9,7 +9,7 @@ import JSONBig from 'json-bigint'
 import zlib from 'zlib'
 import { ProxyMock } from '../../common'
 import { IocTypes } from '../MainConst'
-import { BizNetwork } from '../misc/network.utils'
+import { BizNetwork } from '../misc/utils'
 import { MockService } from './mock.service'
 import { PushService } from './push.service'
 
