@@ -108,8 +108,8 @@ let mockRecordId = -1
 
 onMounted(() => {
   if (!__IS_WEB__) {
-    window.electronAPI.onOpenMockRuleMgr(() => { openRuleMgr() })
-    window.electronAPI.onOpenSettings(() => { openSettings() })
+    window.mainApi.onOpenMockRuleMgr(() => { openRuleMgr() })
+    window.mainApi.onOpenSettings(() => { openSettings() })
   }
 })
 

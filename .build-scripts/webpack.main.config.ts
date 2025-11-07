@@ -61,6 +61,10 @@ class MainConfig extends BaseConfig {
     new NoEmitOnErrorsPlugin(),
   ]
 
+  optimization: Configuration['optimization'] = {
+    usedExports: true
+  }
+
   resolve: Configuration['resolve'] = {
     alias: {
       './': path.join(dirname, '../src/main'),
