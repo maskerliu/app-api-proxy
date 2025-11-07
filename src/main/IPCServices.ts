@@ -1,5 +1,5 @@
 import { spawn } from "child_process"
-import { app, BrowserWindow, ipcMain, nativeTheme } from "electron"
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from "electron"
 import fs from 'fs'
 import fse from 'fs-extra'
 import os from 'os'
@@ -7,6 +7,7 @@ import path from "path"
 import { Version } from "../common"
 import { MainAPICMD } from "../common/ipc.api"
 import { fullUpdate, incrementUpdate } from "./AppUpdater"
+import { AppName } from "./MainConst"
 
 ipcMain.handle(MainAPICMD.Relaunch, (_) => {
   if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
@@ -37,11 +38,26 @@ ipcMain.handle(MainAPICMD.Relaunch, (_) => {
 
 ipcMain.handle(MainAPICMD.OpenDevTools, (_, args?: any) => {
   BrowserWindow.getAllWindows()
-    .find((it, idx, _) => { return it.title == 'AppApiProxy' })
+    .find((it, idx, _) => { return it.title == AppName })
     .webContents.openDevTools({ mode: 'detach', activate: false })
 })
 
+ipcMain.handle(MainAPICMD.OpenFile, async (_, target: string) => {
+  let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    properties: ['openFile',],
+    filters: [
+      {
+        name: 'Image',
+        extensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp']
+      }
+    ]
+  })
 
+  if (result.canceled) return
+  BrowserWindow.getAllWindows()
+    .find((it, idx, _) => { return it.title == AppName })
+    .webContents.send(MainAPICMD.OpenFile, result.filePaths[0])
+})
 
 ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
   nativeTheme.themeSource = theme
@@ -49,7 +65,7 @@ ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark'))
     // console.log(this.mainWindow.setTitleBarOverlay)
   } else {
     BrowserWindow.getAllWindows()
-      .find((it, idx, _) => { return it.title == 'AppApiProxy' })
+      .find((it, idx, _) => { return it.title == AppName })
       .setTitleBarOverlay({
         color: '#f8f8f800',
         symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'

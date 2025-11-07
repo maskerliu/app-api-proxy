@@ -7,7 +7,7 @@ import os from 'os'
 import path from 'path'
 import { MainAPICMD } from '../common/ipc.api'
 import './IPCServices'
-import { IS_DEV, USER_DATA_DIR } from './MainConst'
+import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
@@ -31,7 +31,7 @@ export default class MainApp {
   }
 
   public async startApp() {
-    app.setName('AppApiProxy')
+    app.setName(AppName)
     // app.disableHardwareAcceleration()
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
@@ -120,7 +120,7 @@ export default class MainApp {
 
     let winOpt: BrowserWindowConstructorOptions = {
       icon: this.dockerIconFile,
-      title: "AppApiProxy",
+      title: AppName,
       width: 1100,
       height: 670,
       minHeight: 640,
@@ -214,7 +214,7 @@ export default class MainApp {
       }
     })
 
-    tray.setToolTip('AppApiProxy')
+    tray.setToolTip(AppName)
     tray.setContextMenu(contextMenu)
   }
 
