@@ -21,7 +21,7 @@ export interface IMainAPI {
 
   relaunch(): void
 
-  openFile(...args: any): Promise<void>
+  openFile(...args: any): void
 
   openDevTools(...args: any): void
 

@@ -6,9 +6,9 @@ let mainApi: IMainAPI = {
   relaunch() {
     ipcRenderer.invoke(MainAPICMD.Relaunch)
   },
-  openFile: function (...args: any): Promise<void> {
-    ipcRenderer.invoke('dialog:openFile')
-    return null
+  openFile: function (callback: Function): void {
+    ipcRenderer.invoke(MainAPICMD.OpenFile)
+    ipcRenderer.once(MainAPICMD.OpenFile, (event, result) => callback(result))
   },
   openDevTools(...args: any) {
     ipcRenderer.invoke(MainAPICMD.OpenDevTools, args)
@@ -25,7 +25,7 @@ let mainApi: IMainAPI = {
   },
 
   getSysSettings(callback: (result: LocalServerConfig) => void) {
-    ipcRenderer.on(MainAPICMD.GetSysSettings, (_event, result: LocalServerConfig) => callback(result))
+    ipcRenderer.once(MainAPICMD.GetSysSettings, (_event, result: LocalServerConfig) => callback(result))
   },
 
   setAppTheme(theme: ('system' | 'light' | 'dark')) {
@@ -33,23 +33,23 @@ let mainApi: IMainAPI = {
   },
 
   getSysTheme(callback: any) {
-    ipcRenderer.on(MainAPICMD.GetSysTheme, (theme) => callback(theme))
+    ipcRenderer.once(MainAPICMD.GetSysTheme, (theme) => callback(theme))
   },
 
   onOpenMockRuleMgr(callback: any) {
-    ipcRenderer.on(MainAPICMD.OpenMockRuleMgr, (_event) => callback())
+    ipcRenderer.once(MainAPICMD.OpenMockRuleMgr, (_event) => callback())
   },
 
   onOpenSettings(callback: any) {
-    ipcRenderer.on(MainAPICMD.OpenSettings, (_event) => callback())
+    ipcRenderer.once(MainAPICMD.OpenSettings, (_event) => callback())
   },
 
   onSysThemeChanged(callback: (theme: string) => void) {
-    ipcRenderer.on(MainAPICMD.SysThemeChanged, (_, theme: string) => callback(theme))
+    ipcRenderer.once(MainAPICMD.SysThemeChanged, (_, theme: string) => callback(theme))
   },
 
   onDownloadUpdate(callback: (...args: any) => void) {
-    ipcRenderer.on(MainAPICMD.DownloadUpdate, (_, ...args: any) => callback(...args))
+    ipcRenderer.once(MainAPICMD.DownloadUpdate, (_, ...args: any) => callback(...args))
   },
 }
 
