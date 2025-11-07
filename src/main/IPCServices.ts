@@ -7,7 +7,7 @@ import path from "path"
 import { Version } from "../common"
 import { MainAPICMD } from "../common/ipc.api"
 import { fullUpdate, incrementUpdate } from "./AppUpdater"
-import { AppName } from "./MainConst"
+import { getAppWindow } from "./misc/utils"
 
 ipcMain.handle(MainAPICMD.Relaunch, (_) => {
   if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
@@ -37,9 +37,7 @@ ipcMain.handle(MainAPICMD.Relaunch, (_) => {
 })
 
 ipcMain.handle(MainAPICMD.OpenDevTools, (_, args?: any) => {
-  BrowserWindow.getAllWindows()
-    .find((it, idx, _) => { return it.title == AppName })
-    .webContents.openDevTools({ mode: 'detach', activate: false })
+  getAppWindow()?.webContents.openDevTools({ mode: 'detach', activate: false })
 })
 
 ipcMain.handle(MainAPICMD.OpenFile, async (_, target: string) => {
@@ -54,9 +52,7 @@ ipcMain.handle(MainAPICMD.OpenFile, async (_, target: string) => {
   })
 
   if (result.canceled) return
-  BrowserWindow.getAllWindows()
-    .find((it, idx, _) => { return it.title == AppName })
-    .webContents.send(MainAPICMD.OpenFile, result.filePaths[0])
+  getAppWindow()?.webContents.send(MainAPICMD.OpenFile, result.filePaths[0])
 })
 
 ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
@@ -64,12 +60,10 @@ ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark'))
   if (os.platform() == 'darwin') {
     // console.log(this.mainWindow.setTitleBarOverlay)
   } else {
-    BrowserWindow.getAllWindows()
-      .find((it, idx, _) => { return it.title == AppName })
-      .setTitleBarOverlay({
-        color: '#f8f8f800',
-        symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'
-      })
+    getAppWindow()?.setTitleBarOverlay({
+      color: '#f8f8f800',
+      symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'
+    })
   }
 })
 

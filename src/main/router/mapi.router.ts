@@ -1,7 +1,7 @@
 import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
 import { IocTypes } from "../MainConst"
-import { BizNetwork } from '../misc/network.utils'
+import { BizNetwork } from '../misc/utils'
 import { MapiService } from "../service"
 import { BaseRouter, ParamType } from "./base.router"
 
