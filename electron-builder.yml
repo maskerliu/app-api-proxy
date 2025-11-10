@@ -27,14 +27,15 @@ files:
   - "!**/node_modules/**/test/**"
   - "!**/node_modules/**/tests/**"
   - "!**/node_modules/**/*test.js"
+  - "**/node_modules/**/chunking-test.js"
   - "!**/node_modules/**/doc/**"
   - "!**/node_modules/**/docs/**"
   - "!**/node_modules/**/example/**"
   - "!**/node_modules/**/examples/**"
-  - "!**/node_modules/*/.github/*"
-  - "!**/node_modules/*/deps/**/*"
-  - "!**/node_modules/*/prebuilds/**/*"
-  - "**/node_modules/*/prebuilds/${platform}-${arch}/**/*"
+  - "!**/node_modules/**/.github/**"
+  - "!**/node_modules/**/deps/**"
+  - "!**/node_modules/**/prebuilds/**"
+  - "**/node_modules/**/prebuilds/${platform}-${arch}/**/*"
   - "!**/node_modules/**/src/**"
   - "!**/node_modules/**/browser/**"
   - "!**/node_modules/**/umd/**"
@@ -45,7 +46,6 @@ files:
   - "**/node_modules/debug/src/**"
   - "**/node_modules/**/cuid2/src/**"
   - "./update.exe"
-  # - "./node_modules/level-transcoder/**/*"
 
 electronLanguages:
   - en-US
