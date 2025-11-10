@@ -26,7 +26,7 @@ export default class MainApp {
     let ext = os.platform() == 'win32' ? 'ico' : 'png'
     this.dockerIconFile = path.join(this.staticDir, `icon.${ext}`)
     this.mainServer.bootstrap()
-
+ 
     console.log('home', app.getPath('temp'))
   }
 

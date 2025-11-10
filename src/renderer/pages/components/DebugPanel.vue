@@ -292,14 +292,14 @@ async function closeCamera() {
 
 function openDevTools() {
   if (!__IS_WEB__) {
-    window.electronAPI.openDevTools()
+    window.mainApi.openDevTools()
     showDebugPanel.value = false
   }
 }
 
 async function onSSE() {
   if (!__IS_WEB__) {
-    window.electronAPI.sendServerEvent()
+    window.mainApi.sendServerEvent()
   }
 
   await ProxyMock.broadcast(commonStore.uid)
