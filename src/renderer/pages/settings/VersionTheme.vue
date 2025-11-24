@@ -95,7 +95,7 @@ const langs = ['en', 'zh-CN']
 
 onMounted(() => {
   if (!__IS_WEB__) {
-    window.electronAPI.onDownloadUpdate((...args: any) => {
+    window.mainApi?.onDownloadUpdate((...args: any) => {
       downloadProgress.value = args[0].progress.toFixed(1)
     })
   }
@@ -117,7 +117,7 @@ function onSelectLang(_lang: string) {
 
 function onThemeChanged() {
   window.localStorage.setItem('theme', theme.value)
-  if (!__IS_WEB__) window.electronAPI.setAppTheme(theme.value)
+  if (!__IS_WEB__) window.mainApi?.setAppTheme(theme.value)
 }
 
 async function onVersionCheck() {
@@ -157,12 +157,12 @@ function downloadNewVersion() {
   showDownload.value = true
   downloadProgress.value = 0
   if (newVersion.fullUpdate) showRestart.value = false
-  if (!__IS_WEB__) window.electronAPI.downloadUpdate(newVersion)
+  if (!__IS_WEB__) window.mainApi?.downloadUpdate(newVersion)
 }
 
 function restart() {
   showDownload.value = false
-  if (!__IS_WEB__) window.electronAPI.relaunch()
+  if (!__IS_WEB__) window.mainApi?.relaunch()
 }
 
 </script>

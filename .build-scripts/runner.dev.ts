@@ -195,4 +195,8 @@ async function start() {
   }
 }
 
-start()
+try {
+  await start()
+} catch (err) {
+  console.log(err)
+}

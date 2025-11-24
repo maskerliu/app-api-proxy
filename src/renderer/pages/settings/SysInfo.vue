@@ -107,7 +107,7 @@ function onSelectIP(ip: LocalIP) {
 }
 
 function onSave() {
-  window.electronAPI.saveSysSettings(JSON.stringify(commonStore.serverConfig))
+  window.mainApi?.saveSysSettings(JSON.stringify(commonStore.serverConfig))
   showSettings.value = false
 }
 
