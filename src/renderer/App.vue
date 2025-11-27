@@ -53,12 +53,12 @@ onMounted(async () => {
   i18n.locale.value = lang.value
 
   if (window.isWeb) {
+    await CommonStore().init()
+  } else {
     window.mainApi?.getSysSettings(async (result) => {
       await CommonStore().init(result)
     })
     window.mainApi?.setAppTheme(theme.value)
-  } else {
-    await CommonStore().init()
   }
 
   canRender.value = true
