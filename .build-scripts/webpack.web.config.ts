@@ -166,6 +166,7 @@ class WebConfig extends BaseConfig {
 
     if (process.env.NODE_ENV !== 'production') {
       this.plugins.push(new DefinePlugin({
+        __DEV__: true,
         SERVER_BASE_URL: `'${pkg.config.protocol}://${localServer}:${pkg.config.port}'`,
       }))
 
