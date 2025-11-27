@@ -141,7 +141,7 @@ const maxLines = ref<number>(0)
 const showMockRuleMgr = inject<Ref<boolean>>('showMockRuleMgr')
 const withCurRecord = inject<Ref<boolean>>('withCurRecord')
 
-const isWeb = __IS_WEB__
+const isWeb = window.isWeb
 
 onMounted(() => {
   window.onresize = () => {

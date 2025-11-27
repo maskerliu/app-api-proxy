@@ -26,7 +26,7 @@ export const CommonStore = defineStore('Common', {
       if (config) {
         updateBaseDomain(`${config.protocol}://${config.ip}:${config.port}`)
       } else {
-        if (__DEV__ || !__IS_WEB__) {
+        if (__DEV__) {
           updateBaseDomain(SERVER_BASE_URL)
         }
       }
@@ -62,7 +62,7 @@ export const CommonStore = defineStore('Common', {
       updateClientUID(this.uid)
 
       this.registerUrl = `${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register/${this.uid}`
-      if (__IS_WEB__) {
+      if (window.isWeb) {
         pushClient.start(`${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}`, this.uid)
       } else {
         pushClient.start(`${this.serverConfig.protocol}://localhost:${this.serverConfig.port}`, this.uid)

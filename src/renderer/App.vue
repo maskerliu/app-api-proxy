@@ -29,7 +29,7 @@ const theme = ref<ConfigProviderTheme>('light')
 const lang = ref<string>('zh-CN')
 const active = ref<number>(0)
 const showDebugPanel = ref<boolean>(false)
-const enableDebug = true // !__IS_WEB__
+const enableDebug = true
 
 provide('theme', theme)
 provide('lang', lang)
@@ -37,7 +37,7 @@ provide('showDebugPanel', showDebugPanel)
 
 onMounted(async () => {
 
-  window.isWeb = __IS_WEB__
+  window.isWeb = window.mainApi == null
   useRouter().beforeEach((to: any, from: any) => {
     return true
   })
@@ -52,12 +52,11 @@ onMounted(async () => {
   lang.value = wrapLang != null ? wrapLang : 'zh-CN'
   i18n.locale.value = lang.value
 
-  if (!__IS_WEB__) {
-    window.mainApi.getSysSettings(async (result) => {
+  if (window.isWeb) {
+    window.mainApi?.getSysSettings(async (result) => {
       await CommonStore().init(result)
     })
-
-    window.mainApi.setAppTheme(theme.value)
+    window.mainApi?.setAppTheme(theme.value)
   } else {
     await CommonStore().init()
   }
