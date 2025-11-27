@@ -58,7 +58,7 @@
       <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId)" v-else />
     </OverlayScrollbarsComponent>
 
-    <van-popup v-model:show="showPopup" position="right" :closeable="isWeb" close-icon="close">
+    <van-popup v-model:show="showPopup" position="right" close-icon="close">
       <mock-rule-mgr v-if="showMockRuleMgr" />
       <settings v-if="showSettings" />
     </van-popup>
@@ -90,7 +90,7 @@ const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 
-const isWeb = __IS_WEB__
+const isWeb = window.isWeb
 const showPopup = ref(false)
 const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
@@ -107,10 +107,8 @@ provide('showSettings', showSettings)
 let mockRecordId = -1
 
 onMounted(() => {
-  if (!__IS_WEB__) {
-    window.mainApi.onOpenMockRuleMgr(() => { openRuleMgr() })
-    window.mainApi.onOpenSettings(() => { openSettings() })
-  }
+  window.mainApi?.onOpenMockRuleMgr(() => { openRuleMgr() })
+  window.mainApi?.onOpenSettings(() => { openSettings() })
 })
 
 watch(() => theme.value, () => {

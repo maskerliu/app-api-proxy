@@ -63,7 +63,7 @@ import { ProxyMock } from '../../../common'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import ProxyRequestBody from './ProxyRequestBody.vue'
 
-const topOffset = __IS_WEB__ ? 5 : 30
+const topOffset = window.isWeb ? 5 : 30
 
 const props = defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> },

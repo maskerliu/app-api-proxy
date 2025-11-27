@@ -66,17 +66,17 @@ const { t } = useI18n()
 const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
 const showPopover = ref<boolean>(false)
-const isWeb = __IS_WEB__
+const isWeb = window.isWeb
 const showSettings = inject<Ref<boolean>>('showSettings')
 const protocol = ref(0)
 
 let perferences = [
   { tooltip: 'settings.sys.serverDomain', key: 'domain' },
-  { tooltip: 'settings.sys.port', key: 'port', readonly: __IS_WEB__ },
-  { tooltip: 'settings.sys.updateServer', key: 'updateServer', readonly: __IS_WEB__ },
-  { tooltip: 'settings.sys.proxySocketPort', key: 'proxySocketPort', readonly: __IS_WEB__ },
-  { tooltip: 'settings.sys.apiDefineServer', key: 'apiDefineServer', readonly: __IS_WEB__ },
-  { tooltip: 'settings.sys.statRuleServer', key: 'statRuleServer', readonly: __IS_WEB__ },
+  { tooltip: 'settings.sys.port', key: 'port', readonly: isWeb },
+  { tooltip: 'settings.sys.updateServer', key: 'updateServer', readonly: isWeb },
+  { tooltip: 'settings.sys.proxySocketPort', key: 'proxySocketPort', readonly: isWeb },
+  { tooltip: 'settings.sys.apiDefineServer', key: 'apiDefineServer', readonly: isWeb },
+  { tooltip: 'settings.sys.statRuleServer', key: 'statRuleServer', readonly: isWeb },
   {
     tooltip: 'settings.sys.dataProxyServer',
     key: 'dataProxyServer',

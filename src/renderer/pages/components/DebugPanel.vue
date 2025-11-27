@@ -260,7 +260,7 @@ function processFrame() {
 }
 
 async function openCamera() {
-  if (__IS_WEB__) return
+  if (window.isWeb) return
 
   if (preVideo.value.srcObject) {
     previewCtx.clearRect(0, 0, preview.value.width, preview.value.height)
@@ -291,17 +291,12 @@ async function closeCamera() {
 }
 
 function openDevTools() {
-  if (!__IS_WEB__) {
-    window.mainApi.openDevTools()
-    showDebugPanel.value = false
-  }
+  window.mainApi?.openDevTools()
+  showDebugPanel.value = false
 }
 
 async function onSSE() {
-  if (!__IS_WEB__) {
-    window.mainApi.sendServerEvent()
-  }
-
+  window.mainApi?.sendServerEvent()
   await ProxyMock.broadcast(commonStore.uid)
 }
 
