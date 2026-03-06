@@ -13,7 +13,6 @@ thumbs.db
 package-lock.json
 .yarn/*
 .idea/*
-.vscode/*
 *.log
 SharePerferences/*
 UserData/**/*
