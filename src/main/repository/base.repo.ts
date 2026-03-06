@@ -1,6 +1,9 @@
 
 import { injectable } from 'inversify'
-import 'pouchdb-node'
+import PouchFind from 'pouchdb-find'
+import PouchDB from 'pouchdb-node'
+
+PouchDB.plugin(PouchFind)
 
 @injectable()
 export default class BaseRepo<T extends PouchDB.Core.RemoveDocument> {

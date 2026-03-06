@@ -1,12 +1,11 @@
 import { injectable } from 'inversify'
 import path from 'path'
-import PouchFind from 'pouchdb-find'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '../../common/proxy.api'
 import { USER_DATA_DIR } from '../MainConst'
 import BaseRepo from './base.repo'
 
-PouchDB.plugin(PouchFind)
+// PouchDB.plugin(PouchFind)
 
 interface IMockRepo {
   search(field?: string, query?: string, returnFields?: Array<string>): Promise<ProxyMock.MockRule[]>
