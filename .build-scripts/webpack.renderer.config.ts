@@ -3,12 +3,12 @@
 import HtmlWebpackPlugin from 'html-webpack-plugin'
 import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
+import TerserPlugin from "terser-webpack-plugin"
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
 import pkg from '../package.json' assert { type: "json" }
 import { BaseConfig } from './webpack.base.config'
-import TerserPlugin from "terser-webpack-plugin"
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
 
@@ -37,7 +37,7 @@ class RendererConfig extends BaseConfig {
       },
       {
         test: /\.css$/,
-        use: ['vue-style-loader', 'css-loader']
+        use: ['style-loader', 'css-loader']
       },
       {
         test: /\.tsx?$/,
