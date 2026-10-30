@@ -50,12 +50,11 @@
 <script lang="ts" setup>
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import Hls from 'hls.js'
-import { inject, onMounted, Ref, ref, useTemplateRef, watch } from 'vue'
-import { baseDomain, ProxyMock } from '../../../common'
+import { onMounted, ref, useTemplateRef, watch } from 'vue'
+import { baseDomain, ProxyMock } from '@shared'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
-const showDebugPanel = inject<Ref<boolean>>('showDebugPanel')
 const sseData = ref<string>('hello world')
 const playerStatus = ref<boolean>(false)
 const playerLoading = ref<boolean>(false)
@@ -91,7 +90,7 @@ onMounted(async () => {
   await registerSSE()
 })
 
-watch(showDebugPanel, (val, old) => {
+watch(() => commonStore.showDebugPanel, (val, old) => {
   if (!val) {
     hlsPlayer.value.pause()
     hls?.stopLoad()
@@ -292,7 +291,7 @@ async function closeCamera() {
 
 function openDevTools() {
   window.mainApi?.openDevTools()
-  showDebugPanel.value = false
+  commonStore.showDebugPanel = false
 }
 
 async function onSSE() {

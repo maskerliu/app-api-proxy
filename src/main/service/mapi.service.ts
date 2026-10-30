@@ -1,5 +1,5 @@
 import { injectable } from 'inversify'
-import { BizContext, Mapi } from '../../common'
+import { BizContext, Mapi } from '@shared'
 
 /**
  * this is a mock service for mapi

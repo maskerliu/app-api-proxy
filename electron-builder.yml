@@ -4,7 +4,6 @@ directories:
   output: build/${version}
 
 asarUnpack:
-  - "**/node_modules/@u4/opencv4nodejs/**/*"
   - "node_modules/leveldown/**/*"
 
 publish:
@@ -21,7 +20,6 @@ files:
   - "!**/node_modules/**/*.markdown"
   - "!**/node_modules/**/*.ts"
   - "!**/node_modules/**/build/**/*"
-  - "**/node_modules/@u4/opencv4nodejs/build/Release/*.node"
   - "!**/node_modules/**/bin/**"
   - "!**/node_modules/**/bench/**"
   - "!**/node_modules/**/test/**"

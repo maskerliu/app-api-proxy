@@ -58,7 +58,7 @@
 
 <script lang="ts" setup>
 import type { PropType } from 'vue'
-import { ProxyMock } from '../../../common'
+import { ProxyMock } from '@shared'
 import { ProxyRecordStore } from '../../store'
 
 defineProps({

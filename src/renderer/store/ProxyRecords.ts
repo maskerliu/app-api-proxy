@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ProxyMock } from '../../common'
+import { ProxyMock } from '@shared'
 
 
 const COLORS: string[] = [

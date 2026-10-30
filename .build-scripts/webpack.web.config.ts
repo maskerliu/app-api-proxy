@@ -1,13 +1,13 @@
 'use strict'
 
 import HtmlWebpackPlugin from 'html-webpack-plugin'
-import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
+import TerserPlugin from 'terser-webpack-plugin'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
 // import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
-import pkg from '../package.json' assert { type: "json" }
+import pkg from '../package.json' with { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
@@ -103,7 +103,6 @@ class WebConfig extends BaseConfig {
     }),
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
-    new NodePolyfillPlugin(),
     new DefinePlugin({
       __VUE_OPTIONS_API__: false,
       __VUE_PROD_DEVTOOLS__: false,
@@ -119,12 +118,34 @@ class WebConfig extends BaseConfig {
   resolve: Configuration['resolve'] = {
     alias: {
       '@': path.join(dirname, '../src/renderer'),
-      // 'vue$': 'vue/dist/vue.esm-browser.js',
+      '@renderer': path.join(dirname, '../src/renderer'),
+      '@shared': path.join(dirname, '../src/shared'),
     },
-    extensions: ['.ts', '.js', '.vue', '.json', '.css', '.node']
+    extensions: ['.ts', '.js', '.vue', '.json', '.css', '.node'],
+    fallback: {
+      "fs": false,
+      "tls": false,
+      "net": false,
+      "path": false,
+      "zlib": false,
+      "http": false,
+      "https": false,
+      "stream": false,
+      "buffer": false
+    }
   }
 
   optimization: Configuration['optimization'] = {
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          ecma: 2018,
+          compress: { comparisons: false },
+          mangle: true,
+        },
+      }),
+    ],
     splitChunks: {
       chunks: 'all',
       cacheGroups: {
@@ -165,12 +186,12 @@ class WebConfig extends BaseConfig {
     )
 
     if (process.env.NODE_ENV !== 'production') {
-      this.plugins.push(new DefinePlugin({
+      this.plugins?.push(new DefinePlugin({
         __DEV__: true,
         SERVER_BASE_URL: `'${pkg.config.protocol}://${localServer}:${pkg.config.port}'`,
       }))
 
-      this.plugins.push(
+      this.plugins?.push(
         // new BundleAnalyzerPlugin({
         //   analyzerMode: 'server',
         //   analyzerHost: '127.0.0.1',

@@ -29,13 +29,13 @@ import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
 import TCPlayer from 'tcplayer.js'
 import 'tcplayer.js/dist/tcplayer.min.css'
-import { ConfigProviderTheme } from 'vant'
-import { inject, nextTick, onMounted, Ref, ref, useTemplateRef, watch } from 'vue'
-import { baseDomain } from '../../../common'
+import { nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { baseDomain } from '@shared'
+import { CommonStore } from '../../store'
 
 const licenseUrl = 'https://license.vod2.myqcloud.com/license/v2/1340452115_1/v_cube.license'
 
-const theme = inject<Ref<ConfigProviderTheme>>('theme')
+const commonStore = CommonStore()
 
 interface VueAceEditorProps {
   lang: string
@@ -103,7 +103,7 @@ let tcplayer: any
 
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
-  _defOpts.theme = `ace/theme/cloud_editor${theme.value == 'light' ? '' : '_' + theme.value}`
+  _defOpts.theme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
   if (props.maxLines) {
     _defOpts.maxLines = props.maxLines
   }
@@ -125,8 +125,8 @@ onMounted(() => {
   _editor.renderer.content.addEventListener('click', onClick)
 })
 
-watch(theme, () => {
-  let newTheme = `ace/theme/cloud_editor${theme.value == 'light' ? '' : '_' + theme.value}`
+watch(() => commonStore.theme, () => {
+  let newTheme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
   _editor.setOption('theme', newTheme)
 })
 

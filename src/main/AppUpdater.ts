@@ -8,8 +8,8 @@ import path from 'path'
 import process from 'process'
 import { pipeline } from 'stream/promises'
 import { createGunzip } from 'zlib'
-import { Version } from '../common'
-import { MainAPICMD } from '../common/ipc.api'
+import { Version } from '@shared'
+import { MainApiCmd } from '@shared/ipc.api'
 import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
 
 export interface InstallOptions {
@@ -28,7 +28,7 @@ export async function incrementUpdate(version: Version) {
     onDownloadProgress: (event) => {
       BrowserWindow.getAllWindows()
         .find((it, idx, _) => { return it.title == AppName })
-        .webContents.send(MainAPICMD.DownloadUpdate,
+        .webContents.send(MainApiCmd.DownloadUpdate,
           { progress: Math.round((event.loaded / event.total) * 100) })
     }
   })
@@ -74,7 +74,7 @@ export async function fullUpdate(version: Version) {
       let window = BrowserWindow.getAllWindows()
         .find((it, idx, _) => { return it.title == AppName })
       if (window) {
-        window.webContents.send(MainAPICMD.DownloadUpdate,
+        window.webContents.send(MainApiCmd.DownloadUpdate,
           { progress: Math.round((event.loaded / event.total) * 100) })
       }
     }

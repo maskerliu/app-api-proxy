@@ -6,6 +6,7 @@ export default {
     delete: 'Delete',
     save: 'Save',
     upload: 'Upload',
+    loading: 'Loading...',
     searchPlaceholder: 'keyword for search',
     searchNoMatch: 'no match rule found'
   },
@@ -52,6 +53,7 @@ export default {
       dataProxyServer: 'Data Proxy Server',
       mqttBroker: 'MQTT Broker',
       theme: 'Theme',
+      fontsize: 'Font Size',
       lang: 'locales',
       version: 'Version',
       restart: 'restart',

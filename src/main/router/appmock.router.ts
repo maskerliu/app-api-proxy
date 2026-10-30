@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
-import { API_URL } from '../../common/api.const'
+import { API_URL } from '@shared/api.const'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
 import { CommonService, MockService, ProxyService, PushService } from '../service'

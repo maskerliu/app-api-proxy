@@ -1,19 +1,19 @@
-import { spawn } from "child_process"
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from "electron"
-import fs from 'fs'
+import { spawn } from 'child_process'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import fse from 'fs-extra'
 import os from 'os'
-import path from "path"
-import { Version } from "../common"
-import { MainAPICMD } from "../common/ipc.api"
-import { fullUpdate, incrementUpdate } from "./AppUpdater"
-import { getAppWindow } from "./misc/utils"
+import path from 'path'
+import { Version } from '@shared'
+import { MainApiCmd } from '@shared/ipc.api'
+import { fullUpdate, incrementUpdate } from './AppUpdater'
+import { USER_DATA_DIR } from './MainConst'
+import { getAppWindow } from './misc/utils'
 
-ipcMain.handle(MainAPICMD.Relaunch, (_) => {
+ipcMain.handle(MainApiCmd.Relaunch, (_) => {
   if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
     const logPath = app.getPath('logs')
-    const out = fs.openSync(path.join(logPath, 'out.log'), 'a')
-    const err = fs.openSync(path.join(logPath, 'err.log'), 'a')
+    const out = fse.openSync(path.join(logPath, 'out.log'), 'a')
+    const err = fse.openSync(path.join(logPath, 'err.log'), 'a')
     let updateBash = `update.${os.platform() == 'win32' ? 'exe' : 'sh'}`
 
     if (os.platform() == 'win32') {
@@ -36,11 +36,7 @@ ipcMain.handle(MainAPICMD.Relaunch, (_) => {
   app.quit()
 })
 
-ipcMain.handle(MainAPICMD.OpenDevTools, (_, args?: any) => {
-  getAppWindow()?.webContents.openDevTools({ mode: 'detach', activate: false })
-})
-
-ipcMain.handle(MainAPICMD.OpenFile, async (_, target: string) => {
+ipcMain.handle(MainApiCmd.SelectFile, async (_) => {
   let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     properties: ['openFile',],
     filters: [
@@ -52,10 +48,59 @@ ipcMain.handle(MainAPICMD.OpenFile, async (_, target: string) => {
   })
 
   if (result.canceled) return
-  getAppWindow()?.webContents.send(MainAPICMD.OpenFile, result.filePaths[0])
+  getAppWindow()?.webContents.send(MainApiCmd.SelectFile, os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0])
 })
 
-ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
+ipcMain.handle(MainApiCmd.SelectFolder, async (_) => {
+  let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    properties: ['openDirectory',],
+  })
+
+  if (result.canceled) return
+  getAppWindow()?.webContents.send(MainApiCmd.SelectFolder, os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0])
+})
+
+ipcMain.handle(MainApiCmd.OpenFolder, async (_, target: string) => {
+  if (!target) return
+  await shell.openPath(target)
+})
+
+ipcMain.handle(MainApiCmd.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, slient = false) => {
+  let filePath = path.join(USER_DATA_DIR, fileName)
+  await fse.ensureDir(path.dirname(filePath))
+
+  if (slient) {
+    await fse.writeFile(filePath, Buffer.from(data as any) as any)
+    return
+  }
+
+  let filters = [{ name: '全部文件', extensions: ['*'] }]
+  let ext = path.extname(fileName)
+  if (ext && ext !== '.') {
+    const name = ext.slice(1, ext.length)
+    if (name) {
+      filters.unshift({ name: '', extensions: [name] })
+    }
+  }
+
+  try {
+    const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+      title,
+      filters,
+      defaultPath: filePath
+    })
+    if (result.canceled || !result.filePath) return
+    await fse.writeFile(result.filePath, Buffer.from(data as any) as any)
+  } catch (e) {
+    console.log(`save as--catch:${e}`)
+  }
+})
+
+ipcMain.handle(MainApiCmd.OpenDevTools, (_, args?: any) => {
+  getAppWindow()?.webContents.openDevTools({ mode: 'detach', activate: false })
+})
+
+ipcMain.handle(MainApiCmd.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
   nativeTheme.themeSource = theme
   if (os.platform() == 'darwin') {
     // console.log(this.mainWindow.setTitleBarOverlay)
@@ -67,7 +112,7 @@ ipcMain.handle(MainAPICMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark'))
   }
 })
 
-ipcMain.handle(MainAPICMD.DownloadUpdate, async (_, newVersion: Version) => {
+ipcMain.handle(MainApiCmd.DownloadUpdate, async (_, newVersion: Version) => {
   if (newVersion.fullUpdate) await fullUpdate(newVersion)
   else await incrementUpdate(newVersion)
 })

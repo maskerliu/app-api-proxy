@@ -1,107 +1,93 @@
 <template>
-  <van-config-provider :theme="theme" class="full-row">
+  <van-config-provider :theme="commonStore.theme" :theme-vars="commonStore.themeVars" theme-vars-scope="global"
+    class="full-row">
+    <div class="drag-bar" v-if="!isWeb"></div>
+
     <router-view class="biz-content" v-slot="{ Component, route }">
-      <transition name="fade">
+      <transition name="fade" v-if="canRender">
         <component :is="Component" :key="route.path" />
       </transition>
     </router-view>
 
-    <van-floating-bubble v-if="enableDebug" :offset="{ x: 10, y: 500 }" axis="xy" :gap="10" magnetic="x" icon="fire-o"
+    <van-floating-bubble v-if="enableDebug" :offset="offset" axis="xy" :gap="10" magnetic="x" icon="fire-o"
       @click="onOpenDebugPanel" />
 
-    <van-popup v-model:show="showDebugPanel" position="left">
+    <van-popup v-model:show="commonStore.showDebugPanel" position="left" closeable close-icon="close">
       <debug-panel />
     </van-popup>
+
+    <van-overlay :show="showLoading" teleport="#app"
+      style="width:100vw; height: 100vh; align-items: center; flex-direction: column; z-index: 2000;">
+      <van-row justify="center" class="loading">
+        <van-loading />
+        <div style="margin: 5px 15px;">{{ $t('common.loading') }}</div>
+      </van-row>
+    </van-overlay>
   </van-config-provider>
 </template>
 
 <script lang="ts" setup>
-import { ConfigProviderTheme } from 'vant'
-import { onMounted, provide, ref } from 'vue'
+import { defineAsyncComponent, onMounted, provide, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import DebugPanel from './pages/components/DebugPanel.vue'
+import { LocalServerConfig } from '@shared'
 import { CommonStore } from './store'
 
-const i18n = useI18n()
-const canRender = ref(true)
-const theme = ref<ConfigProviderTheme>('light')
-const lang = ref<string>('zh-CN')
-const active = ref<number>(0)
-const showDebugPanel = ref<boolean>(false)
-const enableDebug = true
+const DebugPanel = defineAsyncComponent(() => import('./pages/components/DebugPanel.vue'))
 
-provide('theme', theme)
-provide('lang', lang)
-provide('showDebugPanel', showDebugPanel)
+const isWeb = window.isWeb
+const commonStore = CommonStore()
+const i18n = useI18n()
+const router = useRouter()
+const canRender = ref(false)
+const active = ref<number>(0)
+const enableDebug = true
+const showLoading = ref<boolean>(false)
+const loadingTimer = setTimeout(() => {
+  if (!canRender.value) showLoading.value = true
+}, 200)
+const offset = ref({
+  x: window.innerWidth - 42,
+  y: window.innerHeight - 150
+})
+
+provide('showLoading', showLoading)
+
+async function onConfigReady(config?: LocalServerConfig) {
+  await commonStore.init(config)
+  i18n.locale.value = commonStore.lang
+  window.mainApi?.setAppTheme(commonStore.theme)
+  canRender.value = true
+  clearTimeout(loadingTimer)
+  showLoading.value = false
+  router.replace('/proxy')
+  active.value = 1
+}
 
 onMounted(async () => {
 
+  canRender.value = false
   window.isWeb = window.mainApi == null
-  useRouter().beforeEach((to: any, from: any) => {
-    return true
+
+  window.addEventListener('resize', () => {
+    offset.value.x = window.innerWidth - 42
+    offset.value.y = window.innerHeight - 150
   })
 
-  useRouter().replace("/proxy")
-  active.value = 1
-
-  let wrapTheme = window.localStorage.getItem('theme')
-  theme.value = wrapTheme != null ? wrapTheme as ConfigProviderTheme : 'light'
-
-  let wrapLang = window.localStorage.getItem('lang')
-  lang.value = wrapLang != null ? wrapLang : 'zh-CN'
-  i18n.locale.value = lang.value
-
-  if (window.isWeb) {
-    await CommonStore().init()
+  if (window.mainApi) {
+    window.mainApi.getBizConfig(onConfigReady)
   } else {
-    window.mainApi?.getSysSettings(async (result) => {
-      await CommonStore().init(result)
-    })
-    window.mainApi?.setAppTheme(theme.value)
+    await onConfigReady()
   }
-
-  canRender.value = true
 })
 
 function onOpenDebugPanel() {
-  showDebugPanel.value = true
+  commonStore.showDebugPanel = true
 }
 
 </script>
 
 <style>
-.van-theme-light {
-  --van-white: white;
-  --van-black: #333;
-  --van-gray-1: #ecedee;
-  --van-gray-8: #69696b;
-}
-
-.van-theme-dark {
-  --van-white: rgb(24, 23, 23);
-  --van-black: #efecec;
-  --van-gray-1: #272728;
-  --van-gray-8: #ccccce;
-}
-
-:root {
-  --van-dialog-border-radius: 6px;
-  --van-tag-font-size: 0.6rem;
-  --van-tag-padding: 2px 5px;
-  --van-tag-border-radius: 5px;
-  --van-cell-horizontal-padding: 10px;
-  --van-popup-round-radius: 8px;
-  --van-popup-close-icon-margin: 23px;
-  --van-border-width: 1.4px;
-  --van-radius-md: 8px;
-  --van-dialog-radius: 8px;
-  --van-floating-bubble-background: #f04b1e;
-  --van-tabs-line-height: 1.8rem;
-  --van-tab-font-size: 0.9rem;
-  --van-tab-line-height: 1rem;
-}
-
 #app {
   /* font-family: "Consolas"; */
   background: var(--van-gray-1);
@@ -155,12 +141,24 @@ function onOpenDebugPanel() {
 }
 
 .drag-bar {
-  width: 100%;
-  height: 30px;
-  position: fixed;
-  background: linear-gradient(to bottom, var(--van-gray-1), transparent);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  pointer-events: auto;
   -webkit-app-region: drag;
-  z-index: -1;
+  z-index: 1;
+}
+
+.loading {
+  width: 20%;
+  padding: 10px 5px;
+  margin: 20% auto;
+  background-color: #262f37e0;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: #bdc3c7;
 }
 
 .rule-mgr-cell-value {

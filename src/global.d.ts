@@ -1,4 +1,4 @@
-import { IMainAPI } from "./common/ipc.api"
+import { IMainAPI } from "@shared/ipc.api"
 
 declare global {
   let __DEV__: boolean

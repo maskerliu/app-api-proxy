@@ -4,7 +4,7 @@ import CopyWebpackPlugin from 'copy-webpack-plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import webpack, { Configuration } from 'webpack'
-import pkg from '../package.json' assert { type: "json" }
+import pkg from '../package.json' with { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 
 const { DefinePlugin, HotModuleReplacementPlugin, NoEmitOnErrorsPlugin } = webpack
@@ -61,13 +61,11 @@ class MainConfig extends BaseConfig {
     new NoEmitOnErrorsPlugin(),
   ]
 
-  optimization: Configuration['optimization'] = {
-    usedExports: true
-  }
-
   resolve: Configuration['resolve'] = {
     alias: {
       './': path.join(dirname, '../src/main'),
+      '@main': path.join(dirname, '../src/main'),
+      '@shared': path.join(dirname, '../src/shared'),
     },
     extensions: ['.ts', '.js', '.json', '.node']
   }
@@ -87,22 +85,25 @@ class MainConfig extends BaseConfig {
 
     this.plugins?.push(
       new CopyWebpackPlugin({
-        patterns: [{
-          from: path.join(dirname, '../cert'),
-          to: path.join(dirname, '../dist/electron/cert/'),
-        }]
-      }),
-      new CopyWebpackPlugin({
-        patterns: [{
-          from: path.join(dirname, `../icons/common/`),
-          to: path.join(dirname, '../dist/electron/static/'),
-        }]
-      }),
-      new CopyWebpackPlugin({
-        patterns: [{
-          from: path.join(dirname, `../icons/icon${suffix}`),
-          to: path.join(dirname, '../dist/electron/static/'),
-        }]
+        patterns: [
+          {
+            from: path.join(dirname, '../icons/common/'),
+            to: path.join(dirname, '../dist/electron/static/'),
+          },
+          {
+            from: path.join(dirname, '../icons/web/'),
+            to: path.join(dirname, '../dist/electron/static/'),
+            noErrorOnMissing: true,
+          },
+          {
+            from: path.join(dirname, `../icons/icon${suffix}`),
+            to: path.join(dirname, '../dist/electron/static/'),
+          },
+          {
+            from: path.join(dirname, '../cert'),
+            to: path.join(dirname, '../dist/electron/cert/'),
+          },
+        ]
       })
     )
 

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "composite": false,
     "sourceMap": false,
     "declaration": false,
@@ -25,12 +25,33 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": [
+      "node",
       "reflect-metadata"
     ],
     "lib": [
       "ESNext",
       "DOM"
     ],
+    "paths": {
+      "@shared": [
+        "./src/shared"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ],
+      "@renderer": [
+        "./src/renderer"
+      ],
+      "@renderer/*": [
+        "./src/renderer/*"
+      ],
+      "@main": [
+        "./src/main"
+      ],
+      "@main/*": [
+        "./src/main/*"
+      ]
+    }
   },
   "include": [
     "src/**/*",

@@ -5,16 +5,24 @@
         <van-icon class="iconfont icon-theme" style="margin-left: 15px;" />
       </template>
       <template #right-icon>
-        <van-radio-group v-model="theme" direction="horizontal" style="height: 26px;" @change="onThemeChanged">
+        <van-radio-group v-model="commonStore.theme" direction="horizontal" style="height: 26px;"
+          @change="commonStore.updateTheme">
           <van-radio name="light">
             <van-icon class="iconfont icon-theme-light theme-icon"
-              :style="{ color: theme == 'light' ? '#3498db' : 'gray' }" />
+              :style="{ color: commonStore.theme == 'light' ? '#3498db' : 'gray' }" />
           </van-radio>
           <van-radio name="dark">
             <van-icon class="iconfont icon-theme-dark theme-icon"
-              :style="{ color: theme == 'dark' ? '#3498db' : 'gray' }" />
+              :style="{ color: commonStore.theme == 'dark' ? '#3498db' : 'gray' }" />
           </van-radio>
         </van-radio-group>
+      </template>
+    </van-field>
+
+    <van-field center input-align="right" :label="$t('settings.sys.fontsize')" label-width="4rem" :readonly="true">
+      <template #input>
+        <van-slider v-model="commonStore.fontSize" :min="7" :max="10" @change="commonStore.updateFontSize"
+          style="width: 60%; margin-right: 10px;" />
       </template>
     </van-field>
 
@@ -46,7 +54,7 @@
           </van-cell>
           <template #reference>
             <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
-              {{ lang }}
+              {{ commonStore.lang }}
             </div>
           </template>
         </van-popover>
@@ -69,10 +77,10 @@
   </van-cell-group>
 </template>
 <script lang="ts" setup>
-import { ConfigProviderTheme, showNotify, showToast } from 'vant'
-import { inject, onMounted, ref, Ref, watch } from 'vue'
+import { showNotify, showToast } from 'vant'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Version, versionCheck } from '../../../common'
+import { Version, versionCheck } from '@shared'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -83,9 +91,6 @@ const showLangs = ref<boolean>(false)
 const showDownload = ref<boolean>(false)
 const showRestart = ref<boolean>(false)
 const downloadProgress = ref<number>(0)
-
-const lang = inject<Ref<string>>('lang')
-const theme = inject<Ref<ConfigProviderTheme>>('theme')
 
 const popupCloseable = window.isWeb
 let newVersion: Version = null
@@ -107,15 +112,9 @@ watch(downloadProgress, () => {
 })
 
 function onSelectLang(_lang: string) {
-  lang.value = _lang
+  commonStore.updateLang(_lang)
   showLangs.value = false
-  i18n.locale.value = lang.value
-  window.localStorage.setItem('lang', _lang)
-}
-
-function onThemeChanged() {
-  window.localStorage.setItem('theme', theme.value)
-  window.mainApi?.setAppTheme(theme.value)
+  i18n.locale.value = _lang
 }
 
 async function onVersionCheck() {

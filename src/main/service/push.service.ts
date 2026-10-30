@@ -1,7 +1,7 @@
 import { Server } from 'http'
 import { injectable } from 'inversify'
 import { Connection, createServer, Server as SockServer } from 'sockjs'
-import { ProxyMock } from '../../common'
+import { ProxyMock } from '@shared'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
@@ -24,13 +24,13 @@ export class PushService {
     this.sockjsServer.installHandlers(httpServer)
   }
 
-  public closeWebSocketServer(callback: any) {
+  public closeWebSocketServer(callback?: any) {
     this.pushClients.forEach(it => {
       it.conn.close()
       it.conn.destroy()
     })
     this.pushClients.clear()
-    this.sockjsServer
+    callback?.()
   }
 
   public sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>) {

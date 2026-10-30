@@ -1,6 +1,6 @@
 import express, { Request, Response, Router } from "express"
 import formidable, { Files } from 'formidable'
-import { BizCode, BizFail, BizResponse } from "../../common/base.models"
+import { BizCode, BizFail, BizResponse } from "@shared/base.models"
 import { BizNetwork, fetchFormFile, parseContext, parseJsonBody } from "../misc/utils"
 
 

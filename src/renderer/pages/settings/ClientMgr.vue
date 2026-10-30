@@ -38,7 +38,7 @@
 <script lang="ts" setup>
 import { showNotify } from 'vant'
 import { onMounted, ref } from 'vue'
-import { ProxyMock } from '../../../common'
+import { ProxyMock } from '@shared'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()

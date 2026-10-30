@@ -11,6 +11,8 @@ import router from './router'
 
 OverlayScrollbars.plugin(ClickScrollPlugin)
 
+window.isWeb = window.mainApi == null
+
 const pinia = createPinia()
 const app = createApp(App)
 app.use(i18n)
@@ -18,4 +20,3 @@ app.use(router)
 app.use(pinia)
 app.use(vant)
 app.mount('#app')
-

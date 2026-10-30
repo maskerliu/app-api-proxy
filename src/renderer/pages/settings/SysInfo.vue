@@ -41,7 +41,7 @@
 
     <van-cell v-if="!isWeb">
       <template #value>
-        <van-button plain type="primary" size="normal" block @click="onSave">
+        <van-button plain type="primary" size="small" block @click="onSave">
           {{ $t('common.save') }}
         </van-button>
       </template>
@@ -49,9 +49,9 @@
   </van-cell-group>
 </template>
 <script lang="ts" setup>
+import { LocalIP } from '@shared'
 import { inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LocalIP } from '../../../common'
 import { CommonStore } from '../../store'
 
 type SettingPreference = {
@@ -107,7 +107,7 @@ function onSelectIP(ip: LocalIP) {
 }
 
 function onSave() {
-  window.mainApi?.saveSysSettings(JSON.stringify(commonStore.serverConfig))
+  window.mainApi?.updateBizConfig(JSON.stringify(commonStore.serverConfig))
   showSettings.value = false
 }
 

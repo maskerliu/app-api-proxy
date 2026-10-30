@@ -59,7 +59,7 @@
 <script lang="ts" setup>
 import { Form, showToast } from 'vant'
 import { inject, PropType, Ref, ref } from 'vue'
-import { ProxyMock } from '../../../common'
+import { ProxyMock } from '@shared'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import ProxyRequestBody from './ProxyRequestBody.vue'
 

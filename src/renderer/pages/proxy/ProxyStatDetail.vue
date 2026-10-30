@@ -8,7 +8,7 @@
 <script lang="ts">
 import { mapState } from 'pinia'
 import { defineComponent, PropType } from 'vue'
-import { ProxyMock } from '../../../common'
+import { ProxyMock } from '@shared'
 import { CommonStore,ProxyRecordStore } from '../../store'
 
 type SateRule = { desc: string, rule: string[], ruleDesc: string }

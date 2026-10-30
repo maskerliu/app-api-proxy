@@ -1,13 +1,12 @@
 'use strict'
 
 import HtmlWebpackPlugin from 'html-webpack-plugin'
-import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
 import TerserPlugin from "terser-webpack-plugin"
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
-import pkg from '../package.json' assert { type: "json" }
+import pkg from '../package.json' with { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 
 const { DefinePlugin, LoaderOptionsPlugin, NoEmitOnErrorsPlugin } = webpack
@@ -17,7 +16,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 let whiteListedModules = ['axios']
 
 class RendererConfig extends BaseConfig {
-  devtool: string | false = process.env.NODE_ENV !== 'production' ? "cheap-module-source-map" : false
+  devtool: string | false = process.env.NODE_ENV !== 'production' ? "eval-cheap-module-source-map" : false
   name: Configuration['name'] = 'renderer'
   target: Configuration['target'] = 'web' // 'electron-renderer'
   entry: Configuration['entry'] = { renderer: path.join(dirname, '../src/renderer/index.ts') }
@@ -36,7 +35,7 @@ class RendererConfig extends BaseConfig {
         }
       },
       {
-        test: /\.css$/,
+        test: /\.css$/i,
         use: ['style-loader', 'css-loader']
       },
       {
@@ -52,7 +51,10 @@ class RendererConfig extends BaseConfig {
       },
       {
         test: /\.wasm$/,
-        type: "asset/inline",
+        type: 'asset/resource',
+        generator: {
+          filename: '[name][ext]'
+        }
       },
       {
         test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
@@ -73,18 +75,12 @@ class RendererConfig extends BaseConfig {
     ]
   }
 
-  experiments: Configuration['experiments'] = {
-    asyncWebAssembly: true,
-    syncWebAssembly: true
-  }
-
   plugins: Configuration['plugins'] = [
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
     }),
     new VueLoaderPlugin(),
     new NoEmitOnErrorsPlugin(),
-    new NodePolyfillPlugin(),
     new DefinePlugin({
       __VUE_OPTIONS_API__: false,
       __VUE_PROD_DEVTOOLS__: false,
@@ -100,20 +96,21 @@ class RendererConfig extends BaseConfig {
   resolve: Configuration['resolve'] = {
     alias: {
       '@': path.join(dirname, '../src/renderer'),
+      '@renderer': path.join(dirname, '../src/renderer'),
+      '@shared': path.join(dirname, '../src/shared'),
     },
-    extensions: ['.js', '.ts', '.vue', '.json', '.css']
+    extensions: ['.ts', '.js', '.vue', '.json', '.css', '.wasm'],
+    fallback: {
+      'stream': false,
+      'vm': false,
+      'fs': false,
+      'crypto': false,
+      'path': path.resolve(dirname, '../node_modules/path-browserify'),
+    }
   }
 
   optimization: Configuration['optimization'] = {
-    minimize: true,
-    minimizer: ['...', new TerserPlugin({
-      extractComments: false,
-      terserOptions: {
-        compress: {
-          drop_console: true
-        }
-      }
-    })],
+    minimize: false,
     splitChunks: {
       chunks: 'all',
       cacheGroups: {
@@ -157,7 +154,6 @@ class RendererConfig extends BaseConfig {
         nodeModules: process.env.NODE_ENV !== 'production' ? path.resolve(dirname, '../node_modules') : false
       }),
       new DefinePlugin({
-        __DEV__: true,
         SERVER_BASE_URL: `'${pkg.config.protocol}://localhost:${pkg.config.port}'`, PROTOCOL: `'${pkg.config.protocol}'`
       }),
     )
@@ -168,6 +164,15 @@ class RendererConfig extends BaseConfig {
       )
     } else {
       this.plugins?.push(new LoaderOptionsPlugin({ minimize: true }))
+      this.optimization!.minimize = true
+      this.optimization!.minimizer = ['...', new TerserPlugin({
+        extractComments: false,
+        terserOptions: {
+          compress: {
+            drop_console: true
+          }
+        }
+      })]
       this.output!.publicPath = './'
     }
 

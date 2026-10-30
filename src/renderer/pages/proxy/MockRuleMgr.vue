@@ -118,8 +118,8 @@
 <script lang="ts" setup>
 import { Row, showNotify } from 'vant'
 import { inject, onMounted, Ref, ref, watch } from 'vue'
-import { ProxyMock } from '../../../common'
-import { json2map, map2json } from '../../common'
+import { ProxyMock } from '@shared'
+import { json2map, map2json } from '@shared'
 import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 

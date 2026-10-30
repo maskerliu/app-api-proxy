@@ -5,6 +5,7 @@ export default {
     delete: '删除',
     save: '保存',
     upload: '上传',
+    loading: '加载中...',
     searchPlaceholder: '请输入搜索关键词',
     searchNoMatch: '未找到符合的规则'
   },
@@ -51,6 +52,7 @@ export default {
       dataProxyServer: '代理数据服务地址',
       mqttBroker: 'MQTT服务地址',
       theme: '主题',
+      fontsize: '字体大小',
       lang: '语言',
       version: '版本',
       restart: '重启',

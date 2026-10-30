@@ -1,11 +1,12 @@
+import { exec } from 'child_process'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions,
-  globalShortcut, ipcMain, Menu, nativeImage, session, screen, Tray
+  globalShortcut, ipcMain, Menu, session, Tray
 } from 'electron'
 import fs from 'original-fs'
 import os from 'os'
 import path from 'path'
-import { MainAPICMD } from '../common/ipc.api'
+import { MainApiCmd } from '@shared/ipc.api'
 import './IPCServices'
 import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
@@ -26,19 +27,17 @@ export default class MainApp {
     let ext = os.platform() == 'win32' ? 'ico' : 'png'
     this.dockerIconFile = path.join(this.staticDir, `icon.${ext}`)
     this.mainServer.bootstrap()
- 
-    console.log('home', app.getPath('temp'))
   }
 
   public async startApp() {
     app.setName(AppName)
+    app.setPath('crashDumps', path.join(USER_DATA_DIR, 'crashDumps'))
     // app.disableHardwareAcceleration()
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
     app.commandLine.appendSwitch('ignore-certificate-errors')
-    app.commandLine.appendSwitch('disable-gpu')
     app.commandLine.appendSwitch('disable-software-rasterizer')
 
-    if (process.env.NODE_ENV == 'development') {
+    if (IS_DEV) {
       app.commandLine.appendSwitch('trace-deprecation')
       app.commandLine.appendSwitch('trace-warnings')
       app.commandLine.appendSwitch('experimental-worker')
@@ -61,38 +60,37 @@ export default class MainApp {
       }
     })
 
-    app.on('ready', () => {
-      console.log(`screen info: ${screen.getPrimaryDisplay().scaleFactor}`)
-      let display = screen.getPrimaryDisplay()
-      console.log(`screen width: ${display.workAreaSize.width} \t height: ${display.workAreaSize.height}`)
-
-
-      let icon = nativeImage.createFromPath(path.join(this.staticDir, 'icon.png'))
-      console.log(`\t\t ${icon.getScaleFactors().length}\t ${icon.getScaleFactors()}`)
-
+    app.on('ready', async () => {
       globalShortcut.register('CommandOrControl+q', () => {
         app.quit()
       })
 
-      let lock = app.requestSingleInstanceLock()
-      if (!lock) app.quit()
+      globalShortcut.register('CommandOrControl+r', () => {
+        BrowserWindow.getFocusedWindow()?.reload()
+      })
+
+      if (!app.requestSingleInstanceLock()) app.quit()
 
       this.initSessionConfig()
-      this.initIPCService()
+      await this.initIPCService()
 
       if (this.mainWindow == null) {
         this.createMainWindow()
       }
 
+      this.addFirewallRule()
       this.createTrayMenu()
     })
 
     app.on('second-instance', (_, args, workDir) => {
       console.log(args, workDir)
+      this.mainWindow?.show()
+      this.mainWindow?.focus()
     })
 
     app.on('before-quit', () => {
       app.releaseSingleInstanceLock()
+      this.mainServer.stop().catch(err => console.error(err))
     })
 
     app.on('window-all-closed', () => {
@@ -126,6 +124,7 @@ export default class MainApp {
       minHeight: 640,
       useContentSize: true,
       transparent: false,
+      backgroundColor: '#f2f3f5',
       frame: true,
       resizable: true,
       show: false,
@@ -149,7 +148,6 @@ export default class MainApp {
     this.mainWindow.webContents.session.setSpellCheckerEnabled(false)
 
     this.mainWindow.on('resize', () => {
-
       if (os.platform() == 'darwin')
         this.mainWindow.setWindowButtonPosition({ x: this.mainWindow.getBounds().width - 70, y: 10 })
     })
@@ -158,15 +156,23 @@ export default class MainApp {
       // console.log(this.mainWindow)
     })
 
-    this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
-
     this.mainWindow.webContents.on('preload-error', (event, preloadPath, error) => {
-      console.error('preload error', error)
+      console.error('preload error', preloadPath, error)
     })
+
+    this.mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      console.error('[FATAL] render-process-gone:', details.reason, details.exitCode)
+    })
+
+    this.mainWindow.webContents.on('unresponsive', () => {
+      console.error('[FATAL] renderer unresponsive')
+    })
+
     this.mainWindow.on('ready-to-show', () => {
       this.mainWindow.show()
       this.mainWindow.focus()
-      this.mainWindow.webContents.send(MainAPICMD.GetSysSettings, this.mainServer.getSysSettings())
+      this.mainWindow.webContents.send(MainApiCmd.GetBizConfig, this.mainServer.getBizConfig())
+      if (IS_DEV) this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
     })
   }
 
@@ -180,7 +186,7 @@ export default class MainApp {
         label: '用例管理',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainAPICMD.OpenMockRuleMgr)
+          this.mainWindow?.webContents.send(MainApiCmd.OpenMockRuleMgr)
         }
       },
       {
@@ -188,7 +194,7 @@ export default class MainApp {
         label: '设置',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainAPICMD.OpenSettings)
+          this.mainWindow?.webContents.send(MainApiCmd.OpenSettings)
         }
       },
       {
@@ -196,7 +202,7 @@ export default class MainApp {
         label: '开发者面板',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainAPICMD.OpenDevTools)
+          this.mainWindow?.webContents.send(MainApiCmd.OpenDevTools)
         }
       },
       {
@@ -242,12 +248,15 @@ export default class MainApp {
 
   private initSessionConfig() {
 
-    if (IS_DEV && os.platform() != 'linux') session.defaultSession.extensions.loadExtension(VUE_PLUGIN)
+    if (IS_DEV && os.platform() != 'linux' && fs.existsSync(VUE_PLUGIN)) {
+      session.defaultSession.extensions.loadExtension(VUE_PLUGIN)
+        .catch(err => console.warn('load vue devtools failed:', err.message))
+    }
 
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       if (details.url.indexOf('.amap.com') !== -1
         || details.url.indexOf('alicdn.com') !== -1
-        || details.url.indexOf('qcloud.com')) {
+        || details.url.indexOf('qcloud.com') !== -1) {
         callback({
           responseHeaders: {
             ...details.responseHeaders,
@@ -262,30 +271,46 @@ export default class MainApp {
             ...details.responseHeaders,
             'Cross-Origin-Opener-Policy': 'same-origin',
             'Cross-Origin-Embedder-Policy': 'require-corp',
-
           }
         })
       }
     })
   }
 
-  private initIPCService() {
-    ipcMain.handle(MainAPICMD.SaveSysSettings, (_, ...args: any) => {
-      let curSettings = this.mainServer.getSysSettings()
-      let newSettings = JSON.parse(args)
-
-      this.mainServer.updateSysSettings(JSON.parse(args))
-
-      if (newSettings.port !== curSettings.port || newSettings.protocol !== curSettings.protocol) {
-        this.mainServer.stop()
-        this.mainServer.start()
-      }
-
-      this.mainWindow.webContents.send(MainAPICMD.GetSysSettings, this.mainServer.getSysSettings())
+  private async initIPCService() {
+    ipcMain.handle(MainApiCmd.UpdateBizConfig, async (_, ...args: any) => {
+      await this.mainServer.updateBizConfig(JSON.parse(args[0]))
+      this.mainWindow?.webContents.send(MainApiCmd.GetBizConfig, this.mainServer.getBizConfig())
     })
 
-    ipcMain.handle(MainAPICMD.SendServerEvent, () => {
+    ipcMain.handle(MainApiCmd.SendServerEvent, () => {
       // console.log('send sse')
+    })
+  }
+
+  private addFirewallRule() {
+    if (os.platform() !== 'win32') return
+
+    const appPath = process.execPath
+    const ruleName = IS_DEV ? 'Electron' : AppName
+    const checkCommand = `netsh advfirewall firewall show rule name="${ruleName}"`
+
+    exec(checkCommand, (error, stdout) => {
+      if (stdout?.includes('No rules match') || stdout?.includes('没有与指定标准相匹配的规则')) {
+        const ruleCommand = (dir: 'in' | 'out') =>
+          `netsh advfirewall firewall add rule name="${ruleName}" dir=${dir} action=allow program="${appPath}" enable=yes`
+
+        exec(ruleCommand('in'), (err) => {
+          if (err) console.error(`inbound rule add failed: ${err.message}`)
+          else console.log('inbound rule added')
+        })
+        exec(ruleCommand('out'), (err) => {
+          if (err) console.error(`outbound rule add failed: ${err.message}`)
+          else console.log('outbound rule added')
+        })
+      } else {
+        console.log('firewall rule exists')
+      }
     })
   }
 }

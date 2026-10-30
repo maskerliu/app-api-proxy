@@ -1,15 +1,16 @@
-
 import { LocalServerConfig } from "./base.models"
 
-
-export const MainAPICMD = {
+export const MainApiCmd = {
   Relaunch: 'relaunch',
-  OpenFile: 'openFile',
+  SelectFile: 'selectFile',
+  SelectFolder: 'selectFolder',
+  OpenFolder: 'openFolder',
+  SaveFileAs: 'saveFile',
   OpenDevTools: 'openDevTools',
   OpenMockRuleMgr: 'openMockRuleMgr',
   OpenSettings: 'openSettings',
-  GetSysSettings: 'getSysSettings',
-  SaveSysSettings: 'saveSysSettings',
+  GetBizConfig: 'getBizConfig',
+  UpdateBizConfig: 'updateBizConfig',
   SetAppTheme: 'setAppTheme',
   GetSysTheme: 'getSysTheme',
   SysThemeChanged: 'sysThemeChanged',
@@ -21,11 +22,17 @@ export interface IMainAPI {
 
   relaunch(): void
 
-  openFile(...args: any): void
+  selectFile(callback: Function): void
+
+  selectFolder(callback: Function): void
+
+  openFolder(path: string): void
+
+  saveFile(title: string, fileName: string, file: string | ArrayBuffer, slient?: boolean): void
 
   openDevTools(...args: any): void
 
-  saveSysSettings(...args: any): void
+  updateBizConfig(...args: any): void
 
   sendServerEvent(): void
 
@@ -35,7 +42,7 @@ export interface IMainAPI {
 
   onOpenSettings(callback: any): void
 
-  getSysSettings(callback: (result: LocalServerConfig) => void): void
+  getBizConfig(callback: (result: LocalServerConfig) => void): void
 
   setAppTheme(theme: ('system' | 'light' | 'dark')): void
 

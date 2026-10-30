@@ -5,7 +5,7 @@ import { deleteSync } from 'del'
 import minimist from 'minimist'
 import Spinnies from 'spinnies'
 import webpack from 'webpack'
-import pkg from '../package.json' assert { type: "json" }
+import pkg from '../package.json' with { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 import mainConfig from './webpack.main.config'
 import rendererConfig from './webpack.renderer.config'
@@ -16,6 +16,9 @@ const Run_Mode_PROD = 'production'
 process.env.NODE_ENV = Run_Mode_PROD
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 process.env.DEBUG = 'electron-builder'
+
+const spinner = { interval: 80, frames: ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'] }
+const spinnies = new Spinnies({ color: 'blue', succeedColor: 'green', spinner })
 
 export function run() {
   let argv = minimist(process.argv.slice(2))
@@ -32,62 +35,47 @@ function clean() {
   process.exit()
 }
 
-async function build() {
+function build() {
   greeting()
   deleteSync([`build/${pkg.version}/*`])
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
 
-  let spinner = { interval: 80, frames: ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷'] }
-  let spinnies = new Spinnies({ color: 'blue', succeedColor: 'green', spinner })
-  addSpinnerTask(spinnies, mainConfig)
-  addSpinnerTask(spinnies, webConfig)
-  addSpinnerTask(spinnies, rendererConfig)
+  addSpinnerTask(mainConfig)
+  addSpinnerTask(rendererConfig)
 }
 
-async function addSpinnerTask(spinnies: Spinnies, config: BaseConfig) {
-  spinnies.add(config.name, { text: `  build ${config.name}...` })
-  try {
-    let result = await pack(config)
-    spinnies.succeed(config.name, { text: `  ${result}` })
-  } catch (err) {
-    spinnies.fail(config.name, { text: `  ${err}` })
-  }
+function addSpinnerTask(config: BaseConfig) {
+  spinnies.add(config.name as string, { text: `  build ${config.name}...` })
+  pack(config)
 }
 
-function pack(config: BaseConfig): Promise<string> {
-  return new Promise((resolve, reject) => {
-    config.init().mode = Run_Mode_PROD
-    webpack(config, (err, stats) => {
-      if (err) {
-        reject(err.stack || err)
-      } else if (stats.hasErrors()) {
-        let err = ''
-        stats.toString({ chunks: true, colors: true })
-          .split(/\r?\n/)
-          .forEach(line => { err += `    ${line}\n` })
-        reject(err)
-      } else {
-        resolve(`${config.name} build success`)
-        // resolve(stats.toString({ chunks: false, colors: true}))
-      }
-    })
+function pack(config: BaseConfig) {
+  const startTime = Date.now()
+  config.init().mode = Run_Mode_PROD
+  const compiler = webpack(config)
+  compiler.run((err, stats) => {
+    const cost = (Date.now() - startTime) / 1000
+    if (err) {
+      spinnies.fail(config.name as string, { text: `  ${err}` })
+    } else if (stats?.hasErrors()) {
+      stats.toString({ chunks: true, colors: true })
+        .split(/\r?\n/)
+        .forEach(line => console.error(`    ${line}`))
+      spinnies.fail(config.name as string, { text: `  ${config.name} build fail, cost ${cost}s` })
+    } else {
+      spinnies.succeed(config.name as string, { text: `  ${config.name} build success, cost ${cost}s` })
+    }
+    compiler.close(() => { })
   })
-}
-
-function renderer() {
-  deleteSync(['dist/electron/*', '!.gitkeep'])
-  rendererConfig.init().mode = Run_Mode_PROD
-  pack(rendererConfig)
 }
 
 function web() {
   deleteSync(['dist/web/*', '!.gitkeep'])
-  webConfig.init().mode = Run_Mode_PROD
-  pack(webConfig)
+  addSpinnerTask(webConfig)
 }
 
 function greeting() {
-  console.log(chalk.bgGreen.white('    lets-build'.padEnd(process.stdout.columns - 20, ' ')))
+  console.log(chalk.bgGreen.white('    lets-build'.padEnd(process.stdout.columns, ' ')))
 }
 
 run()

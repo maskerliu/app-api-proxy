@@ -1,9 +1,9 @@
 <template>
   <van-row>
-
     <van-col class="bg-border left-panel">
       <van-row justify="space-between">
-        <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal" style="width: 235px;">
+        <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
+          style="z-index: 100; -webkit-app-region: no-drag; width: 235px;">
           <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
             <i class="iconfont icon-api" style="font-weight: blod"></i>
           </van-checkbox>
@@ -14,7 +14,7 @@
             <van-icon class="iconfont icon-websocket" style="font-weight: blod" />
           </van-checkbox>
         </van-checkbox-group>
-        <div style="padding: 1px 0;">
+        <div style="padding: 1px 0; z-index: 100; -webkit-app-region: no-drag;">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
           <van-icon class="iconfont icon-setting left-panel-icon" @click="openSettings">
@@ -51,7 +51,6 @@
     </van-col>
     <OverlayScrollbarsComponent class="right-panel" :options="{ scrollbars: { theme: `os-theme-${reverseTheme}`, } }"
       defer>
-      <div class="drag-bar" v-if="!isWeb"></div>
       <span v-if="recordStore.curRecord() == null"></span>
       <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-else-if="recordStore.curRecord()?.type == 5020" />
@@ -73,11 +72,11 @@
 </template>
 
 <script lang="ts" setup>
+import { ProxyMock } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
-import { ConfigProviderTheme, List, showNotify } from 'vant'
-import { defineAsyncComponent, inject, onMounted, provide, Ref, ref, watch } from 'vue'
-import { ProxyMock } from '../../../common'
+import { List, showNotify } from 'vant'
+import { defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -90,15 +89,12 @@ const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 
-const isWeb = window.isWeb
 const showPopup = ref(false)
 const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
 const showSettings = ref<boolean>(false)
 
-const theme = inject<Ref<ConfigProviderTheme>>('theme')
-
-const reverseTheme = ref<string>(theme.value == 'dark' ? 'light' : 'dark')
+const reverseTheme = ref<string>(commonStore.theme == 'dark' ? 'light' : 'dark')
 
 provide('showMockRuleMgr', showMockRuleMgr)
 provide('withCurRecord', withCurRecord)
@@ -111,8 +107,8 @@ onMounted(() => {
   window.mainApi?.onOpenSettings(() => { openSettings() })
 })
 
-watch(() => theme.value, () => {
-  reverseTheme.value = theme.value == 'dark' ? 'light' : 'dark'
+watch(() => commonStore.theme, () => {
+  reverseTheme.value = commonStore.theme == 'dark' ? 'light' : 'dark'
 })
 
 watch(() => recordStore.isChanged, () => {
@@ -208,7 +204,7 @@ function onMockRecordStart() {
 
 .snap-panel {
   width: 100%;
-  height: calc(100vh - 154px);
+  height: calc(100vh - 140px);
   overflow-y: auto;
   overflow-x: hidden;
   margin: 5px 0 0 0;
