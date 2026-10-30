@@ -24,6 +24,8 @@
 import ace, { Ace, Range } from 'ace-builds'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 import 'ace-builds/src-min-noconflict/mode-json'
+import 'ace-builds/src-min-noconflict/mode-text'
+import 'ace-builds/src-min-noconflict/mode-xml'
 import 'ace-builds/src-min-noconflict/theme-cloud_editor'
 import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
@@ -101,6 +103,11 @@ const playStatus = ref<boolean>(false)
 const loadStatus = ref<boolean>(false)
 let tcplayer: any
 
+// setValue 会重置折叠状态，折叠必须在赋值之后执行
+function applyFold() {
+  if (props.fold) _editor.session.foldAll()
+}
+
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
   _defOpts.theme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
@@ -114,11 +121,10 @@ onMounted(() => {
     foldStyle: _defOpts.foldStyle
   })
 
-  if (props.fold) _editor.session.foldAll()
-
   if (data.value) {
     _editor.session.setValue(data.value)
   }
+  applyFold()
 
   _editor.renderer.scroller.addEventListener('mousemove', onMouseMove)
   _editor.renderer.content.addEventListener('mouseout', onMouseOut)
@@ -137,7 +143,8 @@ watch(() => props.maxLines, () => {
 
 watch(data, () => {
   _editor.session.setValue(data.value)
-  nextTick(() => _editor.navigateFileEnd())
+  applyFold()
+  if (!props.fold) nextTick(() => _editor.navigateFileEnd())
 })
 
 watch(() => props.lang, () => {

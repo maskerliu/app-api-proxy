@@ -103,12 +103,16 @@ export function findIp(gatewayOrFamily: string, isInternal?: boolean) {
 }
 
 
+function headerValue(req: Request, name: string): string {
+  const value = req.headers[name]
+  return Array.isArray(value) ? value[0] : value as string
+}
+
 export function parseContext(req: Request): BizContext {
 
-  let network = req.headers[BizNetwork.BIZ_HEADER_NETWORK] as string
-  network = network == null ? 'unknown' : network
+  const network = headerValue(req, BizNetwork.BIZ_HEADER_NETWORK)
   let netType = UserNetwork.UNKNOWN
-  switch (network.toLowerCase()) {
+  switch (network?.toLowerCase()) {
     case '2g':
       netType = UserNetwork.G2
       break
@@ -126,32 +130,36 @@ export function parseContext(req: Request): BizContext {
       break
     case 'ethernet':
       netType = UserNetwork.Ethernet
+      break
     default:
       netType = UserNetwork.UNKNOWN
   }
 
-  let ua = req.headers[BizNetwork.BIZ_HEADER_UA] as string
-  let scheme: string, appId: string, appVersion: string, deviceInfo: UserDevice, channel: string
-  if (ua == null) {
-    ua = req.headers['user-agent'] as string
-    let regArr = ua.match(/[\(]*[0-9A-Za-z;,_.\s\/]+[\)]*/g)
-    scheme = regArr[0].trim()
-    const os = regArr[1].trim().substring(1, regArr[1].length - 1).split(';')[0]
-    const [brand, _] = regArr[4].trim().split(' ')
-    deviceInfo = { os, version: '', brand, model: '' }
-  } else {
-    let regArr = ua.match(/[0-9A-Za-z\/\.\s:-]+/g)
-    scheme = regArr[0]
-    let [os, version] = regArr[1].split(' ')
-    let [brand, model] = regArr[3].split(':')
-    let [appId, appVersion] = regArr[2].split(' ')
-    channel = regArr[4]
+  let scheme = '', appId = '', appVersion = '', channel = ''
+  let deviceInfo: UserDevice = { os: '', version: '', brand: '', model: '' }
+  const ua = headerValue(req, BizNetwork.BIZ_HEADER_UA)
+  if (ua != null) {
+    const regArr = ua.match(/[0-9A-Za-z\/\.\s:-]+/g) ?? []
+    scheme = regArr[0] ?? ''
+    const [os = '', version = ''] = (regArr[1] ?? '').trim().split(' ')
+    const [brand = '', model = ''] = (regArr[3] ?? '').trim().split(':')
+    const [parsedAppId = '', parsedAppVersion = ''] = (regArr[2] ?? '').trim().split(' ')
+    appId = parsedAppId
+    appVersion = parsedAppVersion
+    channel = regArr[4] ?? ''
     deviceInfo = { os, version, brand, model }
+  } else {
+    const regArr = headerValue(req, 'user-agent')?.match(/[\(]*[0-9A-Za-z;,_.\s\/]+[\)]*/g) ?? []
+    scheme = regArr[0]?.trim() ?? ''
+    const os = (regArr[1] ?? '').trim().replace(/^\(|\)$/g, '').split(';')[0].trim()
+    const [brand = ''] = (regArr[4] ?? '').trim().split(' ')
+    deviceInfo = { os, version: '', brand, model: '' }
   }
+
   let context: BizContext = {
     scheme,
-    token: req.headers[BizNetwork.BIZ_HEADER_TOKEN] as string,
-    did: req.headers[BizNetwork.BIZ_HEADER_DEVICE] as string,
+    token: headerValue(req, BizNetwork.BIZ_HEADER_TOKEN),
+    did: headerValue(req, BizNetwork.BIZ_HEADER_DEVICE),
     network: netType,
     deviceInfo,
     appId,

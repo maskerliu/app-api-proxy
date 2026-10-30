@@ -1,9 +1,7 @@
-import axios, { AxiosRequestConfig, AxiosRequestHeaders, Method } from 'axios'
+import axios from 'axios'
 import { Request, Response } from 'express'
-import formidable from 'formidable'
-import IncomingForm from 'formidable/Formidable'
-import { readFileSync } from 'fs'
-import { IncomingHttpHeaders } from 'http'
+import http from 'http'
+import https from 'https'
 import { inject, injectable } from 'inversify'
 import JSONBig from 'json-bigint'
 import zlib from 'zlib'
@@ -19,8 +17,14 @@ let MockKey = null
 @injectable()
 export class ProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
+  private static MAX_REQUEST_BODY: number = 50 * 1024 * 1024
+  private static MAX_RECORD_BODY: number = 1024 * 1024
+  private static HOP_BY_HOP_HEADERS: string[] = [
+    'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
+    'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade',
+  ]
+  private static HEADER_NAME_REG = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
   private _sessionId: number
-  private _form: IncomingForm
   private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
   @inject(IocTypes.MocksService)
@@ -31,13 +35,8 @@ export class ProxyService {
 
   constructor() {
     this._sessionId = 0
-    this._form = formidable()
 
     this.proxyConfigs = new Map()
-    // axios.get('https://test-gateway-web.yupaopao.com/openapi/mockKey/getMockKey').then(resp => {
-    //   MockKey = resp.data
-    //   console.log(MockKey)
-    // }).catch(err => { console.error('FetchMockKey', err.cause) })
   }
 
   public getDataProxyServer(uid: string): ProxyMock.ProxyConfig {
@@ -92,139 +91,405 @@ export class ProxyService {
   }
 
   public async handleRequest(req: Request, resp: Response) {
-    let uid = req.header(BizNetwork.BIZ_HEADER_MOCK_UID)
+    const uid = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_UID)
     // 清理无效配置
     if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
 
-    let startTime = new Date().getTime()
-    let sessionId = startTime
+    const startTime = new Date().getTime()
+    const sessionId = startTime
+    const delay = this.proxyConfigs.has(uid) ? this.proxyConfigs.get(uid).delay : 0
 
-    let requestData = null, proxyBody: any
-    if (req.method.toLocaleLowerCase() === 'get') {
-      requestData = !!req.query ? req.query : null
+    let rawBody: Buffer
+    try {
+      rawBody = await this.readRequestBody(req)
+    } catch (err: any) {
+      if (!resp.headersSent) {
+        resp.status(413).json({ code: 9000, msg: err.message || 'request body error' })
+      }
+      return
     }
 
-    let [_, files] = await this._form.parse(req)
-    req['files'] = files
-    let data: ProxyMock.ProxyRequestRecord = {
+    let requestData = null
+    if (req.method.toLocaleLowerCase() === 'get' && Object.keys(req.query).length > 0) {
+      requestData = req.query
+    }
+
+    const data: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
       type: ProxyMock.PorxyType.REQUEST_START,
       url: req.url,
       method: req.method,
       headers: req.headers,
       requestData: requestData,
-      data: this.parseBody(req),
+      data: this.parseBody(req, rawBody),
       timestamp: new Date().getSeconds(),
     }
 
     this.pushService.sendProxyMessage(uid, data)
 
-    let delay = this.proxyConfigs.has(uid) ? this.proxyConfigs.get(uid).delay : 0
-
-    let bizResp = null
     try {
-      bizResp = await this.mockService.mock(sessionId, req.header[BizNetwork.BIZ_HEADER_MOCK_UID], req.url, startTime, delay)
-    } catch (err) {
-      bizResp = await this.proxy(sessionId, req, startTime, delay)
-    } finally {
+      const bizResp = await this.mockService.mock(sessionId, uid, req.url, startTime, delay)
       setTimeout(() => {
-        resp.send(bizResp)
-        resp.end()
+        if (!resp.headersSent) {
+          resp.send(bizResp)
+          resp.end()
+        }
       }, delay)
+    } catch (err) {
+      await this.proxy(sessionId, req, resp, startTime, delay, rawBody)
     }
   }
 
-  private async proxy(sessionId: number, req: Request, startTime: number, delay: number) {
-    let uid = req.header(BizNetwork.BIZ_HEADER_MOCK_UID)
-    let originHost = req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) ? req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) : req.header('host')
-    let headers = Object.assign({}, req.headers)
+  private proxy(sessionId: number, req: Request, resp: Response, startTime: number, delay: number, rawBody?: Buffer) {
+    const uid = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_UID)
+    const state = { responded: false, finished: false, clientGone: false }
 
-    headers['Mock-Key'] = MockKey
-    delete headers['host']
-    delete headers[BizNetwork.BIZ_HEADER_MOCK_HOST]
-    delete headers[BizNetwork.BIZ_HEADER_MOCK_UID]
+    return new Promise<void>((resolve) => {
+      const complete = () => {
+        if (state.finished) return
+        state.finished = true
+        resolve()
+      }
 
-    let axiosHeaders = {} as AxiosRequestHeaders
-    let keys: keyof IncomingHttpHeaders
-    for (keys in headers) {
-      axiosHeaders[keys] = String(headers[keys])
-    }
+      const fail = (err: Error) => {
+        if (state.responded) {
+          complete()
+          return
+        }
+        console.error('proxy request failed:', err.message)
+        const record: ProxyMock.ProxyRequestRecord = {
+          id: sessionId,
+          url: req.url,
+          type: ProxyMock.PorxyType.REQUEST_END,
+          statusCode: -100,
+          responseHeaders: null,
+          responseData: JSON.stringify({ error: err.message }),
+          time: new Date().getTime() - startTime,
+          isMock: false,
+        }
+        setTimeout(() => {
+          this.pushService.sendProxyMessage(uid, record)
+          if (!resp.headersSent) {
+            resp.status(502).json({ code: 9000, msg: `proxy error: ${err.message}` })
+          }
+          complete()
+        }, delay)
+      }
 
-    let requestUrl = originHost + req.path
-    if (this.proxyConfigs.has(uid)
-      && this.proxyConfigs.get(uid).status
-      && this.proxyConfigs.get(uid).dataServer != null) {
-      requestUrl = this.proxyConfigs.get(uid).dataServer + req.path
-    }
+      let upstreamReq: http.ClientRequest
+      try {
+        const target = this.resolveTarget(req, uid)
+        const headers = this.buildUpstreamHeaders(req, rawBody, target.host)
+        const transport = target.protocol === 'https:' ? https : http
+        upstreamReq = transport.request({
+          protocol: target.protocol,
+          hostname: target.hostname,
+          port: target.port,
+          method: req.method,
+          path: target.path,
+          headers,
+          timeout: ProxyService.PROXY_DEF_TIMEOUT,
+        }, (upstreamResp) => {
+          state.responded = true
+          this.relayResponse(uid, sessionId, req, resp, startTime, delay, upstreamResp, state, complete)
+        })
+      } catch (err: any) {
+        fail(err)
+        return
+      }
 
-    let options: AxiosRequestConfig = {
-      url: requestUrl,
-      method: req.method as Method,
-      headers: axiosHeaders,
-      transformResponse: [
-        (data: any) => {
-          return JSONBig.parse(data)
-        },
-      ],
-      timeout: ProxyService.PROXY_DEF_TIMEOUT,
-      data: this.parseBody(req)
-    }
+      upstreamReq.on('timeout', () => upstreamReq.destroy(new Error('proxy timeout')))
+      upstreamReq.on('error', (err) => fail(err))
 
-    if (JSON.stringify(req.query) !== '{}') {
-      options.params = req.query
-    }
+      resp.on('close', () => {
+        if (resp.writableEnded) return
+        state.clientGone = true
+        upstreamReq.destroy()
+      })
 
-    let data: ProxyMock.ProxyRequestRecord
-    try {
-      let resp = await axios(options)
-      data = {
+      if (rawBody != null) upstreamReq.end(rawBody)
+      else upstreamReq.end()
+    })
+  }
+
+  private relayResponse(
+    uid: string,
+    sessionId: number,
+    req: Request,
+    resp: Response,
+    startTime: number,
+    delay: number,
+    upstreamResp: http.IncomingMessage,
+    state: { responded: boolean, finished: boolean, clientGone: boolean },
+    complete: () => void,
+  ) {
+    const status = upstreamResp.statusCode ?? 502
+    const headers = upstreamResp.headers
+    const skip = this.skipResponseHeaders(headers)
+    const chunks: Buffer[] = []
+    let collected = 0
+    let received = 0
+    let truncated = false
+    let timer: NodeJS.Timeout
+
+    upstreamResp.pause()
+    upstreamResp.on('data', (chunk: Buffer) => {
+      received += chunk.length
+      const keep = ProxyService.MAX_RECORD_BODY - collected
+      if (keep <= 0) {
+        truncated = true
+        return
+      }
+      if (chunk.length > keep) {
+        chunks.push(chunk.subarray(0, keep))
+        collected += keep
+        truncated = true
+      } else {
+        chunks.push(chunk)
+        collected += chunk.length
+      }
+    })
+
+    upstreamResp.on('end', () => {
+      const record: ProxyMock.ProxyRequestRecord = {
         id: sessionId,
         url: req.url,
         type: ProxyMock.PorxyType.REQUEST_END,
-        statusCode: resp.status,
-        responseHeaders: !!resp.headers ? resp.headers : null,
-        responseData: !!resp.data ? JSON.stringify(resp.data) : null,
+        statusCode: status,
+        responseHeaders: headers ?? null,
+        responseData: this.formatRecordData(Buffer.concat(chunks as unknown as Uint8Array[]), headers, truncated, received),
         time: new Date().getTime() - startTime,
         isMock: false,
       }
-      return resp.data
-    } catch (err: any) {
-      console.error('axios', err.code)
-      let resp = err.response
-      let respData = err.message
-      data = {
+      this.pushService.sendProxyMessage(uid, record)
+      complete()
+    })
+
+    upstreamResp.on('error', (err) => {
+      clearTimeout(timer)
+      const record: ProxyMock.ProxyRequestRecord = {
         id: sessionId,
         url: req.url,
         type: ProxyMock.PorxyType.REQUEST_END,
         statusCode: -100,
-        headers: !!resp && !!resp.headers ? resp.headers : null,
-        responseData: { error: err.message },
+        responseHeaders: headers ?? null,
+        responseData: JSON.stringify({ error: state.clientGone ? 'client closed' : err.message }),
         time: new Date().getTime() - startTime,
         isMock: false,
       }
-    } finally {
-      setTimeout(() => {
-        this.pushService.sendProxyMessage(uid, data)
-      }, delay)
+      this.pushService.sendProxyMessage(uid, record)
+      if (state.clientGone) {
+        complete()
+        return
+      }
+      if (resp.headersSent) {
+        resp.destroy(err)
+      } else {
+        resp.status(502).json({ code: 9000, msg: `proxy error: ${err.message}` })
+      }
+      complete()
+    })
+
+    timer = setTimeout(() => {
+      if (resp.headersSent || state.clientGone) return
+
+      if (req.httpVersionMajor < 2 && upstreamResp.statusMessage) resp.statusMessage = upstreamResp.statusMessage
+      resp.statusCode = status
+      for (const name in headers) {
+        if (skip.has(name.toLowerCase())) continue
+        const value = headers[name]
+        if (value != null) resp.setHeader(name, value as any)
+      }
+      upstreamResp.pipe(resp)
+      upstreamResp.resume()
+    }, delay)
+  }
+
+  private resolveTarget(req: Request, uid: string) {
+    const proxyConfig = this.proxyConfigs.get(uid)
+    let base = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST)
+    if (proxyConfig?.status && proxyConfig.dataServer != null) base = proxyConfig.dataServer
+    // 不能用代理自身的 host 兜底，否则会转发给自己，客户端只能拿到代理页面 404
+    if (base == null || base.length === 0) throw new Error('missing x-mock-host header')
+    // 裸 host（无协议）按原始逻辑走 http，不能沿用代理侧的 https
+    if (!/^[a-z][a-z\d+\-.]*:\/\//i.test(base)) base = `http://${base}`
+
+    const url = new URL(base)
+    const basePath = url.pathname.replace(/\/+$/, '')
+    return {
+      protocol: url.protocol,
+      hostname: url.hostname.replace(/^\[(.*)\]$/, '$1'),
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: basePath + (req.url.startsWith('/') ? req.url : `/${req.url}`),
+      host: url.host,
     }
   }
 
-  private parseBody(req: Request) {
-    let body: any
-    if (req.method.toLocaleLowerCase() == 'post') {
-      let [contentType, charset, _] = req.headers['content-type'].match(/[\da-zA-Z\:\/\-\=]+/g)
-      if (contentType == BizNetwork.MIME_MULTIPART) {
-        body = new FormData()
-        for (const key in req['files']) {
-          let file = req['files'][key][0]
-          let data = readFileSync(file.filepath, 'utf-8')
-          let blob = new Blob([data], { type: file.mimetype })
-          body.set(key, blob)
-        }
-      } else if (contentType == BizNetwork.MIME_JSON || contentType == BizNetwork.MIME_FORM) {
-        body = req.body
+  private buildUpstreamHeaders(req: Request, rawBody: Buffer, host: string): http.OutgoingHttpHeaders {
+    const connectionTokens = String(req.headers['connection'] ?? '')
+      .split(',').map(it => it.trim().toLowerCase()).filter(Boolean)
+    const skip = new Set([
+      ...ProxyService.HOP_BY_HOP_HEADERS, ...connectionTokens,
+      'host', 'content-length', BizNetwork.BIZ_HEADER_MOCK_HOST, BizNetwork.BIZ_HEADER_MOCK_UID,
+    ])
+
+    const headers: http.OutgoingHttpHeaders = {}
+    for (let i = 0; i < req.rawHeaders.length; i += 2) {
+      const name = req.rawHeaders[i]
+      const key = name.toLowerCase()
+      // http2 伪头（:method/:path/:scheme/:authority）不是合法 HTTP/1.1 头，必须丢弃
+      if (key.startsWith(':') || !ProxyService.HEADER_NAME_REG.test(key)) continue
+      if (skip.has(key)) continue
+      const value = req.rawHeaders[i + 1]
+      const existing = headers[key]
+      if (existing == null) headers[key] = value
+      else if (Array.isArray(existing)) existing.push(value)
+      else headers[key] = [existing as string, value]
+    }
+
+    headers['host'] = host
+    const chunked = req.headers['transfer-encoding'] != null
+    if (rawBody != null) {
+      // 原始请求为 chunked 时继续以 chunked 发送，保持分帧一致（Node 对 end(buffer) 会自行补 Content-Length）
+      if (chunked) headers['transfer-encoding'] = 'chunked'
+      else headers['content-length'] = String(rawBody.length)
+    } else if (req.headers['content-length'] != null) {
+      headers['content-length'] = String(req.headers['content-length'])
+    }
+    if (MockKey != null) headers['Mock-Key'] = MockKey
+    return headers
+  }
+
+  private skipResponseHeaders(headers: http.IncomingHttpHeaders): Set<string> {
+    const connectionTokens = String(headers['connection'] ?? '')
+      .split(',').map(it => it.trim().toLowerCase()).filter(Boolean)
+    return new Set([...ProxyService.HOP_BY_HOP_HEADERS, ...connectionTokens])
+  }
+
+  private formatRecordData(data: any, headers: any, truncated = false, totalBytes?: number): string {
+    if (data == null) return null
+
+    const body = Buffer.isBuffer(data) ? data : Buffer.from(data)
+    if (body.length === 0 && !truncated) return null
+
+    const total = totalBytes ?? body.length
+    const contentType = String(headers?.['content-type'] ?? '').toLowerCase()
+    const encoding = String(headers?.['content-encoding'] ?? '').trim().toLowerCase()
+
+    // 转发的是原始字节，记录展示前需自行解码，否则压缩响应会显示为乱码
+    if (encoding && encoding !== 'identity') {
+      if (truncated) return JSON.stringify(`[${encoding} ${total} bytes, truncated]`)
+      try {
+        return this.formatDecodedRecord(this.decodeContent(body, encoding), contentType, false, total)
+      } catch (err) {
+        return JSON.stringify(`[binary ${total} bytes, ${encoding}]`)
       }
     }
-    return body
+
+    return this.formatDecodedRecord(body, contentType, truncated, total)
+  }
+
+  private formatDecodedRecord(body: Buffer, contentType: string, truncated: boolean, total: number): string {
+    const text = this.decodeText(body, contentType)
+    if (contentType.includes('json')) {
+      if (truncated) return JSON.stringify(`${text}\n...[truncated ${total} bytes]`)
+      try {
+        return JSONBig.stringify(JSONBig.parse(text))
+      } catch (err) {
+        return JSON.stringify(text)
+      }
+    }
+    if (contentType.startsWith('text/') || contentType.includes('xml')
+      || contentType.includes('javascript') || contentType.includes('urlencoded')) {
+      return JSON.stringify(truncated ? `${text}\n...[truncated ${total} bytes]` : text)
+    }
+    return JSON.stringify(`[binary ${total} bytes${truncated ? ', truncated' : ''}]`)
+  }
+
+  private decodeContent(body: Buffer, encoding: string): Buffer {
+    const z = zlib as any
+    const options = { maxOutputLength: ProxyService.MAX_RECORD_BODY * 4 }
+    return encoding.split(',').map(it => it.trim()).filter(Boolean).reverse()
+      .reduce((payload, it) => {
+        switch (it) {
+          case 'gzip':
+          case 'x-gzip':
+            return z.gunzipSync(payload, options)
+          case 'deflate':
+            try {
+              return z.inflateSync(payload, options)
+            } catch (err) {
+              return z.inflateRawSync(payload, options)
+            }
+          case 'br':
+            return z.brotliDecompressSync(payload, options)
+          case 'zstd':
+            if (typeof z.zstdDecompressSync !== 'function') throw new Error('zstd unsupported')
+            return z.zstdDecompressSync(payload, options)
+          case 'identity':
+            return payload
+          default:
+            throw new Error(`unsupported content-encoding: ${it}`)
+        }
+      }, body)
+  }
+
+  private decodeText(body: Buffer, contentType: string): string {
+    const charset = /charset\s*=\s*"?([^;"\s]+)/i.exec(contentType)?.[1]?.trim().toLowerCase()
+    if (charset && charset !== 'utf-8' && charset !== 'utf8') {
+      try {
+        return new TextDecoder(charset).decode(body)
+      } catch (err) {
+        // 未知字符集时退回 utf-8
+      }
+    }
+    return body.toString('utf-8')
+  }
+
+  private parseBody(req: Request, rawBody?: Buffer) {
+    const body = rawBody ?? req.body
+    if (body == null) return null
+    if (!Buffer.isBuffer(body)) return body
+    return this.formatRecordData(body, req.headers)
+  }
+
+  private readRequestBody(req: Request): Promise<Buffer> {
+    if (Buffer.isBuffer(req.body)) {
+      return Promise.resolve(req.body.length > 0 ? req.body : undefined)
+    }
+
+    // HTTP/2 没有 Content-Length/Transfer-Encoding 分帧，请求体以 END_STREAM 结束
+    const hasBody = req.httpVersionMajor >= 2
+      || req.headers['transfer-encoding'] != null
+      || req.headers['content-length'] != null
+    if (!hasBody || req.readableEnded) return Promise.resolve(undefined)
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = []
+      let size = 0
+      let tooLarge = false
+
+      req.on('data', (chunk: Buffer) => {
+        if (tooLarge) return
+        size += chunk.length
+        if (size > ProxyService.MAX_REQUEST_BODY) {
+          tooLarge = true
+          chunks.length = 0
+          reject(new Error('request body too large'))
+          return
+        }
+        chunks.push(chunk)
+      })
+      req.on('end', () => {
+        if (tooLarge) return
+        resolve(size > 0 ? Buffer.concat(chunks as unknown as Uint8Array[]) : undefined)
+      })
+      req.on('error', reject)
+    })
+  }
+
+  private headerValue(req: Request, name: string): string {
+    const value = req.headers[name]
+    return Array.isArray(value) ? value[0] : value as string
   }
 }

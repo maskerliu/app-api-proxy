@@ -135,12 +135,14 @@ export class MainServer {
     this.httpApp.use(express.static(path.resolve(__dirname, '../web')))
     this.httpApp.use('/_res', express.static(path.join(USER_DATA_DIR, './static')))
     this.httpApp.use(cors(this.corsOpt))
-    this.httpApp.use(express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }))
-    this.httpApp.use(express.text({ type: 'application/json', limit: '50mb' }))
-    this.httpApp.use(express.json())
 
-    this.httpApp.use(API_URL.AppMock, this.appmockRouter.router)
-    this.httpApp.use(API_URL.MApi, this.mapiRouter.router)
+    const formParser = express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 })
+    const textJsonParser = express.text({ type: 'application/json', limit: '50mb' })
+    const jsonParser = express.json({ limit: '50mb' })
+
+    this.httpApp.use(API_URL.AppMock, formParser, textJsonParser, jsonParser, this.appmockRouter.router)
+    this.httpApp.use(API_URL.MApi, formParser, textJsonParser, jsonParser, this.mapiRouter.router)
+    // 代理不能经过任何 body parser：需保留原始字节与 Content-Encoding，由 ProxyService 自行读取请求流
     this.httpApp.use(API_URL.Proxy, this.proxyRouter.router)
     this.httpApp.use(API_URL.CorsMediaProxy, this.proxyCorsMedia)
 

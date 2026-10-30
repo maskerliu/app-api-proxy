@@ -90,7 +90,7 @@
       </van-col>
 
       <van-col style="flex: 1; position: relative;">
-        <vue-ace-editor :read-only="false" :data="content" />
+        <vue-ace-editor :read-only="false" :fold="false" :data="content" />
       </van-col>
     </van-row>
 
