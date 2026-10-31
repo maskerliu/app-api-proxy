@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ProxyMock } from '@shared'
+import { ProxyMock } from '@shared/proxy.models'
 
 
 const COLORS: string[] = [
@@ -15,35 +15,66 @@ const COLORS: string[] = [
   "#673AB7"
 ]
 
+// 单条响应在主进程已截断到 1MB，40 条是展示上限，避免长时间挂机内存持续增长
+const MAX_RECORDS = 40
+
+type RecordItem = ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord
+
+function isFiltered(record: RecordItem, types: string[], keyword: string): boolean {
+  if (record.type == ProxyMock.PorxyType.REQUEST_START ||
+    record.type == ProxyMock.PorxyType.REQUEST_END) {
+    return types.indexOf(String(ProxyMock.PorxyType.REQUEST)) == -1 ||
+      String((record as ProxyMock.ProxyRequestRecord).url ?? '').indexOf(keyword) == -1
+  }
+
+  if (record.type == ProxyMock.PorxyType.STATISTICS ||
+    record.type == ProxyMock.PorxyType.SOCKET) {
+    return types.indexOf(String(record.type)) == -1
+  }
+
+  if (record.type !== ProxyMock.PorxyType.STATISTICS && keyword.length > 0) {
+    return String((record as ProxyMock.ProxyRequestRecord).url ?? '').indexOf(keyword) == -1
+  }
+
+  return false
+}
+
 export const ProxyRecordStore = defineStore('ProxyRecords', {
   state: () => {
     return {
       proxyTypes: [String(ProxyMock.PorxyType.REQUEST)],
       filterKeyword: '' as string | number,
       curRecordId: -1,
-      records: new Map() as Map<number, (ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord)>,
+      records: new Map() as Map<number, RecordItem>,
+      // 记录插入顺序，淘汰时按队列头部清理
+      order: [] as number[],
       isChanged: 0, // is a random number to identify the records change,
-
+    }
+  },
+  getters: {
+    // 过滤只影响展示，原始记录保留，清空关键字后可以恢复
+    visibleRecords(state): RecordItem[] {
+      const types = state.proxyTypes.map(it => String(it))
+      const keyword = String(state.filterKeyword ?? '')
+      const result: RecordItem[] = []
+      for (let i = state.order.length - 1; i >= 0; i--) {
+        const record = state.records.get(state.order[i])
+        if (record == null || isFiltered(record, types, keyword)) continue
+        result.push(record)
+      }
+      return result
     }
   },
   actions: {
-    updateRecord(record: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
-      if (this.shouldFilter(record)) return
-
+    updateRecord(record: RecordItem) {
       switch (record.type) {
         case ProxyMock.PorxyType.REQUEST_START:
         case ProxyMock.PorxyType.STATISTICS:
-          if (this.records.size > 40) {
-            let keys = [...this.records.keys()]
-            for (let i = 0; i < 10; ++i) {
-              this.records.delete(keys[i])
-            }
-          }
-
           record.timelineColor = COLORS[record.timestamp % 10]
 
+          if (!this.records.has(record.id)) this.order.push(record.id)
           this.records.set(record.id, record)
-          if (!this.records.has(this.curRecordId)) this.curRecordId = -1
+          this.trimRecords()
           break
         case ProxyMock.PorxyType.REQUEST_END:
           if (!this.records.has(record.id)) { return }
@@ -52,46 +83,44 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
           tmpRecord.isMock = proxyRecord.isMock
           tmpRecord.type = proxyRecord.type
           tmpRecord.responseHeaders = proxyRecord.responseHeaders
-          tmpRecord.responseData = JSON.parse(proxyRecord.responseData)
+          tmpRecord.responseData = this.parseResponseData(proxyRecord.responseData)
           tmpRecord.statusCode = proxyRecord.statusCode
           tmpRecord.time = proxyRecord.time
           break
         default:
           console.error("unsupport record type")
       }
+
+      // 淘汰逻辑会跳过当前选中项，这里仅做兜底
+      if (this.curRecordId != -1 && !this.records.has(this.curRecordId)) this.curRecordId = -1
       this.isChanged = new Date().getTime()
     },
-    updateFilter() {
-      [...this.records.keys()].forEach(key => {
-        let record = this.records.get(key)
-        if (this.shouldFilter(record)) this.records.delete(key)
-      })
+    trimRecords() {
+      while (this.order.length > MAX_RECORDS) {
+        // 选中项不参与淘汰，避免正在查看的详情被删掉
+        const evictedIdx = this.order.findIndex(id => id !== this.curRecordId)
+        if (evictedIdx < 0) break
+        const [evicted] = this.order.splice(evictedIdx, 1)
+        this.records.delete(evicted)
+      }
+    },
+    parseResponseData(data: any) {
+      if (data == null) return null
+      if (typeof data !== 'string') return data
+      try {
+        return JSON.parse(data)
+      } catch (err) {
+        // 非 JSON 响应（如 text/plain、错误信息）直接按原文展示
+        return data
+      }
     },
     clearRecords(): void {
       this.records.clear()
+      this.order.length = 0
       this.curRecordId = -1
     },
     curRecord() {
       return this.records.get(this.curRecordId)
-    },
-    shouldFilter(record: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord): boolean {
-      if (record.type == ProxyMock.PorxyType.REQUEST_START ||
-        record.type == ProxyMock.PorxyType.REQUEST_END) {
-        return this.proxyTypes.indexOf(String(ProxyMock.PorxyType.REQUEST)) == -1 ||
-          (record as ProxyMock.ProxyRequestRecord).url.indexOf(this.filterKeyword) == -1
-      }
-
-      if (record.type == ProxyMock.PorxyType.STATISTICS ||
-        record.type == ProxyMock.PorxyType.SOCKET) {
-        return this.proxyTypes.indexOf(String(record.type)) == -1
-      }
-
-      if (record.type !== ProxyMock.PorxyType.STATISTICS &&
-        this.filterKeyword != null && this.filterKeyword.length > 0) {
-        return (record as ProxyMock.ProxyRequestRecord).url.indexOf(this.filterKeyword) == -1
-      }
-
-      return false
     },
     mockRecordStart(id: number) {
       this.isChanged = new Date().getTime()

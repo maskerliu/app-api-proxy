@@ -1,6 +1,6 @@
 import SockJS from 'sockjs-client'
 import { showNotify } from 'vant'
-import { ProxyMock } from '@shared/proxy.api'
+import { ProxyMock } from '@shared/proxy.models'
 import { CommonStore, ProxyRecordStore } from '../store'
 
 export class PushClient {
@@ -42,7 +42,15 @@ export class PushClient {
   }
 
   private handleMsg(data: any): void {
-    let msg: ProxyMock.PushMsg<any> = JSON.parse(data)
+    let msg: ProxyMock.PushMsg<any>
+    try {
+      msg = JSON.parse(data)
+    } catch (err) {
+      console.warn('push message parse failed:', err)
+      return
+    }
+    if (msg?.payload == null) return
+
     switch (msg.type) {
       case ProxyMock.PushMsgType.CMD: {
         this.handleCMD(msg.payload)

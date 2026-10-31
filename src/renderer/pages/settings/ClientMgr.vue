@@ -9,7 +9,7 @@
     </van-field>
 
     <van-grid :column-num="3" clickable style="max-height: calc(100vh - 91px); overflow-y: scroll;">
-      <van-grid-item v-for="item in clients" @click="showOpMenu(item)" badge="9" style="max-height: 80px">
+      <van-grid-item v-for="item in clients" :key="item.uid" @click="showOpMenu(item)" style="max-height: 80px">
         <template #text>
           <span class="single-line">{{ item.uid }}</span>
         </template>
@@ -37,20 +37,23 @@
 </template>
 <script lang="ts" setup>
 import { showNotify } from 'vant'
-import { onMounted, ref } from 'vue'
-import { ProxyMock } from '@shared'
+import { computed, onMounted, ref } from 'vue'
+import { ProxyMock, getAllPushClients } from '@shared'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
 const dialogVisible = ref(false)
 const selectClient = ref<ProxyMock.ClientInfo>()
 const broadcastMsg = ref('')
-const clients = ref<ProxyMock.ClientInfo[]>([])
 const imMsg = ref('')
+
+// 在线列表以下发推送为准，避免本地快照与真实连接状态不一致
+const clients = computed(() => commonStore.clientInfos)
 
 onMounted(async () => {
   try {
-    clients.value = await ProxyMock.getAllPushClients()
+    const list = await getAllPushClients()
+    if (commonStore.clientInfos.length === 0) commonStore.updateClientInfos(list ?? [])
   } catch (error) {
     showNotify(error)
   }

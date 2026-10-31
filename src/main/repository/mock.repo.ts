@@ -1,7 +1,7 @@
 import { injectable } from 'inversify'
 import path from 'path'
 import PouchDB from 'pouchdb-node'
-import { ProxyMock } from '@shared/proxy.api'
+import { ProxyMock } from '@shared/proxy.models'
 import { USER_DATA_DIR } from '../MainConst'
 import BaseRepo from './base.repo'
 

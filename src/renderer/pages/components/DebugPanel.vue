@@ -50,8 +50,8 @@
 <script lang="ts" setup>
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import Hls from 'hls.js'
-import { onMounted, ref, useTemplateRef, watch } from 'vue'
-import { baseDomain, ProxyMock } from '@shared'
+import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { baseDomain, ProxyMock, broadcast } from '@shared'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -69,17 +69,14 @@ const offscreen = useTemplateRef<HTMLCanvasElement>('offscreen')
 let hls: Hls
 let timer: any
 let animationId: number
+let sseAbort: AbortController
 let previewCtx: CanvasRenderingContext2D
 let offscreenCtx: CanvasRenderingContext2D
 let frames = 0
 
 onMounted(async () => {
 
-  if (hls == null) hls = new Hls()
-
-  window.addEventListener('beforeunload', () => {
-    closeCamera()
-  })
+  window.addEventListener('beforeunload', closeCamera)
 
   previewCtx = preview.value.getContext('2d', { willReadFrequently: true })
   offscreenCtx = offscreen.value.getContext('2d', { willReadFrequently: true })
@@ -87,14 +84,21 @@ onMounted(async () => {
   previewCtx.imageSmoothingEnabled = true
   previewCtx.imageSmoothingQuality = 'high'
 
+  initHls()
   await registerSSE()
 })
 
-watch(() => commonStore.showDebugPanel, (val, old) => {
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', closeCamera)
+  sseAbort?.abort()
+  sseAbort = null
+  stopHls()
+  closeCamera()
+})
+
+watch(() => commonStore.showDebugPanel, (val) => {
   if (!val) {
-    hlsPlayer.value.pause()
-    hls?.stopLoad()
-    hls?.destroy()
+    stopHls()
   } else {
     initHls()
   }
@@ -103,72 +107,95 @@ watch(() => commonStore.showDebugPanel, (val, old) => {
 function initHls() {
   if (hls != null) return
 
-  hls = new Hls({ maxBufferLength: 30 })
+  const instance = new Hls({ maxBufferLength: 30 })
+  hls = instance
 
-  timer = setInterval(() => {
-    bandwidth.value = (hls?.bandwidthEstimate % 1000 || 0).toFixed(2)
-  }, 1000)
+  if (timer == null) {
+    timer = setInterval(() => {
+      bandwidth.value = ((hls?.bandwidthEstimate ?? 0) % 1000).toFixed(2)
+    }, 1000)
+  }
 
-  hls.on(Hls.Events.MANIFEST_PARSED, function () {
-    hlsPlayer.value.play()
+  instance.on(Hls.Events.MANIFEST_PARSED, function () {
+    if (hls !== instance) return
+    hlsPlayer.value?.play()
   })
 
-  hls.on(Hls.Events.ERROR, function (event, data) {
+  instance.on(Hls.Events.ERROR, function (event, data) {
+    if (hls !== instance) return
     switch (data.type) {
       case Hls.ErrorTypes.NETWORK_ERROR:
         console.log('network error', event)
-        hls.startLoad()
+        instance.startLoad()
         break
       case Hls.ErrorTypes.MEDIA_ERROR:
         console.log('media error', event)
-        hls.recoverMediaError()
+        instance.recoverMediaError()
         break
       default:
-        hls.destroy()
         console.log('other error', event)
+        instance.destroy()
+        if (hls === instance) hls = null
         break
     }
   })
 
-  hls.on(Hls.Events.BUFFER_EOS, function (event, data) {
+  instance.on(Hls.Events.BUFFER_EOS, function (event, data) {
+    if (hls !== instance) return
     console.log('buffer eos', event)
-    hls.startLoad()
+    instance.startLoad()
   })
 
-  // hls.on(Hls.Events.BUFFER_APPENDED, function (event, data) {
-  //   console.log('buffer appended', event, data)
-  // })
-
-  hls.on(Hls.Events.BUFFER_FLUSHED, function (event, data) {
+  instance.on(Hls.Events.BUFFER_FLUSHED, function (event, data) {
     console.log('buffer flushed', event)
   })
 }
 
+function stopHls() {
+  hlsPlayer.value?.pause()
+  hls?.stopLoad()
+  hls?.destroy()
+  hls = null
+  if (timer != null) {
+    clearInterval(timer)
+    timer = null
+  }
+}
+
 async function registerSSE() {
-  await fetchEventSource(`${baseDomain()}/appmock/sse/${commonStore.uid}`, {
-    headers: {
-      'x-mock-uid': commonStore.uid
-    },
-    async onopen(resp) {
-      if (resp.ok && resp.headers.get('content-type') === EventStreamContentType) {
-        return // everything's good
-      } else if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) {
-        // client-side errors are usually non-retriable:
-        throw new Error('Fatal')
-      } else {
-        throw new Error('Retriable')
-      }
-    },
-    onmessage(ev) {
-      sseData.value = ev.data
-    },
-    onclose() {
-      console.log('closed')
-    },
-    onerror(err) {
-      console.log(err)
-    },
-  })
+  sseAbort?.abort()
+  const controller = new AbortController()
+  sseAbort = controller
+
+  try {
+    await fetchEventSource(`${baseDomain()}/appmock/sse/${commonStore.uid}`, {
+      headers: {
+        'x-mock-uid': commonStore.uid
+      },
+      signal: controller.signal,
+      async onopen(resp) {
+        if (resp.ok && resp.headers.get('content-type') === EventStreamContentType) {
+          return // everything's good
+        } else if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) {
+          // client-side errors are usually non-retriable:
+          throw new Error('Fatal')
+        } else {
+          throw new Error('Retriable')
+        }
+      },
+      onmessage(ev) {
+        sseData.value = ev.data
+      },
+      onclose() {
+        console.log('closed')
+      },
+      onerror(err) {
+        console.log(err)
+      },
+    })
+  } catch (err) {
+    if (!controller.signal.aborted) console.warn('sse closed:', err)
+  }
 }
 
 function toNew() {
@@ -180,56 +207,23 @@ function onHlsClick() {
 
   if (playerStatus.value) {
     playerStatus.value = false
-    hlsPlayer.value.pause()
+    hlsPlayer.value?.pause()
     hls?.stopLoad()
-    clearTimeout(timer)
+    if (timer != null) {
+      clearInterval(timer)
+      timer = null
+    }
   } else {
-    timer = setInterval(() => {
-      bandwidth.value = (hls?.bandwidthEstimate % 1000 || 0).toFixed(2)
-    }, 1000)
+    initHls()
+    if (timer == null) {
+      timer = setInterval(() => {
+        bandwidth.value = ((hls?.bandwidthEstimate ?? 0) % 1000).toFixed(2)
+      }, 1000)
+    }
     playerStatus.value = true
     if (Hls.isSupported()) {
-      hls?.loadSource(streamUrl.value)
-      hls?.attachMedia(hlsPlayer.value)
-      // hls.on(Hls.Events.MANIFEST_PARSED, function () {
-      //   hlsPlayer.value.play()
-      // })
-
-
-      // hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (event, data) {
-      //   console.log('lists has been updated', event, data)
-      // })
-
-      // hls.on(Hls.Events.AUDIO_TRACK_LOADING, function (event, data) {
-      //   console.log('audio track  loading starts', event, data)
-      // })
-
-      // hls.on(Hls.Events.AUDIO_TRACK_LOADED, function (event, data) {
-      //   console.log('audio track  loading completed', event, data)
-      // })
-
-
-      // hls.on(Hls.Events.FRAG_LOADING, function (event, data) {
-      //   console.log('frag loading starts', event, data)
-      // })
-
-      // hls.on(Hls.Events.FRAG_LOADED, function (event, data) {
-      //   console.log('frag loading completed', event, data)
-      // })
-
-      // hls.on(Hls.Events.FRAG_PARSED, function (event, data) {
-      //   console.log('frag parsed', event, data)
-      // })
-
-      // hls.on(Hls.Events.FRAG_BUFFERED, function (event, data) {
-      //   console.log('frag buffered', event, data)
-      // })
-
-      // hls.on(Hls.Events.FRAG_CHANGED, function (event, data) {
-      //   console.log('frag changed', event, data)
-      // })
-
-
+      hls.loadSource(streamUrl.value)
+      hls.attachMedia(hlsPlayer.value)
     } else if (hlsPlayer.value.canPlayType('application/vnd.apple.mpegurl')) {
       hlsPlayer.value.src = streamUrl.value
     }
@@ -238,6 +232,7 @@ function onHlsClick() {
 
 
 function processFrame() {
+  if (preVideo.value == null) return
   if (preVideo.value.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) return
 
   offscreen.value.width = preview.value.width = preVideo.value.videoWidth * 0.5
@@ -283,9 +278,13 @@ async function openCamera() {
 }
 
 async function closeCamera() {
-  if (animationId) cancelAnimationFrame(animationId)
-  if (preVideo.value.srcObject) {
+  if (animationId) {
+    cancelAnimationFrame(animationId)
+    animationId = null
+  }
+  if (preVideo.value?.srcObject) {
     (preVideo.value.srcObject as MediaStream).getTracks().forEach(track => track.stop())
+    preVideo.value.srcObject = null
   }
 }
 
@@ -296,7 +295,7 @@ function openDevTools() {
 
 async function onSSE() {
   window.mainApi?.sendServerEvent()
-  await ProxyMock.broadcast(commonStore.uid)
+  await broadcast(commonStore.uid)
 }
 
 </script>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ConfigProviderTheme, ConfigProviderThemeVars, showNotify } from 'vant'
-import { LocalServerConfig, ProxyMock, updateBaseDomain, updateClientUID } from '@shared'
+import type { LocalServerConfig } from '@shared/base.models'
+import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID } from '@shared'
 import { generateUid, PushClient } from '../common'
 
 export { ProxyRecordStore } from './ProxyRecords'
@@ -75,7 +76,7 @@ export const CommonStore = defineStore('Common', {
       }
 
       try {
-        this.serverConfig = config ? config : await ProxyMock.getServerConfig()
+        this.serverConfig = config ? config : await getServerConfig()
         this.updateServerConfig()
       } catch (err) {
         showNotify(err)
@@ -125,11 +126,15 @@ export const CommonStore = defineStore('Common', {
       }
 
       this.serverConfig = config ? config : this.serverConfig
+      const ip = this.serverConfig.ip || '127.0.0.1'
+      if (this.serverConfig.protocol && this.serverConfig.port != null) {
+        updateBaseDomain(`${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}`)
+      }
       updateClientUID(this.uid)
 
-      this.registerUrl = `${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}/appmock/register/${this.uid}`
+      this.registerUrl = `${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}/appmock/register/${this.uid}`
       if (window.isWeb) {
-        pushClient.start(`${this.serverConfig.protocol}://${this.serverConfig.ip}:${this.serverConfig.port}`, this.uid)
+        pushClient.start(`${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}`, this.uid)
       } else {
         pushClient.start(`${this.serverConfig.protocol}://localhost:${this.serverConfig.port}`, this.uid)
       }

@@ -1,18 +1,20 @@
 import { ipcRenderer } from 'electron'
-import { LocalServerConfig } from '@shared/base.models'
+import type { LocalServerConfig } from '@shared/base.models'
 import { IMainAPI, MainApiCmd } from '@shared/ipc.api'
 
 const mainApi: IMainAPI = {
   relaunch() {
     ipcRenderer.invoke(MainApiCmd.Relaunch)
   },
-  selectFile(callback: Function): void {
-    ipcRenderer.invoke(MainApiCmd.SelectFile)
-    ipcRenderer.once(MainApiCmd.SelectFile, (event, result) => callback(result))
+  async selectFile(callback?: Function): Promise<string | undefined> {
+    const result = await ipcRenderer.invoke(MainApiCmd.SelectFile)
+    callback?.(result)
+    return result
   },
-  selectFolder(callback: Function): void {
-    ipcRenderer.invoke(MainApiCmd.SelectFolder)
-    ipcRenderer.once(MainApiCmd.SelectFolder, (event, result) => callback(result))
+  async selectFolder(callback?: Function): Promise<string | undefined> {
+    const result = await ipcRenderer.invoke(MainApiCmd.SelectFolder)
+    callback?.(result)
+    return result
   },
   openFolder(path: string) {
     ipcRenderer.invoke(MainApiCmd.OpenFolder, path)
@@ -23,19 +25,26 @@ const mainApi: IMainAPI = {
   openDevTools(...args: any) {
     ipcRenderer.invoke(MainApiCmd.OpenDevTools, args)
   },
-  updateBizConfig(...args: any) {
-    ipcRenderer.invoke(MainApiCmd.UpdateBizConfig, args)
+  updateBizConfig(...args: any): Promise<LocalServerConfig> {
+    return ipcRenderer.invoke(MainApiCmd.UpdateBizConfig, ...args)
   },
   downloadUpdate(newVersion: any) {
     ipcRenderer.invoke(MainApiCmd.DownloadUpdate, newVersion)
+      .catch(err => console.error('downloadUpdate failed:', err))
   },
 
   sendServerEvent: function (): void {
     ipcRenderer.invoke(MainApiCmd.SendServerEvent)
   },
 
+  writeClipboard(text: string): Promise<void> {
+    return ipcRenderer.invoke(MainApiCmd.WriteClipboard, text)
+  },
+
   getBizConfig(callback: (result: LocalServerConfig) => void) {
-    ipcRenderer.once(MainApiCmd.GetBizConfig, (_event, result: LocalServerConfig) => callback(result))
+    ipcRenderer.invoke(MainApiCmd.GetBizConfig)
+      .then((result: LocalServerConfig) => callback(result))
+      .catch(err => console.error('getBizConfig failed:', err))
   },
 
   setAppTheme(theme: ('system' | 'light' | 'dark')) {

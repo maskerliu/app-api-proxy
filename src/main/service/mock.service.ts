@@ -1,5 +1,5 @@
 import { inject, injectable } from 'inversify'
-import { ProxyMock } from '@shared'
+import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes } from "../MainConst"
 import { MockRepo } from '../repository/mock.repo'
 import { PushService } from './push.service'
@@ -16,28 +16,39 @@ export class MockService {
 
   private clientMockStatus: Map<string, string> = new Map()
 
-  public async mock(sessionId: number, uid: string, url: string, startTime: number, delay: number) {
+  public async mock(sessionId: number, uid: string, url: string, startTime: number, delay: number): Promise<ProxyMock.MockResponse> {
 
     if (uid == null || !this.clientMockStatus.has(uid)) {
-      throw 'no match mock rule'
+      throw new Error('no match mock rule')
     }
 
-    let ruleId = this.clientMockStatus.get(uid)
-    let rule = await this.mockRepo.get('_id', ruleId)
-    let record = rule.jsonRequests[url]
-    if (record == null) throw 'no match mock rule'
+    const ruleId = this.clientMockStatus.get(uid)
+    const rule = await this.mockRepo.get('_id', ruleId)
+    if (rule == null) {
+      // 规则已被删除或索引失效，清掉客户端的启用状态
+      this.clientMockStatus.delete(uid)
+      throw new Error('mock rule not found')
+    }
 
-    let data: ProxyMock.ProxyRequestRecord = {
+    const record = rule.jsonRequests?.[url]
+    if (record == null) throw new Error('no match mock rule')
+
+    // 失败请求的 statusCode 可能是 -100 或空值，非法状态码会让 Express 直接抛 RangeError
+    const rawStatus = Number(record.statusCode)
+    const statusCode = Number.isInteger(rawStatus) && rawStatus >= 100 && rawStatus <= 599 ? rawStatus : 200
+    const responseHeaders = record.responseHeaders ?? null
+    const data: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
       type: ProxyMock.PorxyType.REQUEST_END,
-      statusCode: record.statusCode || 200,
-      headers: !!record.responseHeaders ? record.responseHeaders : null,
-      responseData: !!record.responseData ? JSON.stringify(record.responseData) : null,
+      url: url,
+      statusCode: statusCode,
+      responseHeaders: responseHeaders,
+      responseData: record.responseData == null ? null : JSON.stringify(record.responseData),
       time: new Date().getTime() - startTime,
       isMock: true,
     }
     this.pushService.sendProxyMessage(uid, data)
-    return record.responseData
+    return { statusCode, headers: responseHeaders, data: record.responseData }
   }
 
   async searchMockRules(uid: string, keyword: string) {
@@ -54,8 +65,13 @@ export class MockService {
     }
   }
 
+  async getActiveMockRule(uid: string) {
+    return this.clientMockStatus.get(uid) ?? ''
+  }
+
   async getMockRuleDetail(uid: string, ruleId: string) {
     let result = await this.mockRepo.get('_id', ruleId)
+    if (result == null) throw new Error('Mock规则不存在')
     result.isMock = this.clientMockStatus.has(uid) && this.clientMockStatus.get(uid) == result._id
     return result
   }

@@ -17,6 +17,7 @@ const VUE_PLUGIN = os.platform() == 'darwin' ? '/Users/chris/Downloads/vue-devto
 
 export default class MainApp {
   private mainWindow: BrowserWindow = null
+  private tray: Tray = null
   private winURL: string = IS_DEV ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
   private staticDir: string
   private dockerIconFile: string
@@ -30,6 +31,11 @@ export default class MainApp {
   }
 
   public async startApp() {
+    if (!app.requestSingleInstanceLock()) {
+      app.quit()
+      return
+    }
+
     app.setName(AppName)
     app.setPath('crashDumps', path.join(USER_DATA_DIR, 'crashDumps'))
     // app.disableHardwareAcceleration()
@@ -69,8 +75,6 @@ export default class MainApp {
         BrowserWindow.getFocusedWindow()?.reload()
       })
 
-      if (!app.requestSingleInstanceLock()) app.quit()
-
       this.initSessionConfig()
       await this.initIPCService()
 
@@ -84,6 +88,7 @@ export default class MainApp {
 
     app.on('second-instance', (_, args, workDir) => {
       console.log(args, workDir)
+      if (this.mainWindow == null) this.createMainWindow()
       this.mainWindow?.show()
       this.mainWindow?.focus()
     })
@@ -171,7 +176,6 @@ export default class MainApp {
     this.mainWindow.on('ready-to-show', () => {
       this.mainWindow.show()
       this.mainWindow.focus()
-      this.mainWindow.webContents.send(MainApiCmd.GetBizConfig, this.mainServer.getBizConfig())
       if (IS_DEV) this.mainWindow.webContents.openDevTools({ mode: 'detach', activate: false })
     })
   }
@@ -179,7 +183,7 @@ export default class MainApp {
   private createTrayMenu() {
 
     let iconDir = IS_DEV ? path.join(this.staticDir, 'common') : this.staticDir
-    let tray = new Tray(path.join(iconDir, 'icon-tray.png'))
+    this.tray = new Tray(path.join(iconDir, 'icon-tray.png'))
     const contextMenu = Menu.buildFromTemplate([
       {
         icon: path.join(iconDir, 'ic-rule.png'),
@@ -214,14 +218,17 @@ export default class MainApp {
       }
     ])
 
-    tray.on('click', () => {
+    this.tray.on('click', () => {
       if (this.mainWindow == null) {
         this.createMainWindow()
+      } else {
+        this.mainWindow.show()
+        this.mainWindow.focus()
       }
     })
 
-    tray.setToolTip(AppName)
-    tray.setContextMenu(contextMenu)
+    this.tray.setToolTip(AppName)
+    this.tray.setContextMenu(contextMenu)
   }
 
   private initAppEnv() {
@@ -278,9 +285,12 @@ export default class MainApp {
   }
 
   private async initIPCService() {
-    ipcMain.handle(MainApiCmd.UpdateBizConfig, async (_, ...args: any) => {
-      await this.mainServer.updateBizConfig(JSON.parse(args[0]))
-      this.mainWindow?.webContents.send(MainApiCmd.GetBizConfig, this.mainServer.getBizConfig())
+    ipcMain.handle(MainApiCmd.GetBizConfig, () => this.mainServer.getBizConfig())
+
+    ipcMain.handle(MainApiCmd.UpdateBizConfig, async (_, configJson: string) => {
+      const config = JSON.parse(configJson)
+      await this.mainServer.updateBizConfig(config)
+      return this.mainServer.getBizConfig()
     })
 
     ipcMain.handle(MainApiCmd.SendServerEvent, () => {

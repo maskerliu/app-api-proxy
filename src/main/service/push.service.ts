@@ -1,13 +1,13 @@
 import { Server } from 'http'
 import { injectable } from 'inversify'
 import { Connection, createServer, Server as SockServer } from 'sockjs'
-import { ProxyMock } from '@shared'
+import { ProxyMock } from '@shared/proxy.models'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
 
 @injectable()
 export class PushService {
-  pushClients: Map<String, PushClient>
+  pushClients: Map<string, PushClient>
   private sockjsServer: SockServer
 
   constructor() {
@@ -33,13 +33,11 @@ export class PushService {
     callback?.()
   }
 
-  public sendMessage(clientUid: String, data: ProxyMock.PushMsg<any>) {
-    if (this.pushClients.has(clientUid)) {
-      this.pushClients.get(clientUid).conn.write(JSON.stringify(data))
-    }
+  public sendMessage(clientUid: string, data: ProxyMock.PushMsg<any>) {
+    this.safeWrite(clientUid, data)
   }
 
-  public sendProxyMessage(clientUid: String, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
+  public sendProxyMessage(clientUid: string, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
 
     let pushMsg: ProxyMock.PushMsg<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> = {
       type: ProxyMock.PushMsgType.TXT,
@@ -48,9 +46,7 @@ export class PushService {
         content: data
       }
     }
-    if (this.pushClients.has(clientUid)) {
-      this.pushClients.get(clientUid).conn.write(JSON.stringify(pushMsg))
-    }
+    this.safeWrite(clientUid, pushMsg)
   }
 
   public hasProxy(uid: string): boolean {
@@ -73,7 +69,15 @@ export class PushService {
   }
 
   private handleMsg(conn: Connection, data: any) {
-    let msg: ProxyMock.PushMsg<any> = JSON.parse(data)
+    let msg: ProxyMock.PushMsg<any>
+    try {
+      msg = JSON.parse(String(data))
+    } catch (err) {
+      console.warn('push message parse failed:', err)
+      return
+    }
+    if (msg?.payload == null) return
+
     switch (msg.type) {
       case ProxyMock.PushMsgType.CMD: {
         this.handleCMD(conn, msg)
@@ -87,21 +91,30 @@ export class PushService {
   }
 
   private handleClose(conn: Connection) {
-    let keys = [...this.pushClients.keys()]
+    this.removeClient(conn)
+  }
+
+  private handleError(conn: Connection) {
+    this.removeClient(conn)
+  }
+
+  private removeClient(conn: Connection) {
+    const keys = [...this.pushClients.keys()]
     keys.forEach(key => {
-      if (this.pushClients.get(key).connId == conn.id) { this.pushClients.delete(key) }
+      if (this.pushClients.get(key)?.connId == conn.id) this.pushClients.delete(key)
     })
 
     this.boardcastClientInfos()
   }
 
-  private handleError(conn: Connection) {
-    let keys = [...this.pushClients.keys()]
-    keys.forEach(key => {
-      if (this.pushClients.get(key).connId == conn.id) this.pushClients.delete(key)
-    })
-
-    this.boardcastClientInfos()
+  private safeWrite(uid: string, payload: any) {
+    const client = this.pushClients.get(uid)
+    if (client == null) return
+    try {
+      client.conn.write(JSON.stringify(payload))
+    } catch (err) {
+      console.warn(`push write failed [${uid}]:`, err)
+    }
   }
 
   private handleCMD(conn: Connection, msg: ProxyMock.PushMsg<any>) {
@@ -119,8 +132,7 @@ export class PushService {
       case ProxyMock.CMDType.RECONNECT:
         break
       case ProxyMock.CMDType.KICKDOWN:
-        if (this.pushClients.has(msg.to))
-          this.pushClients.get(msg.to).conn.write(JSON.stringify(msg))
+        this.safeWrite(msg.to, msg)
         break
     }
   }
@@ -129,11 +141,11 @@ export class PushService {
     switch (msg.payload.type) {
       case ProxyMock.BizType.IM: {
         if (msg.to == null) { // boardcast to everyone
-          this.pushClients.forEach(it => {
-            if (it.uid != msg.from) it.conn.write(JSON.stringify(msg))
+          this.pushClients.forEach((it, uid) => {
+            if (it.uid != msg.from) this.safeWrite(uid, msg)
           })
         } else {
-          this.pushClients.get(msg.to).conn.write(JSON.stringify(msg))
+          this.safeWrite(msg.to, msg)
         }
         break
       }
@@ -162,8 +174,8 @@ export class PushService {
       content: data
     }
 
-    this.pushClients.forEach(it => {
-      it.conn.write(JSON.stringify(msg))
+    this.pushClients.forEach((_, uid) => {
+      this.safeWrite(uid, msg)
     })
   }
 }

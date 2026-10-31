@@ -5,7 +5,7 @@ import https from 'https'
 import { inject, injectable } from 'inversify'
 import JSONBig from 'json-bigint'
 import zlib from 'zlib'
-import { ProxyMock } from '@shared'
+import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
 import { MockService } from './mock.service'
@@ -47,15 +47,17 @@ export class ProxyService {
     this.proxyConfigs.set(uid, proxyPref)
   }
 
+  public getProxyConfig(uid: string): ProxyMock.ProxyConfig {
+    return this.proxyConfigs.get(uid) ?? { dataServer: null, status: false, delay: 0 }
+  }
+
   public saveProxyConfig(uid: string, config: ProxyMock.ProxyConfig) {
-    if (this.proxyConfigs.has(uid)) {
-      let uConfig = this.proxyConfigs.get(uid)
-      if (config.delay) uConfig.delay = config.delay
-      if (config.dataServer) uConfig.dataServer = config.dataServer
-      if (config.status) uConfig.status = config.status
-    } else {
-      this.proxyConfigs.set(uid, config)
-    }
+    if (uid == null || config == null) return 'success'
+    const uConfig = this.getProxyConfig(uid)
+    if (config.delay != null) uConfig.delay = config.delay
+    if (config.dataServer != null) uConfig.dataServer = config.dataServer
+    if (config.status != null) uConfig.status = config.status
+    this.proxyConfigs.set(uid, uConfig)
     return 'success'
   }
 
@@ -96,8 +98,8 @@ export class ProxyService {
     if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
 
     const startTime = new Date().getTime()
-    const sessionId = startTime
-    const delay = this.proxyConfigs.has(uid) ? this.proxyConfigs.get(uid).delay : 0
+    const sessionId = ++this._sessionId
+    const delay = this.proxyConfigs.get(uid)?.delay ?? 0
 
     let rawBody: Buffer
     try {
@@ -129,15 +131,34 @@ export class ProxyService {
 
     try {
       const bizResp = await this.mockService.mock(sessionId, uid, req.url, startTime, delay)
-      setTimeout(() => {
-        if (!resp.headersSent) {
-          resp.send(bizResp)
-          resp.end()
-        }
-      }, delay)
-    } catch (err) {
+      this.sendMockResponse(resp, bizResp, delay)
+    } catch (err: any) {
+      if (err?.message !== 'no match mock rule') {
+        console.warn('mock failed, fallback to proxy:', err?.message ?? err)
+      }
       await this.proxy(sessionId, req, resp, startTime, delay, rawBody)
     }
+  }
+
+  private sendMockResponse(resp: Response, mockResp: ProxyMock.MockResponse, delay: number) {
+    setTimeout(() => {
+      if (resp.headersSent || resp.writableEnded || resp.destroyed) return
+
+      resp.status(mockResp.statusCode ?? 200)
+      const headers = mockResp.headers ?? {}
+      for (const name of Object.keys(headers)) {
+        const key = name.toLowerCase()
+        if (!ProxyService.HEADER_NAME_REG.test(key)) continue
+        if (ProxyService.HOP_BY_HOP_HEADERS.includes(key)) continue
+        // mock 数据已解码，不能再透传压缩/长度相关头
+        if (key === 'content-length' || key === 'content-encoding') continue
+        const value = headers[name]
+        if (value != null) resp.setHeader(name, value as any)
+      }
+
+      if (mockResp.data == null) resp.end()
+      else resp.send(mockResp.data)
+    }, delay)
   }
 
   private proxy(sessionId: number, req: Request, resp: Response, startTime: number, delay: number, rawBody?: Buffer) {

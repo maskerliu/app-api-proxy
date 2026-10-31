@@ -3,34 +3,37 @@
     <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);"
       :style="{ paddingTop: isWeb ? '0' : '10px' }">
       <van-col style="min-width: 348px; flex-grow: 1;">
-        <van-collapse accordion v-model="activeSearchResult" :border="false">
-          <van-collapse-item name="0" :disabled="true" :is-link="false" style="padding-top: 2px;">
-            <template #title>
+        <van-popover v-model:show="showSearchResult" trigger="manual" placement="bottom-start" :show-arrow="false"
+          :offset="[0, 2]">
+          <template #reference>
+            <div ref="searchBox" style="width: 100%;" @click="onSearchBoxClick">
               <van-search show-action :clearable="false" v-model="keyword" style="padding: 0;"
                 :placeholder="$t('common.searchPlaceholder')">
                 <template #action>
-                  <van-icon plain type="primary" name="plus" size="small" @click="onRuleEdit(null)"
+                  <van-icon plain type="primary" name="plus" size="small" @click.stop="onRuleEdit(null)"
                     style="margin-right: 35px;" />
                 </template>
               </van-search>
-            </template>
+            </div>
+          </template>
 
-            <van-list class="search-result" :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
-              <van-cell center class="rule-snap-item1" is-link v-for="(rule, idx) in rules" :title="rule.name"
-                :label="rule.desc" @click="onRuleSelect(rule)">
-                <template #value>
-                  <div>
-                    <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
-                      @click="onRuleEdit(rule)" />
-                    <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
-                      @click="onRuleDelete(rule)" />
-                    <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px" @click="onSave" />
-                  </div>
-                </template>
-              </van-cell>
-            </van-list>
-          </van-collapse-item>
-        </van-collapse>
+          <van-list class="search-result" :style="searchWidth > 0 ? { width: searchWidth + 'px' } : null"
+            :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
+            <van-cell center class="rule-snap-item1" is-link v-for="(rule, idx) in rules" :title="rule.name"
+              :label="rule.desc" @click="onRuleSelect(rule)">
+              <template #value>
+                <div>
+                  <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
+                    @click.stop="onRuleEdit(rule)" />
+                  <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
+                    @click.stop="onRuleDelete(rule)" />
+                  <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
+                    @click.stop="onSave" />
+                </div>
+              </template>
+            </van-cell>
+          </van-list>
+        </van-popover>
       </van-col>
       <van-col style="min-width: 380px; flex-grow: 1;">
         <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
@@ -90,7 +93,7 @@
       </van-col>
 
       <van-col style="flex: 1; position: relative;">
-        <vue-ace-editor :read-only="false" :fold="false" :data="content" />
+        <vue-ace-editor :read-only="false" :fold="false" v-model:data="content" />
       </van-col>
     </van-row>
 
@@ -118,15 +121,17 @@
 <script lang="ts" setup>
 import { Row, showNotify } from 'vant'
 import { inject, onMounted, Ref, ref, watch } from 'vue'
-import { ProxyMock } from '@shared'
-import { json2map, map2json } from '@shared'
+import { ProxyMock, deleteMockRule, getActiveMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '@shared'
+import { json2map, map2json } from '../../common'
 import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
 const recordStore = ProxyRecordStore()
 const topBar = ref<typeof Row>()
+const searchBox = ref<HTMLElement>()
 const keyword = ref<string>('')
-const activeSearchResult = ref<string>('-1')
+const showSearchResult = ref<boolean>(false)
+const searchWidth = ref<number>(0)
 const rules = ref<Array<ProxyMock.MockRule>>(null)
 const curRecordKey = ref<string>(null)
 const showRuleEdit = ref(false)
@@ -138,7 +143,8 @@ const windowHeight = ref<number>(0)
 const topBarHeight = ref<number>(0)
 const maxLines = ref<number>(0)
 
-const showMockRuleMgr = inject<Ref<boolean>>('showMockRuleMgr')
+let detailTask: Promise<void> = null
+
 const withCurRecord = inject<Ref<boolean>>('withCurRecord')
 
 const isWeb = window.isWeb
@@ -147,34 +153,51 @@ onMounted(() => {
   window.onresize = () => {
     windowHeight.value = document.body.clientHeight
     topBarHeight.value = topBar.value.$el.offsetHeight
+    updateSearchWidth()
   }
   windowHeight.value = document.body.clientHeight
   topBarHeight.value = topBar.value.$el.offsetHeight
+  updateSearchWidth()
 
   curRule.value = new ProxyMock.MockRule()
-  content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
+  content.value = withCurRecord.value ? JSON.stringify(recordStore.curRecord(), null, '\t') : null
+  selectActiveMockRule()
 })
 
-watch(showMockRuleMgr, (_new, _old) => {
-  if (_new && withCurRecord.value) {
-    content.value = JSON.stringify(recordStore.curRecord(), null, '\t')
-  } else {
-    content.value = null
-  }
+watch(showSearchResult, (show) => {
+  if (show) updateSearchWidth()
+})
+
+function updateSearchWidth() {
+  searchWidth.value = searchBox.value?.offsetWidth ?? 0
+}
+
+function onSearchBoxClick() {
+  if (keyword.value != '' && rules.value?.length > 0) showSearchResult.value = true
+}
+
+watch(withCurRecord, (isWithRecord) => {
+  content.value = isWithRecord ? JSON.stringify(recordStore.curRecord(), null, '\t') : null
 })
 
 watch(keyword, async () => {
   if (keyword.value == '') {
-    activeSearchResult.value = '-1'
+    showSearchResult.value = false
+    rules.value = null
     return
   }
 
+  const kw = keyword.value
   try {
-    rules.value = await ProxyMock.searchMockRules(keyword.value)
+    const result = await searchMockRules(kw)
+    if (keyword.value !== kw) return
+    rules.value = result ?? []
   } catch (err) {
+    if (keyword.value !== kw) return
+    rules.value = []
     showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
   }
-  activeSearchResult.value = '0'
+  showSearchResult.value = true
 })
 
 watch(() => windowHeight.value, (_new) => {
@@ -185,36 +208,59 @@ watch(() => topBarHeight.value, (_new) => {
   maxLines.value = Math.floor((windowHeight.value - _new - 12) / 15)
 })
 
-function addRecord() {
-  if (curRule.value == null) curRule.value = new ProxyMock.MockRule()
-  if (curRule.value.requests == null) curRule.value.requests = new Map()
+async function addRecord() {
+  if (curRule.value?._id == null) {
+    showNotify({ message: '请先选择Mock规则', type: 'warning', duration: 800 })
+    return
+  }
 
+  let record: ProxyMock.ProxyRequestRecord
   try {
-    let record = JSON.parse(content.value)
-    curRule.value.requests.set(record.url, record)
+    record = JSON.parse(content.value)
   } catch (err) {
     showNotify({ message: '数据格式错误', type: 'danger', duration: 800 })
+    return
   }
+  if (record?.url == null) {
+    showNotify({ message: '请求数据缺少url字段', type: 'danger', duration: 800 })
+    return
+  }
+
+  if (detailTask != null) await detailTask
+  if (curRule.value.requests == null) curRule.value.requests = new Map()
+  curRule.value.requests.set(record.url, record)
+  await onSave(false)
 }
 
 function onRuleSelect(rule: ProxyMock.MockRule) {
   if (rule != null) {
     curRule.value = rule
-    fetchMockRuleDetail()
+    curRule.value.requests = new Map()
+    detailTask = fetchMockRuleDetail()
   } else {
     curRule.value = new ProxyMock.MockRule()
+    detailTask = null
   }
-  content.value = null
   keyword.value = ''
-  activeSearchResult.value = '-1'
+  showSearchResult.value = false
+}
+
+async function selectActiveMockRule() {
+  try {
+    const ruleId = await getActiveMockRule()
+    // 用户已手动选择了规则时不再覆盖
+    if (ruleId && curRule.value._id == null) onRuleSelect({ _id: ruleId } as ProxyMock.MockRule)
+  } catch (err) {
+    // 当前没有开启的规则时保持默认空规则
+  }
 }
 
 async function fetchMockRuleDetail() {
   if (curRule.value.name == null && curRule.value._id == null) return
 
   try {
-    curRule.value = await ProxyMock.getMockRuleDetail(curRule.value._id)
-    curRule.value.requests = json2map(curRule.value.jsonRequests)
+    curRule.value = await getMockRuleDetail(curRule.value._id)
+    curRule.value.requests = curRule.value.jsonRequests == null ? new Map() : json2map(curRule.value.jsonRequests)
   } catch (err) {
     showNotify({ message: '未找到对应规则', type: 'warning', duration: 1000 })
   }
@@ -222,19 +268,22 @@ async function fetchMockRuleDetail() {
 
 function onRuleEdit(rule?: ProxyMock.MockRule) {
   curRule.value = rule == null ? new ProxyMock.MockRule() : rule
+  showSearchResult.value = false
   showRuleEdit.value = true
 }
 
 function onRuleDelete(rule: ProxyMock.MockRule) {
-  if (curRule.value.name == null || curRule.value._id == null) return
+  if (rule == null || rule._id == null) return
   curRule.value = rule
+  showSearchResult.value = false
   showRuleDelete.value = true
 }
 
 async function onRuleDeleteConfirm() {
   try {
-    await ProxyMock.deleteMockRule(curRule.value._id)
+    await deleteMockRule(curRule.value._id)
     curRule.value = new ProxyMock.MockRule()
+    detailTask = null
     content.value = null
     showRuleDelete.value = false
   } catch (err) {
@@ -252,7 +301,7 @@ async function onSave(onlySnap: boolean = false) {
 
   try {
     curRule.value.jsonRequests = map2json(curRule.value.requests)
-    curRule.value._id = await ProxyMock.saveMockRule(curRule.value, onlySnap)
+    curRule.value._id = await saveMockRule(curRule.value, onlySnap)
     await fetchMockRuleDetail()
     showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
   } catch (err) {
@@ -286,10 +335,15 @@ function onRecordDeleteConfirm() {
   /* background: var(--van-gray-1); */
 }
 
+.mgr-content :deep(.van-popover__wrapper) {
+  display: block;
+  width: 100%;
+}
+
 .search-result {
-  min-width: 200px;
-  height: 50vh;
-  overflow-y: scroll;
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .rule-snap-item {

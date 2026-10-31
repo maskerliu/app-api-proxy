@@ -9,14 +9,16 @@
       </div>
     </template>
     <template #title>
-      <div v-if="source.type == 5020"
-        v-for="(item, idx) in (source as ProxyMock.ProxyStatRecord).statistics.bps.slice(0, 2)">
-        <span class="stat-snap-pid"> {{ item.pageId }} </span>
-        <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
-        <span class="stat-snap-eid" v-if="item.event_id != 2001"><br />
-          {{ item.elementId == "" ? item.arg1 : item.elementId }}
-        </span>
-      </div>
+      <template v-if="source.type == 5020">
+        <div v-for="(item, idx) in ((source as ProxyMock.ProxyStatRecord).statistics?.bps?.slice(0, 2) ?? [])"
+          :key="idx">
+          <span class="stat-snap-pid"> {{ item.pageId }} </span>
+          <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
+          <span class="stat-snap-eid" v-if="item.event_id != 2001"><br />
+            {{ item.elementId == "" ? item.arg1 : item.elementId }}
+          </span>
+        </div>
+      </template>
       <van-row v-else justify="end">
         <div class="request-snap-url">
           {{ source.url }}
@@ -24,9 +26,9 @@
       </van-row>
     </template>
     <template #label>
-      <div justify="start" style="direction: rtl; unicode-bidi: embed; width: 100%; margin-top: 25px;">
-        <span class="request-snap-timecost" v-bind:style="{ color: source.time > 500 ? '#e74c3c' : '#2ecc71' }">
-          耗时: {{ source.time ? `${source.time}`.padStart(5, '&nbsp;') : "-----" }} ms
+      <div style="display: flex; align-items: center; direction: rtl; width: 100%; margin-top: 25px;">
+        <span class="request-snap-timecost" v-bind:style="{ color: (source.time ?? 0) > 500 ? '#e74c3c' : '#2ecc71' }">
+          耗时: <span class="timecost-value">{{ source.time != null ? source.time : "-----" }}</span> ms
         </span>
         <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
           style="margin-left: 5px; font-size: 0.5rem;" v-if="source.responseData != null">
@@ -44,7 +46,7 @@
           {{ source.method }}
         </van-tag>
         <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
-          style="font-size: 1.1rem; color: brown; font-weight: bold; top: 3px;" />
+          style="font-size: 1.1rem; color: brown; font-weight: bold;" />
 
       </div>
     </template>
@@ -116,6 +118,13 @@ const recordStore = ProxyRecordStore()
 .request-snap-timecost {
   margin-left: 5px;
   font-size: 0.7rem;
+}
+
+.timecost-value {
+  display: inline-block;
+  min-width: 3.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .request-snap-url {

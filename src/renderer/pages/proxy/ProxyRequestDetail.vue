@@ -58,7 +58,7 @@
 
 <script lang="ts" setup>
 import { Form, showToast } from 'vant'
-import { inject, PropType, Ref, ref } from 'vue'
+import { inject, PropType, ref } from 'vue'
 import { ProxyMock } from '@shared'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import ProxyRequestBody from './ProxyRequestBody.vue'
@@ -72,26 +72,52 @@ const props = defineProps({
 const detailContainer = ref<typeof Form>()
 const detailResp = ref()
 const apiDesc = ref<string>(null)
-const showMockRuleMgr = inject<Ref<boolean>>('showMockRuleMgr')
-const withCurRecord = inject<Ref<boolean>>('withCurRecord')
+const openMockRuleMgr = inject<(withRecord: boolean) => void>('openMockRuleMgr')
 
 // watch(props.record, () => {
 //   updated()
 // })
 
-function copyLink() {
-  // var input = document.createElement('input')
-  // input.value = props.record.url
-  // document.body.appendChild(input)
-  // input.select()
-  // document.execCommand("copy")
-  showToast(`[ ${props.record.url} ] has copyed!`)
-  // clipboard.writeText(this.record.url)
+async function copyLink() {
+  const url = props.record?.url
+  if (url == null) {
+    showToast('请先选择一条请求记录')
+    return
+  }
+
+  try {
+    if (window.mainApi) {
+      await window.mainApi.writeClipboard(url)
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+    } else {
+      fallbackCopy(url)
+    }
+    showToast(`[ ${url} ] 已复制到剪贴板`)
+  } catch (err) {
+    showToast('复制失败，请手动复制')
+  }
+}
+
+function fallbackCopy(text: string) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.top = '0'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const copied = document.execCommand('copy')
+  document.body.removeChild(textarea)
+  if (!copied) throw new Error('copy failed')
 }
 
 function addToMockRule() {
-  showMockRuleMgr.value = true
-  withCurRecord.value = true
+  if (props.record == null) {
+    showToast('请先选择一条请求记录')
+    return
+  }
+  openMockRuleMgr(true)
 }
 
 function updated() {

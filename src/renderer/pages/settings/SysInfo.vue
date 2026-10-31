@@ -35,7 +35,9 @@
       v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly"
       :error-message="!commonStore.serverConfig['portValid'] && item.tooltip == 'settings.sys.port' ? $t('settings.sys.porterror') : null">
       <template #right-icon>
-        <van-switch v-if="item.hasStatus" style="margin-top: 5px;"></van-switch>
+        <van-switch v-if="item.hasStatus" style="margin-top: 5px;"
+          :model-value="!!commonStore.serverConfig.status"
+          @update:model-value="(val: boolean) => commonStore.serverConfig.status = val"></van-switch>
       </template>
     </van-field>
 
@@ -50,6 +52,7 @@
 </template>
 <script lang="ts" setup>
 import { LocalIP } from '@shared'
+import { showNotify } from 'vant'
 import { inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CommonStore } from '../../store'
@@ -74,15 +77,13 @@ let perferences = [
   { tooltip: 'settings.sys.serverDomain', key: 'domain' },
   { tooltip: 'settings.sys.port', key: 'port', readonly: isWeb },
   { tooltip: 'settings.sys.updateServer', key: 'updateServer', readonly: isWeb },
-  { tooltip: 'settings.sys.proxySocketPort', key: 'proxySocketPort', readonly: isWeb },
   { tooltip: 'settings.sys.apiDefineServer', key: 'apiDefineServer', readonly: isWeb },
   { tooltip: 'settings.sys.statRuleServer', key: 'statRuleServer', readonly: isWeb },
   {
     tooltip: 'settings.sys.dataProxyServer',
-    key: 'dataProxyServer',
+    key: 'dataServer',
     hasSave: true,
     hasStatus: true,
-    statusKey: 'dataProxyStatus',
   },
   { tooltip: 'settings.sys.mqttBroker', key: 'mqttBroker', },
 ] as Array<SettingPreference>
@@ -103,12 +104,23 @@ watch(() => protocol.value, () => {
 
 function onSelectIP(ip: LocalIP) {
   curServerIp.value = ip
+  commonStore.serverConfig.ip = ip.address
   showPopover.value = false
 }
 
-function onSave() {
-  window.mainApi?.updateBizConfig(JSON.stringify(commonStore.serverConfig))
-  showSettings.value = false
+async function onSave() {
+  if (curServerIp.value) commonStore.serverConfig.ip = curServerIp.value.address
+
+  try {
+    const config = await window.mainApi?.updateBizConfig(JSON.stringify(commonStore.serverConfig))
+    if (config) {
+      // 服务可能因端口/协议变化而重启，以主进程返回的配置为准同步渲染层与推送连接
+      commonStore.updateServerConfig(config)
+    }
+    showSettings.value = false
+  } catch (err: any) {
+    showNotify({ type: 'warning', message: `保存配置失败: ${err?.message ?? err}` })
+  }
 }
 
 </script>

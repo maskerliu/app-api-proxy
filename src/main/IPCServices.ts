@@ -1,9 +1,9 @@
 import { spawn } from 'child_process'
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import fse from 'fs-extra'
 import os from 'os'
 import path from 'path'
-import { Version } from '@shared'
+import type { Version } from '@shared/base.models'
 import { MainApiCmd } from '@shared/ipc.api'
 import { fullUpdate, incrementUpdate } from './AppUpdater'
 import { USER_DATA_DIR } from './MainConst'
@@ -36,7 +36,7 @@ ipcMain.handle(MainApiCmd.Relaunch, (_) => {
   app.quit()
 })
 
-ipcMain.handle(MainApiCmd.SelectFile, async (_) => {
+ipcMain.handle(MainApiCmd.SelectFile, async (): Promise<string | undefined> => {
   let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     properties: ['openFile',],
     filters: [
@@ -47,22 +47,26 @@ ipcMain.handle(MainApiCmd.SelectFile, async (_) => {
     ]
   })
 
-  if (result.canceled) return
-  getAppWindow()?.webContents.send(MainApiCmd.SelectFile, os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0])
+  if (result.canceled || result.filePaths.length === 0) return undefined
+  return os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0]
 })
 
-ipcMain.handle(MainApiCmd.SelectFolder, async (_) => {
+ipcMain.handle(MainApiCmd.SelectFolder, async (): Promise<string | undefined> => {
   let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     properties: ['openDirectory',],
   })
 
-  if (result.canceled) return
-  getAppWindow()?.webContents.send(MainApiCmd.SelectFolder, os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0])
+  if (result.canceled || result.filePaths.length === 0) return undefined
+  return os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0]
 })
 
 ipcMain.handle(MainApiCmd.OpenFolder, async (_, target: string) => {
   if (!target) return
   await shell.openPath(target)
+})
+
+ipcMain.handle(MainApiCmd.WriteClipboard, (_, text: string) => {
+  clipboard.writeText(String(text ?? ''))
 })
 
 ipcMain.handle(MainApiCmd.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, slient = false) => {

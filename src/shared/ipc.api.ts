@@ -1,4 +1,4 @@
-import { LocalServerConfig } from "./base.models"
+import type { LocalServerConfig } from "./base.models"
 
 export const MainApiCmd = {
   Relaunch: 'relaunch',
@@ -15,16 +15,17 @@ export const MainApiCmd = {
   GetSysTheme: 'getSysTheme',
   SysThemeChanged: 'sysThemeChanged',
   DownloadUpdate: 'downloadUpdate',
-  SendServerEvent: 'sendServerEvent'
+  SendServerEvent: 'sendServerEvent',
+  WriteClipboard: 'writeClipboard'
 }
 
 export interface IMainAPI {
 
   relaunch(): void
 
-  selectFile(callback: Function): void
+  selectFile(callback?: (result?: string) => void): Promise<string | undefined>
 
-  selectFolder(callback: Function): void
+  selectFolder(callback?: (result?: string) => void): Promise<string | undefined>
 
   openFolder(path: string): void
 
@@ -32,9 +33,11 @@ export interface IMainAPI {
 
   openDevTools(...args: any): void
 
-  updateBizConfig(...args: any): void
+  updateBizConfig(...args: any): Promise<LocalServerConfig>
 
   sendServerEvent(): void
+
+  writeClipboard(text: string): Promise<void>
 
   downloadUpdate(...args: any): void
 

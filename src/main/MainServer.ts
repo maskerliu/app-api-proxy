@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, HttpStatusCode, Method } from 'axios'
+import axios, { HttpStatusCode, Method } from 'axios'
 import compression from 'compression'
 import cors, { CorsOptions } from 'cors'
 import express, { Application, Request, Response } from 'express'
@@ -8,7 +8,7 @@ import http2express from 'http2-express'
 import path from 'path'
 import tcpPortUsed from 'tcp-port-used'
 import { API_URL } from '@shared/api.const'
-import { LocalServerConfig } from '@shared/base.models'
+import type { LocalServerConfig } from '@shared/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, IS_DEV, USER_DATA_DIR } from './MainConst'
 import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
@@ -76,7 +76,10 @@ export class MainServer {
 
   public async updateBizConfig(config: LocalServerConfig) {
     const current = this.commonService.serverConfig
-    if (current.port !== config.port || current.protocol !== config.protocol) {
+    // 渲染层的端口可能来自输入框字符串，比较前统一成数字，避免每次保存都重启服务
+    const nextPort = Number.parseInt(String(config.port ?? ''))
+    const portChanged = Number.isFinite(nextPort) && nextPort !== current.port
+    if (portChanged || current.protocol !== config.protocol) {
       this.commonService.saveServerConfig(config)
       await this.start()
       return
@@ -85,29 +88,40 @@ export class MainServer {
   }
 
   public async stop(timeout: number = 5000): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.httpServer == null) {
+    const server = this.httpServer
+    if (server == null) return
+    this.httpServer = null
+
+    try {
+      this.pushService.closeWebSocketServer()
+    } catch (err) {
+      console.warn('close push server failed:', err)
+    }
+
+    // 重启/退出时不能因 keep-alive 连接或超时被 reject，否则后续 start() 直接失败
+    await new Promise<void>((resolve) => {
+      let settled = false
+      let timer: NodeJS.Timeout
+      const done = () => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
         resolve()
-        return
       }
 
-      this.pushService.closeWebSocketServer()
-
-      const timeoutId = setTimeout(() => {
-        reject(new Error('shutdown timeout'))
+      timer = setTimeout(() => {
+        console.warn(`http server close timeout(${timeout}ms), force close connections`)
+        ;(server as any).closeAllConnections?.()
+        done()
       }, timeout)
+      timer.unref()
 
-      this.httpServer.close((err) => {
-        clearTimeout(timeoutId)
-        this.httpServer = null
-        if (err) {
-          console.log(`http server closed, ${err}`)
-          reject(err)
-        } else {
-          console.log('http server closed')
-          resolve()
-        }
+      server.close((err) => {
+        if (err) console.warn('http server close error:', err)
+        else console.log('http server closed')
+        done()
       })
+      ;(server as any).closeIdleConnections?.()
     })
   }
 
@@ -198,46 +212,40 @@ export class MainServer {
   private async proxyCorsMedia(req: Request, resp: Response) {
     try {
       let target = req.query['target']
-      let options: AxiosRequestConfig = {
+      let headers: Record<string, string> = {}
+      // 透传范围请求，音视频才能边下边播、拖动进度
+      if (req.headers.range) headers['range'] = req.headers.range as string
+      if (req.headers['if-range']) headers['if-range'] = req.headers['if-range'] as string
+
+      let proxyResp = await axios({
         url: target as string,
-        method: req.method as Method
-      }
-      let proxyResp = await axios(options)
+        method: req.method as Method,
+        headers,
+        responseType: 'stream',
+        // 原样透传字节，避免与转发的 content-encoding/content-length 不一致
+        decompress: false
+      })
+
       Object.keys(proxyResp.headers).forEach(it => {
-        if (it == 'content-length') return
-        if (it == 'cache-control') return
-        if (it == 'expires') return
+        // 传输层头由本服务重新生成，直接转发会出错
+        if (['transfer-encoding', 'connection', 'keep-alive'].includes(it)) return
         resp.setHeader(it, proxyResp.headers[it])
       })
       resp.status(proxyResp.status)
 
-      let contentType = proxyResp.headers['content-type'] as string
-      if (/image.*/.test(contentType)) {
-        options.responseType = 'arraybuffer'
-      } else if (/audio.*/.test(contentType)) {
-        options.responseType = 'arraybuffer'
-      } else if (/video.*/.test(contentType)) {
-        options.responseType = 'arraybuffer'
-      }
-
-      proxyResp = await axios(options)
-
-      switch (options.responseType) {
-        case 'arraybuffer':
-          resp.end(proxyResp.data)
-          break
-        case 'stream':
-          proxyResp.data.pipe(resp)
-          break
-        default:
-          resp.send(proxyResp.data)
-          break
-      }
+      let upstream: any = proxyResp.data
+      upstream.on('error', () => {
+        if (resp.headersSent) resp.end()
+        else resp.status(HttpStatusCode.InternalServerError).end()
+      })
+      // 关闭预览时停止下载
+      resp.on('close', () => upstream.destroy())
+      upstream.pipe(resp)
     } catch (err) {
+      let data = (err as any)?.response?.data
+      if (data?.destroy) data.destroy()
       resp.status(HttpStatusCode.InternalServerError)
-      resp.send(err)
-    } finally {
-      resp.end()
+      resp.send((err as Error)?.message ?? err)
     }
   }
 

@@ -1,8 +1,12 @@
 <template>
-  <div ref="aceEditor" :class="maxLines ? null : 'ace-editor'">
+  <!-- 跳过 Vant touch 模拟：合成 touch 事件会被 Ace 的移动端处理器当成触摸，
+       长按选词、拖动变滚动，导致鼠标拖选失效 -->
+  <div ref="aceEditor" data-no-touch-simulate :class="maxLines ? null : 'ace-editor'">
     <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app" @close="preClose">
-      <audio v-show="previewType == 0" controls preload="auto" style="width: 100%; height: 120px;"
-        :src="audioSrc"></audio>
+      <van-loading v-show="previewType == 4" type="spinner" size="24" />
+
+      <audio v-show="previewType == 0" controls preload="metadata" style="width: 100%; height: 120px;" :src="audioSrc"
+        @error="onPreviewError"></audio>
 
       <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" show-loading>
         <template v-slot:loading>
@@ -10,17 +14,13 @@
         </template>
       </van-image>
 
-      <video v-show="previewType == 2" controls width="100%" :src="videoSrc"></video>
-
-      <div v-show="previewType == 3" style="width: 30rem; height: 120px;">
-        <van-icon :name="playStatus ? 'pause-circle-o' : 'play-circle-o'" size="36"
-          style="margin-left: 50px; color: var(--van-gray-8);"
-          @click="playStatus ? tcplayer.pause() : tcplayer.play()" />
-      </div>
+      <video ref="videoEl" v-show="previewType == 2" controls preload="metadata" :src="videoSrc"
+        @error="onPreviewError"></video>
     </van-popup>
   </div>
 </template>
 <script lang="ts" setup>
+import { baseDomain } from '@shared'
 import ace, { Ace, Range } from 'ace-builds'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 import 'ace-builds/src-min-noconflict/mode-json'
@@ -29,13 +29,10 @@ import 'ace-builds/src-min-noconflict/mode-xml'
 import 'ace-builds/src-min-noconflict/theme-cloud_editor'
 import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
-import TCPlayer from 'tcplayer.js'
-import 'tcplayer.js/dist/tcplayer.min.css'
-import { nextTick, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { baseDomain } from '@shared'
+import Hls from 'hls.js'
+import { showToast } from 'vant'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { CommonStore } from '../../store'
-
-const licenseUrl = 'https://license.vod2.myqcloud.com/license/v2/1340452115_1/v_cube.license'
 
 const commonStore = CommonStore()
 
@@ -51,7 +48,9 @@ interface MatchToken { row: number, start: number, value: string }
 
 const data = defineModel<string>('data')
 let x = 0, y = 0, row = 0, col = 0, marker = 0, curRow = 0, curCol = 0
+let pressX = 0, pressY = 0
 let link: string = null
+let settingFromModel = false
 
 let _editor: Ace.Editor = null
 let _defOpts: Partial<Ace.EditorOptions> = {
@@ -95,13 +94,11 @@ const aceEditor = ref<HTMLElement>()
 const showPreview = ref<boolean>(false)
 const previewType = ref<number>(0)
 
-// const previewContainer = useTemplateRef<HTMLElement>('previewContainer')
+const videoEl = ref<HTMLVideoElement>()
 const imgSrc = ref<string>()
 const audioSrc = ref<string>()
 const videoSrc = ref<string>()
-const playStatus = ref<boolean>(false)
-const loadStatus = ref<boolean>(false)
-let tcplayer: any
+let hls: Hls
 
 // setValue 会重置折叠状态，折叠必须在赋值之后执行
 function applyFold() {
@@ -126,9 +123,17 @@ onMounted(() => {
   }
   applyFold()
 
+  // 可编辑时把编辑内容回写给 v-model，供父组件读取
+  _editor.session.on('change', () => {
+    if (settingFromModel) return
+    data.value = _editor.getValue()
+  })
+
+  _editor.renderer.scroller.addEventListener('mousedown', onMouseDown)
   _editor.renderer.scroller.addEventListener('mousemove', onMouseMove)
   _editor.renderer.content.addEventListener('mouseout', onMouseOut)
-  _editor.renderer.content.addEventListener('click', onClick)
+  // 按下/抬起时文本层可能重建，click 的 target 会变成 scroller，挂在 content 上会漏事件
+  _editor.renderer.scroller.addEventListener('click', onClick)
 })
 
 watch(() => commonStore.theme, () => {
@@ -142,7 +147,10 @@ watch(() => props.maxLines, () => {
 })
 
 watch(data, () => {
-  _editor.session.setValue(data.value)
+  if (_editor == null || data.value === _editor.getValue()) return
+  settingFromModel = true
+  _editor.session.setValue(data.value ?? '')
+  settingFromModel = false
   applyFold()
   if (!props.fold) nextTick(() => _editor.navigateFileEnd())
 })
@@ -151,22 +159,116 @@ watch(() => props.lang, () => {
   _editor.setOption('mode', `ace/mode/${props.lang}`)
 })
 
-watch(showPreview, (_, _old) => {
-
-  if (!_) {
-    URL.revokeObjectURL(audioSrc.value)
-    URL.revokeObjectURL(imgSrc.value)
-    URL.revokeObjectURL(videoSrc.value)
-
-    audioSrc.value = null
-    imgSrc.value = null
-    videoSrc.value = null
-  }
+watch(showPreview, (visible) => {
+  if (!visible) releasePreviewUrls()
 })
 
+function releasePreviewUrls() {
+  [audioSrc.value, imgSrc.value, videoSrc.value].forEach(src => {
+    if (src?.startsWith('blob:')) URL.revokeObjectURL(src)
+  })
+  audioSrc.value = null
+  imgSrc.value = null
+  videoSrc.value = null
+}
+
+function proxyMediaUrl(url: string) {
+  return `${baseDomain()}/corsMediaProxy?target=${encodeURIComponent(url)}`
+}
+
+function isHlsUrl(url: string) {
+  return /\.m3u8([?#]|$)/i.test(url)
+}
+
+function destroyHls() {
+  if (hls == null) return
+  hls.destroy()
+  hls = null
+  videoEl.value?.pause()
+  videoEl.value?.removeAttribute('src')
+}
+
+function previewHls(url: string) {
+  releasePreviewUrls()
+  destroyHls()
+  previewType.value = 2
+  showPreview.value = true
+
+  nextTick(() => {
+    const video = videoEl.value
+    if (video == null) return
+
+    if (Hls.isSupported()) {
+      const instance = new Hls({ maxBufferLength: 30 })
+      hls = instance
+
+      instance.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (hls !== instance) return
+        video.play().catch(() => { })
+      })
+
+      instance.on(Hls.Events.ERROR, (_event, data) => {
+        if (hls !== instance) return
+        // 直播流网络抖动、解码异常先尝试恢复，恢复不了再提示失败
+        if (data.type == Hls.ErrorTypes.NETWORK_ERROR) return instance.startLoad()
+        if (data.type == Hls.ErrorTypes.MEDIA_ERROR) return instance.recoverMediaError()
+        if (!data.fatal) return
+
+        destroyHls()
+        if (!showPreview.value) return
+        previewType.value = -1
+        showPreview.value = false
+        showToast('资源预览失败')
+      })
+
+      instance.loadSource(url)
+      instance.attachMedia(video)
+      return
+    }
+
+    // macOS 的 Chromium 不支持原生 HLS，这里只是兜底
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url
+      video.play().catch(() => { })
+      return
+    }
+
+    previewType.value = -1
+    showPreview.value = false
+    showToast('不支持的预览类型')
+  })
+}
+
+function onPreviewError(e: Event) {
+  const el = e.target as HTMLMediaElement
+  // HLS 的错误交给 hls.js 处理，直接清 src 会破坏 MediaSource
+  if (hls != null && el == videoEl.value) return
+
+  const failedSrc = el.getAttribute('src')
+  // 立即停止出错的加载，否则弹层关闭后残留的媒体元素还会异步报错
+  el.removeAttribute('src')
+  el.load()
+
+  if (!showPreview.value) return
+  // 只处理当前这次预览的失败，忽略上一次预览残留元素报出的错误
+  const expected = previewType.value == 0 ? audioSrc.value
+    : previewType.value == 2 ? videoSrc.value : null
+  if (expected == null || failedSrc != expected) return
+
+  releasePreviewUrls()
+  showPreview.value = false
+  showToast('资源预览失败')
+}
+
+function onMouseDown(e: MouseEvent) {
+  pressX = e.clientX
+  pressY = e.clientY
+}
+
 function onMouseMove(e: MouseEvent) {
+  // 只在实际拖选时清标记；按下时轻微抖动就清空会导致点击链接失效
   if ((_editor as any).$mouseHandler.isMousePressed) {
-    if (_editor.selection.isEmpty()) clearMarker()
+    if (!_editor.selection.isEmpty()) clearMarker()
     return
   }
   x = e.clientX
@@ -181,88 +283,137 @@ function onMouseOut() {
 async function preClose() {
   previewType.value = -1
 
-  if (tcplayer) {
-    tcplayer.unload()
-    playStatus.value = false
-    loadStatus.value = false
-  }
+  destroyHls()
 
-  videoSrc.value = null
-  audioSrc.value = null
-  imgSrc.value = null
-
+  releasePreviewUrls()
 }
 
-async function onClick() {
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|avif|ico)$/i
+const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|m4b|aac|flac|opus)$/i
+const VIDEO_EXT = /\.(mp4|m4v|mov|webm|mkv|flv)$/i
+
+function mediaKindByUrl(url: string): string {
+  let path = url.split(/[?#]/)[0]
+  if (IMAGE_EXT.test(path)) return 'image'
+  if (AUDIO_EXT.test(path)) return 'audio'
+  if (VIDEO_EXT.test(path)) return 'video'
+  return ''
+}
+
+// 部分 CDN/对象存储会把媒体文件的 content-type 返回成 application/octet-stream，
+// 此时按文件头、再按 URL 后缀兜底判断
+function resolveMediaKind(contentType: string, data: ArrayBuffer, url: string): string {
+  let type = (contentType ?? '').split(';')[0].trim().toLowerCase()
+  if (type.startsWith('image/')) return 'image'
+  if (type.startsWith('audio/')) return 'audio'
+  if (type.startsWith('video/')) return 'video'
+
+  let head = new Uint8Array(data.slice(0, 12))
+  if (head.length >= 3 && head[0] == 0xFF && head[1] == 0xD8 && head[2] == 0xFF) return 'image' // jpeg
+  if (head.length >= 8 && head[0] == 0x89 && head[1] == 0x50 && head[2] == 0x4E && head[3] == 0x47) return 'image' // png
+  if (head.length >= 3 && head[0] == 0x47 && head[1] == 0x49 && head[2] == 0x46) return 'image' // gif
+  if (head.length >= 12 && head[8] == 0x57 && head[9] == 0x45 && head[10] == 0x42 && head[11] == 0x50) return 'image' // webp
+  if (head.length >= 2 && head[0] == 0x42 && head[1] == 0x4D) return 'image' // bmp
+  if (head.length >= 8 && head[4] == 0x66 && head[5] == 0x74 && head[6] == 0x79 && head[7] == 0x70) return 'video' // mp4/mov(ftyp)
+
+  let path = url.split(/[?#]/)[0]
+  if (IMAGE_EXT.test(path)) return 'image'
+  if (AUDIO_EXT.test(path)) return 'audio'
+  if (VIDEO_EXT.test(path)) return 'video'
+  return ''
+}
+
+async function onClick(e: MouseEvent) {
+  // 拖选文字松手也会触发 click，位移较大时不算点击，避免选完文字弹出预览
+  if (Math.abs(e.clientX - pressX) + Math.abs(e.clientY - pressY) > 5) return
+
+  // 直接按点击坐标取链接：拖拽产生的残留选区不应阻止预览
+  link = findLinkAt(e.clientX, e.clientY)?.value
+  x = e.clientX
+  y = e.clientY
   if (!link) return
 
-  showPreview.value = true
-  if (/^https?:\/\/.*\.m3u8/.test(link)) {
-    previewType.value = 3
-    let video: HTMLVideoElement
-    if (aceEditor.value.getElementsByTagName('video').length == 0) {
-      video = document.createElement<'video'>('video')
-      video.setAttribute("id", 'player-container-id')
-      video.setAttribute('width', '100%')
-      video.setAttribute('height', '0')
-      video.style.display = 'none'
-      video.style.visibility = 'hidden'
-
-      aceEditor.value.appendChild(video)
-    } else {
-      video = aceEditor.value.getElementsByTagName('video')[0]
-      video.setAttribute("id", 'player-container-id')
-      console.log(video)
-    }
-
-    if (tcplayer == null) {
-      tcplayer = TCPlayer('player-container-id', { autoplay: true, licenseUrl })
-    }
-
-    tcplayer.src(link)
-
-    tcplayer.on('error', function (e) {
-      console.log(e)
-    })
-
-    tcplayer.on('play', function () {
-      playStatus.value = true
-    })
-
-    tcplayer.on('pause', function () {
-      playStatus.value = false
-    })
-
-    tcplayer.on('loadstart', function () {
-      loadStatus.value = true
-    })
-
-    tcplayer.on('loadeddata', function () {
-      loadStatus.value = false
-    })
-
+  if (isHlsUrl(link)) {
+    previewHls(link)
     return
   }
 
-  try {
-    let resp = await axios.get(`${baseDomain()}/corsMediaProxy?target=${link}`,
-      { withCredentials: false, responseType: 'arraybuffer' })
-    let contentType = resp.headers['content-type'] as string
-    if (/image.*/.test(contentType)) {
-      previewType.value = 1
-      imgSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
-    } else if (/audio.*/.test(contentType)) {
-      previewType.value = 0
-      audioSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
-    } else if (/video.*/.test(contentType)) {
-      previewType.value = 2
-      videoSrc.value = URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+  // 音视频交给播放器流式加载（代理已支持 Range），避免整文件读入内存
+  let kind = mediaKindByUrl(link)
+  if (kind == 'audio' || kind == 'video') {
+    releasePreviewUrls()
+    if (kind == 'audio') audioSrc.value = proxyMediaUrl(link)
+    else videoSrc.value = proxyMediaUrl(link)
+    previewType.value = kind == 'audio' ? 0 : 2
+    showPreview.value = true
+    return
+  }
 
+  previewType.value = 4
+  showPreview.value = true
+
+  try {
+    // target 必须编码，否则签名 URL 中的 & + # 会破坏查询串
+    let resp = await axios.get(proxyMediaUrl(link), {
+      withCredentials: false,
+      responseType: 'arraybuffer',
+      timeout: 30000
+    })
+    if (!showPreview.value) return
+
+    let contentType = resp.headers['content-type'] as string
+    // 没有 .m3u8 后缀但 content-type 是 HLS 播放列表
+    if (/mpegurl/i.test(contentType ?? '')) {
+      previewHls(link)
+      return
+    }
+
+    let mediaKind = resolveMediaKind(contentType, resp.data, link)
+    let toBlobUrl = () => URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+
+    releasePreviewUrls()
+    switch (mediaKind) {
+      case 'image':
+        previewType.value = 1
+        imgSrc.value = toBlobUrl()
+        break
+      case 'audio':
+        previewType.value = 0
+        audioSrc.value = toBlobUrl()
+        break
+      case 'video':
+        previewType.value = 2
+        videoSrc.value = toBlobUrl()
+        break
+      default:
+        previewType.value = -1
+        showPreview.value = false
+        showToast('不支持的预览类型')
     }
   } catch (err) {
     console.log(err)
+    if (!showPreview.value) return
+    previewType.value = -1
+    showPreview.value = false
+    showToast('资源预览失败')
   }
-  showPreview.value = true
+}
+
+function findLinkAt(clientX: number, clientY: number): Partial<MatchToken> {
+  var canvasPos = _editor.renderer.scroller.getBoundingClientRect()
+  var offset = (clientX + _editor.renderer.scrollLeft - canvasPos.left - (_editor.renderer as any).$padding) / _editor.renderer.characterWidth
+  var row = Math.floor((clientY + _editor.renderer.scrollTop - canvasPos.top) / _editor.renderer.lineHeight)
+  var col = Math.round(offset)
+  var screenPos = { row: row, column: col, side: offset - col > 0 ? 1 : -1 }
+  var docPos = _editor.session.screenToDocumentPosition(screenPos.row, screenPos.column)
+
+  var line = _editor.session.getLine(docPos.row)
+  if (docPos.column == line.length) {
+    var clippedPos = _editor.session.documentToScreenPosition(docPos.row, docPos.column)
+    if (clippedPos.column != screenPos.column) return
+  }
+
+  return findLink(docPos.row, docPos.column)
 }
 
 function update() {
@@ -270,8 +421,6 @@ function update() {
   var offset = (x + _editor.renderer.scrollLeft - canvasPos.left - (_editor.renderer as any).$padding) / _editor.renderer.characterWidth
   row = Math.floor((y + _editor.renderer.scrollTop - canvasPos.top) / _editor.renderer.lineHeight)
   col = Math.round(offset)
-  var screenPos = { row: row, column: col, side: offset - col > 0 ? 1 : -1 }
-  var docPos = _editor.session.screenToDocumentPosition(screenPos.row, screenPos.column)
 
   var selectionRange = _editor.selection.getRange()
   if (!selectionRange.isEmpty()) {
@@ -279,15 +428,7 @@ function update() {
       return clearMarker()
   }
 
-  var line = _editor.session.getLine(docPos.row)
-  if (docPos.column == line.length) {
-    var clippedPos = _editor.session.documentToScreenPosition(docPos.row, docPos.column)
-    if (clippedPos.column != screenPos.column) {
-      return clearMarker()
-    }
-  }
-
-  let token = findLink(docPos.row, docPos.column)
+  let token = findLinkAt(x, y)
   // console.log(docPos.row, docPos.column, token)
   link = token?.value
   if (!token) return clearMarker()
@@ -306,8 +447,13 @@ function clearMarker() {
 
 function findLink(row: number, column: number): Partial<MatchToken> {
   var line = _editor.session.getLine(row)
-  var match = getMatchAround(/https?:\/\/[^\s"']+/g, line, column)
+  var match = getMatchAround(/https?:\/\/[^\s"'\\]+/g, line, column)
   if (!match)
+    return
+
+  // 嵌套 JSON 字符串里链接后紧跟 \" ，标点也可能被误收进链接
+  match.value = match.value.replace(/[\\,;.!?)\]}]+$/, '')
+  if (!match.value || match.start + match.value.length < column)
     return
 
   match.row = row
@@ -334,12 +480,27 @@ function getMatchAround(regExp: RegExp, string: string, col: number): Partial<Ma
 
 </script>
 <style>
+/* center 弹层宽度是 shrink-to-fit，子元素 width:100% 会形成循环，导致弹层宽度为 0 */
 .preview-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 70%;
+  max-width: 60%;
+  max-height: 70%;
   overflow: hidden;
+}
+
+.preview-container audio {
+  max-width: 480px;
+  flex: none;
+}
+
+/* 视频没有固有尺寸，弹层会缩成 300x150，这里给个明确的播放区域 */
+.preview-container video {
+  width: 60vw;
+  max-width: 960px;
+  max-height: 70vh;
+  flex: none;
 }
 
 .ace-editor {
