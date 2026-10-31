@@ -1,12 +1,12 @@
 {
   "code": 8000,
   "data": {
-    "forceUpdate": false,
+    "forceUpdate": true,
     "fullUpdate": false,
-    "updateUrl": "",
-    "message": "",
-    "version": "",
-    "sha512": "",
-    "releaseDate": ""
+    "updateUrl": "http://192.168.21.5:4000/res/app-win32-x64-1.0.3.gz",
+    "message": "快更新到1.0.3吧！！！",
+    "version": "1.0.3",
+    "sha512": "D/G1uUxaW6iw6US1ljHuSE+Dw3RzR7v3tzSbI03W0x8JYqDXw1XLdTJcJ2DCPMoMmoG7LMi5wFSy3EAES2QT1w==",
+    "releaseDate": "2026-10-31T08:47:08.563Z"
   }
 }

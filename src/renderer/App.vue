@@ -98,6 +98,7 @@ function onOpenDebugPanel() {
   user-select: none; */
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   user-select: none;
   scroll-behavior: smooth;
@@ -134,8 +135,9 @@ function onOpenDebugPanel() {
 
 .biz-content {
   width: 100%;
-  min-width: 375px;
+  min-width: 0;
   height: 100vh;
+  height: 100dvh;
   background: var(--van-gray-1);
   overflow: hidden auto;
 }
@@ -152,9 +154,10 @@ function onOpenDebugPanel() {
 }
 
 .loading {
-  width: 20%;
+  width: min(240px, 60vw);
+  min-width: 160px;
   padding: 10px 5px;
-  margin: 20% auto;
+  margin: 20vh auto;
   background-color: #262f37e0;
   border-radius: 10px;
   font-size: 0.8rem;

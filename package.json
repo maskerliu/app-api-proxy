@@ -1,6 +1,6 @@
 {
   "name": "AppApiProxy",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": {
     "name": "maskerliu",
     "email": "lynx.chrisliu@gmail.com"
@@ -22,7 +22,7 @@
     "pub:full": "yarn pkg && yarn publish --target=full",
     "postinstall": "yarn electron-builder install-app-deps",
     "rebuild": "electron-rebuild",
-    "updateServer": "http-server build/ -p 4000 --cors -c-1"
+    "updateServer": "npx --yes http-server build/ -p 4000 --cors -c-1"
   },
   "config": {
     "port": 8884,

@@ -56,6 +56,8 @@ img {
 .overlayscrollbars-vue {
   width: 16rem;
   height: 16rem;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
   margin: 0 auto;
   resize: both;
   overflow: auto;

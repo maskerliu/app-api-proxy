@@ -63,7 +63,7 @@
 
     <van-popup round v-model:show="showDownload" :closeable="popupCloseable" :close-on-click-overlay="false"
       teleport="#app">
-      <van-row style="width: 450px; margin: 15px; height: 300px;" justify="center">
+      <van-row class="version-popup" justify="center">
         <van-icon class="iconfont icon-version-update" style="color: green; font-size: 2rem;" />
         <pre class="update-message">{{ newVersion.message }} </pre>
         <div style="width: 100%;">
@@ -166,6 +166,12 @@ function restart() {
 <style lang="css" scoped>
 .theme-icon {
   font-size: 1.6rem;
+}
+
+.version-popup {
+  width: min(450px, calc(100vw - 60px));
+  min-height: 300px;
+  margin: 15px;
 }
 
 .update-message {

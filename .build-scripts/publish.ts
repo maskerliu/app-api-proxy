@@ -8,9 +8,34 @@ import { pipeline } from 'stream/promises'
 import YAML from 'yaml'
 import { createGunzip, createGzip } from 'zlib'
 import pkg from '../package.json'
+import { getLocalIPs } from './misc'
+
+const VIRTUAL_IFACE = /vethernet|hyper-v|vmware|virtualbox|wsl|docker|tailscale|zerotier|virtual/i
+
+// 取对外可达的局域网 IPv4，供其他设备访问更新包
+function lanAddress(): string {
+  const ips = getLocalIPs().filter(it => !it.internal)
+  const candidates = ips.filter(it => !VIRTUAL_IFACE.test(it.name))
+  const picked = candidates.find(it => it.address.startsWith('192.168.'))
+    ?? candidates.find(it => it.address.startsWith('10.'))
+    ?? candidates.find(it => /^172\.(1[6-9]|2\d|3[01])\./.test(it.address))
+    ?? candidates[0]
+  if (picked == null) {
+    console.warn('未找到局域网 IPv4 地址，updateUrl 回退到 127.0.0.1')
+    return '127.0.0.1'
+  }
+  return picked.address
+}
+
+function writeVersionFiles(resp: any) {
+  const content = JSON.stringify(resp, null, '\t')
+  writeFileSync(path.join('build', `version-${process.platform}-${process.arch}.json`), content, 'utf8')
+  writeFileSync(path.join('build', 'version.json'), content, 'utf8')
+}
 
 async function compress(sourceDir: string, destDir: string) {
   let hash = crypto.createHash('sha512')
+  fs.mkdirSync(path.dirname(destDir), { recursive: true })
   let source = createReadStream(sourceDir)
   let dest = createWriteStream(destDir)
   let digest = ''
@@ -42,14 +67,13 @@ async function buildIncrementRelease(asarPath: string, ymlName: string) {
   resp.data = {
     forceUpdate: true,
     fullUpdate: false,
-    updateUrl: `http://127.0.0.1:4000/res/app-${process.platform}-${process.arch}-${lst.version}.gz`,
+    updateUrl: `http://${lanAddress()}:4000/res/app-${process.platform}-${process.arch}-${lst.version}.gz`,
     message: `快更新到${lst.version}吧！！！`,
     version: lst.version,
     sha512: digest,
     releaseDate: lst.releaseDate
   }
-  writeFileSync(path.join('build', `version-${process.platform}-${process.arch}.json`),
-    JSON.stringify(resp, null, '\t'), 'utf8')
+  writeVersionFiles(resp)
 }
 
 async function buildFullRelease(installerPath: string, ymlName: string) {
@@ -60,15 +84,14 @@ async function buildFullRelease(installerPath: string, ymlName: string) {
   resp.data = {
     forceUpdate: true,
     fullUpdate: true,
-    updateUrl: `http://127.0.0.1:4000/${installerPath}`,
+    updateUrl: `http://${lanAddress()}:4000/${installerPath}`,
     message: `快更新到${lst.version}吧！！！`,
     version: lst.version,
     sha512: lst.sha512,
     releaseDate: lst.releaseDate
   }
 
-  writeFileSync(path.join('build', `version-${process.platform}-${process.arch}.json`),
-    JSON.stringify(resp, null, '\t'), 'utf8')
+  writeVersionFiles(resp)
 }
 
 let argv = minimist(process.argv.slice(2))

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ConfigProviderTheme, ConfigProviderThemeVars, showNotify } from 'vant'
 import type { LocalServerConfig } from '@shared/base.models'
-import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID } from '@shared'
+import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID, updateUpdateServer } from '@shared'
 import { generateUid, PushClient } from '../common'
 
 export { ProxyRecordStore } from './ProxyRecords'
@@ -126,6 +126,7 @@ export const CommonStore = defineStore('Common', {
       }
 
       this.serverConfig = config ? config : this.serverConfig
+      updateUpdateServer(this.serverConfig.updateServer)
       const ip = this.serverConfig.ip || '127.0.0.1'
       if (this.serverConfig.protocol && this.serverConfig.port != null) {
         updateBaseDomain(`${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}`)

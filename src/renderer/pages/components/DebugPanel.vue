@@ -320,9 +320,14 @@ async function onSSE() {
 
 .debug-panel {
   width: 100%;
-  min-width: 375px;
+  min-width: min(375px, 100vw);
   height: 100%;
   padding: 10px 0;
   background-color: var(--van-gray-1);
+}
+
+.debug-panel canvas {
+  max-width: 100%;
+  height: auto;
 }
 </style>

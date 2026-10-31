@@ -1,12 +1,11 @@
 <template>
   <!-- 跳过 Vant touch 模拟：合成 touch 事件会被 Ace 的移动端处理器当成触摸，
        长按选词、拖动变滚动，导致鼠标拖选失效 -->
-  <div ref="aceEditor" data-no-touch-simulate :class="maxLines ? null : 'ace-editor'">
+  <div ref="aceEditor" data-no-touch-simulate :class="maxLines || fill ? null : 'ace-editor'">
     <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app" @close="preClose">
       <van-loading v-show="previewType == 4" type="spinner" size="24" />
 
-      <audio v-show="previewType == 0" controls preload="metadata" style="width: 100%; height: 120px;" :src="audioSrc"
-        @error="onPreviewError"></audio>
+      <audio v-show="previewType == 0" controls preload="metadata" :src="audioSrc" @error="onPreviewError"></audio>
 
       <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" show-loading>
         <template v-slot:loading>
@@ -31,7 +30,7 @@ import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
 import Hls from 'hls.js'
 import { showToast } from 'vant'
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -42,6 +41,7 @@ interface VueAceEditorProps {
   fold: boolean
   readOnly: boolean
   maxLines: number
+  fill: boolean
 }
 
 interface MatchToken { row: number, start: number, value: string }
@@ -88,6 +88,7 @@ const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
   fold: true,
   readOnly: true,
   data: '{}',
+  fill: false,
 })
 
 const aceEditor = ref<HTMLElement>()
@@ -103,6 +104,37 @@ let hls: Hls
 // setValue 会重置折叠状态，折叠必须在赋值之后执行
 function applyFold() {
   if (props.fold) _editor.session.foldAll()
+}
+
+const FILL_MIN_LINES = 3
+const FILL_BOTTOM_GAP = 5
+
+let fillObserver: ResizeObserver
+
+function scrollParentOf(el: HTMLElement): HTMLElement {
+  let node = el.parentElement
+  while (node != null && node !== document.body) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node
+    node = node.parentElement
+  }
+  return null
+}
+
+// 按滚动容器的剩余高度换算行数，用内容坐标计算，滚动时结果保持不变
+function syncFillHeight() {
+  if (!props.fill || _editor == null || aceEditor.value == null) return
+
+  const el = aceEditor.value
+  const parent = scrollParentOf(el)
+  const parentRect = parent?.getBoundingClientRect()
+  const viewportTop = parentRect?.top ?? 0
+  const viewportHeight = parent?.clientHeight ?? window.innerHeight
+  const offsetTop = el.getBoundingClientRect().top - viewportTop + (parent?.scrollTop ?? window.scrollY)
+  const lineHeight = _editor.renderer.lineHeight || 16
+  const lines = Math.max(FILL_MIN_LINES, Math.floor((viewportHeight - offsetTop - FILL_BOTTOM_GAP) / lineHeight))
+
+  _editor.setOption('minLines', lines)
+  _editor.setOption('maxLines', lines)
 }
 
 onMounted(() => {
@@ -134,6 +166,19 @@ onMounted(() => {
   _editor.renderer.content.addEventListener('mouseout', onMouseOut)
   // 按下/抬起时文本层可能重建，click 的 target 会变成 scroller，挂在 content 上会漏事件
   _editor.renderer.scroller.addEventListener('click', onClick)
+
+  if (props.fill) {
+    nextTick(syncFillHeight)
+    fillObserver = new ResizeObserver(() => syncFillHeight())
+    fillObserver.observe(scrollParentOf(aceEditor.value) ?? document.body)
+    window.addEventListener('resize', syncFillHeight)
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', syncFillHeight)
+  fillObserver?.disconnect()
+  fillObserver = null
 })
 
 watch(() => commonStore.theme, () => {
@@ -153,6 +198,7 @@ watch(data, () => {
   settingFromModel = false
   applyFold()
   if (!props.fold) nextTick(() => _editor.navigateFileEnd())
+  if (props.fill) nextTick(syncFillHeight)
 })
 
 watch(() => props.lang, () => {
@@ -478,6 +524,8 @@ function getMatchAround(regExp: RegExp, string: string, col: number): Partial<Ma
   return token
 }
 
+defineExpose({ syncFillHeight })
+
 </script>
 <style>
 /* center 弹层宽度是 shrink-to-fit，子元素 width:100% 会形成循环，导致弹层宽度为 0 */
@@ -490,8 +538,11 @@ function getMatchAround(regExp: RegExp, string: string, col: number): Partial<Ma
   overflow: hidden;
 }
 
+/* 弹层是 shrink-to-fit：百分比宽度会塌成 0，音视频都用固定宽度 */
 .preview-container audio {
-  max-width: 480px;
+  width: 480px;
+  max-width: 50vw;
+  height: 120px;
   flex: none;
 }
 

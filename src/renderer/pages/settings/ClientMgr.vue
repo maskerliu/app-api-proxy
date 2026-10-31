@@ -21,7 +21,7 @@
     </van-grid>
 
     <van-popup round v-model:show="dialogVisible" closeable close-icon="close" teleport="#app">
-      <van-form style="width: 450px; margin: 15px">
+      <van-form style="width: min(450px, calc(100vw - 60px)); margin: 15px">
         <van-field label="client id" :model-value="selectClient.uid" readonly />
         <van-field label="client key" :model-value="selectClient.connId" readonly />
         <van-field label="client ip" :model-value="`${selectClient.ip}:${selectClient.port}`" readonly />

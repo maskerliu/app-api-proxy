@@ -1,8 +1,8 @@
 <template>
   <van-row class="mgr-content">
-    <van-row class="border-bg" ref="topBar" justify="start" style="width: calc(100% - 10px);"
+    <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - 10px);"
       :style="{ paddingTop: isWeb ? '0' : '10px' }">
-      <van-col style="min-width: 348px; flex-grow: 1;">
+      <van-col class="rule-search-col">
         <van-popover v-model:show="showSearchResult" trigger="manual" placement="bottom-start" :show-arrow="false"
           :offset="[0, 2]">
           <template #reference>
@@ -35,7 +35,7 @@
           </van-list>
         </van-popover>
       </van-col>
-      <van-col style="min-width: 380px; flex-grow: 1;">
+      <van-col class="rule-head-col">
         <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
           style="padding: 5px 10px;" :title-style="{ flexGrow: 1.2 }" value-class="rule-mgr-cell-value">
           <template #icon v-if="curRule._id != null">
@@ -67,8 +67,8 @@
         </van-cell>
       </van-col>
     </van-row>
-    <van-row :style="{ width: '100%', height: 'calc(100vh - 10px - ' + topBarHeight + 'px)' }">
-      <van-list class="border-bg" style="width: 300px; height: calc(100% - 10px);">
+    <van-row class="mgr-body">
+      <van-list class="border-bg record-list">
         <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)"
           v-if="curRule != null && curRule.requests != null" clickable is-link>
           <template #title>
@@ -88,11 +88,11 @@
           </template>
         </van-cell>
       </van-list>
-      <van-col style="padding-top: 50px">
+      <van-col class="record-actions" style="padding-top: 50px">
         <van-button type="primary" size="mini" icon="exchange" @click="addRecord" />
       </van-col>
 
-      <van-col style="flex: 1; position: relative;">
+      <van-col class="rule-editor-col">
         <vue-ace-editor :read-only="false" :fold="false" v-model:data="content" />
       </van-col>
     </van-row>
@@ -119,15 +119,14 @@
 </template>
 
 <script lang="ts" setup>
-import { Row, showNotify } from 'vant'
-import { inject, onMounted, Ref, ref, watch } from 'vue'
+import { showNotify } from 'vant'
+import { inject, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { ProxyMock, deleteMockRule, getActiveMockRule, getMockRuleDetail, saveMockRule, searchMockRules } from '@shared'
 import { json2map, map2json } from '../../common'
 import { ProxyRecordStore } from '../../store'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
 const recordStore = ProxyRecordStore()
-const topBar = ref<typeof Row>()
 const searchBox = ref<HTMLElement>()
 const keyword = ref<string>('')
 const showSearchResult = ref<boolean>(false)
@@ -139,9 +138,6 @@ const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const content = ref<string>(null)
-const windowHeight = ref<number>(0)
-const topBarHeight = ref<number>(0)
-const maxLines = ref<number>(0)
 
 let detailTask: Promise<void> = null
 
@@ -150,18 +146,16 @@ const withCurRecord = inject<Ref<boolean>>('withCurRecord')
 const isWeb = window.isWeb
 
 onMounted(() => {
-  window.onresize = () => {
-    windowHeight.value = document.body.clientHeight
-    topBarHeight.value = topBar.value.$el.offsetHeight
-    updateSearchWidth()
-  }
-  windowHeight.value = document.body.clientHeight
-  topBarHeight.value = topBar.value.$el.offsetHeight
+  window.addEventListener('resize', updateSearchWidth)
   updateSearchWidth()
 
   curRule.value = new ProxyMock.MockRule()
   content.value = withCurRecord.value ? JSON.stringify(recordStore.curRecord(), null, '\t') : null
   selectActiveMockRule()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateSearchWidth)
 })
 
 watch(showSearchResult, (show) => {
@@ -198,14 +192,6 @@ watch(keyword, async () => {
     showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
   }
   showSearchResult.value = true
-})
-
-watch(() => windowHeight.value, (_new) => {
-  maxLines.value = Math.floor((_new - topBarHeight.value - 12) / 15)
-})
-
-watch(() => topBarHeight.value, (_new) => {
-  maxLines.value = Math.floor((windowHeight.value - _new - 12) / 15)
 })
 
 async function addRecord() {
@@ -328,11 +314,42 @@ function onRecordDeleteConfirm() {
 
 <style scoped>
 .mgr-content {
-  width: 80vw;
-  min-width: 375px;
+  display: flex;
+  flex-direction: column;
+  width: min(80vw, 1600px);
+  min-width: min(375px, 100vw);
+  max-width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   /* background: var(--van-gray-1); */
+}
+
+.top-bar {
+  flex: none;
+}
+
+.rule-search-col,
+.rule-head-col {
+  flex: 1 1 auto;
+  min-width: min(348px, 100%);
+}
+
+.mgr-body {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.record-list {
+  width: min(300px, 34%);
+  height: calc(100% - 10px);
+}
+
+.rule-editor-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
 }
 
 .mgr-content :deep(.van-popover__wrapper) {
@@ -357,9 +374,35 @@ function onRecordDeleteConfirm() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  width: 220px;
+  width: 100%;
+  max-width: 220px;
   display: block;
   direction: rtl;
   margin-bottom: 5px;
+}
+
+/* 窄屏下记录列表与编辑区上下排列，避免编辑区被挤到不可用宽度 */
+@media (max-width: 640px) {
+  .mgr-body {
+    flex-direction: column;
+  }
+
+  .record-list {
+    width: calc(100% - 10px);
+    height: 36%;
+  }
+
+  .record-actions {
+    padding-top: 0 !important;
+    display: flex;
+    justify-content: center;
+    padding-bottom: 5px;
+  }
+
+  .rule-editor-col {
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 0;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <van-row>
+  <van-row class="proxy-page">
     <van-col class="bg-border left-panel">
       <van-row justify="space-between">
         <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
@@ -249,10 +249,17 @@ function onMockRecordStart() {
   right: -3px;
 }
 
+.proxy-page {
+  flex-wrap: nowrap;
+}
+
 .left-panel {
+  display: flex;
+  flex-direction: column;
   flex-grow: 1;
   min-width: 340px;
   height: calc(100% - 10px);
+  min-height: 0;
   margin: 5px;
 }
 
@@ -260,7 +267,8 @@ function onMockRecordStart() {
   flex-grow: 19;
   flex-basis: 50%;
   min-width: 375px;
-  height: calc(100vh - 10px);
+  height: calc(100% - 10px);
+  min-height: 0;
   margin: 5px 2px;
   overflow: hidden;
   overflow-y: auto;
@@ -295,11 +303,36 @@ function onMockRecordStart() {
 }
 
 .snap-panel {
+  flex: 1 1 auto;
   width: 100%;
-  height: calc(100vh - 140px);
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   margin: 5px 0 0 0;
+}
+
+/* 窄窗口下左右面板改为上下堆叠，列表占上方固定比例，详情占剩余空间 */
+@media (max-width: 900px) {
+  .proxy-page {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    height: 42%;
+    margin: 5px;
+  }
+
+  .right-panel {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    margin: 5px;
+  }
 }
 
 .register-url {

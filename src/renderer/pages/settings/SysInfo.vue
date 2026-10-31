@@ -35,8 +35,7 @@
       v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly"
       :error-message="!commonStore.serverConfig['portValid'] && item.tooltip == 'settings.sys.port' ? $t('settings.sys.porterror') : null">
       <template #right-icon>
-        <van-switch v-if="item.hasStatus" style="margin-top: 5px;"
-          :model-value="!!commonStore.serverConfig.status"
+        <van-switch v-if="item.hasStatus" style="margin-top: 5px;" :model-value="!!commonStore.serverConfig.status"
           @update:model-value="(val: boolean) => commonStore.serverConfig.status = val"></van-switch>
       </template>
     </van-field>
@@ -85,7 +84,6 @@ let perferences = [
     hasSave: true,
     hasStatus: true,
   },
-  { tooltip: 'settings.sys.mqttBroker', key: 'mqttBroker', },
 ] as Array<SettingPreference>
 
 onMounted(() => {

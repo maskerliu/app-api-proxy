@@ -48,7 +48,7 @@
       class="detail-content">
       <van-cell style="padding: 0;">
         <template #value>
-          <vue-ace-editor :fold="false" :max-lines="22"
+          <vue-ace-editor ref="responseEditor" :fold="false" :fill="true"
             :data="record.responseData == null ? '{}' : JSON.stringify(record.responseData, null, '\t')" />
         </template>
       </van-cell>
@@ -58,7 +58,7 @@
 
 <script lang="ts" setup>
 import { Form, showToast } from 'vant'
-import { inject, PropType, ref } from 'vue'
+import { inject, nextTick, PropType, ref, watch } from 'vue'
 import { ProxyMock } from '@shared'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import ProxyRequestBody from './ProxyRequestBody.vue'
@@ -71,8 +71,12 @@ const props = defineProps({
 
 const detailContainer = ref<typeof Form>()
 const detailResp = ref()
+const responseEditor = ref<InstanceType<typeof VueAceEditor>>()
 const apiDesc = ref<string>(null)
 const openMockRuleMgr = inject<(withRecord: boolean) => void>('openMockRuleMgr')
+
+// 请求体区块随记录有没有而增减，responseBody 的顶部位置会变，需要重新贴合父容器底部
+watch(() => props.record, () => nextTick(() => responseEditor.value?.syncFillHeight()))
 
 // watch(props.record, () => {
 //   updated()
