@@ -2,6 +2,8 @@
 
 ![数据预览](./icons/icon.png)
 
+> 详细使用说明：[docs/使用说明.md](./docs/使用说明.md) ｜ [PDF 版](./docs/使用说明.pdf)
+
 > 旨在推动前后端研发分离的效率小工具，方便前端（移动/PC/FE）同学在研发过程透过代理方便地查看请求数据/伪造数据/覆盖边界，结合接口设计可在前后端并行开发中通过数据Mock功能实现对API接口实现依赖的解耦，加速研发流程。
 > 原工程[app-mock-desktop](https://github.com/maskerliu/app-mock-desktop) 现在废弃了。
 > 欢迎大家试用
@@ -35,10 +37,12 @@ yarn build
 ```
 
 #### 接入指南
-您的应用需对网络请求框架做一个简单改造，在所有需要接入ApiProxy的请求URL的Host的替换为ApiProxy提供的Host，同时在需代理请求的Header中添加
 
-``` java
-req.headers['mock-host'] = origin_host;
-req.headers['mock-uid'] = mock_uid;
+将请求地址改为 `{代理协议}://{代理IP}:{端口}/_proxy{原始Path}{原始Query}`，并添加请求头：
+
+```http
+x-mock-host: https://api.example.com
+x-mock-uid: <在线客户端 UID>
 ```
- 即完成应用端改造，其中origin_host为原请求的host，mock-uid为AppMock代理请求client的id。
+
+其中 `x-mock-host` 为原始请求的协议和域名，`x-mock-uid` 为在线客户端的 ID。完整的接入步骤、代码示例和常见问题见 [docs/使用说明.md](./docs/使用说明.md)。

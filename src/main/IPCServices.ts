@@ -14,22 +14,33 @@ ipcMain.handle(MainApiCmd.Relaunch, (_) => {
     const logPath = app.getPath('logs')
     const out = fse.openSync(path.join(logPath, 'out.log'), 'a')
     const err = fse.openSync(path.join(logPath, 'err.log'), 'a')
-    let updateBash = `update.${os.platform() == 'win32' ? 'exe' : 'sh'}`
 
     if (os.platform() == 'win32') {
-      updateBash = `${path.join(process.resourcesPath, updateBash)}`
+      const helper = path.join(process.resourcesPath, 'update.ps1')
+      // 直接 detached 启动控制台程序时 PowerShell 会立即退出而不执行脚本，需经 shell 转发
+      const child = spawn(
+        'powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+          `"${helper}"`, `"${process.resourcesPath}"`, `"${app.getPath('exe')}"`, `"${path.join(logPath, 'err.log')}"`],
+        {
+          detached: true,
+          shell: true,
+          stdio: ['ignore', out, err],
+          windowsHide: true
+        })
+      child.unref()
     } else {
-      updateBash = `sh ${path.join(process.resourcesPath, updateBash)}`
+      const updateSh = `sh ${path.join(process.resourcesPath, 'update.sh')}`
+      const child = spawn(
+        updateSh,
+        [`"${process.resourcesPath}"`, `"${app.getPath('exe')}"`],
+        {
+          detached: true,
+          shell: true,
+          stdio: ['ignore', out, err]
+        })
+      child.unref()
     }
-    const child = spawn(
-      updateBash,
-      [`"${process.resourcesPath}"`, `"${app.getPath('exe')}"`],
-      {
-        detached: true,
-        shell: true,
-        stdio: ['ignore', out, err]
-      })
-    child.unref()
   } else {
     app.relaunch({ execPath: app.isPackaged ? process.execPath : __dirname })
   }

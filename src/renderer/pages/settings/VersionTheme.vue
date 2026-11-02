@@ -78,7 +78,7 @@
 </template>
 <script lang="ts" setup>
 import { showNotify, showToast } from 'vant'
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Version, versionCheck } from '@shared'
 import { CommonStore } from '../../store'
@@ -100,8 +100,20 @@ const langs = ['en', 'zh-CN']
 
 onMounted(() => {
   window.mainApi?.onDownloadUpdate((...args: any) => {
-    downloadProgress.value = args[0].progress.toFixed(1)
+    const event = args[0] ?? {}
+    if (event.error) {
+      showNotify(String(event.error))
+      downloadProgress.value = 0
+      showDownload.value = false
+      return
+    }
+    const progress = Number(event.progress)
+    if (Number.isFinite(progress)) downloadProgress.value = progress
   })
+})
+
+onBeforeUnmount(() => {
+  window.mainApi?.offDownloadUpdate()
 })
 
 watch(downloadProgress, () => {
@@ -122,21 +134,6 @@ async function onVersionCheck() {
   hasNewVersion.value = false
   try {
     newVersion = await versionCheck(commonStore.serverConfig.platform, commonStore.serverConfig.arch, commonStore.serverConfig.updateServer)
-    newVersion.message = "在QQ，轻松社交" +
-      "\n- [聊天消息]随时随地好友和群消息；" +
-      "\n- [语音通话]、[视频聊天]和亲友自在畅聊；" +
-      "\n- [文件传输]手机电脑多端互传，轻松便捷。" +
-      "\n" +
-      "\n在QQ，轻松生活" +
-      "\n- [空间动态]快速获知好友动态，随时分享生活；" +
-      "\n- [移动支付]话费充值、转账收款、网购一应俱全；" +
-      "\n- [关怀模式]大字体、大图标，操作更简单，长辈使用更方便。" +
-      "\n" +
-      "\n在QQ，轻松娱乐" +
-      "\n- [游戏中心]体验热门手游乐趣，还有更多大神攻略分享；" +
-      "\n- [个性装扮]各种主题、名片、彩铃、气泡、挂件自由选。" +
-      "\n" +
-      "\nQQ9将功能赋能，打造轻松欢乐的社交、娱乐与生活体验。"
     hasNewVersion.value = newVersion.version != commonStore.serverConfig.appVersion
 
     if (!hasNewVersion.value) {

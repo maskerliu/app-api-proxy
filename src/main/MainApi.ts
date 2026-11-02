@@ -2,6 +2,8 @@ import { ipcRenderer } from 'electron'
 import type { LocalServerConfig } from '@shared/base.models'
 import { IMainAPI, MainApiCmd } from '@shared/ipc.api'
 
+let downloadUpdateListener: ((event: any, ...args: any[]) => void) | null = null
+
 const mainApi: IMainAPI = {
   relaunch() {
     ipcRenderer.invoke(MainApiCmd.Relaunch)
@@ -68,7 +70,16 @@ const mainApi: IMainAPI = {
   },
 
   onDownloadUpdate(callback: (...args: any) => void) {
-    ipcRenderer.once(MainApiCmd.DownloadUpdate, (_, ...args: any) => callback(...args))
+    if (downloadUpdateListener != null) ipcRenderer.removeListener(MainApiCmd.DownloadUpdate, downloadUpdateListener)
+    downloadUpdateListener = (_, ...args: any) => callback(...args)
+    ipcRenderer.on(MainApiCmd.DownloadUpdate, downloadUpdateListener)
+  },
+
+  offDownloadUpdate() {
+    if (downloadUpdateListener != null) {
+      ipcRenderer.removeListener(MainApiCmd.DownloadUpdate, downloadUpdateListener)
+      downloadUpdateListener = null
+    }
   },
 }
 

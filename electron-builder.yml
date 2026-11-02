@@ -43,7 +43,6 @@ files:
   - "!**/node_modules/**/tsconfig.json"
   - "**/node_modules/debug/src/**"
   - "**/node_modules/**/cuid2/src/**"
-  - "./update.exe"
 
 electronLanguages:
   - en-US
@@ -54,7 +53,7 @@ win:
   icon: icons/icon.ico
   compression: "maximum"
   extraFiles:
-    - from: "./update.exe"
+    - from: "./update.ps1"
       to: "./resources/"
   target:
     - target: nsis

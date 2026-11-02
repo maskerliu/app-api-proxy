@@ -29,7 +29,7 @@ export async function incrementUpdate(version: Version) {
     const resp = await axios({
       url: version.updateUrl, method: 'GET', responseType: 'stream',
       onDownloadProgress: (event) => {
-        notifyDownloadProgress(event.total ? Math.round((event.loaded / event.total) * 100) : 0)
+        notifyDownloadProgress(event.total ? Math.min(99, Math.round((event.loaded / event.total) * 100)) : 0)
       }
     })
     await pipeline(resp.data, createWriteStream(sourceFile))
@@ -39,13 +39,16 @@ export async function incrementUpdate(version: Version) {
     if (digest == version.sha512) {
       console.log('文件校验通过, 重启安装更新')
       fs.renameSync(destFile, path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar'))
+      notifyDownloadProgress(100)
     } else {
       console.log('文件破损，请重新下载！！')
       try { fs.rmSync(destFile, { force: true }) } catch (_) { }
+      notifyDownloadFailed('更新包校验失败，请重新下载')
     }
   } catch (err) {
     console.error('increment update failed:', err)
     try { fs.rmSync(destFile, { force: true }) } catch (_) { }
+    notifyDownloadFailed('更新下载失败，请重试')
   }
 }
 
@@ -76,13 +79,15 @@ export async function fullUpdate(version: Version) {
     const resp = await axios({
       url: version.updateUrl, method: 'GET', responseType: 'stream',
       onDownloadProgress: (event) => {
-        notifyDownloadProgress(event.total ? Math.round((event.loaded / event.total) * 100) : 0)
+        notifyDownloadProgress(event.total ? Math.min(99, Math.round((event.loaded / event.total) * 100)) : 0)
       }
     })
     await pipeline(resp.data, createWriteStream(downloadDir))
+    notifyDownloadProgress(100)
   } catch (err) {
     console.error('download installer failed:', err)
     try { fs.rmSync(downloadDir, { force: true }) } catch (_) { }
+    notifyDownloadFailed('更新下载失败，请重试')
     throw err
   }
 
@@ -105,9 +110,17 @@ export async function fullUpdate(version: Version) {
 }
 
 function notifyDownloadProgress(progress: number) {
+  notifyDownloadEvent({ progress })
+}
+
+function notifyDownloadFailed(error: string) {
+  notifyDownloadEvent({ progress: 0, error })
+}
+
+function notifyDownloadEvent(event: { progress: number, error?: string }) {
   const win = BrowserWindow.getAllWindows().find(it => it.title == AppName)
   if (win == null || win.isDestroyed()) return
-  win.webContents.send(MainApiCmd.DownloadUpdate, { progress })
+  win.webContents.send(MainApiCmd.DownloadUpdate, event)
 }
 
 function sha512File(file: string): Promise<string> {

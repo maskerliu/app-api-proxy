@@ -54,4 +54,6 @@ export interface IMainAPI {
   onSysThemeChanged(callback: (theme: string) => void): void
 
   onDownloadUpdate(callback: any): void
+
+  offDownloadUpdate(): void
 }
