@@ -61,6 +61,10 @@ export class ProxyService {
     return 'success'
   }
 
+  public clearClientState(uid: string) {
+    this.proxyConfigs.delete(uid)
+  }
+
   public async handleStatRequest(req: any, resp: Response) {
     zlib.unzip(Buffer.from(req.rawbody) as any, async (err: any, buffer: any) => {
       if (!err) {
@@ -94,8 +98,8 @@ export class ProxyService {
 
   public async handleRequest(req: Request, resp: Response) {
     const uid = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_UID)
-    // 清理无效配置
-    if (!this.pushService.hasProxy(uid)) this.proxyConfigs.delete(uid)
+    // 清理无效配置（viewer 与通过注册地址接入的设备都算有效客户端）
+    if (!this.pushService.hasClient(uid)) this.proxyConfigs.delete(uid)
 
     const startTime = new Date().getTime()
     const sessionId = ++this._sessionId
@@ -421,7 +425,8 @@ export class ProxyService {
       }
     }
     if (contentType.startsWith('text/') || contentType.includes('xml')
-      || contentType.includes('javascript') || contentType.includes('urlencoded')) {
+      || contentType.includes('javascript') || contentType.includes('urlencoded')
+      || contentType.startsWith('multipart/')) {
       return JSON.stringify(truncated ? `${text}\n...[truncated ${total} bytes]` : text)
     }
     return JSON.stringify(`[binary ${total} bytes${truncated ? ', truncated' : ''}]`)

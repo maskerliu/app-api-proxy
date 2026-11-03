@@ -5,6 +5,7 @@ export * from './base.models'
 export * from './ipc.api'
 export * from './proxy.models'
 export * from './proxy.api'
+export * from './uid'
 export * from './virtualclient.api'
 
 export * from './mapi'

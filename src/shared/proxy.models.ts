@@ -73,12 +73,23 @@ export namespace ProxyMock {
     conn?: Connection
   }
 
+  export type ClientKind = 'viewer' | 'device'
+
   export interface ClientInfo {
     connId: string
     uid: string
     ip: string
     port: number
     username?: string
+    // viewer: 通过 SockJS 注册的 UI；device: 通过注册地址接入的被调试设备
+    kind?: ClientKind
+    ownerUid?: string // device 归属的 viewer uid
+  }
+
+  export interface RegisterResult {
+    uid: string
+    ownerUid?: string
+    message?: string
   }
 
   export enum PushMsgType {
@@ -87,10 +98,12 @@ export namespace ProxyMock {
   }
 
   export enum CMDType {
-    REGISTER = 0,
+    REGISTER = 0, // client -> server: 请求注册，由服务端分配 uid
     KICKDOWN = 1,
     RECONNECT = 2,
-    BROADCAST = 3
+    BROADCAST = 3,
+    REGISTERED = 4, // server -> client: 注册成功，content 为新的 uid
+    DEVICE_REGISTERED = 5 // server -> viewer: 有设备通过注册地址接入，content 为设备 uid
   }
 
   export enum BizType {

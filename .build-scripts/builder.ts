@@ -41,6 +41,7 @@ function build() {
   deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
 
   addSpinnerTask(mainConfig)
+  addSpinnerTask(webConfig)
   addSpinnerTask(rendererConfig)
 }
 

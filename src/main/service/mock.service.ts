@@ -18,15 +18,17 @@ export class MockService {
 
   public async mock(sessionId: number, uid: string, url: string, startTime: number, delay: number): Promise<ProxyMock.MockResponse> {
 
-    if (uid == null || !this.clientMockStatus.has(uid)) {
+    // Mock 开关由 viewer 控制；设备请求沿用其所属 viewer 的启用状态
+    const ownerUid = uid == null ? null : this.pushService.resolveOwnerUid(uid)
+    if (ownerUid == null || !this.clientMockStatus.has(ownerUid)) {
       throw new Error('no match mock rule')
     }
 
-    const ruleId = this.clientMockStatus.get(uid)
+    const ruleId = this.clientMockStatus.get(ownerUid)
     const rule = await this.mockRepo.get('_id', ruleId)
     if (rule == null) {
       // 规则已被删除或索引失效，清掉客户端的启用状态
-      this.clientMockStatus.delete(uid)
+      this.clientMockStatus.delete(ownerUid)
       throw new Error('mock rule not found')
     }
 
@@ -92,6 +94,10 @@ export class MockService {
     let removeResult = await this.mockRepo.delete(ruleId)
     this.updateMockSettings(uid, ruleId, false)
     return removeResult ? '成功删除记录' : 'Mock规则删除失败'
+  }
+
+  public clearClientState(uid: string) {
+    this.clientMockStatus.delete(uid)
   }
 
   private updateMockSettings(uid: string, ruleId: string, isMock: boolean) {

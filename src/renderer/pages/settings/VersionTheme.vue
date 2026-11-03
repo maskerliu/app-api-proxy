@@ -20,9 +20,19 @@
     </van-field>
 
     <van-field center input-align="right" :label="$t('settings.sys.fontsize')" label-width="4rem" :readonly="true">
+      <template #left-icon>
+        <van-icon class="iconfont icon-font-size" style="margin-left: 15px;" />
+      </template>
       <template #input>
-        <van-slider v-model="commonStore.fontSize" :min="7" :max="10" @change="commonStore.updateFontSize"
-          style="width: 60%; margin-right: 10px;" />
+        <van-popover v-model:show="showFontSizes" placement="bottom-end" style="min-width: 140px">
+          <van-cell v-for="size in fontSizes" :title="`${size}`" clickable is-link @click="onSelectFontSize(size)">
+          </van-cell>
+          <template #reference>
+            <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
+              {{ commonStore.fontSize }}
+            </div>
+          </template>
+        </van-popover>
       </template>
     </van-field>
 
@@ -61,14 +71,17 @@
       </template>
     </van-field>
 
-    <van-popup round v-model:show="showDownload" :closeable="popupCloseable" :close-on-click-overlay="false"
-      teleport="#app">
+    <van-popup round v-model:show="showDownload" :closeable="!showRestart" :close-on-click-overlay="false"
+      teleport="#app" @close="onPopupClose">
       <van-row class="version-popup" justify="center">
         <van-icon class="iconfont icon-version-update" style="color: green; font-size: 2rem;" />
         <pre class="update-message">{{ newVersion.message }} </pre>
         <div style="width: 100%;">
           <van-progress :percentage="downloadProgress" stroke-width="4" class="download-progress" />
         </div>
+        <van-button v-if="downloading" plain block type="default" size="small" @click="cancelDownload">
+          {{ $t('settings.sys.cancelUpdate') }}
+        </van-button>
         <van-button v-if="showRestart" plain block type="success" size="small" @click="restart">
           {{ $t('settings.sys.restart') }}
         </van-button>
@@ -77,26 +90,28 @@
   </van-cell-group>
 </template>
 <script lang="ts" setup>
+import { Version, versionCheck } from '@shared'
 import { showNotify, showToast } from 'vant'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Version, versionCheck } from '@shared'
-import { CommonStore } from '../../store'
+import { CommonStore, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../../store'
 
 const commonStore = CommonStore()
 const i18n = useI18n()
 const versionChecking = ref<boolean>(false)
 const hasNewVersion = ref<boolean>(false)
 const showLangs = ref<boolean>(false)
+const showFontSizes = ref<boolean>(false)
 const showDownload = ref<boolean>(false)
 const showRestart = ref<boolean>(false)
+const downloading = ref<boolean>(false)
 const downloadProgress = ref<number>(0)
 
-const popupCloseable = window.isWeb
 let newVersion: Version = null
 
 const value1 = ref(0)
 const langs = ['en', 'zh-CN']
+const fontSizes = Array.from({ length: FONT_SIZE_MAX - FONT_SIZE_MIN + 1 }, (_v, i) => FONT_SIZE_MIN + i)
 
 onMounted(() => {
   window.mainApi?.onDownloadUpdate((...args: any) => {
@@ -104,6 +119,7 @@ onMounted(() => {
     if (event.error) {
       showNotify(String(event.error))
       downloadProgress.value = 0
+      downloading.value = false
       showDownload.value = false
       return
     }
@@ -118,6 +134,7 @@ onBeforeUnmount(() => {
 
 watch(downloadProgress, () => {
   if (downloadProgress.value == 100) {
+    downloading.value = false
     showRestart.value = !newVersion.fullUpdate
     hasNewVersion.value = false
   }
@@ -127,6 +144,12 @@ function onSelectLang(_lang: string) {
   commonStore.updateLang(_lang)
   showLangs.value = false
   i18n.locale.value = _lang
+}
+
+function onSelectFontSize(size: number) {
+  commonStore.fontSize = size
+  commonStore.updateFontSize()
+  showFontSizes.value = false
 }
 
 async function onVersionCheck() {
@@ -148,10 +171,20 @@ async function onVersionCheck() {
 }
 
 function downloadNewVersion() {
+  if (downloading.value) return
   showDownload.value = true
   downloadProgress.value = 0
-  if (newVersion.fullUpdate) showRestart.value = false
+  showRestart.value = false
+  downloading.value = true
   window.mainApi?.downloadUpdate(newVersion)
+}
+
+function cancelDownload() {
+  window.mainApi?.cancelUpdate()
+}
+
+function onPopupClose() {
+  if (downloading.value) window.mainApi?.cancelUpdate()
 }
 
 function restart() {

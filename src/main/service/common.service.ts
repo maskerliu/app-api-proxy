@@ -4,7 +4,6 @@ import { inject, injectable } from 'inversify'
 import path from 'path'
 import 'reflect-metadata'
 import type { LocalServerConfig } from '@shared/base.models'
-import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../misc/utils'
 import { ProxyService } from './proxy.service'
@@ -81,20 +80,8 @@ export class CommonService {
     return this._serverConfig
   }
 
-  public register(uid: string) {
-    if (uid != null) {
-      let data: ProxyMock.PushMsg<any> = {
-        type: ProxyMock.PushMsgType.CMD,
-        payload: {
-          type: ProxyMock.CMDType.REGISTER,
-          content: uid
-        }
-      }
-      this.pushService.sendMessage(uid, data)
-      return '注册成功'
-    } else {
-      throw 'invalid uid'
-    }
+  public registerDevice(ownerUid: string, username?: string) {
+    return this.pushService.registerDevice(ownerUid, username)
   }
 
   saveServerConfig(config: LocalServerConfig) {

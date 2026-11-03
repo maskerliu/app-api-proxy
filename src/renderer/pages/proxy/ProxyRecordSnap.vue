@@ -31,18 +31,18 @@
           耗时: <span class="timecost-value">{{ source.time != null ? source.time : "-----" }}</span> ms
         </span>
         <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
-          style="margin-left: 5px; font-size: 0.5rem;" v-if="source.responseData != null">
+          style="margin-left: 5px; font-size: var(--van-font-size-xs);" v-if="source.responseData != null">
           {{ source.responseData.code }}<b>[BIZ]</b>
         </van-tag>
 
         <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'"
-          style="margin-left: 5px; font-size: 0.5rem;">
+          style="margin-left: 5px; font-size: var(--van-font-size-xs);">
           {{ source.statusCode }} <b>[HTTP]</b>
         </van-tag>
 
         <van-tag v-if="source.type == 5020" type="primary" style="margin-left: 5px;">[打点]</van-tag>
         <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'"
-          style="margin-left: 5px; font-size: 0.5rem;">
+          style="margin-left: 5px; font-size: var(--van-font-size-xs);">
           {{ source.method }}
         </van-tag>
         <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
@@ -81,7 +81,7 @@ const recordStore = ProxyRecordStore()
   height: 100%;
   left: 6px;
   top: 0;
-  font-size: 0.5rem;
+  font-size: var(--van-font-size-xs);
   font-weight: bold;
   border-left: 2px dashed var(--van-gray-8);
   /* color: white; */
@@ -99,25 +99,25 @@ const recordStore = ProxyRecordStore()
 
 .stat-snap-pid {
   max-width: 100px;
-  font-size: 0.6rem;
+  font-size: var(--van-font-size-xs);
   color: #8c7ae6;
 }
 
 .stat-snap-eid {
   max-width: 100px;
-  font-size: 0.6rem;
+  font-size: var(--van-font-size-xs);
   color: #e1b12c;
   margin-top: 5px;
 }
 
 .stat-snap-type {
-  font-size: 0.6rem;
+  font-size: var(--van-font-size-xs);
   color: #d35400;
 }
 
 .request-snap-timecost {
   margin-left: 5px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
 }
 
 .timecost-value {
@@ -131,7 +131,7 @@ const recordStore = ProxyRecordStore()
   position: absolute;
   top: 10px;
   width: calc(100% - 55px);
-  font-size: 0.8rem;
+  font-size: var(--van-font-size-md);
   font-weight: 500;
   display: block;
   white-space: nowrap;

@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ConfigProviderTheme, ConfigProviderThemeVars, showNotify } from 'vant'
 import type { LocalServerConfig } from '@shared/base.models'
 import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID, updateUpdateServer } from '@shared'
-import { generateUid, PushClient } from '../common'
+import { API_URL } from '@shared/api.const'
+import { PushClient } from '../common'
 
 export { ProxyRecordStore } from './ProxyRecords'
 
@@ -21,7 +22,6 @@ const BASE_THEME_VARS: ConfigProviderThemeVars = {
   cellGroupInsetPadding: '5px',
   cellGroupInsetTitlePadding: '5px 20px',
   collapseItemContentPadding: '0px',
-  tagFontSize: '0.6rem',
   tagPadding: '2px 5px',
   tagRadius: '5px',
   cellVerticalPadding: '8px',
@@ -33,9 +33,16 @@ const BASE_THEME_VARS: ConfigProviderThemeVars = {
   dialogRadius: '8px',
   floatingBubbleBackground: '#f04b1e',
   tabsLineHeight: '1.8rem',
-  tabFontSize: '0.9rem',
   tabLineHeight: '1rem',
 }
+
+const FONT_SIZE_MIN = 7
+const FONT_SIZE_MAX = 10
+const FONT_SIZE_DEFAULT = 9
+// 正文字号在设置值基础上的偏移，AceEditor 等需要显式 px 的地方复用该值
+const FONT_SIZE_MD_OFFSET = 4
+
+export { FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_MD_OFFSET }
 
 export const CommonStore = defineStore('Common', {
   state: () => {
@@ -44,7 +51,7 @@ export const CommonStore = defineStore('Common', {
       uid: '',
       theme: 'light' as ConfigProviderTheme,
       themeVars: { ...BASE_THEME_VARS },
-      fontSize: 9,
+      fontSize: FONT_SIZE_DEFAULT,
       lang: 'zh-CN',
       showDebugPanel: false,
       showQrCode: false,
@@ -64,7 +71,7 @@ export const CommonStore = defineStore('Common', {
       const wrapLang = window.localStorage.getItem('lang')
       this.lang = wrapLang != null ? wrapLang : 'zh-CN'
 
-      this.fontSize = parseInt(window.localStorage.getItem('fontSize') || '9')
+      this.fontSize = this.normalizeFontSize(window.localStorage.getItem('fontSize'))
       this.updateFontSize()
 
       pushClient = new PushClient()
@@ -95,13 +102,20 @@ export const CommonStore = defineStore('Common', {
       }
       this.themeVars = Object.assign({}, this.themeVars, grays)
     },
+    normalizeFontSize(value: string | number): number {
+      const size = typeof value == 'number' ? value : parseInt(value ?? '')
+      return Number.isFinite(size) ? Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, size)) : FONT_SIZE_DEFAULT
+    },
     updateFontSize() {
+      this.fontSize = this.normalizeFontSize(this.fontSize)
       window.localStorage.setItem('fontSize', `${this.fontSize}`)
       this.themeVars = Object.assign({}, this.themeVars, {
         fontSizeXs: `${this.fontSize}px`,
         fontSizeSm: `${this.fontSize + 2}px`,
-        fontSizeMd: `${this.fontSize + 4}px`,
+        fontSizeMd: `${this.fontSize + FONT_SIZE_MD_OFFSET}px`,
         fontSizeLg: `${this.fontSize + 6}px`,
+        tagFontSize: `${this.fontSize}px`,
+        tabFontSize: `${this.fontSize + 5}px`,
       })
     },
     updateLang(lang: string) {
@@ -119,12 +133,6 @@ export const CommonStore = defineStore('Common', {
 
     },
     updateServerConfig(config?: LocalServerConfig) {
-      this.uid = window.localStorage.getItem('uid')
-      if (this.uid == null) {
-        this.uid = generateUid()
-        window.localStorage.setItem('uid', this.uid)
-      }
-
       this.serverConfig = config ? config : this.serverConfig
       updateUpdateServer(this.serverConfig.updateServer)
       const ip = this.serverConfig.ip || '127.0.0.1'
@@ -132,13 +140,28 @@ export const CommonStore = defineStore('Common', {
         updateBaseDomain(`${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}`)
       }
       updateClientUID(this.uid)
+      this.buildRegisterUrl()
 
-      this.registerUrl = `${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}/appmock/register/${this.uid}`
       if (window.isWeb) {
-        pushClient.start(`${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}`, this.uid)
+        pushClient.start(`${this.serverConfig.protocol}://${ip}:${this.serverConfig.port}`)
       } else {
-        pushClient.start(`${this.serverConfig.protocol}://localhost:${this.serverConfig.port}`, this.uid)
+        pushClient.start(`${this.serverConfig.protocol}://localhost:${this.serverConfig.port}`)
       }
+    },
+    // 注册成功后使用服务端分配的 uid，旧 uid 不再复用
+    applyUid(uid: string) {
+      if (uid == null || uid.length === 0) return
+      this.uid = uid
+      updateClientUID(uid)
+      this.buildRegisterUrl()
+    },
+    buildRegisterUrl() {
+      const { protocol, ip, port } = this.serverConfig ?? {} as LocalServerConfig
+      if (!this.uid || !protocol || port == null) {
+        this.registerUrl = ''
+        return
+      }
+      this.registerUrl = `${protocol}://${ip || '127.0.0.1'}:${port}${API_URL.AppMock}${API_URL.MockRegister}/${this.uid}`
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {
       this.clientInfos = [...clientInfos]

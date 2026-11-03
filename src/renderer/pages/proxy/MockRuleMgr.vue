@@ -370,7 +370,7 @@ function onRecordDeleteConfirm() {
 .record-snap {
   border-radius: 4px;
   border: 2px #ddd dashed;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

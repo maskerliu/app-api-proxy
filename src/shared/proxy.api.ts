@@ -43,7 +43,7 @@ export function getAllPushClients() {
 }
 
 export function mockRegister(uid: string) {
-  return get<string>(`${API_URL.AppMock}${API_URL.MockRegister}/${uid}`)
+  return get<ProxyMock.RegisterResult>(`${API_URL.AppMock}${API_URL.MockRegister}/${uid}`)
 }
 
 export function broadcast(uid: string) {

@@ -35,6 +35,10 @@ const mainApi: IMainAPI = {
       .catch(err => console.error('downloadUpdate failed:', err))
   },
 
+  cancelUpdate() {
+    ipcRenderer.invoke(MainApiCmd.CancelUpdate)
+  },
+
   sendServerEvent: function (): void {
     ipcRenderer.invoke(MainApiCmd.SendServerEvent)
   },

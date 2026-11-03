@@ -91,6 +91,7 @@ function onOpenDebugPanel() {
 #app {
   /* font-family: "Consolas"; */
   background: var(--van-gray-1);
+  font-size: var(--van-font-size-md);
   letter-spacing: 1px;
   /* -moz-user-select: none;
   -webkit-user-select: none;
@@ -160,7 +161,7 @@ function onOpenDebugPanel() {
   margin: 20vh auto;
   background-color: #262f37e0;
   border-radius: 10px;
-  font-size: 0.8rem;
+  font-size: var(--van-font-size-md);
   color: #bdc3c7;
 }
 

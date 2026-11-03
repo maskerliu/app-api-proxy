@@ -20,34 +20,76 @@ export interface InstallOptions {
 }
 
 
-export async function incrementUpdate(version: Version) {
-  const sourceFile = path.join(USER_DATA_DIR, 'update', `app-${version.version}.gz`)
+const DOWNLOAD_TIMEOUT = 60_000
+
+let activeUpdate: AbortController | null = null
+
+export async function runUpdate(version: Version) {
+  if (activeUpdate != null) {
+    console.warn('update already in progress, duplicated request ignored')
+    return
+  }
+
+  const controller = new AbortController()
+  activeUpdate = controller
+  try {
+    if (version.fullUpdate) await fullUpdate(version, controller.signal)
+    else await incrementUpdate(version, controller.signal)
+  } finally {
+    if (activeUpdate === controller) activeUpdate = null
+  }
+}
+
+export function cancelUpdate() {
+  activeUpdate?.abort()
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (!signal?.aborted) return
+  const err = new Error('update aborted')
+  err.name = 'AbortError'
+  throw err
+}
+
+export async function incrementUpdate(version: Version, signal?: AbortSignal) {
+  const updateDir = path.join(USER_DATA_DIR, 'update')
+  const sourceFile = path.join(updateDir, `app-${version.version}.gz`)
   const destFile = path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'tmp-update')
-  try { fs.rmSync(sourceFile) } catch (err) { console.log('fail to delete file', sourceFile) }
+  fs.mkdirSync(updateDir, { recursive: true })
+  fs.rmSync(sourceFile, { force: true })
 
   try {
     const resp = await axios({
       url: version.updateUrl, method: 'GET', responseType: 'stream',
+      timeout: DOWNLOAD_TIMEOUT, signal,
       onDownloadProgress: (event) => {
         notifyDownloadProgress(event.total ? Math.min(99, Math.round((event.loaded / event.total) * 100)) : 0)
       }
     })
-    await pipeline(resp.data, createWriteStream(sourceFile))
-    await pipeline(createReadStream(sourceFile), createGunzip(), createWriteStream(destFile))
+    await pipeline(resp.data, createWriteStream(sourceFile), { signal })
+    throwIfAborted(signal)
 
     const digest = await sha512File(sourceFile)
-    if (digest == version.sha512) {
-      console.log('文件校验通过, 重启安装更新')
-      fs.renameSync(destFile, path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar'))
-      notifyDownloadProgress(100)
-    } else {
+    if (digest !== version.sha512) {
       console.log('文件破损，请重新下载！！')
-      try { fs.rmSync(destFile, { force: true }) } catch (_) { }
+      fs.rmSync(sourceFile, { force: true })
       notifyDownloadFailed('更新包校验失败，请重新下载')
+      return
     }
+
+    await pipeline(createReadStream(sourceFile), createGunzip(), createWriteStream(destFile), { signal })
+    throwIfAborted(signal)
+    fs.renameSync(destFile, path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar'))
+    notifyDownloadProgress(100)
   } catch (err) {
+    fs.rmSync(sourceFile, { force: true })
+    fs.rmSync(destFile, { force: true })
+    if (signal?.aborted || axios.isCancel(err)) {
+      console.log('increment update cancelled')
+      notifyDownloadFailed('更新已取消')
+      return
+    }
     console.error('increment update failed:', err)
-    try { fs.rmSync(destFile, { force: true }) } catch (_) { }
     notifyDownloadFailed('更新下载失败，请重试')
   }
 }
@@ -67,44 +109,83 @@ function configureMacAutoUpdater() {
   })
 }
 
-export async function fullUpdate(version: Version) {
-  if (os.platform() == 'darwin') configureMacAutoUpdater()
+export async function fullUpdate(version: Version, signal?: AbortSignal) {
+  const platform = os.platform()
+  if (platform == 'linux') {
+    notifyDownloadFailed('当前平台暂不支持全量更新，请使用增量更新或手动安装')
+    throw new Error('full update is not supported on linux')
+  }
+  if (platform == 'darwin') configureMacAutoUpdater()
 
-  let ext = os.platform() == 'linux' ? 'AppImage' : os.platform() == 'darwin' ? 'zip' : 'exe'
-  let downloadDir = path.join(USER_DATA_DIR, 'update', `installer-${version.version}.${ext}`)
-
-  try { fs.rmSync(downloadDir) } catch (err) { console.log('fail to delete file', downloadDir) }
+  const ext = platform == 'darwin' ? 'zip' : 'exe'
+  const updateDir = path.join(USER_DATA_DIR, 'update')
+  const installerPath = path.join(updateDir, `installer-${version.version}.${ext}`)
+  const partFile = `${installerPath}.part`
+  fs.mkdirSync(updateDir, { recursive: true })
+  fs.rmSync(partFile, { force: true })
+  fs.rmSync(installerPath, { force: true })
 
   try {
     const resp = await axios({
       url: version.updateUrl, method: 'GET', responseType: 'stream',
+      timeout: DOWNLOAD_TIMEOUT, signal,
       onDownloadProgress: (event) => {
         notifyDownloadProgress(event.total ? Math.min(99, Math.round((event.loaded / event.total) * 100)) : 0)
       }
     })
-    await pipeline(resp.data, createWriteStream(downloadDir))
-    notifyDownloadProgress(100)
+    await pipeline(resp.data, createWriteStream(partFile), { signal })
+    throwIfAborted(signal)
   } catch (err) {
+    fs.rmSync(partFile, { force: true })
+    if (signal?.aborted || axios.isCancel(err)) {
+      console.log('full update cancelled')
+      notifyDownloadFailed('更新已取消')
+      return
+    }
     console.error('download installer failed:', err)
-    try { fs.rmSync(downloadDir, { force: true }) } catch (_) { }
     notifyDownloadFailed('更新下载失败，请重试')
     throw err
   }
 
+  if (!version.sha512) {
+    fs.rmSync(partFile, { force: true })
+    notifyDownloadFailed('更新包缺少校验信息，无法安装')
+    throw new Error('missing sha512 for full update')
+  }
+  const digest = await sha512File(partFile)
+  if (digest !== version.sha512) {
+    fs.rmSync(partFile, { force: true })
+    notifyDownloadFailed('更新包校验失败，请重新下载')
+    throw new Error('update package verification failed')
+  }
+  if (signal?.aborted) {
+    fs.rmSync(partFile, { force: true })
+    notifyDownloadFailed('更新已取消')
+    return
+  }
+
+  try {
+    fs.renameSync(partFile, installerPath)
+  } catch (err) {
+    fs.rmSync(partFile, { force: true })
+    console.error('save installer failed:', err)
+    notifyDownloadFailed('更新包保存失败，请重试')
+    throw err
+  }
+  notifyDownloadProgress(100)
+
   let opt = {
-    installerPath: downloadDir,
+    installerPath,
     isSilent: false,
     isForceRunAfter: false,
     isAdminRightsRequired: false
   }
 
-  switch (os.platform()) {
+  switch (platform) {
     case 'win32':
       return await doWinInstall(opt)
     case 'darwin':
       return await doMacInstall(opt)
-    case 'linux':
-      return await doLinuxInstall(opt)
   }
   return false
 }
@@ -179,14 +260,6 @@ async function doWinInstall(options: InstallOptions) {
     }
   })
   return true
-}
-
-async function doLinuxInstall(options: InstallOptions) {
-  // TODO implement linux AppImage full update
-
-
-
-  return false
 }
 
 async function spawnLog(cmd: string, args: string[] = [], env: any = undefined, stdio: StdioOptions = "ignore"): Promise<boolean> {

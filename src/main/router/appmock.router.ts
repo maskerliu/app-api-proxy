@@ -24,74 +24,126 @@ export class AppMockRouter extends BaseRouter {
   private proxyService: ProxyService
 
   private _clients: Map<string, ReqResp> = new Map()
+  private _heartbeat: ReturnType<typeof setInterval> = null
+
+  private static readonly HEARTBEAT_INTERVAL = 15000
+  private static readonly RETRY_INTERVAL = 3000
 
   constructor() {
     super()
 
-    this.router.get('/sse/:uid', (req, resp) => {
-      resp.setHeader('Content-Type', 'text/event-stream')
-      resp.setHeader('Cache-Control', 'no-cache')
-      // resp.setHeader('Connection', 'keep-alive')
-      // resp.setHeader('Keep-Alive', 'max=10,timeout=15000')
-      resp.setHeader('Access-Control-Allow-Origin', '*')
-      resp.flushHeaders()
+    this.router.get('/sse/broadcast/:uid', (req, resp) => {
+      const from = req.params['uid']
+      const chunk = `event: warning\nid: ${Date.now()}\ndata: hello[${Math.random()} from ${from}]\n\n`
 
-      const uid = (req.headers['x-mock-uid'] as string) ?? req.params['uid']
-      if (uid == null) {
-        resp.end()
+      this._clients.forEach((it, uid) => {
+        if (it.resp.writableEnded || it.resp.destroyed) {
+          this._clients.delete(uid)
+          return
+        }
+        try {
+          it.resp.write(chunk)
+        } catch (err) {
+          console.warn(`sse broadcast failed: ${uid}`, err)
+          this._clients.delete(uid)
+        }
+      })
+      this.stopHeartbeatIfIdle()
+
+      resp.send(`broadcast success from ${from}`)
+    })
+
+    this.router.get('/sse/:uid', (req, resp) => {
+      const uid = (req.headers['x-mock-uid'] as string) || req.params['uid']
+      if (!uid) {
+        resp.status(400).end()
         return
       }
 
+      resp.status(200)
+      resp.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+      resp.setHeader('Cache-Control', 'no-cache, no-transform')
+      // HTTP/2 下不能带 Connection/Keep-Alive 这类连接级头，否则会抛 ERR_HTTP2_INVALID_CONNECTION_HEADERS
+      // 关闭 nginx 等反向代理的响应缓冲，否则事件会被攒着一起发
+      resp.setHeader('X-Accel-Buffering', 'no')
+      resp.setHeader('Access-Control-Allow-Origin', '*')
+      resp.flushHeaders()
+
       const previous = this._clients.get(uid)
-      if (previous != null && previous.resp !== resp) {
-        try {
-          previous.resp.end()
-        } catch (err) {
-          console.warn(`close previous sse failed: ${uid}`, err)
-        }
-      }
+      if (previous != null && previous.resp !== resp) this.closeClient(previous.resp)
       this._clients.set(uid, { req, resp })
+      this.startHeartbeat()
 
       const cleanup = () => {
         // 只清理自己这条连接，重连后的新连接不能被旧连接的 close 事件删掉
-        if (this._clients.get(uid)?.resp === resp) this._clients.delete(uid)
+        if (this._clients.get(uid)?.resp !== resp) return
+        this._clients.delete(uid)
+        this.stopHeartbeatIfIdle()
       }
 
-      req.on('error', (err: any) => {
-        console.log(`${new Date()}\terror: ${err}`, err.code)
-        cleanup()
-      })
-
-      req.on('close', () => {
-        console.log(`${new Date()}\treq close: ${uid}\t ${req.closed}`)
-        cleanup()
-      })
+      req.on('error', () => cleanup())
+      req.on('close', cleanup)
       resp.on('close', cleanup)
-      // console.log(`${logDate(new Date())}\t${req.headers['x-mock-uid']} connected\t ${req.closed}`)
+      resp.on('error', cleanup)
+
+      try {
+        // 告知客户端断线后的重连间隔
+        resp.write(`retry: ${AppMockRouter.RETRY_INTERVAL}\n\n`)
+      } catch (err) {
+        console.warn(`sse handshake failed: ${uid}`, err)
+        cleanup()
+      }
     })
 
-    this.router.get('/sse/broadcast/:uid', (req, resp) => {
-      this._clients.forEach(it => {
-        console.log(`send data from [${req.params['uid']}] to [${it.req.headers['x-mock-uid']}]`)
+  }
+
+  private closeClient(resp: Response) {
+    try {
+      if (!resp.writableEnded) resp.end()
+    } catch (err) {
+      console.warn('close previous sse failed:', err)
+    }
+  }
+
+  // 心跳注释行，避免空闲连接被浏览器/系统/代理判定超时
+  private startHeartbeat() {
+    if (this._heartbeat != null) return
+
+    this._heartbeat = setInterval(() => {
+      this._clients.forEach((it, uid) => {
+        if (it.resp.writableEnded || it.resp.destroyed) {
+          this._clients.delete(uid)
+          return
+        }
         try {
-          it.resp.write(`event: warning\n`)
-          it.resp.write(`id: ${new Date().getTime()}\n`)
-          it.resp.write(`data: hello[${Math.random()} from ${req.params['uid']}]\n\n`)
+          it.resp.write(': ping\n\n')
         } catch (err) {
-          console.warn(`sse broadcast failed: ${req.params['uid']}`, err)
+          console.warn(`sse heartbeat failed: ${uid}`, err)
+          this._clients.delete(uid)
         }
       })
-      resp.send(`${req.headers['uid']} broadcast success`)
-      resp.end()
-    })
+      this.stopHeartbeatIfIdle()
+    }, AppMockRouter.HEARTBEAT_INTERVAL)
+    this._heartbeat.unref?.()
+  }
 
+  private stopHeartbeatIfIdle() {
+    if (this._clients.size > 0 || this._heartbeat == null) return
+    clearInterval(this._heartbeat)
+    this._heartbeat = null
   }
 
   override initApiInfos(): void {
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: `${API_URL.MockRegister}/:uid`, func: 'register', target: 'commonService',
+      path: `${API_URL.MockRegister}/:uid`, func: 'registerDevice', target: 'commonService',
       params: [{ key: 'uid', type: ParamType.Path }]
+    })
+    // 兼容历史二维码地址 .../register?uid=xxx
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.MockRegister, func: 'registerDevice', target: 'commonService',
+      params: [{ key: 'uid', type: ParamType.Query }]
     })
     this.addApiInfo({
       method: BizNetwork.Method_Get,

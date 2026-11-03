@@ -5,7 +5,7 @@ import os from 'os'
 import path from 'path'
 import type { Version } from '@shared/base.models'
 import { MainApiCmd } from '@shared/ipc.api'
-import { fullUpdate, incrementUpdate } from './AppUpdater'
+import { cancelUpdate, runUpdate } from './AppUpdater'
 import { USER_DATA_DIR } from './MainConst'
 import { getAppWindow } from './misc/utils'
 
@@ -128,6 +128,9 @@ ipcMain.handle(MainApiCmd.SetAppTheme, (_, theme: ('system' | 'light' | 'dark'))
 })
 
 ipcMain.handle(MainApiCmd.DownloadUpdate, async (_, newVersion: Version) => {
-  if (newVersion.fullUpdate) await fullUpdate(newVersion)
-  else await incrementUpdate(newVersion)
+  await runUpdate(newVersion)
+})
+
+ipcMain.handle(MainApiCmd.CancelUpdate, () => {
+  cancelUpdate()
 })

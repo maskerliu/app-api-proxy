@@ -7,7 +7,7 @@
 
       <audio v-show="previewType == 0" controls preload="metadata" :src="audioSrc" @error="onPreviewError"></audio>
 
-      <van-image v-show="previewType == 1" :src="imgSrc" width="100%" height="100%" fit="contain" show-loading>
+      <van-image v-show="previewType == 1" :src="imgSrc" fit="contain" show-loading>
         <template v-slot:loading>
           <van-loading type="spinner" size="20" />
         </template>
@@ -31,7 +31,7 @@ import axios from 'axios'
 import Hls from 'hls.js'
 import { showToast } from 'vant'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { CommonStore } from '../../store'
+import { CommonStore, FONT_SIZE_MD_OFFSET } from '../../store'
 
 const commonStore = CommonStore()
 
@@ -54,7 +54,6 @@ let settingFromModel = false
 
 let _editor: Ace.Editor = null
 let _defOpts: Partial<Ace.EditorOptions> = {
-  // fontSize: 11,
   // maxLines: 22,
   // minLines: 1,
   theme: 'ace/theme/cloud_editor_dark',
@@ -100,6 +99,8 @@ const imgSrc = ref<string>()
 const audioSrc = ref<string>()
 const videoSrc = ref<string>()
 let hls: Hls
+// 每次预览递增，用于丢弃上一个预览仍在进行的异步结果
+let previewSeq = 0
 
 // setValue 会重置折叠状态，折叠必须在赋值之后执行
 function applyFold() {
@@ -110,18 +111,23 @@ const FILL_MIN_LINES = 3
 const FILL_BOTTOM_GAP = 5
 
 let fillObserver: ResizeObserver
+let fillLines = 0
 
 function scrollParentOf(el: HTMLElement): HTMLElement {
   let node = el.parentElement
   while (node != null && node !== document.body) {
+    // OverlayScrollbars 内容未溢出时 viewport 是 overflow: hidden，只能靠属性识别，
+    // 否则会越过面板找到外层滚动容器，贴合高度按错误的高度计算
+    if (node.hasAttribute('data-overlayscrollbars-viewport')) return node
     if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node
     node = node.parentElement
   }
   return null
 }
 
-// 按滚动容器的剩余高度换算行数，用内容坐标计算，滚动时结果保持不变
-function syncFillHeight() {
+// 按滚动容器的剩余高度换算行数，用内容坐标计算，滚动时结果保持不变。
+// allowShrink=false 用于折叠面板展开：保留当前高度让内容撑开页面，而不是压缩响应体
+function syncFillHeight(allowShrink = true) {
   if (!props.fill || _editor == null || aceEditor.value == null) return
 
   const el = aceEditor.value
@@ -131,14 +137,21 @@ function syncFillHeight() {
   const viewportHeight = parent?.clientHeight ?? window.innerHeight
   const offsetTop = el.getBoundingClientRect().top - viewportTop + (parent?.scrollTop ?? window.scrollY)
   const lineHeight = _editor.renderer.lineHeight || 16
-  const lines = Math.max(FILL_MIN_LINES, Math.floor((viewportHeight - offsetTop - FILL_BOTTOM_GAP) / lineHeight))
+  const needed = Math.max(FILL_MIN_LINES, Math.floor((viewportHeight - offsetTop - FILL_BOTTOM_GAP) / lineHeight))
+  const lines = allowShrink ? needed : Math.max(needed, fillLines)
 
+  fillLines = lines
   _editor.setOption('minLines', lines)
   _editor.setOption('maxLines', lines)
 }
 
+function onWindowResize() {
+  syncFillHeight()
+}
+
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
+  _defOpts.fontSize = commonStore.fontSize + FONT_SIZE_MD_OFFSET
   _defOpts.theme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
   if (props.maxLines) {
     _defOpts.maxLines = props.maxLines
@@ -168,15 +181,15 @@ onMounted(() => {
   _editor.renderer.scroller.addEventListener('click', onClick)
 
   if (props.fill) {
-    nextTick(syncFillHeight)
+    nextTick(() => syncFillHeight())
     fillObserver = new ResizeObserver(() => syncFillHeight())
     fillObserver.observe(scrollParentOf(aceEditor.value) ?? document.body)
-    window.addEventListener('resize', syncFillHeight)
+    window.addEventListener('resize', onWindowResize)
   }
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', syncFillHeight)
+  window.removeEventListener('resize', onWindowResize)
   fillObserver?.disconnect()
   fillObserver = null
 })
@@ -184,6 +197,12 @@ onUnmounted(() => {
 watch(() => commonStore.theme, () => {
   let newTheme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
   _editor.setOption('theme', newTheme)
+})
+
+watch(() => commonStore.fontSize, () => {
+  _editor.setOption('fontSize', commonStore.fontSize + FONT_SIZE_MD_OFFSET)
+  _editor.resize()
+  if (props.fill) nextTick(syncFillHeight)
 })
 
 watch(() => props.maxLines, () => {
@@ -327,6 +346,7 @@ function onMouseOut() {
 }
 
 async function preClose() {
+  previewSeq++
   previewType.value = -1
 
   destroyHls()
@@ -379,6 +399,9 @@ async function onClick(e: MouseEvent) {
   y = e.clientY
   if (!link) return
 
+  // 新预览开始，让上一个预览仍在进行的异步请求结果失效
+  const seq = ++previewSeq
+
   if (isHlsUrl(link)) {
     previewHls(link)
     return
@@ -405,7 +428,7 @@ async function onClick(e: MouseEvent) {
       responseType: 'arraybuffer',
       timeout: 30000
     })
-    if (!showPreview.value) return
+    if (seq != previewSeq || !showPreview.value) return
 
     let contentType = resp.headers['content-type'] as string
     // 没有 .m3u8 后缀但 content-type 是 HLS 播放列表
@@ -438,7 +461,8 @@ async function onClick(e: MouseEvent) {
     }
   } catch (err) {
     console.log(err)
-    if (!showPreview.value) return
+    // 超时/失败时可能已经切到别的预览，不能再关闭当前弹层
+    if (seq != previewSeq || !showPreview.value) return
     previewType.value = -1
     showPreview.value = false
     showToast('资源预览失败')
@@ -552,6 +576,20 @@ defineExpose({ syncFillHeight })
   max-width: 960px;
   max-height: 70vh;
   flex: none;
+}
+
+/* 大图按原比例缩放到限制内，保持完整画面 */
+.preview-container .van-image {
+  max-width: 60vw;
+  max-height: 70vh;
+  flex: none;
+}
+
+.preview-container .van-image__img {
+  width: auto;
+  height: auto;
+  max-width: 60vw;
+  max-height: 70vh;
 }
 
 .ace-editor {

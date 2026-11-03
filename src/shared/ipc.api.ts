@@ -15,6 +15,7 @@ export const MainApiCmd = {
   GetSysTheme: 'getSysTheme',
   SysThemeChanged: 'sysThemeChanged',
   DownloadUpdate: 'downloadUpdate',
+  CancelUpdate: 'cancelUpdate',
   SendServerEvent: 'sendServerEvent',
   WriteClipboard: 'writeClipboard'
 }
@@ -40,6 +41,8 @@ export interface IMainAPI {
   writeClipboard(text: string): Promise<void>
 
   downloadUpdate(...args: any): void
+
+  cancelUpdate(): void
 
   onOpenMockRuleMgr(callback: any): void
 

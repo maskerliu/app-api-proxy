@@ -10,7 +10,8 @@ export const API_URL = {
     GetProxyConfig: '/getProxyConfig',
     GetAllPushClients: '/getAllPushClients',
     MockRegister: '/register',
-    Broadcast: '/broadcast',
+    Sse: '/sse',
+    Broadcast: '/sse/broadcast',
 
     MApi: '/mapi',
     Proxy: '/_proxy',

@@ -2,16 +2,23 @@ import { Server } from 'http'
 import { injectable } from 'inversify'
 import { Connection, createServer, Server as SockServer } from 'sockjs'
 import { ProxyMock } from '@shared/proxy.models'
+import { generateUid } from '@shared/uid'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
+type DeviceClient = { uid: string, ownerUid: string, username: string }
 
 @injectable()
 export class PushService {
   pushClients: Map<string, PushClient>
+  private devices: Map<string, DeviceClient>
   private sockjsServer: SockServer
+
+  // 连接断开/重新注册时由外部清理该 uid 对应的代理与 Mock 状态
+  public onClientClosed?: (uid: string) => void
 
   constructor() {
     this.pushClients = new Map()
+    this.devices = new Map()
     this.sockjsServer = createServer({ prefix: '/echo', websocket: true })
     this.sockjsServer.on('connection', (conn: any) => {
       conn.on('data', (data: any) => { this.handleMsg(conn, data) })
@@ -30,11 +37,12 @@ export class PushService {
       it.conn.destroy()
     })
     this.pushClients.clear()
+    this.devices.clear()
     callback?.()
   }
 
   public sendMessage(clientUid: string, data: ProxyMock.PushMsg<any>) {
-    this.safeWrite(clientUid, data)
+    this.safeWrite(this.resolveOwnerUid(clientUid), data)
   }
 
   public sendProxyMessage(clientUid: string, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
@@ -46,11 +54,56 @@ export class PushService {
         content: data
       }
     }
-    this.safeWrite(clientUid, pushMsg)
+    this.sendMessage(clientUid, pushMsg)
   }
 
-  public hasProxy(uid: string): boolean {
-    return this.pushClients.has(uid)
+  // 设备 uid 的推送统一交给所属 viewer，保证请求记录展示在扫码的桌面端
+  public resolveOwnerUid(uid: string): string {
+    return this.devices.get(uid)?.ownerUid ?? uid
+  }
+
+  public hasClient(uid: string): boolean {
+    return this.pushClients.has(uid) || this.devices.has(uid)
+  }
+
+  // viewer 每次注册都由服务端分配新的 uid，避免同一个 uid 被多次注册、串流
+  public registerClient(conn: Connection, username?: string): ProxyMock.RegisterResult {
+    const uid = this.nextUid()
+    // 同一连接重复注册时，把该连接旧 uid 名下的设备迁移到新 uid
+    this.detachConnection(conn, uid)
+    this.pushClients.set(uid, { conn, uid, username: username ?? '', connId: conn.id })
+
+    const result: ProxyMock.RegisterResult = { uid, message: '注册成功' }
+    this.sendMessage(uid, {
+      type: ProxyMock.PushMsgType.CMD,
+      payload: {
+        type: ProxyMock.CMDType.REGISTERED,
+        content: result
+      }
+    })
+    this.boardcastClientInfos()
+    return result
+  }
+
+  // 设备通过注册地址接入：分配独立 uid，并归属到扫码的 viewer
+  public registerDevice(ownerUid: string, username?: string): ProxyMock.RegisterResult {
+    if (ownerUid == null || ownerUid.length === 0) throw new Error('invalid uid')
+    const owner = this.pushClients.get(ownerUid)
+    if (owner == null) throw new Error(`client [${ownerUid}] is not online`)
+
+    const uid = this.nextUid()
+    this.devices.set(uid, { uid, ownerUid, username: username ?? owner.username })
+
+    const result: ProxyMock.RegisterResult = { uid, ownerUid, message: '注册成功' }
+    this.sendMessage(ownerUid, {
+      type: ProxyMock.PushMsgType.CMD,
+      payload: {
+        type: ProxyMock.CMDType.DEVICE_REGISTERED,
+        content: result
+      }
+    })
+    this.boardcastClientInfos()
+    return result
   }
 
   public getAllPushClients() {
@@ -61,7 +114,19 @@ export class PushService {
         uid: it.uid,
         username: it.username,
         ip: it.conn.remoteAddress,
-        port: it.conn.remotePort
+        port: it.conn.remotePort,
+        kind: 'viewer'
+      })
+    })
+    this.devices.forEach(it => {
+      result.push({
+        connId: '',
+        uid: it.uid,
+        username: it.username,
+        ip: '-',
+        port: 0,
+        kind: 'device',
+        ownerUid: it.ownerUid
       })
     })
 
@@ -99,12 +164,39 @@ export class PushService {
   }
 
   private removeClient(conn: Connection) {
-    const keys = [...this.pushClients.keys()]
-    keys.forEach(key => {
-      if (this.pushClients.get(key)?.connId == conn.id) this.pushClients.delete(key)
-    })
+    if (this.detachConnection(conn)) this.boardcastClientInfos()
+  }
 
-    this.boardcastClientInfos()
+  // 移除连接持有的 uid（及其名下设备）；remapTo 用于同连接重新注册时迁移设备
+  private detachConnection(conn: Connection, remapTo?: string): boolean {
+    let changed = false
+    const stale = [...this.pushClients.values()].filter(it => it.connId == conn.id)
+    for (const client of stale) {
+      this.pushClients.delete(client.uid)
+      changed = true
+
+      const devices = [...this.devices.values()].filter(it => it.ownerUid == client.uid)
+      for (const device of devices) {
+        if (remapTo == null) {
+          this.dropDevice(device.uid)
+        } else {
+          device.ownerUid = remapTo
+        }
+      }
+      this.onClientClosed?.(client.uid)
+    }
+    return changed
+  }
+
+  private dropDevice(uid: string) {
+    if (!this.devices.delete(uid)) return
+    this.onClientClosed?.(uid)
+  }
+
+  private nextUid(): string {
+    let uid = generateUid()
+    while (this.pushClients.has(uid) || this.devices.has(uid)) uid = generateUid()
+    return uid
   }
 
   private safeWrite(uid: string, payload: any) {
@@ -120,14 +212,7 @@ export class PushService {
   private handleCMD(conn: Connection, msg: ProxyMock.PushMsg<any>) {
     switch (msg.payload.type) {
       case ProxyMock.CMDType.REGISTER:
-        let client: PushClient = {
-          conn: conn,
-          uid: msg.payload.content.uid,
-          username: msg.payload.content.username,
-          connId: conn.id
-        }
-        this.pushClients.set(client.uid, client)
-        this.boardcastClientInfos()
+        this.registerClient(conn, this.registerUsername(msg.payload.content))
         break
       case ProxyMock.CMDType.RECONNECT:
         break
@@ -135,6 +220,11 @@ export class PushService {
         this.safeWrite(msg.to, msg)
         break
     }
+  }
+
+  private registerUsername(content: any): string {
+    if (typeof content === 'string') return content
+    return content?.username ?? ''
   }
 
   private handleTXT(conn: any, msg: ProxyMock.PushMsg<any>) {
@@ -145,7 +235,7 @@ export class PushService {
             if (it.uid != msg.from) this.safeWrite(uid, msg)
           })
         } else {
-          this.safeWrite(msg.to, msg)
+          this.safeWrite(this.resolveOwnerUid(msg.to), msg)
         }
         break
       }
@@ -153,17 +243,7 @@ export class PushService {
   }
 
   private boardcastClientInfos() {
-    let data: Array<ProxyMock.ClientInfo> = []
-
-    this.pushClients.forEach(it => {
-      data.push({
-        connId: it.conn.id,
-        uid: it.uid,
-        username: it.username,
-        ip: it.conn.remoteAddress,
-        port: it.conn.remotePort
-      })
-    })
+    const data = this.getAllPushClients()
 
     let msg: ProxyMock.PushMsg<Array<ProxyMock.ClientInfo>> = {
       type: ProxyMock.PushMsgType.TXT,

@@ -126,7 +126,7 @@ async function onSave() {
 <style scoped>
 .single-line {
   max-width: 80px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   color: #34495e;
   padding: 5px;
   display: block;

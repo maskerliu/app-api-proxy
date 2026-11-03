@@ -77,14 +77,14 @@ export default ProxyStatDetail
 .el-table .normal-row {
   height: 70px;
   max-height: 70px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   user-select: text;
 }
 
 .el-table .warning-row {
   height: 70px;
   max-height: 70px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   user-select: text;
   background: #eccc6858;
 }
@@ -92,7 +92,7 @@ export default ProxyStatDetail
 .el-table .error-row {
   height: 70px;
   max-height: 70px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   user-select: text;
   background: #ff767558;
 }
@@ -100,21 +100,21 @@ export default ProxyStatDetail
 .el-table .success-row {
   height: 70px;
   max-height: 70px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   user-select: text;
   background: #55efc458;
 }
 
 .table-expand {
   width: 100%;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   height: 400px;
   overflow-y: scroll;
 }
 
 .table-expand label {
   width: 100px;
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   color: #99a9bf;
 }
 
@@ -123,7 +123,7 @@ export default ProxyStatDetail
 }
 
 .el-form-item__content {
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   color: grey;
 }
 
@@ -132,7 +132,7 @@ export default ProxyStatDetail
 }
 
 .preview {
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   color: #2980b9;
   white-space: pre-wrap;
   word-wrap: break-word;

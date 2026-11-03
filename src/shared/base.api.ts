@@ -17,9 +17,11 @@ async function request<T>(method: string, path: string, baseURL?: string, header
     baseURL: baseURL ? baseURL : BASE_DOMAIN,
     url: path,
     method, params, data,
-    headers: Object.assign({
-      'x-mock-uid': clientUID
-    }, headers)
+    // 注册完成前还没有 uid，避免带上空值被服务端当成有效客户端
+    headers: Object.assign(
+      clientUID ? { 'x-mock-uid': clientUID } : {},
+      headers
+    )
   })
 
   let bizResp = resp.data

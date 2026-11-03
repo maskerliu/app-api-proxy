@@ -5,13 +5,13 @@
         <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
           style="z-index: 100; -webkit-app-region: no-drag; width: 235px;">
           <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
-            <i class="iconfont icon-api" style="font-weight: blod"></i>
+            <i class="iconfont icon-api proxy-type-icon" style="font-weight: blod"></i>
           </van-checkbox>
           <van-checkbox shape="square" name="5020" style="padding: 5px 10px">
-            <van-icon class="iconfont icon-statistics" style="font-weight: blod" />
+            <van-icon class="iconfont icon-statistics proxy-type-icon" style="font-weight: blod" />
           </van-checkbox>
           <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
-            <van-icon class="iconfont icon-websocket" style="font-weight: blod" />
+            <van-icon class="iconfont icon-websocket proxy-type-icon" style="font-weight: blod" />
           </van-checkbox>
         </van-checkbox-group>
         <div style="padding: 1px 0; z-index: 100; -webkit-app-region: no-drag;">
@@ -75,9 +75,9 @@
     </van-popup>
 
     <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" round>
-      <qrcode-vue :value="commonStore.registerUrl" :size="310" center />
+      <qrcode-vue v-if="commonStore.registerUrl" :value="commonStore.registerUrl" :size="310" center />
       <div class="register-url" @click="click2Reg">
-        {{ commonStore.registerUrl }}
+        {{ commonStore.registerUrl || $t('proxy.waitingRegister') }}
       </div>
     </van-popup>
   </van-row>
@@ -89,6 +89,7 @@ import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
 import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -103,6 +104,7 @@ const clientInfos = ref<ProxyMock.ClientInfo[]>([])
 const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
+const { t } = useI18n()
 
 const showPopup = ref(false)
 const showMockRuleMgr = ref<boolean>(false)
@@ -113,7 +115,7 @@ const reverseTheme = ref<string>(commonStore.theme == 'dark' ? 'light' : 'dark')
 
 const targetLabel = computed(() => {
   if (targetUid.value == null) return '选择客户端'
-  return shortUid(targetUid.value) + (targetUid.value == commonStore.uid ? ' (本机)' : '')
+  return shortUid(targetUid.value) + uidSuffix(targetUid.value)
 })
 
 provide('withCurRecord', withCurRecord)
@@ -134,6 +136,13 @@ watch(() => showClientPicker.value, (show) => {
 
 watch(() => commonStore.theme, () => {
   reverseTheme.value = commonStore.theme == 'dark' ? 'light' : 'dark'
+})
+
+// 注册前 uid 为空，拿到服务端分配的 uid 后补选默认客户端
+watch(() => commonStore.uid, async (uid) => {
+  if (!uid || (targetUid.value != null && targetUid.value !== '')) return
+  targetUid.value = uid
+  await loadDelay()
 })
 
 watch(() => recordStore.isChanged, () => {
@@ -172,7 +181,7 @@ async function loadClients() {
 
   if (targetUid.value != null && clientInfos.value.some(it => it.uid == targetUid.value)) return
   const other = clientInfos.value.find(it => it.uid != commonStore.uid)
-  targetUid.value = (other ?? clientInfos.value[0])?.uid ?? commonStore.uid
+  targetUid.value = (other ?? clientInfos.value[0])?.uid ?? (commonStore.uid || null)
   await loadDelay()
 }
 
@@ -192,8 +201,14 @@ async function selectClient(client: ProxyMock.ClientInfo) {
   await loadDelay()
 }
 
+function uidSuffix(uid: string): string {
+  if (!uid) return ''
+  if (uid == commonStore.uid) return ' (本机)'
+  return clientInfos.value.find(it => it.uid == uid)?.kind == 'device' ? ' (设备)' : ''
+}
+
 function clientLabel(client: ProxyMock.ClientInfo) {
-  return shortUid(client.uid) + (client.uid == commonStore.uid ? ' (本机)' : '')
+  return shortUid(client.uid) + uidSuffix(client.uid)
 }
 
 function shortUid(uid: string) {
@@ -216,9 +231,14 @@ async function saveProxyDelay() {
 }
 
 async function click2Reg() {
+  if (!commonStore.registerUrl) {
+    showNotify({ message: t('proxy.waitingRegister'), type: 'warning', duration: 800 })
+    return
+  }
   try {
-    let resp = await mockRegister(commonStore.uid)
-    showNotify({ message: resp, type: 'success', duration: 500 })
+    const resp = await mockRegister(commonStore.uid)
+    const message = resp?.message ?? '注册成功'
+    showNotify({ message: resp?.uid ? `${message}: ${resp.uid}` : message, type: 'success', duration: 800 })
     commonStore.showQrCode = resp == null
   } catch (err: any) {
     showNotify({ message: err, type: 'danger', duration: 800 })
@@ -263,6 +283,12 @@ function onMockRecordStart() {
   margin: 5px;
 }
 
+/* 列表内容过长时只压缩列表，避免头部工具行被挤扁后与相邻行重叠 */
+.left-panel>.van-row,
+.left-panel>.van-field {
+  flex: none;
+}
+
 .right-panel {
   flex-grow: 19;
   flex-basis: 50%;
@@ -280,6 +306,10 @@ function onMockRecordStart() {
   color: var(--van-gray-8)
 }
 
+.left-panel .van-checkbox__label .proxy-type-icon {
+  font-size: 16px;
+}
+
 .client-picker {
   display: flex;
   align-items: center;
@@ -295,7 +325,7 @@ function onMockRecordStart() {
 }
 
 .client-picker-name {
-  font-size: 0.7rem;
+  font-size: var(--van-font-size-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -340,7 +370,7 @@ function onMockRecordStart() {
   width: 300px;
   color: var(--van-text-color);
   padding: 5px;
-  font-size: 0.8rem;
+  font-size: var(--van-font-size-md);
   user-select: text;
   word-break: break-all;
   cursor: pointer;

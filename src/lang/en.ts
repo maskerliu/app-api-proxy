@@ -14,6 +14,7 @@ export default {
     setDelay: 'requst delay',
     filterPlaceholder: 'filter with keyword',
     scanQrCode: 'scan QrCode to visit:',
+    waitingRegister: 'connecting push channel, please wait...',
     requestHeader: 'Request Headers',
     requestParams: 'Request Parameters',
     requestBody: 'Request Body',
@@ -53,10 +54,11 @@ export default {
       dataProxyServer: 'Data Proxy Server',
       mqttBroker: 'MQTT Broker',
       theme: 'Theme',
-      fontsize: 'Font Size',
+      fontsize: 'FontSize',
       lang: 'locales',
       version: 'Version',
       restart: 'restart',
+      cancelUpdate: 'Cancel Update',
       noNewVersion: 'No New Version'
     },
     boardcast: {

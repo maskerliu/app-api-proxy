@@ -6,7 +6,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="Event Source">
-      <van-cell title="trigger server notification" :label="sseData" is-link @click="onSSE"></van-cell>
+      <van-cell title="trigger server notification" :label="sseLabel" is-link @click="onSSE"></van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="HLS">
@@ -14,7 +14,7 @@
         <template #left-icon>
           <div style="display: flex; justify-content: center;">
             <van-icon class="iconfont icon-link" style="color: var(--van-gray-8)" />
-            <div style="position: absolute; bottom: -5px; left: 0; font-size: 10px; color: red;">{{ bandwidth }}kbps
+            <div style="position: absolute; bottom: -5px; left: 0; font-size: var(--van-font-size-xs); color: red;">{{ bandwidth }}kbps
             </div>
           </div>
         </template>
@@ -50,12 +50,15 @@
 <script lang="ts" setup>
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import Hls from 'hls.js'
-import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { baseDomain, ProxyMock, broadcast } from '@shared'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { baseDomain, broadcast } from '@shared'
+import { API_URL } from '@shared/api.const'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
-const sseData = ref<string>('hello world')
+const sseData = ref<string>('')
+const sseStatus = ref<string>('idle')
+const sseLabel = computed(() => sseData.value ? `${sseStatus.value} | ${sseData.value}` : sseStatus.value)
 const playerStatus = ref<boolean>(false)
 const playerLoading = ref<boolean>(false)
 const streamUrl = ref<string>('https://iovliveplay.radio.cn/fm/1600000001173.m3u8')
@@ -69,7 +72,7 @@ const offscreen = useTemplateRef<HTMLCanvasElement>('offscreen')
 let hls: Hls
 let timer: any
 let animationId: number
-let sseAbort: AbortController
+let sseAbort: AbortController | null = null
 let previewCtx: CanvasRenderingContext2D
 let offscreenCtx: CanvasRenderingContext2D
 let frames = 0
@@ -84,14 +87,14 @@ onMounted(async () => {
   previewCtx.imageSmoothingEnabled = true
   previewCtx.imageSmoothingQuality = 'high'
 
+  if (!commonStore.showDebugPanel) return
   initHls()
   await registerSSE()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', closeCamera)
-  sseAbort?.abort()
-  sseAbort = null
+  stopSSE()
   stopHls()
   closeCamera()
 })
@@ -99,9 +102,16 @@ onBeforeUnmount(() => {
 watch(() => commonStore.showDebugPanel, (val) => {
   if (!val) {
     stopHls()
+    stopSSE()
   } else {
     initHls()
+    registerSSE()
   }
+})
+
+// 推送连接重连后服务端会分配新 uid，SSE 需要跟着重新订阅
+watch(() => commonStore.uid, (uid) => {
+  if (commonStore.showDebugPanel && uid) registerSSE()
 })
 
 function initHls() {
@@ -162,39 +172,68 @@ function stopHls() {
   }
 }
 
-async function registerSSE() {
+function stopSSE() {
   sseAbort?.abort()
+  sseAbort = null
+}
+
+async function registerSSE() {
+  const uid = commonStore.uid
+  if (!uid) {
+    sseStatus.value = 'waiting uid'
+    return
+  }
+
+  stopSSE()
   const controller = new AbortController()
   sseAbort = controller
+  sseStatus.value = 'connecting'
 
   try {
-    await fetchEventSource(`${baseDomain()}/appmock/sse/${commonStore.uid}`, {
+    await fetchEventSource(`${baseDomain()}${API_URL.AppMock}${API_URL.Sse}/${uid}`, {
       headers: {
-        'x-mock-uid': commonStore.uid
+        accept: EventStreamContentType,
+        'x-mock-uid': uid
       },
       signal: controller.signal,
+      // 调试面板关闭时才需要断开，窗口隐藏/最小化时保持连接
+      openWhenHidden: true,
       async onopen(resp) {
-        if (resp.ok && resp.headers.get('content-type') === EventStreamContentType) {
-          return // everything's good
-        } else if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) {
-          // client-side errors are usually non-retriable:
-          throw new Error('Fatal')
-        } else {
-          throw new Error('Retriable')
+        if (controller.signal.aborted) return
+        const contentType = resp.headers.get('content-type') ?? ''
+        if (resp.ok && contentType.startsWith(EventStreamContentType)) {
+          sseStatus.value = 'connected'
+          return
         }
+        // 4xx（429 除外）属于客户端错误，重试也不会成功
+        if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) {
+          throw new Error(`fatal: ${resp.status}`)
+        }
+        throw new Error(`retriable: ${resp.status}`)
       },
       onmessage(ev) {
-        sseData.value = ev.data
+        if (controller.signal.aborted) return
+        sseData.value = ev.event && ev.event !== 'message' ? `[${ev.event}] ${ev.data}` : ev.data
       },
       onclose() {
-        console.log('closed')
+        // 服务端主动结束流时按断线处理，交给 onerror 触发重连
+        throw new Error('retriable: closed')
       },
       onerror(err) {
-        console.log(err)
-      },
+        if (controller.signal.aborted) return
+        // 不可重试的错误向上抛出，终止本次订阅
+        if (err instanceof Error && err.message.startsWith('fatal')) throw err
+        sseStatus.value = 'reconnecting'
+      }
     })
-  } catch (err) {
-    if (!controller.signal.aborted) console.warn('sse closed:', err)
+  } catch (err: any) {
+    if (controller.signal.aborted) return
+    sseStatus.value = 'error'
+    sseData.value = String(err?.message ?? err)
+    console.warn('sse closed:', err)
+  } finally {
+    // 已被更新的订阅替换时不要清理新连接的 controller
+    if (sseAbort === controller) sseAbort = null
   }
 }
 
@@ -294,8 +333,13 @@ function openDevTools() {
 }
 
 async function onSSE() {
+  if (!commonStore.uid) return
   window.mainApi?.sendServerEvent()
-  await broadcast(commonStore.uid)
+  try {
+    await broadcast(commonStore.uid)
+  } catch (err) {
+    console.warn('broadcast failed:', err)
+  }
 }
 
 </script>

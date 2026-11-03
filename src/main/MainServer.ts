@@ -12,7 +12,7 @@ import type { LocalServerConfig } from '@shared/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, IS_DEV, USER_DATA_DIR } from './MainConst'
 import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
-import { CommonService, ProxyService, PushService } from './service'
+import { CommonService, MockService, ProxyService, PushService } from './service'
 
 export class MainServer {
 
@@ -25,6 +25,7 @@ export class MainServer {
   private appmockRouter: AppMockRouter
   private proxyRouter: ProxyRouter
   private commonService: CommonService
+  private mockService: MockService
   private proxyService: ProxyService
   private pushService: PushService
 
@@ -35,6 +36,13 @@ export class MainServer {
     this.commonService = bizContainer.get(IocTypes.CommonService)
     this.pushService = bizContainer.get(IocTypes.PushService)
     this.proxyService = bizContainer.get(IocTypes.ProxyService)
+    this.mockService = bizContainer.get(IocTypes.MocksService)
+
+    // uid 生命周期结束（断开/重新注册）时清掉该 uid 的代理与 Mock 状态，避免残留串到下一个客户端
+    this.pushService.onClientClosed = (uid: string) => {
+      this.proxyService.clearClientState(uid)
+      this.mockService.clearClientState(uid)
+    }
   }
 
   private corsOpt: CorsOptions = {
