@@ -6,7 +6,6 @@ import TerserPlugin from 'terser-webpack-plugin'
 import { fileURLToPath } from 'url'
 import { VueLoaderPlugin } from 'vue-loader'
 import webpack, { Configuration } from 'webpack'
-// import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 import pkg from '../package.json' with { type: "json" }
 import { BaseConfig } from './webpack.base.config'
 

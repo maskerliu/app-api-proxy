@@ -32,6 +32,7 @@ export default {
       },
     },
     record: {
+      update: '保存修改',
       delete: {
         title: '警告⚠️',
         confirm: '确认要删除这条请求数据？'

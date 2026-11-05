@@ -13,22 +13,6 @@ export function throttle(fn: Function, delay: number) {
 }
 
 
-export function map2json(map: Map<any, any>): JSON {
-  let json = Object.create(null)
-  for (let [key, value] of map) {
-    json[key] = value
-  }
-  return json
-}
-
-export function json2map(obj: JSON): Map<any, any> {
-  let map = new Map()
-  for (let key of Object.keys(obj)) {
-    map.set(key, obj[key])
-  }
-  return map
-}
-
 export function random(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }

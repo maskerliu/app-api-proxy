@@ -75,8 +75,9 @@
     </van-popup>
 
     <van-popup :title="$t('proxy.scanQrCode')" v-model:show="commonStore.showQrCode" round>
-      <qrcode-vue v-if="commonStore.registerUrl" :value="commonStore.registerUrl" :size="310" center />
-      <div class="register-url" @click="click2Reg">
+      <qrcode-vue v-if="commonStore.registerUrl" :value="commonStore.registerUrl" :size="310" :margin="2" level="Q"
+        gradient gradient-type="linear" gradient-start-color="#4338ca" gradient-end-color="#0f766e" />
+      <div class="register-url" @click="copyRegisterUrl">
         {{ commonStore.registerUrl || $t('proxy.waitingRegister') }}
       </div>
     </van-popup>
@@ -84,7 +85,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ProxyMock, getAllPushClients, getProxyConfig, mockRegister, saveProxyConfig } from '@shared'
+import { ProxyMock, getAllPushClients, getProxyConfig, saveProxyConfig } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
@@ -230,18 +231,21 @@ async function saveProxyDelay() {
   }
 }
 
-async function click2Reg() {
-  if (!commonStore.registerUrl) {
+async function copyRegisterUrl() {
+  const url = commonStore.registerUrl
+  if (!url) {
     showNotify({ message: t('proxy.waitingRegister'), type: 'warning', duration: 800 })
     return
   }
   try {
-    const resp = await mockRegister(commonStore.uid)
-    const message = resp?.message ?? '注册成功'
-    showNotify({ message: resp?.uid ? `${message}: ${resp.uid}` : message, type: 'success', duration: 800 })
-    commonStore.showQrCode = resp == null
-  } catch (err: any) {
-    showNotify({ message: err, type: 'danger', duration: 800 })
+    if (window.mainApi) {
+      await window.mainApi.writeClipboard(url)
+    } else {
+      await navigator.clipboard.writeText(url)
+    }
+    showNotify({ message: '链接已复制到剪贴板', type: 'success', duration: 800 })
+  } catch (err) {
+    showNotify({ message: '复制失败，请手动复制', type: 'danger', duration: 1200 })
   }
 }
 

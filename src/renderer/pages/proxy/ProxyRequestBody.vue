@@ -4,7 +4,7 @@
       <van-radio v-for="view in views" :key="view.name" :name="view.name" icon-size="14px">{{ view.title }}
       </van-radio>
     </van-radio-group>
-    <vue-ace-editor v-if="activeView?.kind == 'code'" style="width: 100%;" :fold="false" :max-lines="22"
+    <vue-ace-editor v-if="activeView?.kind == 'code'" style="width: 100%;" :fold="false" :gutter="false" :max-lines="22"
       :lang="activeView.lang" :data="activeView.content" />
     <div v-else-if="activeView?.kind == 'form'" class="form-body">
       <div v-for="(field, idx) in activeView.fields" :key="`${field.key}-${idx}`" class="form-row">
@@ -144,7 +144,7 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
   flex-wrap: wrap;
   column-gap: 16px;
   row-gap: 4px;
-  padding: 10px;
+  padding: 10px 0;
 }
 
 .form-body {
@@ -183,8 +183,8 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
   white-space: pre-wrap;
   word-break: break-all;
   text-align: left;
-  /* 左侧让出行号槽（约 50px）与内容内边距，与 Ace 代码区起始位置对齐 */
-  padding: 4px 15px 4px 30px;
+  /* 代码区已隐藏行号槽，文本内边距与 Ace 内容起始位置对齐 */
+  padding: 4px 15px 4px 20px;
   user-select: text;
 }
 </style>

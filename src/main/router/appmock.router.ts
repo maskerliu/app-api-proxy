@@ -194,12 +194,40 @@ export class AppMockRouter extends BaseRouter {
     })
 
     this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetMockRecords, func: 'getMockRecords', target: 'mockService',
+      params: [
+        { key: 'ruleId', type: ParamType.Query },
+        { key: 'offset', type: ParamType.Query },
+        { key: 'limit', type: ParamType.Query }
+      ]
+    })
+
+    this.addApiInfo({
       method: BizNetwork.Method_Post,
       path: API_URL.SaveMockRule, func: 'saveMockRule', target: 'mockService',
       params: [
         { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
-        { key: 'onlySnap', type: ParamType.Query },
         { key: 'rule', type: ParamType.FormBody }
+      ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.SaveMockRecord, func: 'saveMockRecord', target: 'mockService',
+      params: [
+        { key: 'ruleId', type: ParamType.Query },
+        { key: 'recordKey', type: ParamType.Query },
+        { key: 'record', type: ParamType.FormBody }
+      ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.DeleteMockRecord, func: 'deleteMockRecord', target: 'mockService',
+      params: [
+        { key: 'ruleId', type: ParamType.Query },
+        { key: 'recordKey', type: ParamType.Query }
       ]
     })
 

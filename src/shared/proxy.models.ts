@@ -64,8 +64,13 @@ export namespace ProxyMock {
     name: string
     desc: string
     isMock?: boolean = false
+    // 仅渲染层使用的列表缓存，不参与持久化
     requests: Map<string, ProxyRequestRecord> = new Map()
-    jsonRequests: JSON
+  }
+
+  export interface MockRecordPage {
+    items: ProxyRequestRecord[]
+    hasMore: boolean
   }
 
   export interface MsgPushClient extends ClientInfo {

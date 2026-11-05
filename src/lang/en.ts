@@ -33,6 +33,7 @@ export default {
       },
     },
     record: {
+      update: 'Save Changes',
       delete: {
         title: 'Warning',
         confirm: 'are you sure to delete this record?'

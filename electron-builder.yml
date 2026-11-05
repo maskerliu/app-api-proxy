@@ -41,6 +41,16 @@ files:
   - "!**/node_modules/**/esm-*/**"
   - "!**/node_modules/**/*browser*"
   - "!**/node_modules/**/tsconfig.json"
+  # 主进程为 CJS，排除无用的 ESM/UMD/test 构建变体
+  - "!**/node_modules/**/lib/index.es.js"
+  - "!**/node_modules/psl/dist/psl.mjs"
+  - "!**/node_modules/psl/dist/psl.umd.cjs"
+  - "!**/node_modules/node-fetch/lib/index.mjs"
+  - "!**/node_modules/bignumber.js/bignumber.mjs"
+  - "!**/node_modules/**/tests.js"
+  - "!**/node_modules/qs/dist/**"
+  # 注意：inversify 7 内部会 require('reflect-metadata/lite')，ReflectLite.js 不能排除
+  - "!**/node_modules/**/*.min.js"
   - "**/node_modules/debug/src/**"
   - "**/node_modules/**/cuid2/src/**"
 
@@ -79,6 +89,9 @@ mac:
       to: "./resources/"
   target:
     - target: dmg
+      arch: universal
+    # 全量更新（autoUpdater）依赖 zip 产物与 latest-mac.yml
+    - target: zip
       arch: universal
 
 pkg:

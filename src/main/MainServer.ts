@@ -61,6 +61,13 @@ export class MainServer {
     await this.stop()
     await this.waitForPortRelease(port)
 
+    try {
+      await this.mockService.init()
+    } catch (err) {
+      // 迁移失败不阻塞服务启动，下次启动会重试
+      console.error('mock storage init failed:', err)
+    }
+
     this.initHttpApp()
     await this.startHttpServer()
   }

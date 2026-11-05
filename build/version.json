@@ -1,12 +1,12 @@
 {
-    "code": 8000,
-    "data": {
-        "forceUpdate": true,
-        "fullUpdate": false,
-        "updateUrl": "http://192.168.21.5:4000/res/app-win32-x64-1.0.4.gz",
-        "message": "快更新到1.0.4吧！！！",
-        "version": "1.0.4",
-        "sha512": "/sHUpPrmzj7zaE9tyV+qLmfd5MrQFxNq38aYxBCA6bq8KLfDESTBtroFKOURG05LbEscB21DeT+/vp+MajSvBQ==",
-        "releaseDate": "2026-10-31T08:47:08.563Z"
-    }
+	"code": 8000,
+	"data": {
+		"forceUpdate": true,
+		"fullUpdate": false,
+		"updateUrl": "http://192.168.21.5:4000/res/app-win32-x64-1.0.4.gz",
+		"message": "快更新到1.0.4吧！！！",
+		"version": "1.0.4",
+		"sha512": "xSTEEPeRPUFdr2hoCwgCNHnS7Wyvdv7LKsNmU2/F3L36RFISuq6O1KPEq+Wuu96+b9JVZVmauNg4XfPV5k+ewQ==",
+		"releaseDate": "2026-11-04T13:01:56.000Z"
+	}
 }

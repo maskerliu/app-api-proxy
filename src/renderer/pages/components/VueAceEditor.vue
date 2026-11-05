@@ -1,7 +1,11 @@
 <template>
   <!-- 跳过 Vant touch 模拟：合成 touch 事件会被 Ace 的移动端处理器当成触摸，
        长按选词、拖动变滚动，导致鼠标拖选失效 -->
-  <div ref="aceEditor" data-no-touch-simulate :class="maxLines || fill ? null : 'ace-editor'">
+  <div data-no-touch-simulate class="ace-editor-wrapper" :class="maxLines || fill ? null : 'ace-editor'">
+    <van-icon v-if="searchable && !searchVisible" name="search" class="ace-search-toggle" title="搜索 (Ctrl+F)"
+      @click="openSearch" />
+    <!-- ace.edit 会清空容器子节点，悬浮控件必须放在编辑器容器外层 -->
+    <div ref="aceEditor" class="ace-editor-inner"></div>
     <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app" @close="preClose">
       <van-loading v-show="previewType == 4" type="spinner" size="24" />
 
@@ -22,6 +26,8 @@
 import { baseDomain } from '@shared'
 import ace, { Ace, Range } from 'ace-builds'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
+// 静态引入搜索扩展：core 的 find 命令默认按 basePath 动态加载，打包环境下会 404
+import 'ace-builds/src-min-noconflict/ext-searchbox'
 import 'ace-builds/src-min-noconflict/mode-json'
 import 'ace-builds/src-min-noconflict/mode-text'
 import 'ace-builds/src-min-noconflict/mode-xml'
@@ -42,6 +48,9 @@ interface VueAceEditorProps {
   readOnly: boolean
   maxLines: number
   fill: boolean
+  fillMaxInset: number
+  gutter: boolean
+  searchable: boolean
 }
 
 interface MatchToken { row: number, start: number, value: string }
@@ -88,11 +97,16 @@ const props = withDefaults(defineProps<Partial<VueAceEditorProps>>(), {
   readOnly: true,
   data: '{}',
   fill: false,
+  fillMaxInset: 0,
+  gutter: true,
+  searchable: false,
 })
 
 const aceEditor = ref<HTMLElement>()
 const showPreview = ref<boolean>(false)
 const previewType = ref<number>(0)
+const searchVisible = ref<boolean>(false)
+let searchObserver: MutationObserver
 
 const videoEl = ref<HTMLVideoElement>()
 const imgSrc = ref<string>()
@@ -127,6 +141,7 @@ function scrollParentOf(el: HTMLElement): HTMLElement {
 
 // 按滚动容器的剩余高度换算行数，用内容坐标计算，滚动时结果保持不变。
 // allowShrink=false 用于折叠面板展开：保留当前高度让内容撑开页面，而不是压缩响应体
+// 最小行数贴合父容器底部；最大行数扣除 fillMaxInset（吸顶区块高度），内容超出后编辑器内部滚动
 function syncFillHeight(allowShrink = true) {
   if (!props.fill || _editor == null || aceEditor.value == null) return
 
@@ -139,20 +154,35 @@ function syncFillHeight(allowShrink = true) {
   const lineHeight = _editor.renderer.lineHeight || 16
   const needed = Math.max(FILL_MIN_LINES, Math.floor((viewportHeight - offsetTop - FILL_BOTTOM_GAP) / lineHeight))
   const lines = allowShrink ? needed : Math.max(needed, fillLines)
+  const maxInset = Math.max(0, props.fillMaxInset ?? 0)
+  const maxLines = Math.max(lines, Math.floor((viewportHeight - maxInset - FILL_BOTTOM_GAP) / lineHeight))
 
   fillLines = lines
   _editor.setOption('minLines', lines)
-  _editor.setOption('maxLines', lines)
+  _editor.setOption('maxLines', maxLines)
 }
 
 function onWindowResize() {
   syncFillHeight()
 }
 
+function syncSearchVisible() {
+  const box = _editor.renderer.scroller.querySelector('.ace_search') as HTMLElement
+  searchVisible.value = box != null && box.style.display != 'none'
+}
+
+// 展开时复用已有输入内容并重新高亮，首次点击才创建搜索框
+function openSearch() {
+  const searchBox = (_editor as any).searchBox
+  if (searchBox != null) searchBox.show()
+  else (ace as any).require('ace/ext/searchbox').Search(_editor)
+}
+
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
   _defOpts.fontSize = commonStore.fontSize + FONT_SIZE_MD_OFFSET
   _defOpts.theme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
+  _defOpts.showGutter = props.gutter
   if (props.maxLines) {
     _defOpts.maxLines = props.maxLines
   }
@@ -186,12 +216,25 @@ onMounted(() => {
     fillObserver.observe(scrollParentOf(aceEditor.value) ?? document.body)
     window.addEventListener('resize', onWindowResize)
   }
+
+  if (props.searchable) {
+    // 搜索框由 Ace 按需创建在 scroller 内，通过观察显示状态同步悬浮图标
+    searchObserver = new MutationObserver(syncSearchVisible)
+    searchObserver.observe(_editor.renderer.scroller, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['style'],
+    })
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', onWindowResize)
   fillObserver?.disconnect()
   fillObserver = null
+  searchObserver?.disconnect()
+  searchObserver = null
 })
 
 watch(() => commonStore.theme, () => {
@@ -208,6 +251,10 @@ watch(() => commonStore.fontSize, () => {
 watch(() => props.maxLines, () => {
   // _editor.setOption('maxLines', props.maxLines)
   _editor.resize()
+})
+
+watch(() => props.fillMaxInset, () => {
+  if (props.fill) nextTick(syncFillHeight)
 })
 
 watch(data, () => {
@@ -592,6 +639,14 @@ defineExpose({ syncFillHeight })
   max-height: 70vh;
 }
 
+.ace-editor-wrapper {
+  position: relative;
+}
+
+.ace-editor .ace-editor-inner {
+  height: 100%;
+}
+
 .ace-editor {
   position: absolute;
   top: 5px;
@@ -606,5 +661,84 @@ defineExpose({ syncFillHeight })
   border-bottom: 2px dashed var(--van-text-color);
   background: #f9ac2f85;
   opacity: 30%;
+}
+
+/* 搜索收起后的悬浮入口，不占据正文空间 */
+.ace-search-toggle {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 5;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: 1px solid var(--van-border-color);
+  border-radius: 4px;
+  background: var(--van-background-2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  color: var(--van-text-color-2);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ace-search-toggle:hover {
+  color: var(--van-primary-color);
+}
+
+/* 当前行改用高亮底色，去掉主题自带的描边 */
+.ace_editor .ace_marker-layer .ace_active-line {
+  background-color: rgba(255, 214, 10, 0.22) !important;
+  border: none !important;
+}
+
+.ace_editor .ace_gutter-active-line {
+  background-color: rgba(255, 214, 10, 0.22) !important;
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_marker-layer .ace_active-line,
+.ace_editor.ace-cloud_editor_dark .ace_gutter-active-line {
+  background-color: rgba(255, 214, 10, 0.16) !important;
+}
+
+/* 内置搜索框样式固定为浅色，暗色主题下单独覆盖 */
+.ace_editor.ace-cloud_editor_dark .ace_search {
+  background: var(--van-background-2);
+  color: var(--van-text-color);
+  border-color: var(--van-border-color);
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_search_field {
+  background: var(--van-background);
+  color: var(--van-text-color);
+  border-color: var(--van-border-color);
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_searchbtn {
+  background: var(--van-background-2);
+  color: var(--van-text-color);
+  border-color: var(--van-border-color);
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_searchbtn:hover {
+  background: var(--van-active-color);
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_button {
+  color: var(--van-text-color);
+  border-color: var(--van-border-color);
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_button:hover {
+  background: var(--van-active-color);
+}
+
+.ace_editor.ace-cloud_editor_dark .ace_button:active {
+  background: var(--van-border-color);
+}
+
+/* 关闭按钮是深色雪碧图，暗色背景上需反色 */
+.ace_editor.ace-cloud_editor_dark .ace_searchbtn_close {
+  filter: invert(1);
 }
 </style>

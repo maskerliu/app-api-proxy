@@ -30,12 +30,12 @@
         <span class="request-snap-timecost" v-bind:style="{ color: (source.time ?? 0) > 500 ? '#e74c3c' : '#2ecc71' }">
           耗时: <span class="timecost-value">{{ source.time != null ? source.time : "-----" }}</span> ms
         </span>
-        <van-tag plain mark :type="parseInt(source.responseData.code) === 8000 ? 'success' : 'warning'"
+        <van-tag plain :type="parseInt(source.responseData.code) === 2000 ? 'success' : 'warning'"
           style="margin-left: 5px; font-size: var(--van-font-size-xs);" v-if="source.responseData != null">
           {{ source.responseData.code }}<b>[BIZ]</b>
         </van-tag>
 
-        <van-tag plain mark :type="source.statusCode === 200 ? 'success' : 'danger'"
+        <van-tag plain :type="source.statusCode === 200 ? 'success' : 'danger'"
           style="margin-left: 5px; font-size: var(--van-font-size-xs);">
           {{ source.statusCode }} <b>[HTTP]</b>
         </van-tag>
@@ -59,8 +59,8 @@
 </template>
 
 <script lang="ts" setup>
-import type { PropType } from 'vue'
 import { ProxyMock } from '@shared'
+import type { PropType } from 'vue'
 import { ProxyRecordStore } from '../../store'
 
 defineProps({

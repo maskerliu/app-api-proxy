@@ -18,12 +18,25 @@ export function getActiveMockRule() {
   return get<string>(`${API_URL.AppMock}${API_URL.GetActiveMockRule}`)
 }
 
-export function saveMockRule(mockRule: ProxyMock.MockRule, onlySnap: boolean) {
-  return post<string>(`${API_URL.AppMock}${API_URL.SaveMockRule}`, null, { onlySnap }, mockRule)
+export function saveMockRule(mockRule: ProxyMock.MockRule) {
+  return post<string>(`${API_URL.AppMock}${API_URL.SaveMockRule}`, null, null, mockRule)
 }
 
 export function deleteMockRule(ruleId: string) {
   return post<string>(`${API_URL.AppMock}${API_URL.DeleteMockRule}`, null, { ruleId })
+}
+
+// recordKey 是修改前的 key；与 record.url 不同时服务端会把它当作改 URL 处理
+export function saveMockRecord(ruleId: string, recordKey: string, record: ProxyMock.ProxyRequestRecord) {
+  return post<string>(`${API_URL.AppMock}${API_URL.SaveMockRecord}`, null, { ruleId, recordKey }, record)
+}
+
+export function deleteMockRecord(ruleId: string, recordKey: string) {
+  return post<string>(`${API_URL.AppMock}${API_URL.DeleteMockRecord}`, null, { ruleId, recordKey })
+}
+
+export function getMockRecords(ruleId: string, offset: number, limit: number) {
+  return get<ProxyMock.MockRecordPage>(`${API_URL.AppMock}${API_URL.GetMockRecords}`, null, { ruleId, offset, limit })
 }
 
 export function getServerConfig() {

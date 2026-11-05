@@ -1,6 +1,6 @@
 <template>
   <van-form ref="detailContainer" label-align="right" colon>
-    <div class="url-bar" :style="{ top: `${stickyTop}px`, marginTop: `${stickyTop}px` }">
+    <div ref="urlBar" class="url-bar" :style="{ top: `${stickyTop}px`, marginTop: `${stickyTop}px` }">
       <van-cell-group inset title="">
         <van-cell center>
           <template #title>
@@ -59,7 +59,7 @@
       style="margin-bottom: 5px;">
       <van-cell style="padding: 0;">
         <template #value>
-          <vue-ace-editor ref="responseEditor" :fold="false" :fill="true"
+          <vue-ace-editor ref="responseEditor" :fold="false" :fill="true" :fill-max-inset="stickyInset" searchable
             :data="record.responseData == null ? '{}' : JSON.stringify(record.responseData, null, '\t')" />
         </template>
       </van-cell>
@@ -70,7 +70,7 @@
 <script lang="ts" setup>
 import { ProxyMock } from '@shared'
 import { Form, showToast } from 'vant'
-import { computed, inject, nextTick, PropType, ref, watch } from 'vue'
+import { computed, inject, nextTick, onMounted, onUnmounted, PropType, ref, watch } from 'vue'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import ProxyRequestBody from './ProxyRequestBody.vue'
 
@@ -85,7 +85,10 @@ const props = defineProps({
 
 const detailContainer = ref<typeof Form>()
 const detailResp = ref()
+const urlBar = ref<HTMLElement>()
 const responseEditor = ref<InstanceType<typeof VueAceEditor>>()
+// 吸顶区块占据的高度：响应体编辑器的最大高度 = 父容器高度 - 该值
+const stickyInset = ref(stickyTop)
 const apiDesc = ref<string>(null)
 const openMockRuleMgr = inject<(withRecord: boolean) => void>('openMockRuleMgr')
 
@@ -118,6 +121,23 @@ function syncResponseFill() {
 
 // 请求体区块随记录有没有而增减，responseBody 的顶部位置会变，需要重新贴合父容器底部
 watch(() => props.record, () => nextTick(() => responseEditor.value?.syncFillHeight()))
+
+function measureStickyInset() {
+  stickyInset.value = stickyTop + (urlBar.value?.offsetHeight ?? 0)
+}
+
+// 吸顶卡片高度随内容/主题变化，同步更新响应体可用的最大高度
+let urlBarObserver: ResizeObserver
+
+onMounted(() => {
+  measureStickyInset()
+  urlBarObserver = new ResizeObserver(measureStickyInset)
+  if (urlBar.value) urlBarObserver.observe(urlBar.value)
+})
+
+onUnmounted(() => {
+  urlBarObserver?.disconnect()
+})
 
 // watch(props.record, () => {
 //   updated()
@@ -174,9 +194,7 @@ function updated() {
 </script>
 
 <style scoped>
-.detail-content {
-  padding: 0;
-}
+.detail-content {}
 
 .url-bar {
   position: sticky;
@@ -194,6 +212,11 @@ function updated() {
 .body-group {
   margin-left: var(--van-padding-md);
   margin-right: var(--van-padding-md);
+}
+
+/* inset 模式下标题渲染为分组的上一个兄弟节点，与上方折叠区块的间距需加在标题上 */
+:deep(.van-cell-group__title--inset) {
+  margin-top: calc(var(--van-padding-md));
 }
 
 .header-list {
