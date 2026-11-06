@@ -75,7 +75,9 @@
       teleport="#app" @close="onPopupClose">
       <van-row class="version-popup" justify="center">
         <van-icon class="iconfont icon-version-update" style="color: green; font-size: 2rem;" />
-        <pre class="update-message">{{ newVersion.message }} </pre>
+        <OverlayScrollbarsComponent class="update-message" :options="scrollOptions" defer>
+          <pre class="update-message-text">{{ newVersion.message }}</pre>
+        </OverlayScrollbarsComponent>
         <div style="width: 100%;">
           <van-progress :percentage="downloadProgress" stroke-width="4" class="download-progress" />
         </div>
@@ -91,9 +93,11 @@
 </template>
 <script lang="ts" setup>
 import { Version, versionCheck } from '@shared'
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showNotify, showToast } from 'vant'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { scrollOptions } from '../../common/scroll'
 import { CommonStore, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../../store'
 
 const commonStore = CommonStore()
@@ -207,9 +211,14 @@ function restart() {
 .update-message {
   width: calc(100% - 0px);
   height: 190px;
-  overflow: hidden auto;
   margin: 0 15px;
   color: var(--van-text-color);
+}
+
+.update-message-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .download-progress {

@@ -4,8 +4,11 @@ import { inject, injectable } from 'inversify'
 import path from 'path'
 import 'reflect-metadata'
 import type { LocalServerConfig } from '@shared/base.models'
+import type { Diagnostic } from '@shared/diagnostic.models'
 import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../misc/utils'
+import { DiagnosticService } from './diagnostic.service'
+import { MockService } from './mock.service'
 import { ProxyService } from './proxy.service'
 import { PushService } from './push.service'
 
@@ -29,6 +32,10 @@ export class CommonService {
   private proxyService: ProxyService
   @inject(IocTypes.PushService)
   private pushService: PushService
+  @inject(IocTypes.MocksService)
+  private mockService: MockService
+  @inject(IocTypes.DiagnosticService)
+  private diagnosticService: DiagnosticService
 
   constructor() {
     const filePath = path.join(USER_DATA_DIR, 'local.config.json')
@@ -51,7 +58,8 @@ export class CommonService {
       portValid: config.portValid,
       domain: config.domain,
       ips,
-      mqttBroker: Lynx_Mqtt_Broker
+      mqttBroker: Lynx_Mqtt_Broker,
+      onboarded: config.onboarded === true,
     }
   }
 
@@ -80,6 +88,27 @@ export class CommonService {
     return this._serverConfig
   }
 
+  getHealth(): Diagnostic.HealthInfo {
+    const clients = this.pushService.getAllPushClients()
+    const viewers = clients.filter(it => it.kind === 'viewer').length
+    return {
+      ok: true,
+      version: this.serverConfig.appVersion,
+      protocol: this.serverConfig.protocol,
+      ip: this.serverConfig.ip,
+      port: this.serverConfig.port,
+      uptimeSec: this.diagnosticService.uptimeSec,
+      clients: {
+        viewers,
+        devices: clients.length - viewers,
+      },
+      activeMockRules: this.mockService.getActiveMockCount(),
+      recentRequests: this.diagnosticService.recentRequests(),
+      unknownUidRequests: this.diagnosticService.unknownUidRequests(),
+      errors: this.diagnosticService.recentErrors(),
+    }
+  }
+
   public registerDevice(ownerUid: string, username?: string) {
     return this.pushService.registerDevice(ownerUid, username)
   }
@@ -98,6 +127,7 @@ export class CommonService {
     this.serverConfig.portValid = config.portValid as boolean
     this.serverConfig.ip = config.ip ?? this.serverConfig.ip
     this.serverConfig.protocol = config.protocol ?? this.serverConfig.protocol
+    this.serverConfig.onboarded = config.onboarded ?? this.serverConfig.onboarded
     try {
       writeFileSync(filePath, JSON.stringify(this.serverConfig), 'utf-8')
     } catch (err) {

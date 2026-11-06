@@ -57,7 +57,8 @@ export const CommonStore = defineStore('Common', {
       showQrCode: false,
       registerUrl: '',
       clientInfos: [] as Array<ProxyMock.ClientInfo>,
-      serverConfig: {} as LocalServerConfig
+      serverConfig: {} as LocalServerConfig,
+      onboarded: false
     }
   },
   actions: {
@@ -84,6 +85,9 @@ export const CommonStore = defineStore('Common', {
 
       try {
         this.serverConfig = config ? config : await getServerConfig()
+        // 网页端没有本地配置文件，用 localStorage 记住接入状态
+        this.onboarded = this.serverConfig.onboarded === true
+          || (window.isWeb && window.localStorage.getItem('onboarded') === '1')
         this.updateServerConfig()
       } catch (err) {
         showNotify(err)
@@ -165,6 +169,20 @@ export const CommonStore = defineStore('Common', {
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {
       this.clientInfos = [...clientInfos]
+    },
+    async markOnboarded() {
+      this.onboarded = true
+      this.serverConfig = { ...this.serverConfig, onboarded: true }
+      if (window.isWeb) {
+        window.localStorage.setItem('onboarded', '1')
+        return
+      }
+      try {
+        // 只更新接入标记，不重启服务/推送连接
+        await window.mainApi?.updateBizConfig(JSON.stringify(this.serverConfig))
+      } catch (err) {
+        showNotify({ message: '保存接入状态失败', type: 'warning', duration: 1200 })
+      }
     },
   }
 })

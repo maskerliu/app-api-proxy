@@ -8,17 +8,19 @@
       </template>
     </van-field>
 
-    <van-grid :column-num="3" clickable style="max-height: calc(100vh - 91px); overflow-y: scroll;">
-      <van-grid-item v-for="item in clients" :key="item.uid" @click="showOpMenu(item)" style="max-height: 80px">
-        <template #text>
-          <span class="single-line">{{ item.uid }}</span>
-        </template>
-        <template #icon>
-          <van-icon class="iconfont icon-network-data" size="30"
-            :style="{ color: commonStore.uid == item.uid ? 'green' : 'gray' }" />
-        </template>
-      </van-grid-item>
-    </van-grid>
+    <OverlayScrollbarsComponent class="client-grid" :options="scrollOptions" defer>
+      <van-grid :column-num="3" clickable>
+        <van-grid-item v-for="item in clients" :key="item.uid" @click="showOpMenu(item)" style="max-height: 80px">
+          <template #text>
+            <span class="single-line">{{ item.uid }}</span>
+          </template>
+          <template #icon>
+            <van-icon class="iconfont icon-network-data" size="30"
+              :style="{ color: commonStore.uid == item.uid ? 'green' : 'gray' }" />
+          </template>
+        </van-grid-item>
+      </van-grid>
+    </OverlayScrollbarsComponent>
 
     <van-popup round v-model:show="dialogVisible" closeable close-icon="close" teleport="#app">
       <van-form style="width: min(450px, calc(100vw - 60px)); margin: 15px">
@@ -37,8 +39,10 @@
 </template>
 <script lang="ts" setup>
 import { showNotify } from 'vant'
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { computed, onMounted, ref } from 'vue'
 import { ProxyMock, getAllPushClients } from '@shared'
+import { scrollOptions } from '../../common/scroll'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -92,6 +96,10 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
 
 </script>
 <style scoped>
+.client-grid {
+  max-height: calc(100vh - 91px);
+}
+
 .single-line {
   max-width: 120px;
   font-size: var(--van-font-size-sm);

@@ -6,18 +6,23 @@
     </van-radio-group>
     <vue-ace-editor v-if="activeView?.kind == 'code'" style="width: 100%;" :fold="false" :gutter="false" :max-lines="22"
       :lang="activeView.lang" :data="activeView.content" />
-    <div v-else-if="activeView?.kind == 'form'" class="form-body">
-      <div v-for="(field, idx) in activeView.fields" :key="`${field.key}-${idx}`" class="form-row">
-        <span class="form-key">{{ field.key }}</span>
-        <span class="form-value">{{ field.value }}</span>
+    <OverlayScrollbarsComponent v-else-if="activeView?.kind == 'form'" class="form-body-scroll"
+      :options="scrollOptions" defer>
+      <div class="form-body">
+        <div v-for="(field, idx) in activeView.fields" :key="`${field.key}-${idx}`" class="form-row">
+          <span class="form-key">{{ field.key }}</span>
+          <span class="form-value">{{ field.value }}</span>
+        </div>
       </div>
-    </div>
+    </OverlayScrollbarsComponent>
     <div v-else class="body-text">{{ activeView?.content }}</div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { computed, ref, watch } from 'vue'
+import { scrollOptions } from '../../common/scroll'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
 interface FormField {
@@ -147,14 +152,16 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
   padding: 10px 0;
 }
 
+.form-body-scroll {
+  max-height: 8rem;
+}
+
 .form-body {
   display: grid;
   grid-template-columns: fit-content(40%) minmax(0, 1fr);
   column-gap: 16px;
   row-gap: 6px;
   padding: 5px 15px;
-  max-height: 8rem;
-  overflow-y: auto;
   /* 抵消外层 van-cell__value 的右对齐，与请求头键值样式保持一致 */
   text-align: left;
   /* label 与 input 统一为 Ace 编辑器字体 */

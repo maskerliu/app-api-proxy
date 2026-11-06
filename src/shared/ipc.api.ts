@@ -9,6 +9,7 @@ export const MainApiCmd = {
   OpenDevTools: 'openDevTools',
   OpenMockRuleMgr: 'openMockRuleMgr',
   OpenSettings: 'openSettings',
+  OpenOnboarding: 'openOnboarding',
   GetBizConfig: 'getBizConfig',
   UpdateBizConfig: 'updateBizConfig',
   SetAppTheme: 'setAppTheme',
@@ -47,6 +48,8 @@ export interface IMainAPI {
   onOpenMockRuleMgr(callback: any): void
 
   onOpenSettings(callback: any): void
+
+  onOpenOnboarding(callback: any): void
 
   getBizConfig(callback: (result: LocalServerConfig) => void): void
 

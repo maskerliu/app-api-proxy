@@ -16,5 +16,6 @@ export const IocTypes = {
   PushService: Symbol.for('PushService'),
   MocksService: Symbol.for('MockService'),
   ProxyService: Symbol.for('ProxyService'),
+  DiagnosticService: Symbol.for('DiagnosticService'),
   MockRepo: Symbol.for('MockRepo')
 }

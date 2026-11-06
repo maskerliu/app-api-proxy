@@ -17,22 +17,24 @@
             </div>
           </template>
 
-          <van-list class="search-result" :style="searchWidth > 0 ? { width: searchWidth + 'px' } : null"
-            :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
-            <van-cell center class="rule-snap-item1" is-link v-for="(rule, idx) in rules" :title="rule.name"
-              :label="rule.desc" @click="onRuleSelect(rule)">
-              <template #value>
-                <div>
-                  <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
-                    @click.stop="onRuleEdit(rule)" />
-                  <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
-                    @click.stop="onRuleDelete(rule)" />
-                  <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
-                    @click.stop="onSave" />
-                </div>
-              </template>
-            </van-cell>
-          </van-list>
+          <OverlayScrollbarsComponent class="search-result"
+            :style="searchWidth > 0 ? { width: searchWidth + 'px' } : null" :options="scrollOptions" defer>
+            <van-list :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
+              <van-cell center class="rule-snap-item1" is-link v-for="(rule, idx) in rules" :title="rule.name"
+                :label="rule.desc" @click="onRuleSelect(rule)">
+                <template #value>
+                  <div>
+                    <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
+                      @click.stop="onRuleEdit(rule)" />
+                    <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
+                      @click.stop="onRuleDelete(rule)" />
+                    <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
+                      @click.stop="onSave" />
+                  </div>
+                </template>
+              </van-cell>
+            </van-list>
+          </OverlayScrollbarsComponent>
         </van-popover>
       </van-col>
       <van-col class="rule-head-col">
@@ -69,39 +71,50 @@
       </van-col>
     </van-row>
     <van-row class="mgr-body">
-      <van-list class="border-bg record-list">
-        <van-cell center v-for="record in [...curRule.requests.values()]" @click="onRecordSelected(record)"
-          v-if="curRule != null && curRule.requests != null" clickable is-link>
-          <template #title>
-            <div class="record-snap">{{ record.url }}</div>
-          </template>
-          <template #label>
-            <van-tag plain :type="record.statusCode == 200 ? 'success' : 'danger'">
-              [http]{{ record.statusCode }}
-            </van-tag>
-            <van-tag plain style="margin-left: 5px" :type="record.responseData?.code == 2000 ? 'success' : 'danger'">
-              [biz]{{ record.responseData?.code }}
-            </van-tag>
-          </template>
-          <template #right-icon>
-            <van-button plain type="danger" size="mini" icon="delete-o" @click="onRecordDelete(record.url)" />
-          </template>
-        </van-cell>
-        <van-cell v-if="recordHasMore" clickable center @click="loadRecords()">
-          <template #title>
-            <span class="record-load-more">{{ recordLoading ? '加载中...' : '加载更多' }}</span>
-          </template>
-        </van-cell>
-      </van-list>
+      <OverlayScrollbarsComponent class="border-bg record-list" :options="scrollOptions" defer>
+        <van-list>
+          <van-cell center v-for="record in [...curRule.requests.values()]" :key="record.id"
+            @click="onRecordSelected(record)" v-if="curRule != null && curRule.requests != null" clickable is-link>
+            <template #title>
+              <div class="record-snap">{{ record.name || record.url }}</div>
+            </template>
+            <template #label>
+              <van-tag plain :type="effectiveResponse(record).statusCode == 200 ? 'success' : 'danger'">
+                [http]{{ effectiveResponse(record).statusCode }}
+              </van-tag>
+              <van-tag v-if="record.variants.length > 0" plain type="primary" style="margin-left: 5px">
+                {{ $t('mock.editor.variantCount', { count: record.variants.length }) }}
+              </van-tag>
+              <van-tag v-if="record.activeVariantId" plain type="success" style="margin-left: 5px">
+                {{ $t('mock.editor.active') }}
+              </van-tag>
+            </template>
+            <template #right-icon>
+              <van-button plain type="danger" size="mini" @click.stop="onRecordDelete(record.id)">
+                <template #icon>
+                  <van-icon class="iconfont icon-delete" />
+                </template>
+              </van-button>
+            </template>
+          </van-cell>
+          <van-cell v-if="recordHasMore" clickable center @click="loadRecords()">
+            <template #title>
+              <span class="record-load-more">{{ recordLoading ? '加载中...' : '加载更多' }}</span>
+            </template>
+          </van-cell>
+        </van-list>
+      </OverlayScrollbarsComponent>
       <van-col class="record-actions" style="padding-top: 50px">
-        <van-icon class="iconfont icon-cloud-sync" size="16" style="color: #3498db; padding: 5px"
-          :title="$t('mock.record.update')" @click="onRecordUpdate" />
+        <van-icon class="iconfont icon-cloud-sync" :class="{ 'record-save-disabled': !canSaveRecord }" size="16"
+          style="color: #3498db; padding: 5px" :title="$t('mock.record.update')" @click="onRecordSave" />
         <van-icon class="iconfont icon-add-rule" size="16" style="color: #3498db; padding: 5px; margin-top: 10px;"
-          @click="addRecord" />
+          :title="$t('mock.editor.newRecord')" @click="addRecord" />
       </van-col>
 
       <van-col class="rule-editor-col">
-        <vue-ace-editor :read-only="false" :fold="false" searchable v-model:data="content" />
+        <mock-record-editor v-if="draft != null" v-model:record="draft" :dirty="dirty" :saving="saving"
+          :new-record="isNew" @save="onRecordSave" />
+        <div v-else class="editor-placeholder">{{ $t('mock.editor.noRecord') }}</div>
       </van-col>
     </van-row>
 
@@ -129,29 +142,41 @@
 <script lang="ts" setup>
 import {
   deleteMockRecord, deleteMockRule, getActiveMockRule, getMockRecords, getMockRuleDetail, ProxyMock,
-  saveMockRecord, saveMockRule, searchMockRules
+  saveMockRecord, saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
-import { showNotify } from 'vant'
-import { inject, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
+import { showConfirmDialog, showNotify } from 'vant'
+import { computed, inject, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { scrollOptions } from '../../common/scroll'
 import { ProxyRecordStore } from '../../store'
-import VueAceEditor from '../components/VueAceEditor.vue'
+import MockRecordEditor from './mock/MockRecordEditor.vue'
+import { cloneRecord, prettifyRecordJson, recordFromRequest } from './mock/mock.record'
 
+const { t } = useI18n()
 const recordStore = ProxyRecordStore()
 const searchBox = ref<HTMLElement>()
 const keyword = ref<string>('')
 const showSearchResult = ref<boolean>(false)
 const searchWidth = ref<number>(0)
 const rules = ref<Array<ProxyMock.MockRule>>(null)
-const curRecordKey = ref<string>(null)
-const pendingDeleteKey = ref<string>(null)
+const curRecordId = ref<string>(null)
+const pendingDeleteId = ref<string>(null)
 const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
-const content = ref<string>(null)
+const draft = ref<ProxyMock.MockRecord>(null)
+const savedSnapshot = ref<string>('')
+const saving = ref(false)
+const isNew = ref(false)
 const recordOffset = ref(0)
 const recordHasMore = ref(false)
 const recordLoading = ref(false)
+
+const dirty = computed(() => draft.value != null && !isNew.value && JSON.stringify(draft.value) !== savedSnapshot.value)
+const canSaveRecord = computed(() => draft.value != null && !saving.value && (dirty.value || isNew.value))
+const effectiveResponse = ProxyMock.effectiveResponse
 
 const RECORD_PAGE_SIZE = 100
 
@@ -167,7 +192,6 @@ onMounted(() => {
   updateSearchWidth()
 
   curRule.value = new ProxyMock.MockRule()
-  content.value = withCurRecord.value ? JSON.stringify(recordStore.curRecord(), null, '\t') : null
   selectActiveMockRule()
 })
 
@@ -188,7 +212,7 @@ function onSearchBoxClick() {
 }
 
 watch(withCurRecord, (isWithRecord) => {
-  content.value = isWithRecord ? JSON.stringify(recordStore.curRecord(), null, '\t') : null
+  if (isWithRecord && curRule.value?._id != null && draft.value == null) startNewRecord()
 })
 
 watch(keyword, async () => {
@@ -211,77 +235,87 @@ watch(keyword, async () => {
   showSearchResult.value = true
 })
 
-function parseRecord(): ProxyMock.ProxyRequestRecord {
-  let record: ProxyMock.ProxyRequestRecord
-  try {
-    record = JSON.parse(content.value)
-  } catch (err) {
-    showNotify({ message: '数据格式错误', type: 'danger', duration: 800 })
-    return null
-  }
-  if (record?.url == null) {
-    showNotify({ message: '请求数据缺少url字段', type: 'danger', duration: 800 })
-    return null
-  }
-  return record
-}
-
-// 记录统一按 url 作为 key，改 url 时旧 key 需要同步删除
-function applyLocalRecord(key: string, record: ProxyMock.ProxyRequestRecord) {
-  if (curRule.value.requests == null) curRule.value.requests = new Map()
-  if (key !== record.url) curRule.value.requests.delete(key)
-  curRule.value.requests.set(record.url, record)
-  curRecordKey.value = record.url
-  content.value = JSON.stringify(record, null, '\t')
+function startNewRecord() {
+  if (curRule.value?._id == null) return
+  const source = withCurRecord.value ? recordStore.curRecord() : null
+  draft.value = recordFromRequest(curRule.value._id, source)
+  savedSnapshot.value = ''
+  isNew.value = true
+  curRecordId.value = null
 }
 
 async function addRecord() {
   if (curRule.value?._id == null) {
-    showNotify({ message: '请先选择Mock规则', type: 'warning', duration: 800 })
+    showNotify({ message: t('mock.editor.selectRuleFirst'), type: 'warning', duration: 800 })
     return
   }
-
-  const record = parseRecord()
-  if (record == null) return
-
+  if (!await confirmDiscard()) return
   if (detailTask != null) await detailTask
-  try {
-    await saveMockRecord(curRule.value._id, record.url, record)
-    applyLocalRecord(record.url, record)
-    showNotify({ message: '记录已保存', type: 'success', duration: 500 })
-  } catch (err) {
-    showNotify({ message: '记录保存失败', type: 'danger', duration: 1200 })
-  }
+  startNewRecord()
 }
 
-async function onRecordUpdate() {
+async function onRecordSave() {
   if (curRule.value?._id == null) {
-    showNotify({ message: '请先选择Mock规则', type: 'warning', duration: 800 })
+    showNotify({ message: t('mock.editor.selectRuleFirst'), type: 'warning', duration: 800 })
     return
   }
-  if (curRecordKey.value == null) {
-    showNotify({ message: '请先选择要修改的请求记录', type: 'warning', duration: 800 })
-    return
-  }
+  if (draft.value == null) return
+  // 无改动时重复保存会推进 updatedAt，让其他窗口的锁提前失效
+  if (!dirty.value && !isNew.value) return
 
-  const oldKey = curRecordKey.value
-  const record = parseRecord()
-  if (record == null) return
+  const issues = validateMockRecord(draft.value)
+  if (issues.length > 0) {
+    showNotify({ message: t(`mock.editor.validation.${issues[0].code}`), type: 'warning', duration: 1200 })
+    return
+  }
 
   if (detailTask != null) await detailTask
-
+  saving.value = true
   try {
-    await saveMockRecord(curRule.value._id, oldKey, record)
-    applyLocalRecord(oldKey, record)
-    showNotify({ message: '记录已更新', type: 'success', duration: 500 })
-  } catch (err) {
-    showNotify({ message: '记录更新失败', type: 'danger', duration: 1200 })
+    const expectedUpdatedAt = isNew.value ? null : draft.value.updatedAt
+    const result = await saveMockRecord(draft.value, expectedUpdatedAt)
+    const saved = cloneRecord(draft.value)
+    saved.id = result.id
+    saved.updatedAt = result.updatedAt
+
+    if (curRule.value.requests == null) curRule.value.requests = new Map()
+    curRule.value.requests.set(saved.id, saved)
+    curRecordId.value = saved.id
+    draft.value = saved
+    savedSnapshot.value = JSON.stringify(saved)
+    isNew.value = false
+    showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 600 })
+  } catch (err: any) {
+    const message = String(err ?? '')
+    showNotify({
+      message: message.indexOf('已被其他人修改') >= 0 ? t('mock.editor.saveConflict') : t('mock.editor.saveFailed'),
+      type: 'danger',
+      duration: 1500
+    })
+  } finally {
+    saving.value = false
   }
 }
 
-function onRuleSelect(rule: ProxyMock.MockRule) {
+async function confirmDiscard(): Promise<boolean> {
+  if (!dirty.value) return true
+  try {
+    await showConfirmDialog({
+      title: t('mock.editor.unsavedTitle'),
+      message: t('mock.editor.unsavedConfirm'),
+      confirmButtonText: t('common.done'),
+      cancelButtonText: t('common.cancel')
+    })
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+async function onRuleSelect(rule: ProxyMock.MockRule) {
   // 未选中规则时取消按钮置灰不可用
   if (rule == null && curRule.value?._id == null) return
+  if (!await confirmDiscard()) return
 
   if (rule != null) {
     curRule.value = rule
@@ -291,7 +325,10 @@ function onRuleSelect(rule: ProxyMock.MockRule) {
     curRule.value = new ProxyMock.MockRule()
     detailTask = null
   }
-  curRecordKey.value = null
+  curRecordId.value = null
+  draft.value = null
+  savedSnapshot.value = ''
+  isNew.value = false
   recordOffset.value = 0
   recordHasMore.value = false
   keyword.value = ''
@@ -318,8 +355,12 @@ async function fetchMockRuleDetail() {
     if (curRule.value?._id !== ruleId) return
     curRule.value = detail
     curRule.value.requests = new Map()
-    curRecordKey.value = null
+    curRecordId.value = null
+    draft.value = null
+    savedSnapshot.value = ''
+    isNew.value = false
     await loadRecords(true)
+    if (withCurRecord.value && draft.value == null) startNewRecord()
   } catch (err) {
     if (curRule.value?._id !== ruleId) return
     showNotify({ message: '未找到对应规则', type: 'warning', duration: 1000 })
@@ -345,7 +386,7 @@ async function loadRecords(reset: boolean = false) {
     const page = await getMockRecords(rule._id, recordOffset.value, RECORD_PAGE_SIZE)
     if (seq !== recordLoadSeq || curRule.value?._id !== rule._id) return
     if (rule.requests == null) rule.requests = new Map()
-    for (const record of page?.items ?? []) rule.requests.set(record.url, record)
+    for (const record of page?.items ?? []) rule.requests.set(record.id, record)
     recordOffset.value += page?.items?.length ?? 0
     recordHasMore.value = page?.hasMore === true
   } catch (err) {
@@ -373,10 +414,12 @@ async function onRuleDeleteConfirm() {
     await deleteMockRule(curRule.value._id)
     curRule.value = new ProxyMock.MockRule()
     detailTask = null
-    curRecordKey.value = null
+    curRecordId.value = null
+    draft.value = null
+    savedSnapshot.value = ''
+    isNew.value = false
     recordOffset.value = 0
     recordHasMore.value = false
-    content.value = null
     showRuleDelete.value = false
   } catch (err) {
     showNotify({ message: '删除失败', type: 'warning', duration: 1000 })
@@ -391,12 +434,12 @@ function onMockSwitchChanged(rule: ProxyMock.MockRule) {
 async function onSave() {
   if (curRule.value == null || curRule.value.name == null) return
 
-  const isNew = curRule.value._id == null
+  const isNewRule = curRule.value._id == null
   try {
-    // 只保存规则元信息，请求记录由 addRecord / onRecordUpdate 单独落盘
+    // 只保存规则元信息，请求记录由 onRecordSave 单独落盘
     curRule.value._id = await saveMockRule(curRule.value)
     // 已有规则无需重载记录，避免切换开关/改名时丢掉已加载的分页
-    if (isNew) await fetchMockRuleDetail()
+    if (isNewRule) await fetchMockRuleDetail()
     showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
   } catch (err) {
     showNotify({ message: '规则更新失败', type: 'danger', duration: 1200 })
@@ -404,30 +447,37 @@ async function onSave() {
   showRuleEdit.value = false
 }
 
-function onRecordSelected(record: ProxyMock.ProxyRequestRecord) {
-  curRecordKey.value = record.url
-  content.value = JSON.stringify(record, null, '\t')
+async function onRecordSelected(record: ProxyMock.MockRecord) {
+  if (record.id === curRecordId.value && !isNew.value) return
+  if (!await confirmDiscard()) return
+  curRecordId.value = record.id
+  draft.value = prettifyRecordJson(cloneRecord(record))
+  // 快照取自格式化后的草稿，仅改变展示时不会出现“未保存”
+  savedSnapshot.value = JSON.stringify(draft.value)
+  isNew.value = false
 }
 
-function onRecordDelete(key: string) {
-  pendingDeleteKey.value = key
+function onRecordDelete(id: string) {
+  pendingDeleteId.value = id
   showRecordDelete.value = true
 }
 
 async function onRecordDeleteConfirm() {
-  const key = pendingDeleteKey.value
-  pendingDeleteKey.value = null
+  const id = pendingDeleteId.value
+  pendingDeleteId.value = null
   showRecordDelete.value = false
-  if (curRule.value?._id == null || key == null) return
+  if (curRule.value?._id == null || id == null) return
 
   try {
-    await deleteMockRecord(curRule.value._id, key)
-    curRule.value.requests?.delete(key)
+    await deleteMockRecord(id)
+    curRule.value.requests?.delete(id)
     // 删除的是已加载区间内的记录，游标同步回退一位，避免下次翻页漏读
     recordOffset.value = Math.max(0, recordOffset.value - 1)
-    if (curRecordKey.value === key) {
-      curRecordKey.value = null
-      content.value = null
+    if (curRecordId.value === id) {
+      curRecordId.value = null
+      draft.value = null
+      savedSnapshot.value = ''
+      isNew.value = false
     }
   } catch (err) {
     showNotify({ message: '删除失败', type: 'warning', duration: 1000 })
@@ -439,6 +489,8 @@ async function onRecordDeleteConfirm() {
 .mgr-content {
   display: flex;
   flex-direction: column;
+  /* van-row 默认 wrap，列方向下高度超出弹层时会把主体换到右侧列并移出可视区 */
+  flex-wrap: nowrap;
   width: min(80vw, 1600px);
   min-width: min(375px, 100vw);
   max-width: 100vw;
@@ -469,12 +521,13 @@ async function onRecordDeleteConfirm() {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
+  /* 编辑器列的内容宽度较大，允许换行会把编辑区挤到列表下方并被弹层裁掉 */
+  flex-wrap: nowrap;
 }
 
 .record-list {
   width: min(300px, 34%);
   height: calc(100% - 10px);
-  overflow-y: auto;
 }
 
 .record-load-more {
@@ -490,9 +543,27 @@ async function onRecordDeleteConfirm() {
 }
 
 .rule-editor-col {
-  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  /* flex-basis 归零，避免内容固有宽度参与换行判断 */
+  flex: 1 1 0;
   min-width: 0;
+  height: calc(100% - 10px);
+  /* 左侧列表有 5px 外边距，这里同步下移，两侧底边才能对齐 */
+  margin-top: 5px;
+  padding: 0 5px;
   position: relative;
+}
+
+.editor-placeholder {
+  margin: auto;
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-sm);
+}
+
+.record-save-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .mgr-content :deep(.van-popover__wrapper) {
@@ -543,8 +614,6 @@ async function onRecordDeleteConfirm() {
 
 .search-result {
   max-height: 50vh;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .rule-snap-item {
@@ -586,7 +655,9 @@ async function onRecordDeleteConfirm() {
   .rule-editor-col {
     flex: 1 1 0;
     width: 100%;
+    height: auto;
     min-height: 0;
+    padding: 0;
   }
 }
 </style>

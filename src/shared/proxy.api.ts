@@ -1,4 +1,5 @@
 import type { LocalServerConfig } from './base.models'
+import type { Diagnostic } from './diagnostic.models'
 import type { ProxyMock } from './proxy.models'
 import { get, post } from './base.api'
 import { API_URL } from './api.const'
@@ -26,13 +27,14 @@ export function deleteMockRule(ruleId: string) {
   return post<string>(`${API_URL.AppMock}${API_URL.DeleteMockRule}`, null, { ruleId })
 }
 
-// recordKey 是修改前的 key；与 record.url 不同时服务端会把它当作改 URL 处理
-export function saveMockRecord(ruleId: string, recordKey: string, record: ProxyMock.ProxyRequestRecord) {
-  return post<string>(`${API_URL.AppMock}${API_URL.SaveMockRecord}`, null, { ruleId, recordKey }, record)
+// 全量保存记录；传 expectedUpdatedAt 时启用乐观锁，冲突返回错误
+export function saveMockRecord(record: ProxyMock.MockRecord, expectedUpdatedAt?: number) {
+  return post<ProxyMock.MockRecordSaveResult>(
+    `${API_URL.AppMock}${API_URL.SaveMockRecord}`, null, { expectedUpdatedAt }, record)
 }
 
-export function deleteMockRecord(ruleId: string, recordKey: string) {
-  return post<string>(`${API_URL.AppMock}${API_URL.DeleteMockRecord}`, null, { ruleId, recordKey })
+export function deleteMockRecord(recordId: string) {
+  return post<boolean>(`${API_URL.AppMock}${API_URL.DeleteMockRecord}`, null, { recordId })
 }
 
 export function getMockRecords(ruleId: string, offset: number, limit: number) {
@@ -53,6 +55,14 @@ export function getProxyConfig(uid: string) {
 
 export function getAllPushClients() {
   return get<Array<ProxyMock.MsgPushClient>>(`${API_URL.AppMock}${API_URL.GetAllPushClients}`)
+}
+
+export function getHealth() {
+  return get<Diagnostic.HealthInfo>(`${API_URL.AppMock}${API_URL.Health}`)
+}
+
+export function diagnose(target: string) {
+  return post<Diagnostic.DiagnoseResult>(`${API_URL.AppMock}${API_URL.Diagnose}`, null, { target })
 }
 
 export function mockRegister(uid: string) {

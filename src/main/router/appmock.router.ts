@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
-import { CommonService, MockService, ProxyService, PushService } from '../service'
+import { CommonService, DiagnosticService, MockService, ProxyService, PushService } from '../service'
 import { BaseRouter, ParamType } from './base.router'
 
 interface ReqResp {
@@ -22,6 +22,8 @@ export class AppMockRouter extends BaseRouter {
   private mockService: MockService
   @inject(IocTypes.ProxyService)
   private proxyService: ProxyService
+  @inject(IocTypes.DiagnosticService)
+  private diagnosticService: DiagnosticService
 
   private _clients: Map<string, ReqResp> = new Map()
   private _heartbeat: ReturnType<typeof setInterval> = null
@@ -154,6 +156,15 @@ export class AppMockRouter extends BaseRouter {
       path: API_URL.GetServerConfig, func: 'getServerConfig', target: 'commonService'
     })
     this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.Health, func: 'getHealth', target: 'commonService'
+    })
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.Diagnose, func: 'diagnose', target: 'diagnosticService',
+      params: [{ key: 'target', type: ParamType.Query }]
+    })
+    this.addApiInfo({
       method: BizNetwork.Method_Post,
       path: API_URL.SaveProxyConfig, func: 'saveProxyConfig', target: 'proxyService',
       params: [
@@ -216,9 +227,8 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Post,
       path: API_URL.SaveMockRecord, func: 'saveMockRecord', target: 'mockService',
       params: [
-        { key: 'ruleId', type: ParamType.Query },
-        { key: 'recordKey', type: ParamType.Query },
-        { key: 'record', type: ParamType.FormBody }
+        { key: 'record', type: ParamType.FormBody },
+        { key: 'expectedUpdatedAt', type: ParamType.Query }
       ]
     })
 
@@ -226,8 +236,7 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Post,
       path: API_URL.DeleteMockRecord, func: 'deleteMockRecord', target: 'mockService',
       params: [
-        { key: 'ruleId', type: ParamType.Query },
-        { key: 'recordKey', type: ParamType.Query }
+        { key: 'recordId', type: ParamType.Query }
       ]
     })
 

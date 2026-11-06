@@ -202,6 +202,14 @@ export default class MainApp {
         }
       },
       {
+        icon: path.join(iconDir, 'ic-rule.png'),
+        label: '接入向导',
+        click: () => {
+          this.mainWindow?.show()
+          this.mainWindow?.webContents.send(MainApiCmd.OpenOnboarding)
+        }
+      },
+      {
         icon: path.join(iconDir, 'ic-debug.png'),
         label: '开发者面板',
         click: () => {

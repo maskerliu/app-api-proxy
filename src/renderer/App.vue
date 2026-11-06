@@ -4,7 +4,7 @@
     <div class="drag-bar" v-if="!isWeb"></div>
 
     <router-view class="biz-content" v-slot="{ Component, route }">
-      <transition name="fade" v-if="canRender">
+      <transition name="fade" mode="out-in" v-if="canRender">
         <component :is="Component" :key="route.path" />
       </transition>
     </router-view>
@@ -60,7 +60,7 @@ async function onConfigReady(config?: LocalServerConfig) {
   canRender.value = true
   clearTimeout(loadingTimer)
   showLoading.value = false
-  router.replace('/proxy')
+  router.replace(commonStore.onboarded ? '/proxy' : '/onboarding')
   active.value = 1
 }
 
@@ -73,6 +73,8 @@ onMounted(async () => {
     offset.value.x = window.innerWidth - 42
     offset.value.y = window.innerHeight - 150
   })
+
+  window.mainApi?.onOpenOnboarding(() => router.push('/onboarding'))
 
   if (window.mainApi) {
     window.mainApi.getBizConfig(onConfigReady)
@@ -119,6 +121,19 @@ function onOpenDebugPanel() {
   background: var(--van-gray-8);
 }
 
+/* OverlayScrollbars 主题：手柄颜色取自 Vant 灰阶，深色主题下随 gray 变量自动反相 */
+.os-theme-van {
+  --os-size: 6px;
+  --os-padding-perpendicular: 2px;
+  --os-padding-axis: 2px;
+  --os-track-border-radius: 3px;
+  --os-handle-border-radius: 3px;
+  --os-handle-interactive-area-offset: 4px;
+  --os-handle-bg: color-mix(in srgb, var(--van-gray-8) 45%, transparent);
+  --os-handle-bg-hover: color-mix(in srgb, var(--van-gray-8) 65%, transparent);
+  --os-handle-bg-active: color-mix(in srgb, var(--van-gray-8) 85%, transparent);
+}
+
 .full-row {
   width: 100%;
   height: 100%;
@@ -141,6 +156,17 @@ function onOpenDebugPanel() {
   height: 100dvh;
   background: var(--van-gray-1);
   overflow: hidden auto;
+}
+
+/* 路由切换淡入淡出；out-in 保证新旧页面不同时占位导致跳动 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 .drag-bar {

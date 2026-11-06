@@ -8,6 +8,7 @@ import zlib from 'zlib'
 import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
+import { DiagnosticService } from './diagnostic.service'
 import { MockService } from './mock.service'
 import { PushService } from './push.service'
 
@@ -32,6 +33,9 @@ export class ProxyService {
 
   @inject(IocTypes.PushService)
   private pushService: PushService
+
+  @inject(IocTypes.DiagnosticService)
+  private diagnosticService: DiagnosticService
 
   constructor() {
     this._sessionId = 0
@@ -104,11 +108,23 @@ export class ProxyService {
     const startTime = new Date().getTime()
     const sessionId = ++this._sessionId
     const delay = this.proxyConfigs.get(uid)?.delay ?? 0
+    const host = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST) ?? ''
+    // 接入向导依赖这里判断请求是否来自已注册的设备
+    this.diagnosticService.recordRequest({
+      sessionId,
+      at: startTime,
+      uid: uid ?? '',
+      method: req.method,
+      url: req.url,
+      host,
+      uidKnown: uid != null && this.pushService.hasClient(uid),
+    })
 
     let rawBody: Buffer
     try {
       rawBody = await this.readRequestBody(req)
     } catch (err: any) {
+      this.diagnosticService.recordError({ uid: uid ?? '', url: req.url, host, error: err?.message ?? 'request body error' })
       if (!resp.headersSent) {
         resp.status(413).json({ code: 9000, msg: err.message || 'request body error' })
       }
@@ -145,6 +161,8 @@ export class ProxyService {
   }
 
   private sendMockResponse(resp: Response, mockResp: ProxyMock.MockResponse, delay: number) {
+    // 变体延迟 > 0 时覆盖设备级延迟（不叠加）
+    const effectiveDelay = mockResp.delay != null ? mockResp.delay : delay
     setTimeout(() => {
       if (resp.headersSent || resp.writableEnded || resp.destroyed) return
 
@@ -162,7 +180,7 @@ export class ProxyService {
 
       if (mockResp.data == null) resp.end()
       else resp.send(mockResp.data)
-    }, delay)
+    }, effectiveDelay)
   }
 
   private proxy(sessionId: number, req: Request, resp: Response, startTime: number, delay: number, rawBody?: Buffer) {
@@ -182,6 +200,12 @@ export class ProxyService {
           return
         }
         console.error('proxy request failed:', err.message)
+        this.diagnosticService.recordError({
+          uid: uid ?? '',
+          url: req.url,
+          host: this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST) ?? '',
+          error: err.message,
+        })
         const record: ProxyMock.ProxyRequestRecord = {
           id: sessionId,
           url: req.url,
@@ -292,6 +316,12 @@ export class ProxyService {
 
     upstreamResp.on('error', (err) => {
       clearTimeout(timer)
+      this.diagnosticService.recordError({
+        uid,
+        url: req.url,
+        host: this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST) ?? '',
+        error: state.clientGone ? 'client closed' : err.message,
+      })
       const record: ProxyMock.ProxyRequestRecord = {
         id: sessionId,
         url: req.url,

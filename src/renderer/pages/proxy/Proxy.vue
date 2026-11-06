@@ -24,12 +24,13 @@
       </van-row>
       <van-field v-model="proxyDelay" type="number" placeholder="延迟(ms)" center label-width="6.5rem">
         <template #label>
-          <van-popover v-model:show="showClientPicker" placement="bottom-start"
-            style="min-width: 220px; max-height: 45vh; overflow-y: auto;">
-            <van-cell v-for="item in clientInfos" :key="item.uid" clickable :title="clientLabel(item)"
-              :title-style="{ color: item.uid == targetUid ? 'var(--van-primary-color)' : '' }"
-              @click="selectClient(item)" />
-            <van-cell v-if="clientInfos.length == 0" title="暂无在线客户端" />
+          <van-popover v-model:show="showClientPicker" placement="bottom-start" style="min-width: 220px;">
+            <OverlayScrollbarsComponent class="client-picker-list" :options="scrollOptions" defer>
+              <van-cell v-for="item in clientInfos" :key="item.uid" clickable :title="clientLabel(item)"
+                :title-style="{ color: item.uid == targetUid ? 'var(--van-primary-color)' : '' }"
+                @click="selectClient(item)" />
+              <van-cell v-if="clientInfos.length == 0" title="暂无在线客户端" />
+            </OverlayScrollbarsComponent>
             <template #reference>
               <div class="client-picker">
                 <van-icon class="iconfont icon-network-data client-picker-icon" />
@@ -54,15 +55,13 @@
         </template>
       </van-field>
 
-      <OverlayScrollbarsComponent class="snap-panel border-bg"
-        :options="{ scrollbars: { theme: `os-theme-${reverseTheme}` } }" defer>
+      <OverlayScrollbarsComponent class="snap-panel border-bg" :options="scrollOptions" defer>
         <van-list ref="snaplist">
           <proxy-record-snap v-for="record in recordStore.visibleRecords" :key="record.id" :source="record" />
         </van-list>
       </OverlayScrollbarsComponent>
     </van-col>
-    <OverlayScrollbarsComponent class="right-panel" :options="{ scrollbars: { theme: `os-theme-${reverseTheme}`, } }"
-      defer>
+    <OverlayScrollbarsComponent class="right-panel" :options="scrollOptions" defer>
       <span v-if="recordStore.curRecord() == null"></span>
       <proxy-stat-detail :record="recordStore.records.get(recordStore.curRecordId)"
         v-else-if="recordStore.curRecord()?.type == 5020" />
@@ -91,6 +90,8 @@ import QrcodeVue from 'qrcode.vue'
 import { List, showNotify } from 'vant'
 import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import { scrollOptions } from '../../common/scroll'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -106,13 +107,12 @@ const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 const { t } = useI18n()
+const router = useRouter()
 
 const showPopup = ref(false)
 const showMockRuleMgr = ref<boolean>(false)
 const withCurRecord = ref<boolean>(false)
 const showSettings = ref<boolean>(false)
-
-const reverseTheme = ref<string>(commonStore.theme == 'dark' ? 'light' : 'dark')
 
 const targetLabel = computed(() => {
   if (targetUid.value == null) return '选择客户端'
@@ -133,10 +133,6 @@ onMounted(async () => {
 
 watch(() => showClientPicker.value, (show) => {
   if (show) loadClients()
-})
-
-watch(() => commonStore.theme, () => {
-  reverseTheme.value = commonStore.theme == 'dark' ? 'light' : 'dark'
 })
 
 // 注册前 uid 为空，拿到服务端分配的 uid 后补选默认客户端
@@ -300,8 +296,6 @@ function onMockRecordStart() {
   height: calc(100% - 10px);
   min-height: 0;
   margin: 5px 2px;
-  overflow: hidden;
-  overflow-y: auto;
 }
 
 .left-panel-icon {
@@ -340,9 +334,11 @@ function onMockRecordStart() {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
   margin: 5px 0 0 0;
+}
+
+.client-picker-list {
+  max-height: 45vh;
 }
 
 /* 窄窗口下左右面板改为上下堆叠，列表占上方固定比例，详情占剩余空间 */

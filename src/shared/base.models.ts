@@ -105,6 +105,7 @@ export interface LocalServerConfig {
   appVersion: string
   theme: string
   locales: string
+  onboarded?: boolean // 是否已完成接入向导
 }
 
 export interface Version {

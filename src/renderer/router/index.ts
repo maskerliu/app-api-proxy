@@ -13,6 +13,16 @@ export default createRouter({
       component: require('../pages/welcome/Welcome.vue').default
     },
     {
+      path: '/onboarding',
+      name: 'Onboarding',
+      component: require('../pages/onboarding/Onboarding.vue').default
+    },
+    {
+      path: '/diagnostic',
+      name: 'Diagnostic',
+      component: require('../pages/onboarding/Diagnostic.vue').default
+    },
+    {
       path: '/proxy',
       name: 'Proxy',
       component: require('../pages/proxy/Proxy.vue').default

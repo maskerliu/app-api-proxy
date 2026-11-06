@@ -49,6 +49,58 @@ export namespace ProxyMock {
     statusCode: number
     headers?: Record<string, any>
     data?: any
+    // 有效延迟（变体覆盖设备级延迟）；未设置时使用设备级延迟
+    delay?: number
+  }
+
+  export type MockBodyType = 'json' | 'xml' | 'text' | 'binary'
+  export type MockBodyEncoding = 'utf8' | 'base64'
+
+  // 同名头可能多值（如 set-cookie），存储层用数组表达
+  export interface MockResponseHeaders {
+    [name: string]: string | string[]
+  }
+
+  export interface MockResponseDef {
+    statusCode: number
+    headers: MockResponseHeaders
+    body: string
+    bodyType: MockBodyType
+    bodyEncoding?: MockBodyEncoding
+    delayMs: number
+  }
+
+  export interface MockVariant extends MockResponseDef {
+    id: string
+    name: string
+    updatedAt?: number
+  }
+
+  export interface MockRecordSource {
+    method?: string
+    url?: string
+    statusCode?: number
+    headers?: any
+    capturedAt?: number
+  }
+
+  export interface MockRecord {
+    id: string
+    ruleId: string
+    name: string
+    // 当前版本仍以 URL 精确命中，R1 匹配引擎接入后由 match 条件取代
+    url: string
+    response: MockResponseDef
+    variants: MockVariant[]
+    activeVariantId: string | null
+    source?: MockRecordSource
+    createdAt: number
+    updatedAt: number
+  }
+
+  export interface MockRecordSaveResult {
+    id: string
+    updatedAt: number
   }
 
   export interface ProxyStatRecord extends ProxyRequestRecord {
@@ -64,13 +116,32 @@ export namespace ProxyMock {
     name: string
     desc: string
     isMock?: boolean = false
-    // 仅渲染层使用的列表缓存，不参与持久化
-    requests: Map<string, ProxyRequestRecord> = new Map()
+    // 仅渲染层使用的列表缓存，不参与持久化；key 为记录 ID
+    requests: Map<string, MockRecord> = new Map()
   }
 
   export interface MockRecordPage {
-    items: ProxyRequestRecord[]
+    items: MockRecord[]
     hasMore: boolean
+  }
+
+  export function defaultResponse(): MockResponseDef {
+    return {
+      statusCode: 200,
+      headers: {},
+      body: '',
+      bodyType: 'json',
+      delayMs: 0
+    }
+  }
+
+  // 有效响应：activeVariantId 命中变体时使用变体，否则回退基础响应
+  export function effectiveResponse(record: MockRecord): MockResponseDef {
+    if (record?.activeVariantId) {
+      const variant = record.variants?.find(it => it.id === record.activeVariantId)
+      if (variant != null) return variant
+    }
+    return record?.response ?? defaultResponse()
   }
 
   export interface MsgPushClient extends ClientInfo {

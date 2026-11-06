@@ -69,6 +69,10 @@ const mainApi: IMainAPI = {
     ipcRenderer.once(MainApiCmd.OpenSettings, (_event) => callback())
   },
 
+  onOpenOnboarding(callback: any) {
+    ipcRenderer.once(MainApiCmd.OpenOnboarding, (_event) => callback())
+  },
+
   onSysThemeChanged(callback: (theme: string) => void) {
     ipcRenderer.once(MainApiCmd.SysThemeChanged, (_, theme: string) => callback(theme))
   },

@@ -12,6 +12,8 @@ export const API_URL = {
     SaveProxyConfig: '/saveProxyConfig',
     GetProxyConfig: '/getProxyConfig',
     GetAllPushClients: '/getAllPushClients',
+    Health: '/health',
+    Diagnose: '/diagnose',
     MockRegister: '/register',
     Sse: '/sse',
     Broadcast: '/sse/broadcast',
