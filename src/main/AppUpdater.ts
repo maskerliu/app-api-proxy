@@ -54,9 +54,12 @@ function throwIfAborted(signal?: AbortSignal) {
 export async function incrementUpdate(version: Version, signal?: AbortSignal) {
   const updateDir = path.join(USER_DATA_DIR, 'update')
   const sourceFile = path.join(updateDir, `app-${version.version}.gz`)
-  const destFile = path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'tmp-update')
+  // 先解压到用户目录（始终可写），安装目录不可写时由重启 helper 提权替换
+  const stagedFile = path.join(updateDir, 'update.asar')
+  const resourcesAsar = path.join(process.resourcesPath, 'update.asar')
   fs.mkdirSync(updateDir, { recursive: true })
   fs.rmSync(sourceFile, { force: true })
+  fs.rmSync(stagedFile, { force: true })
 
   try {
     const resp = await axios({
@@ -77,13 +80,31 @@ export async function incrementUpdate(version: Version, signal?: AbortSignal) {
       return
     }
 
-    await pipeline(createReadStream(sourceFile), createGunzip(), createWriteStream(destFile), { signal })
+    await pipeline(createReadStream(sourceFile), createGunzip(), createWriteStream(stagedFile), { signal })
     throwIfAborted(signal)
-    fs.renameSync(destFile, path.join(IS_DEV ? USER_DATA_DIR : process.resourcesPath, 'update.asar'))
+
+    if (IS_DEV) {
+      fs.rmSync(path.join(USER_DATA_DIR, 'update.asar'), { force: true })
+      fs.renameSync(stagedFile, path.join(USER_DATA_DIR, 'update.asar'))
+    } else if (process.platform != 'win32') {
+      fs.rmSync(resourcesAsar, { force: true })
+      fs.copyFileSync(stagedFile, resourcesAsar)
+      fs.rmSync(stagedFile, { force: true })
+    } else {
+      try {
+        fs.rmSync(resourcesAsar, { force: true })
+        fs.copyFileSync(stagedFile, resourcesAsar)
+        fs.rmSync(stagedFile, { force: true })
+      } catch (err: any) {
+        // Program Files 等受保护目录：保留暂存文件，重启时通过 UAC 提权替换
+        if (err?.code != 'EACCES' && err?.code != 'EPERM') throw err
+        console.log('安装目录无写权限，更新包已暂存，重启时提权应用:', err.code)
+      }
+    }
     notifyDownloadProgress(100)
   } catch (err) {
     fs.rmSync(sourceFile, { force: true })
-    fs.rmSync(destFile, { force: true })
+    fs.rmSync(stagedFile, { force: true })
     if (signal?.aborted || axios.isCancel(err)) {
       console.log('increment update cancelled')
       notifyDownloadFailed('更新已取消')

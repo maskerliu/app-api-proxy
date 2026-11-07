@@ -3,10 +3,10 @@
 	"data": {
 		"forceUpdate": true,
 		"fullUpdate": false,
-		"updateUrl": "http://192.168.21.5:4000/res/app-win32-x64-1.0.4.gz",
-		"message": "快更新到1.0.4吧！！！",
-		"version": "1.0.4",
-		"sha512": "xSTEEPeRPUFdr2hoCwgCNHnS7Wyvdv7LKsNmU2/F3L36RFISuq6O1KPEq+Wuu96+b9JVZVmauNg4XfPV5k+ewQ==",
-		"releaseDate": "2026-11-04T13:01:56.000Z"
+		"updateUrl": "http://192.168.21.5:4000/res/app-win32-x64-1.0.5.gz",
+		"message": "快更新到1.0.5吧！！！",
+		"version": "1.0.5",
+		"sha512": "WDz89BcK0yAu3eGL6doF3jXJFVmN4ZyxyV/he5fZplnnAF4cRIkPJ7bZSIiUaQLvMWANDmd/7EBrNRBJ12p7AA==",
+		"releaseDate": "2026-11-07T01:29:16.500Z"
 	}
 }

@@ -10,26 +10,36 @@ import { USER_DATA_DIR } from './MainConst'
 import { getAppWindow } from './misc/utils'
 
 ipcMain.handle(MainApiCmd.Relaunch, (_) => {
-  if (fse.pathExistsSync(path.join(process.resourcesPath, 'update.asar'))) {
-    const logPath = app.getPath('logs')
-    const out = fse.openSync(path.join(logPath, 'out.log'), 'a')
-    const err = fse.openSync(path.join(logPath, 'err.log'), 'a')
+  const resourcesUpdate = path.join(process.resourcesPath, 'update.asar')
+  const stagedUpdate = path.join(USER_DATA_DIR, 'update', 'update.asar')
+  const pending = fse.pathExistsSync(resourcesUpdate) || fse.pathExistsSync(stagedUpdate)
 
-    if (os.platform() == 'win32') {
-      const helper = path.join(process.resourcesPath, 'update.ps1')
-      // 直接 detached 启动控制台程序时 PowerShell 会立即退出而不执行脚本，需经 shell 转发
-      const child = spawn(
-        'powershell.exe',
-        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-          `"${helper}"`, `"${process.resourcesPath}"`, `"${app.getPath('exe')}"`, `"${path.join(logPath, 'err.log')}"`],
-        {
-          detached: true,
-          shell: true,
-          stdio: ['ignore', out, err],
-          windowsHide: true
-        })
+  if (pending && app.isPackaged) {
+    const logDir = app.getPath('logs')
+    fse.ensureDirSync(logDir)
+    const helper = path.join(process.resourcesPath, 'update-helper.cjs')
+
+    if (os.platform() == 'win32' && fse.pathExistsSync(helper)) {
+      // Electron 的 Node 模式是 GUI 子系统进程，不会弹出控制台窗口；helper 负责等待进程退出、
+      // 替换 app.asar（安装目录不可写时通过 elevate.exe 提权）并重新启动应用
+      const child = spawn(process.execPath, [
+        helper,
+        '--resources', process.resourcesPath,
+        '--exe', app.getPath('exe'),
+        '--log', path.join(logDir, 'update.log'),
+        '--pid', String(process.pid),
+        '--staged', stagedUpdate
+      ], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+      })
+      child.on('error', err => console.error('spawn update helper failed:', err.message))
       child.unref()
-    } else {
+    } else if (os.platform() != 'win32') {
+      const out = fse.openSync(path.join(logDir, 'out.log'), 'a')
+      const err = fse.openSync(path.join(logDir, 'err.log'), 'a')
       const updateSh = `sh ${path.join(process.resourcesPath, 'update.sh')}`
       const child = spawn(
         updateSh,
@@ -40,6 +50,8 @@ ipcMain.handle(MainApiCmd.Relaunch, (_) => {
           stdio: ['ignore', out, err]
         })
       child.unref()
+    } else {
+      app.relaunch({ execPath: app.isPackaged ? process.execPath : __dirname })
     }
   } else {
     app.relaunch({ execPath: app.isPackaged ? process.execPath : __dirname })

@@ -1,50 +1,57 @@
 param(
-  [string]$Resources,
-  [string]$ExePath,
-  [string]$LogPath
+  [Parameter(Mandatory = $true)][string]$Resources,
+  [Parameter(Mandatory = $true)][string]$UpdateAsar,
+  [Parameter(Mandatory = $true)][string]$ResultPath,
+  [Parameter(Mandatory = $true)][string]$StartedPath
 )
 
+# 仅由 update-helper.cjs 在需要提权时调用：把暂存的 update.asar 复制进安装目录并替换 app.asar。
+# 应用进程的退出等待/重启由 helper 负责，避免本脚本拉起的应用继承控制台。
 $ErrorActionPreference = 'SilentlyContinue'
 
+$target = Join-Path $Resources 'update.asar'
 $appAsar = Join-Path $Resources 'app.asar'
 $bakAsar = Join-Path $Resources 'app-bak.asar'
-$updateAsar = Join-Path $Resources 'update.asar'
-$appName = [System.IO.Path]::GetFileNameWithoutExtension($ExePath)
 
-function Write-Log($message) {
-  if ($LogPath) { Add-Content -LiteralPath $LogPath -Value $message }
+function Write-Result($value) {
+  Set-Content -LiteralPath $ResultPath -Value $value -Encoding ASCII
 }
 
-if (Test-Path -LiteralPath $updateAsar) {
-  $swapped = $false
-  for ($i = 0; $i -lt 30; $i++) {
-    Remove-Item -LiteralPath $bakAsar -Force
-    try {
-      Rename-Item -LiteralPath $appAsar -NewName 'app-bak.asar' -ErrorAction Stop
-      $swapped = $true
-      break
-    } catch {
-      Start-Sleep -Milliseconds 1000
-    }
-  }
+Set-Content -LiteralPath $StartedPath -Value 'started' -Encoding ASCII
 
-  if ($swapped) {
-    try {
-      Rename-Item -LiteralPath $updateAsar -NewName 'app.asar' -ErrorAction Stop
-    } catch {
-      Write-Log ('failed to apply update.asar: ' + $_)
-      try { Rename-Item -LiteralPath $bakAsar -NewName 'app.asar' -ErrorAction Stop } catch { }
-    }
-  } else {
-    Write-Log 'app.asar stayed locked, update skipped'
+if ([System.IO.Path]::GetFullPath($UpdateAsar) -ne [System.IO.Path]::GetFullPath($target)) {
+  Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+  try {
+    Copy-Item -LiteralPath $UpdateAsar -Destination $target -Force -ErrorAction Stop
+  } catch {
+    Write-Result ('copy-failed: ' + $_.Exception.Message)
+    exit 1
   }
 }
 
-for ($i = 0; $i -lt 15; $i++) {
-  $running = Get-Process -Name $appName -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $PID }
-  if (-not $running) { break }
-  Start-Sleep -Milliseconds 1000
+$swapped = $false
+for ($i = 0; $i -lt 30; $i++) {
+  Remove-Item -LiteralPath $bakAsar -Force -ErrorAction SilentlyContinue
+  try {
+    Rename-Item -LiteralPath $appAsar -NewName 'app-bak.asar' -ErrorAction Stop
+    $swapped = $true
+    break
+  } catch {
+    Start-Sleep -Milliseconds 1000
+  }
 }
 
-Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-Start-Process -FilePath $ExePath
+if (-not $swapped) {
+  Write-Result 'locked'
+  exit 1
+}
+
+try {
+  Rename-Item -LiteralPath $target -NewName 'app.asar' -ErrorAction Stop
+  Write-Result 'ok'
+  exit 0
+} catch {
+  Write-Result ('rename-failed: ' + $_.Exception.Message)
+  try { Rename-Item -LiteralPath $bakAsar -NewName 'app.asar' -ErrorAction Stop } catch { }
+  exit 1
+}

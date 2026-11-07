@@ -22,7 +22,7 @@
     "pub:full": "yarn pkg && node --import tsx .build-scripts/publish.ts --target=full",
     "postinstall": "yarn electron-builder install-app-deps",
     "rebuild": "electron-rebuild",
-    "updateServer": "npx --yes http-server build/ -p 4000 --cors -c-1"
+    "updateServer": "node --import tsx .build-scripts/update-server.ts"
   },
   "config": {
     "port": 8884,

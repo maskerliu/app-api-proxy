@@ -65,6 +65,8 @@ win:
   extraFiles:
     - from: "./update.ps1"
       to: "./resources/"
+    - from: "./update-helper.cjs"
+      to: "./resources/"
   target:
     - target: nsis
       arch:
