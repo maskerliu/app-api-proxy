@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WS Lab · 客户端</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body class="mode-direct">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>WS Lab</span>
+      <span class="brand-sub">长连接端到端测试</span>
+    </div>
+    <nav>
+      <a class="active" href="/">客户端</a>
+      <a href="/admin">推送控制台</a>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <div class="card-head">
+        <h2>连接配置</h2>
+        <div class="state closed" id="state">
+          <span class="state-dot"></span>
+          <span id="stateText">未连接</span>
+        </div>
+      </div>
+
+      <fieldset id="configFields">
+        <div class="mode-switch" role="group" aria-label="连接模式">
+          <button type="button" class="mode active" data-mode="direct">直接连接</button>
+          <button type="button" class="mode" data-mode="proxy">经 AppApiProxy</button>
+        </div>
+
+        <div class="grid">
+          <label class="field wide">
+            <span class="label">目标地址</span>
+            <input id="targetHost" value="127.0.0.1:8890" placeholder="127.0.0.1:8890" spellcheck="false" />
+            <small class="muted" id="targetHint">ws-lab 服务地址</small>
+          </label>
+          <label class="field">
+            <span class="label">路径</span>
+            <input id="path" value="/ws" placeholder="/ws" spellcheck="false" />
+          </label>
+          <label class="field">
+            <span class="label">客户端名称</span>
+            <input id="name" placeholder="留空由服务端生成" spellcheck="false" />
+          </label>
+          <label class="field proxy-only">
+            <span class="label">代理地址</span>
+            <input id="proxyHost" value="127.0.0.1:8884" placeholder="127.0.0.1:8884 或 wss://127.0.0.1:8884" spellcheck="false" />
+            <small class="muted" id="proxyHint">http 代理；AppApiProxy 为 https 时改填 wss:// 地址</small>
+          </label>
+          <label class="field proxy-only">
+            <span class="label">Mock UID</span>
+            <input id="uid" value="ws-lab" placeholder="在线客户端 UID" spellcheck="false" />
+          </label>
+          <label class="field wide">
+            <span class="label">子协议（可选）</span>
+            <input id="subprotocol" placeholder="如 graphql-ws" spellcheck="false" />
+          </label>
+        </div>
+
+        <div class="row options">
+          <label class="check"><input type="checkbox" id="echo" checked />服务端回显</label>
+        </div>
+      </fieldset>
+
+      <div class="row-between options">
+        <label class="check"><input type="checkbox" id="autoReconnect" checked />断线自动重连</label>
+      </div>
+
+      <div class="url-preview">
+        <span class="muted">连接地址</span>
+        <code id="urlPreview">-</code>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="connectBtn">连接</button>
+        <button class="btn" id="disconnectBtn" disabled>断开</button>
+      </div>
+      <p class="hint">代理模式通过 <code>__mock_host</code> / <code>__mock_uid</code> 查询参数接入，
+        服务端会把剥离后的路径与查询参数回显在 welcome 消息里，便于确认转发结果。</p>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card-head">
+          <h2>消息</h2>
+          <div class="row">
+            <span class="muted" id="msgCount">0 条</span>
+            <button class="btn ghost small" id="clearBtn">清空</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="seg small" id="filterSeg">
+            <button type="button" class="seg-btn active" data-filter="all">全部</button>
+            <button type="button" class="seg-btn" data-filter="in">接收</button>
+            <button type="button" class="seg-btn" data-filter="out">发送</button>
+            <button type="button" class="seg-btn" data-filter="system">系统</button>
+          </div>
+          <input id="search" class="search" placeholder="搜索消息内容" />
+        </div>
+
+        <div id="messages" class="messages"></div>
+
+        <div class="stats-row">
+          <div class="stat"><span class="stat-label">收</span><strong id="statIn">0</strong></div>
+          <div class="stat"><span class="stat-label">发</span><strong id="statOut">0</strong></div>
+          <div class="stat"><span class="stat-label">流量</span><strong id="statBytes">0 B</strong></div>
+          <div class="stat"><span class="stat-label">在线</span><strong id="statUptime">-</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>发送</h2>
+          <span class="muted"><span class="kbd">Ctrl</span> / <span class="kbd">⌘</span> +
+            <span class="kbd">Enter</span> 发送文本</span>
+        </div>
+
+        <label class="field">
+          <span class="label">文本</span>
+          <textarea id="sendText" rows="3" placeholder='{"event":"ping"}' spellcheck="false"></textarea>
+        </label>
+        <div class="actions">
+          <button class="btn primary" id="sendTextBtn" disabled>发送文本</button>
+        </div>
+
+        <div class="grid">
+          <label class="field wide">
+            <span class="label">二进制（Base64）</span>
+            <input id="sendBinary" placeholder="AQIDBA==" spellcheck="false" />
+          </label>
+        </div>
+        <div class="actions">
+          <button class="btn" id="sendBinaryBtn" disabled>发送二进制</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="/client.js"></script>
+</body>
+
+</html>

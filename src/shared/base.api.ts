@@ -12,7 +12,13 @@ let UPDATE_SERVER: string = null
 
 const ContentType_Multipar = 'multipart/form-data;charset=UTF-8;'
 
-async function request<T>(method: string, path: string, baseURL?: string, headers?: any, params?: {}, data?: any) {
+export interface RequestOptions {
+  // 调用方自行处理失败提示时关闭全局 notify，避免同一错误弹两次
+  silentError?: boolean
+}
+
+async function request<T>(method: string, path: string, baseURL?: string, headers?: any, params?: {}, data?: any,
+  options?: RequestOptions) {
   const resp = await axios.request<BizResponse<T>>({
     baseURL: baseURL ? baseURL : BASE_DOMAIN,
     url: path,
@@ -29,23 +35,33 @@ async function request<T>(method: string, path: string, baseURL?: string, header
     case BizCode.SUCCESS:
       return bizResp.data
     case BizCode.FAIL:
-      showNotify({ message: bizResp.msg, type: "warning", duration: 1000 })
-      return Promise.reject(bizResp.msg)
+      if (!options?.silentError) showNotify({ message: bizResp.msg, type: "warning", duration: 1000 })
+      return rejectBizError(bizResp)
     case BizCode.ERROR:
       console.log(resp.data)
-      showNotify({ message: bizResp.msg, type: "danger", duration: 1200 })
-      return Promise.reject(bizResp.msg)
+      if (!options?.silentError) showNotify({ message: bizResp.msg, type: "danger", duration: 1200 })
+      return rejectBizError(bizResp)
     default:
       break
   }
 }
 
-export async function get<T>(path: string, baseURL?: string, params?: {}) {
-  return request<T>('GET', path, baseURL, null, params)
+// 以 Error 拒绝，同时保留结构化错误码；调用方仍可把 err.message 当作文案使用
+function rejectBizError(bizResp: BizResponse<any>) {
+  const error: any = new Error(bizResp.msg ?? '')
+  if (bizResp.errorCode != null) error.errorCode = bizResp.errorCode
+  if (bizResp.existingRecordId != null) error.existingRecordId = bizResp.existingRecordId
+  if (bizResp.detail != null) error.detail = bizResp.detail
+  if (Array.isArray(bizResp.issues)) error.issues = bizResp.issues
+  return Promise.reject(error)
 }
 
-export async function post<T>(path: string, baseURL?: string, params?: {}, data?: any) {
-  return request<T>('POST', path, baseURL, { 'Content-Type': 'application/json' }, params, data)
+export async function get<T>(path: string, baseURL?: string, params?: {}, options?: RequestOptions) {
+  return request<T>('GET', path, baseURL, null, params, null, options)
+}
+
+export async function post<T>(path: string, baseURL?: string, params?: {}, data?: any, options?: RequestOptions) {
+  return request<T>('POST', path, baseURL, { 'Content-Type': 'application/json' }, params, data, options)
 }
 
 export async function formPost<T>(path: string, baseURL?: string, params?: {}, data?: FormData) {

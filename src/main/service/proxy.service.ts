@@ -5,6 +5,7 @@ import https from 'https'
 import { inject, injectable } from 'inversify'
 import JSONBig from 'json-bigint'
 import zlib from 'zlib'
+import type { MockHitMeta, MockMissDiagnostic } from '@shared/mock.models'
 import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
@@ -149,15 +150,21 @@ export class ProxyService {
 
     this.pushService.sendProxyMessage(uid, data)
 
+    let miss: MockMissDiagnostic = null
     try {
-      const bizResp = await this.mockService.mock(sessionId, uid, req.url, startTime, delay)
-      this.sendMockResponse(resp, bizResp, delay)
-    } catch (err: any) {
-      if (err?.message !== 'no match mock rule') {
-        console.warn('mock failed, fallback to proxy:', err?.message ?? err)
+      const attempt = await this.mockService.mock(sessionId, uid,
+        { method: req.method, url: req.url, headers: req.headers }, startTime, delay)
+      if (attempt.matched) {
+        this.sendMockResponse(resp, attempt.response, delay)
+        return
       }
-      await this.proxy(sessionId, req, resp, startTime, delay, rawBody)
+      // 未命中不抛异常：诊断信息随 REQUEST_END 一起推给 UI
+      miss = attempt.meta?.miss ?? null
+    } catch (err: any) {
+      // 匹配引擎异常不能让请求失败，继续转发
+      console.warn('mock failed, fallback to proxy:', err?.message ?? err)
     }
+    await this.proxy(sessionId, req, resp, startTime, delay, rawBody, miss)
   }
 
   private sendMockResponse(resp: Response, mockResp: ProxyMock.MockResponse, delay: number) {
@@ -183,7 +190,8 @@ export class ProxyService {
     }, effectiveDelay)
   }
 
-  private proxy(sessionId: number, req: Request, resp: Response, startTime: number, delay: number, rawBody?: Buffer) {
+  private proxy(sessionId: number, req: Request, resp: Response, startTime: number, delay: number,
+    rawBody?: Buffer, miss?: MockMissDiagnostic) {
     const uid = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_UID)
     const state = { responded: false, finished: false, clientGone: false }
 
@@ -215,6 +223,7 @@ export class ProxyService {
           responseData: JSON.stringify({ error: err.message }),
           time: new Date().getTime() - startTime,
           isMock: false,
+          mock: this.missMeta(miss),
         }
         setTimeout(() => {
           this.pushService.sendProxyMessage(uid, record)
@@ -240,7 +249,7 @@ export class ProxyService {
           timeout: ProxyService.PROXY_DEF_TIMEOUT,
         }, (upstreamResp) => {
           state.responded = true
-          this.relayResponse(uid, sessionId, req, resp, startTime, delay, upstreamResp, state, complete)
+          this.relayResponse(uid, sessionId, req, resp, startTime, delay, upstreamResp, state, complete, miss)
         })
       } catch (err: any) {
         fail(err)
@@ -271,6 +280,7 @@ export class ProxyService {
     upstreamResp: http.IncomingMessage,
     state: { responded: boolean, finished: boolean, clientGone: boolean },
     complete: () => void,
+    miss?: MockMissDiagnostic,
   ) {
     const status = upstreamResp.statusCode ?? 502
     const headers = upstreamResp.headers
@@ -309,6 +319,7 @@ export class ProxyService {
         responseData: this.formatRecordData(Buffer.concat(chunks as unknown as Uint8Array[]), headers, truncated, received),
         time: new Date().getTime() - startTime,
         isMock: false,
+        mock: this.missMeta(miss),
       }
       this.pushService.sendProxyMessage(uid, record)
       complete()
@@ -331,6 +342,7 @@ export class ProxyService {
         responseData: JSON.stringify({ error: state.clientGone ? 'client closed' : err.message }),
         time: new Date().getTime() - startTime,
         isMock: false,
+        mock: this.missMeta(miss),
       }
       this.pushService.sendProxyMessage(uid, record)
       if (state.clientGone) {
@@ -542,6 +554,11 @@ export class ProxyService {
       })
       req.on('error', reject)
     })
+  }
+
+  /** 未命中时只带诊断，避免 UI 把普通转发误判为命中 */
+  private missMeta(miss?: MockMissDiagnostic): MockHitMeta {
+    return miss != null ? { hit: false, miss } : undefined
   }
 
   private headerValue(req: Request, name: string): string {

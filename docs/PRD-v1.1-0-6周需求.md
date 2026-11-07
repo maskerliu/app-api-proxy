@@ -4,7 +4,7 @@
 > 编写日期：2026-11-05
 > 目标版本：v1.1.0
 > 关联文档：[产品功能分析与需求规划](./产品功能分析与需求规划.md)
-> 需求范围：匹配引擎 v2、结构化响应编辑器、接入向导与诊断、规则导入/导出
+> 需求范围：匹配引擎 v2、结构化响应编辑器、接入向导与诊断、规则导入/导出、录制与规则管理流程精简
 
 ---
 
@@ -18,6 +18,7 @@
   - [4.2 R2 结构化响应编辑器](#42-r2-结构化响应编辑器)
   - [4.3 R3 接入向导与诊断](#43-r3-接入向导与诊断)
   - [4.4 R4 规则导入/导出](#44-r4-规则导入导出)
+  - [4.5 R5 录制与规则管理流程精简](#45-r5-录制与规则管理流程精简增量需求)
 - [5. 接口设计](#5-接口设计)
 - [6. 数据迁移](#6-数据迁移)
 - [7. 非功能需求](#7-非功能需求)
@@ -49,7 +50,7 @@
 
 | 目标 | 说明 | 对应需求 |
 |---|---|---|
-| O1：让 Mock 可命中 | 真实项目录制规则无需手改 URL 即可命中 | R1 |
+| O1：让 Mock 可命中 | 真实项目录制规则无需手改 URL 即可命中；命中与未命中均可解释 | R1 |
 | O2：让 Mock 可编辑 | 结构化编辑响应，支持变体；模板与预览延后 | R2 |
 | O3：让接入可自助 | 新用户 10 分钟内完成首个请求和首个 Mock | R3 |
 | O4：让规则可流转 | 规则可导出、导入、进 Git、给同事 | R4 |
@@ -64,18 +65,19 @@
 | 规则创建成功率（表单校验通过并保存） | ≥ 95% |
 | 导入/导出成功率（合法文件） | ≥ 99% |
 | 现有规则迁移丢失率 | 0 |
+| 自动放宽后被用户撤销的比例 | ≤ 10%（用于评估自动忽略是否过度） |
 | 代理额外开销（匹配 + 响应组装，p95） | ≤ 5ms |
 
 ### 1.4 范围
 
 **本期包含：**
 
-- 匹配引擎 v2：Method、Host、Path（精确/前缀/通配/正则）、Query 条件与忽略键、Header 条件、优先级、命中诊断。
+- 匹配引擎 v2：录制派生的匹配松紧（宽松/标准/严格）、稳定性分析（动态键自动忽略、Path 参数化）、Method/Host/Path（精确/前缀/通配/正则）/Query/Header 条件、可预测的冲突解析、命中解释与未命中诊断。
 - 结构化响应编辑器：状态码、响应头、响应体、变体；模板变量与预览延后（见 [4.2.0](#420-落地说明需求调整摘要)）。
 - 接入向导：服务检查、代码片段、扫码注册、设备验证、首个 Mock 引导。
 - 诊断：服务/设备/链路/上游/Mock 五段自检，错误码映射。
 - 规则导入/导出：JSON 规则包、HAR 导入、敏感头脱敏。
-- 所需的数据迁移（schema v3）和接口变更。
+- 所需的数据迁移（schema v4）和接口变更。
 
 **本期不包含：**
 
@@ -84,7 +86,7 @@
 - 场景/状态机、条件序列、概率失败、弱网模板（Next）。
 - OpenAPI 导入与 Schema 校验、WebSocket/gRPC/SSE（Later）。
 - MCP/AI、CLI/CI、团队云空间（Later）。
-- 请求体匹配（Body 条件）暂不做，避免范围膨胀。
+- 请求体匹配（Body 条件）：v1.1 只在 schema 中预留 `match.body`，引擎仅支持 `ignore`，UI 不提供编辑；导入含其他模式的规则包会被明确拒绝。
 
 ---
 
@@ -113,17 +115,23 @@
 | US-08 | 作为用户，当 Mock 没生效时，我希望知道为什么没命中 | P0 |
 | US-09 | 作为 Tech Lead，我希望把规则导出成文件，提交到 Git 给同事使用 | P1 |
 | US-10 | 作为测试，我希望导入 Charles/浏览器导出的 HAR，快速生成 Mock 记录 | P1 |
+| US-11 | 作为联调开发，我希望用「宽松/标准/严格」调匹配强度，而不是逐个理解 Query/Header 条件 | P0 |
+| US-12 | 作为调试者，我希望命中后也能看到“为什么命中、忽略了哪些参数” | P1 |
+| US-13 | 作为已有规则维护者，我希望后录制的更具体规则自动优先，不需要手动改优先级 | P0 |
 
 ### 2.3 体验目标（Before / After）
 
 | 环节 | Before（1.0.4） | After（v1.1） |
 |---|---|---|
-| 录制后命中 | 改 URL、删动态参数、固定签名 | 自动识别动态参数，勾选忽略即可命中 |
+| 录制后命中 | 改 URL、删动态参数、固定签名 | 自动识别并忽略高置信动态参数，Path ID 自动参数化，无需手改 |
 | 同路径多方法 | GET/POST 互相覆盖 | Method 独立匹配 |
+| 同路径多分支 | 后录制覆盖或永远不命中 | 更具体/更新的规则优先，冲突可见 |
+| 匹配强度 | 不理解 Query/Header 条件 | 宽松/标准/严格三档 + 稳定性建议 |
+| 命中后 | 只看到 Mock 生效 | 显示命中原因、忽略键与排序依据 |
 | 编辑响应 | 手改整段 JSON | 状态码/响应头/响应体分栏 + 变体 |
 | 边界数据 | 复制多条记录、手改 | 一个记录多个变体，一键切换 |
 | 新用户接入 | 读文档、拼 Header、猜证书 | 向导 + 代码片段 + 链路自检 |
-| 未命中 | 不知道为什么 | 显示最接近的规则和差异原因 |
+| 未命中 | 不知道为什么 | 显示最接近的规则、相似度和差异原因 |
 | 分享 | 只能本机使用 | 导出规则包/HAR，导入即用 |
 
 ---
@@ -139,7 +147,7 @@ Mock 规则管理
 │   └── 记录编辑
 │       ├── 响应（状态码 / 响应头 / 响应体）
 │       ├── 变体（正常 / 空态 / 错误 / 自定义）
-│       ├── 匹配（Method / Host / Path / Query / Header / 优先级）
+│       ├── 匹配（松紧档位 / Method / Host / Path / Query / Header / 稳定性建议 / 优先级）
 │       └── 原始 JSON（高级用户逃生口）
 ├── 导入 / 导出
 └── 启用开关（场景级 + 全局）
@@ -165,27 +173,21 @@ Mock 规则管理
 
 ```mermaid
 flowchart TD
-    A[收到 /_proxy 请求] --> B[解析 method / host / path / query / headers]
-    B --> C{当前 UID 有启用的场景?}
+    A[收到 /_proxy 请求] --> B[归一化一次：method / host / path / query / headers]
+    B --> C{当前 viewer 有启用的场景?}
     C -- 否 --> P[转发上游]
-    C -- 是 --> D[加载场景匹配缓存]
-    D --> E[按 priority 降序、createdAt 升序遍历记录]
-    E --> F{method 匹配?}
-    F -- 否 --> N[记录失败原因]
-    F -- 是 --> G{host 匹配?}
-    G -- 否 --> N
-    G -- 是 --> H{path 匹配?}
-    H -- 否 --> N
-    H -- 是 --> I{query 匹配?}
-    I -- 否 --> N
-    I -- 是 --> J{headers 匹配?}
-    J -- 否 --> N
-    J -- 是 --> K[命中记录]
-    K --> L[选择 activeVariant / baseResponse]
-    L --> M[延迟 + 返回（模板渲染延后）]
-    N --> O{还有候选?}
-    O -- 是 --> E
-    O -- 否 --> Q[转发上游 + 推送最近未命中诊断]
+    C -- 是 --> D[加载编译缓存 + 命中记忆化]
+    D --> E[Method + Host 预过滤，按 exact → prefix → glob → regex 分桶]
+    E --> F[按解析顺序取候选：手动优先级 → Path 类型 → 条件数 → 最近更新]
+    F --> G{method / host / path / query / headers 全部通过?}
+    G -- 是 --> H[命中记录]
+    H --> I[选择 activeVariant / baseResponse]
+    I --> J[延迟 + 返回]
+    G -- 否 --> K{还有候选?}
+    K -- 是 --> F
+    K -- 否 --> L[廉价评分选出最近记录]
+    L --> M[仅对 top-1 物化失败明细]
+    M --> N[转发上游 + 推送未命中诊断]
 ```
 
 #### 3.2.2 编辑与保存流程
@@ -205,11 +207,16 @@ export type PathMatchType = 'exact' | 'prefix' | 'glob' | 'regex'
 
 export type ValueOp = 'equals' | 'regex' | 'exists' | 'notExists'
 
+export type MockMatchLevel = 'loose' | 'standard' | 'strict' | 'custom'
+
+export type MatchValueSource = 'recording' | 'auto-ignored' | 'suggested' | 'manual' | 'migration'
+
 export interface MockQueryCondition {
   key: string
   op: ValueOp
   value?: string
   ignoreCase?: boolean
+  source?: MatchValueSource
 }
 
 export interface MockQueryMatch {
@@ -217,6 +224,7 @@ export interface MockQueryMatch {
   ignoreKeys: string[]           // 比较前剔除的动态参数
   conditions: MockQueryCondition[]
   allowExtra: boolean            // 是否允许请求携带未声明的参数
+  multiValue: 'any' | 'all'      // 重复键：任一值满足 / 全部值满足
 }
 
 export interface MockHeaderCondition {
@@ -224,19 +232,44 @@ export interface MockHeaderCondition {
   op: ValueOp
   value?: string
   ignoreCase?: boolean
+  source?: MatchValueSource
+}
+
+export interface MockHeaderMatch {
+  ignoreKeys: string[]           // 匹配前剔除的易变头
+  conditions: MockHeaderCondition[]
+}
+
+// v1.1 仅支持 ignore；其余模式为后续版本预留
+export interface MockBodyMatch {
+  mode: 'ignore' | 'jsonSubset' | 'jsonPath' | 'form' | 'text'
+  conditions?: Array<{ path: string; op: ValueOp; value?: string }>
+  maxBytes?: number
+}
+
+export interface MockMatchDerivation {
+  source: 'recording' | 'migration' | 'import' | 'manual'
+  autoIgnoredKeys: string[]
+  suggestions: Array<{ kind: 'ignore-key' | 'path-parameter'; value: string; evidence: string }>
+  pathParameterized: boolean
+  analyzedAt?: number
 }
 
 export interface MockMatchRule {
+  version: 1                     // 匹配 schema 版本
+  level: MockMatchLevel          // 展示用预设，不参与执行
   method: MockMethod
-  host: string                   // '' 或 '*' = 任意；支持 *.example.com
+  host: string                   // '' 或 '*' = 任意；支持 *.example.com；可带显式端口
   pathType: PathMatchType
   path: string
   pathIgnoreCase: boolean
   ignoreTrailingSlash: boolean
   query: MockQueryMatch
-  headers: MockHeaderCondition[]
-  priority: number               // 越大越优先
+  headers: MockHeaderMatch
+  body: MockBodyMatch            // v1.1 固定 { mode: 'ignore' }
+  priority: number | null        // null = 自动排序；手动值优先
   enabled: boolean
+  derivation?: MockMatchDerivation
 }
 
 export type MockBodyType = 'json' | 'xml' | 'text' | 'binary'
@@ -268,12 +301,15 @@ export interface MockRecord {
   id: string                     // 对应 PouchDB _id
   ruleId: string
   name: string
-  // 目标态：R1 接入后使用 match；当前实现暂用 url: string，按 ruleId + url 精确命中
+  // R1 目标态：命中按 match 条件；过渡期回滚时按 ruleId + url 精确命中
   match: MockMatchRule
+  // 展示与旧版本兼容；不再作为唯一键
+  url?: string
   response: MockResponseDef
   variants: MockVariant[]
   activeVariantId: string | null // null = 使用 base response
   source?: MockRecordSource
+  matchInvalid?: string          // 非空表示无法生成有效条件，记录禁用但保留
   createdAt: number
   updatedAt: number
 }
@@ -287,12 +323,15 @@ interface MockRecordDoc {
   type: 'record'
   ruleId: string
   name: string
-  // 目标态：R1 接入后使用 match；当前实现暂用 url: string，按 ruleId + url 精确命中
+  // R1 目标态：命中按 match 条件；过渡期回滚时按 ruleId + url 精确命中
   match: MockMatchRule
+  // 展示与旧版本兼容；不再作为唯一键
+  url?: string
   response: MockResponseDef
   variants: MockVariant[]
   activeVariantId: string | null
   source?: MockRecordSource
+  matchInvalid?: string
   createdAt: number
   updatedAt: number
   // 兼容字段：保留旧结构，便于回滚与旧版本读取
@@ -311,11 +350,13 @@ interface MockRuleDoc {
 
 ### 3.4 兼容与迁移原则
 
-1. **旧数据不丢**：迁移只新增字段，不删除旧字段；旧版本仍可读取。
-2. **旧行为尽量保留**：历史记录默认 `host=任意`、`method=录制方法`、`path=精确`、`query=全部参数必须匹配且顺序无关`、`allowExtra=false`。
-3. **记录 ID 不再随 URL 变化**：历史记录保留原 `_id`；新记录使用 UUID。修改 URL/匹配条件不再重建文档。
-4. **迁移幂等**：重复执行不产生重复数据；迁移前自动备份 PouchDB。
-5. **可回滚**：保留旧字段与旧规则文档；回滚旧版本可继续工作。
+1. **旧数据不丢**：迁移只新增字段，不删除旧字段；无法解析的记录保留并禁用，不跳过、不删除。
+2. **保守放宽，不改变身份**：历史记录默认 `host=任意`、`method=录制方法`、`path=精确`；Query 保留原始条件，但自动忽略高置信动态键，`allowExtra=true`。这是为了满足 O1 的有意行为变化，必须出现在迁移复核与发布说明中。
+3. **语义参数不自动忽略**：`version`、`type`、`tenant`、`role`、`page`、`token` 等业务键永不自动放宽，只给建议。
+4. **记录 ID 不再随 URL 变化**：历史记录保留原 `_id`；新记录使用 UUID。修改 URL/匹配条件不再重建文档。
+5. **唯一性改为匹配指纹**：URL 不再是唯一键；保存、录制去重、导入合并均按归一化后的匹配条件判断。
+6. **迁移幂等**：重复执行不产生重复数据；迁移前自动备份 PouchDB。
+7. **可回滚**：保留旧字段与旧规则文档；回滚旧版本可继续工作；新记录的 match 指纹与旧 url 字段同时保留，便于降级排查。
 
 ---
 
@@ -323,111 +364,148 @@ interface MockRuleDoc {
 
 ### 4.1 R1 匹配引擎 v2
 
+#### 4.1.0 设计原则：录制派生规则（本期核心变化）
+
+录制得到的请求不是一条“干净的规则”，而是**接口身份 + 分支条件 + 请求噪声**的混合体。匹配引擎的目标不是复刻整条 URL，而是识别并剥离噪声，只保留能区分接口和分支的信息。
+
+| 信息类别 | 典型内容 | 默认处理 |
+|---|---|---|
+| 接口身份 | Method、Host、Path | 作为匹配条件 |
+| 分支条件 | 稳定的 Query 键、业务 Header、稳定的 Path ID 位 | 有证据时作为条件 |
+| 请求噪声 | `ts`/`sign`/`nonce`/`requestId`/`sessionId`/`deviceId`、每次变化的 Path ID、易变 Header | 忽略或参数化 |
+
+由此确定 5 条产品原则：
+
+1. **匹配 = 接口身份 + 分支条件 − 请求噪声**。不再默认“录制时 URL 里的每个参数都必须相等”。
+2. **默认命中优先，误命中可控**。录制与迁移默认使用“标准”松紧；需要精确区分时才收紧，收紧必须由用户明确选择。
+3. **每条条件可解释、可追溯**。条件来源分为「录制」「自动忽略」「手动添加」，UI 必须能显示来源。
+4. **解析顺序可预测**。手动优先级 > 路径类型 > 条件具体度 > 最近更新，不依赖“谁先录制”。
+5. **不静默放宽、不静默截断**。自动忽略、Path 参数化、超限都必须给出报告，且可撤销。
+
 #### 4.1.1 目标
 
-让真实 App 的录制规则在动态参数、多方法、多 Host 场景下稳定命中，并在未命中时给出可解释的原因。
+让真实 App 的录制规则在动态参数、多方法、多 Host 场景下稳定命中；让命中与未命中都可解释；在提升命中率的同时，把“误命中”控制在用户可理解和可收紧的范围内。
 
 #### 4.1.2 用户故事
 
-- US-01：录制带 `timestamp`/`sign` 的请求，勾选忽略后稳定命中。
+- US-01：录制带 `timestamp`/`sign` 的请求，不改 URL 即可稳定命中。
 - US-02：GET 与 POST 同 Path 分别配置。
 - US-03：按 Host 区分不同环境的同名接口。
 - US-08：未命中时看到最接近的规则和差异原因。
+- US-11：作为联调开发，我希望用「宽松/标准/严格」一个开关调匹配强度，而不是逐个理解 Query/Header 条件。
+- US-12：作为调试者，我希望命中后也能看到“为什么命中、忽略了哪些参数”，避免误命中却不知道。
+- US-13：作为已有规则维护者，我希望后录制的更具体规则能自动优先，而不是手动改优先级。
 
 #### 4.1.3 功能规则
 
-##### 1）匹配维度
+##### 1）匹配松紧（产品主模型）
 
-| 维度 | 匹配方式 | 默认值 | 说明 |
+用户不需要理解 Method/Query/Header 的组合，只需要选择一个松紧档位；档位是条件的**可视化预设**，不是独立执行路径。
+
+| 档位 | 生效条件 | 适用场景 | 默认 |
 |---|---|---|---|
-| Method | `ANY` / 具体方法 | 录制时的 Method；缺失则 `ANY` | 大小写不敏感 |
-| Host | 任意 / 精确 / `*.example.com` | 任意 | 来源为 `x-mock-host`，只取 hostname + port |
-| Path | 精确 / 前缀 / 通配 / 正则 | 精确 | 匹配 `/_proxy` 之后的 pathname |
-| Query | 忽略 / 条件匹配 | 条件匹配 | 支持忽略键、顺序无关、允许额外参数 |
-| Header | 条件匹配 | 无 | 键名大小写不敏感 |
-| Priority | 数值排序 | 0 | 越大越优先；相同按创建时间升序 |
+| 宽松 | Method + Path | 该接口所有请求返回同一响应 | 手动选择 |
+| 标准 | Method + Host（新录制）+ Path + 稳定 Query；动态键忽略；`allowExtra=true`；Header/Body 忽略 | 大多数录制规则 | **录制与迁移默认** |
+| 严格 | Method + Host + Path + 全部 Query（`allowExtra=false`）+ 指定 Header；Body 暂不支持 | 同接口多分支，需要精确定位 | 手动选择 |
+| 自定义 | 任意条件组合 | 高级用户 | 编辑任一条件后自动进入 |
 
-##### 2）Path 匹配规则
+- 档位只用于展示与批量操作，执行始终按实际条件；手动修改条件后档位变为「自定义」。
+- 记录列表与编辑头部显示当前档位和一行可读摘要，例如：`POST api.example.com /v1/orders · 标准 · 忽略 ts,sign`。
+- 未命中面板提供「一键放宽」（并入宽松/忽略该参数）；命中解释面板提供「一键收紧」（把被忽略的键变成条件）。
+- 收紧后仍命中率不足的规则，用「恢复录制精确匹配」还原为严格档位（全 Query + `allowExtra=false`）。
+
+##### 2）稳定性分析（自动派生条件）
+
+录制与迁移时，服务端对同一场景内 **同一接口身份**（Method + 归一化 Path）的多次录制做差异分析，决定哪些字段进入条件、哪些忽略、哪些只提示。
+
+| 证据 | 判定 | 是否自动忽略 | UI 表现 |
+|---|---|---|---|
+| E1：同一接口 ≥2 次录制，键存在且值不同 | 动态参数 | **是** | 「动态（多次录制值不同）」 |
+| E2：键名命中高风险集合 | 请求级噪声 | **是** | 「动态（请求标识）」 |
+| E3：值形态像时间戳/UUID/长十六进制/长 Base64 | 疑似动态 | 否，仅建议 | 「建议忽略」 |
+| E4：键在部分录制中出现 | 可选参数 | 否，配合 `allowExtra=true` | 「偶发参数」 |
+| E5：键名命中语义集合 | 业务分支 | 否，必须作为条件 | 「业务参数」 |
+
+- **E2 高风险键名**：`ts`、`timestamp`、`_t`、`nonce`、`sign`、`signature`、`requestId`、`traceId`、`spanId`、`sessionId`、`token`、`access_token`、`deviceId`、`device_id`、`udid`、`imei`、`oaid`、`idfa`。
+- **E5 语义集合（永不自动忽略）**：`version`、`v`、`tenant`、`tenantId`、`role`、`exp`、`user_id`、`uid`、`time`、`page`、`size`、`cursor`、`status`、`type`、`lang`、`locale`。这些键即使值在多次录制中变化，也只建议忽略，因为忽略后可能把不同业务分支混为一体。
+- **值形态只用于建议，不作为自动忽略依据**：UUID、长 Base64 可能是有意义的资源 ID、分页游标，自动忽略会制造静默误命中。
+- 证据范围：同一场景、同一 Method + 归一化 Path（含参数化后的模板）的全部记录；保存、导入、重新分析时更新。
+- 分析结果写入 `match.derivation`：来源（recording/migration/import/manual）、自动忽略键及证据、待确认建议、分析时间。UI 可展开查看证据并一键撤销。
+- **Path 参数化**：同一 Path 模板下，某一段多次出现不同的纯数字/UUID/长十六进制值时，自动将这一段替换为 `*`（如 `/v1/users/10086` → `/v1/users/*`）；单次录制只建议不自动。版本段（`/v1/`）、固定词、短数字（如 `v2`）不参数化。
+- 自动忽略和 Path 参数化都属于“放宽”，必须在迁移报告或录制结果中明示，禁止静默执行。
+
+##### 3）匹配维度与归一化
+
+| 维度 | 匹配方式 | 默认值 | 归一化与说明 |
+|---|---|---|---|
+| Method | `ANY` / 具体方法 | 录制时的 Method；缺失则 `ANY` | 统一大写；不做 HEAD→GET 回退 |
+| Host | 任意 / 精确 / `*.example.com` | 新录制：录制 Host；历史：任意 | 优先取 `x-mock-host`，缺失时回落真实 `Host` 头；去协议/路径；小写；不带端口 = 任意端口；显式端口 = 精确端口；`*.example.com` 不含 apex；支持 IPv6 方括号 |
+| Path | 精确 / 前缀 / 通配 / 正则 | 精确 | 匹配 `/_proxy` 之后的 pathname；解析前先消除点段与重复斜杠；默认尾斜杠不敏感；大小写默认敏感 |
+| Query | 忽略 / 条件匹配 | 标准：稳定键条件；无 Query：忽略 | `URLSearchParams` 解析；键名大小写敏感；值解码后再比较；`+` 与 `%20` 等价；重复键保留为数组；空值（`?a=`）与缺省（`?a`）区分 |
+| Header | 条件匹配 | 无 | 键名大小写不敏感；值去除首尾空白；默认不生成任何 Header 条件 |
+| Body | 预留 | 忽略 | v1.1 引擎只接受 `mode=ignore`；导入含 Body 条件的规则包时拒绝并提示「当前版本不支持请求体匹配」 |
+| Priority | 手动覆盖 | `null`（自动） | 见 5）优先级与冲突解析 |
+
+**Path 类型语义：**
 
 | 类型 | 规则 | 示例 |
 |---|---|---|
-| exact | 字符串完全相等（可选忽略大小写/尾斜杠） | `/v1/users/10086` |
+| exact | 归一化后字符串完全相等（可忽略大小写/尾斜杠） | `/v1/users/10086` |
 | prefix | 以 pattern 开头 | `/v1/users/` |
-| glob | `*` 匹配任意字符（含 `/`），`?` 匹配单个字符 | `/v1/users/*` |
-| regex | JavaScript 正则，长度 ≤ 200，保存时校验 | `^/v1/users/\d+$` |
+| glob | `*` 匹配任意字符（含 `/`），`?` 匹配单个非 `/` 字符；`\` 转义 | `/v1/users/*` |
+| regex | JavaScript 正则，按整段 Path 全匹配（引擎自动加锚点），长度 ≤ 200 | `^/v1/users/\d+$` |
 
-- 默认大小写敏感；`pathIgnoreCase` 可选。
-- 默认忽略尾斜杠：`/a` 与 `/a/` 视为相同。
-- 正则仅作为高级选项，UI 需提示性能风险；拒绝明显灾难性回溯的模式（如嵌套量词）。
+- 正则仅作为高级选项，默认折叠；保存时校验并预编译，拒绝嵌套量词等明显高风险模式。
+- Path 类型的具体度：`exact > prefix > glob > regex`，用于冲突解析。
 
-##### 3）Query 匹配规则
+**Query 条件语义：**
 
-- 解析使用 `URLSearchParams`，多值参数保留数组。
-- `mode=ignore`：完全不校验 Query。
+- `mode=ignore`：完全不校验 Query，等价于“任意 Query 都通过”。
 - `mode=match`：
-  1. 先剔除 `ignoreKeys` 中的键；
+  1. 先剔除 `ignoreKeys` 中的键，再做条件比较；
   2. 所有 `conditions` 按 AND 关系匹配；
   3. `allowExtra=true` 时允许请求携带未声明参数；`false` 时存在未声明参数即失败；
-  4. 参数顺序不影响匹配。
-- 条件操作符：
+  4. 参数顺序不影响匹配；
+  5. `multiValue` 控制重复键：`any`（默认，任一值满足即可）或 `all`（所有值都必须满足）。
 
 | 操作符 | 规则 |
 |---|---|
 | equals | 任一值完全相等（可忽略大小写） |
 | regex | 任一值匹配正则 |
-| exists | 键存在即可，值不限 |
-| notExists | 键不存在 |
+| exists | 键存在即可；`?a=` 视为存在 |
+| notExists | 键不存在；`?a=` 视为存在，不通过 |
 
-- **动态参数识别（辅助，不自动修改规则）：**
-  - 键名命中：`ts`、`timestamp`、`_t`、`time`、`nonce`、`sign`、`signature`、`token`、`access_token`、`deviceId`、`device_id`、`udid`、`imei`、`oaid`、`idfa`、`requestId`、`traceId`、`sessionId`、`version`、`v` 等。
-  - 值形态命中：13/10 位时间戳、UUID、长十六进制、长 Base64。
-  - 同一场景下相同 Path 的多次录制中，值发生变化的键。
-  - UI 展示「发现 N 个可能变化的参数」，用户点击「加入忽略列表」后才生效。
+##### 4）优先级与冲突解析
 
-##### 4）匹配算法（伪代码）
+`priority` 改为 `number | null`，默认 `null` 表示自动排序；只有用户显式设置时才参与第一层比较。
 
-```ts
-function matchRequest(req: NormalizedRequest, ruleId: string): MatchResult {
-  const candidates = matcherCache.get(ruleId) // 按 priority desc, createdAt asc 预排序
-  let closest: MissDiagnostic | null = null
+**解析顺序（逐层比较，命中第一条即返回）：**
 
-  for (const record of candidates) {
-    if (!record.match.enabled) continue
-    const result = evaluate(record.match, req)
-    if (result.ok) return { record, miss: null }
-    if (closest == null || result.failures.length < closest.failures.length) {
-      closest = { recordId: record.id, name: record.name, failures: result.failures }
-    }
-  }
+| 层级 | 规则 | 理由 |
+|---|---|---|
+| 1 | 手动 `priority`：设置了优先级的规则优先于未设置；都设置时数值大者优先 | 只用于强制覆盖自动排序 |
+| 2 | Path 类型具体度：`exact > prefix > glob > regex` | 精确路径比模式路径更可信 |
+| 3 | 条件具体度计数：Method≠ANY（+1）、Host≠任意（+1）、每个 Query 条件（+1）、`allowExtra=false`（+1）、每个 Header 条件（+1）、Body≠ignore（+1） | 条件越多，规则越具体 |
+| 4 | `updatedAt` 降序 | 后录制的规则优先，重新录制能覆盖旧行为 |
 
-  return { record: null, miss: closest }
-}
-```
+- **移除「同优先级按创建时间升序（先录制者优先）」**。该策略会让后录制的精确规则永远输给旧的宽规则，属于反直觉行为。
+- 同一场景内允许存在多条相同 Path 的记录（不同 Method/Query/Header/变体），不再互相覆盖。
+- UI 记录列表显示排序依据；手动优先级只作为高级项，默认可隐藏。
+- **冲突检测**（记录列表与保存时）：
+  - 重复：归一化后的匹配条件完全一致 → 保存前阻止并提示打开已有记录；
+  - 遮蔽：同 Method 下，A 的 Host/Path 覆盖 B、A 的 Query/Header 条件是 B 的子集且 `allowExtra=true` → 提示「B 可能永远不会命中」；
+  - 不可达：B 被更高手动优先级的重复规则完全覆盖 → 提示禁用或删除。
+- 遮蔽检测先覆盖可判定的 `exact`/`prefix` 组合；glob/regex 只做重复条件检测，避免误报。
 
-`evaluate` 依次校验 method → host → path → query → headers，全部通过才命中；失败时记录维度、期望值、实际值。
+##### 5）未命中诊断
 
-##### 5）优先级与冲突
-
-- 同一场景内按 `priority` 降序匹配；`priority` 相同按 `createdAt` 升序（先录制的优先）。
-- 命中第一条即返回，不再继续匹配。
-- UI 记录列表显示优先级，支持上移/下移或直接输入数值。
-- 同一场景内允许存在多条相同 Path 的记录（不同 Method/Query/变体），不再互相覆盖。
-
-##### 6）场景启用与状态持久化
-
-- 保持「一个 viewer 同时只启用一个场景」的模型。
-- 新增**全局 Mock 开关**：主界面顶部显示「Mock 已启用：场景名」/「Mock 已关闭」，点击可快速开关当前场景，不必打开规则管理。
-- **持久化最近启用场景**：
-  - 在 PouchDB meta 文档保存 `lastActiveRuleId`。
-  - 应用启动或 viewer 重新注册后，自动恢复该场景的启用状态。
-  - 场景被删除时清空 `lastActiveRuleId`。
-- 设备（device）继续继承其 owner viewer 的启用状态。
-
-##### 7）未命中诊断
-
-- 代理在未命中时计算「最接近的记录」：
-  - 优先选择失败维度最少、Path 相似度最高的记录；
-  - 仅当该记录与请求的 Path 有较高相似度（同前缀或同首段）时，才在列表显示「Mock 未命中」标记，避免每条请求都提示。
+- 未命中时计算「最接近的记录」，分两阶段：
+  1. **廉价评分阶段**：只比较 Path 结构与维度通过数，不构造期望/实际字符串；
+  2. **物化阶段**：只对得分最高的 1 条候选生成失败明细。
+- 相似度按以下顺序计算，避免“失败维度最少”误导：
+  1. Path 首段是否相同、共享前缀长度、Path 段重叠度（Jaccard）；
+  2. 通过的维度数量（Method/Host/Path/Query/Header）；
+  3. 仅当 Path 相似度达到阈值（共享前 2 段，或归一化编辑距离 ≤ 0.35）才展示「Mock 未命中」标记。
 - 诊断内容：
 
 ```ts
@@ -435,110 +513,188 @@ interface MockMissDiagnostic {
   ruleId: string
   closestRecordId?: string
   closestRecordName?: string
+  closestMatchLevel?: MockMatchLevel
+  similarity: number                 // 0–1，Path 相似度
   failures: Array<{
     dimension: 'method' | 'host' | 'path' | 'query' | 'header'
     expected: string
     actual: string
-    detail?: string
+    detail?: string                  // Query 键名、期望值、实际值等
+    suggestion?: 'ignore-key' | 'loosen' | 'edit-record'
   }>
 }
 ```
 
 - 展示位置：
-  - 请求详情新增「Mock 匹配」区块；
-  - 列表行显示灰色「未命中」标签（仅高相似度时）；
-  - 点击标签打开诊断面板，展示失败维度与一键「编辑该规则」。
+  - 请求详情「Mock 匹配」区块；
+  - 列表行灰色「未命中」标签（仅高相似度时）；
+  - 点击标签打开诊断面板，展示失败维度与期望/实际，并提供「忽略该参数」「放宽为宽松」「编辑该记录」「复制诊断」。
 - 若当前没有启用场景，不显示未命中诊断，改为提示「当前未启用 Mock 场景」。
 
-##### 8）性能与缓存
+##### 6）命中解释与误命中控制
 
-- 每个场景维护一份内存匹配缓存：`Map<ruleId, { version, compiledRecords }>`。
-- 场景记录变更（保存/删除/导入/启用/迁移）时失效缓存。
-- 单场景最多加载 5,000 条记录参与匹配；超过时提示用户拆分场景，并只匹配前 5,000 条（按 priority/createdAt）。
-- 目标：1,000 条记录下单次匹配 ≤ 1ms；正则编译只做一次。
-- 正则安全：长度 ≤ 200；保存时拒绝明显灾难性回溯模式；执行不引入额外依赖。
+- 请求详情新增「Mock 匹配」命中态区块，展示：
+  - 命中的记录、档位、变体；
+  - 通过的维度与条件；
+  - **被忽略的动态键**（灰显，标注证据）；
+  - 排序依据（手动优先级 / 精确路径 / 条件更多 / 最近更新）；
+  - 匹配耗时。
+- 若本次命中依赖被忽略的键，显示提示「命中（已忽略 3 个动态参数）」，并提供「收紧匹配」入口，把被忽略键转为条件。
+- 本地计数新增 `mockHitWithIgnoredKeys`，用于评估自动忽略是否过度放宽；不自动上传。
+- 任何自动放宽（忽略键、Path 参数化、迁移默认）都必须可在记录编辑器中查看来源并撤销。
+
+##### 7）性能与缓存
+
+- 请求归一化只做一次，所有候选记录复用同一个 `NormalizedRequest`。
+- 每个场景维护一份编译缓存：`{ version, exactPathMap, prefixTrie, globList, regexList, compiledAt }`；保存/删除/导入/启用/迁移后失效。
+- 匹配时先用 Method + Host 做预过滤，再按 `exact → prefix → glob → regex` 分桶；手动优先级规则单独成组优先评估。
+- 命中结果做 LRU 记忆化：key = `method|host|path|规范化 query|相关 header 哈希`，容量 1,000，规则版本变化即失效。
+- 未命中诊断走两阶段（见 5）），miss 路径不得为每条记录构造期望/实际字符串。
+- 记录数上限：
+  - 超过 5,000 条：提示拆分场景，但**不静默截断**，全部记录仍参与匹配；
+  - 超过 10,000 条：拒绝启用该场景，要求拆分或删除后再启用。
+- 性能目标（1,000 条、90% miss 流量、冷缓存后首轮预热）：
+  - 命中路径 p95 ≤ 1ms；
+  - 未命中路径 p95 ≤ 3ms；
+  - 匹配 + 响应组装整体 p95 ≤ 5ms；
+  - 5,000 条时命中 ≤ 3ms、未命中 ≤ 8ms。
+- 正则安全：长度 ≤ 200，被匹配 Path 截断到 2,048 字符，编译结果缓存；保存时拒绝嵌套量词等明显高风险模式。不承诺静态识别所有灾难性回溯，UI 需提示性能风险。
+
+##### 8）场景启用与状态持久化
+
+- 保持「一个 viewer 同时只启用一个场景」的模型。
+- **全局 Mock 开关**：主界面顶部显示「Mock 已启用：场景名」/「Mock 已关闭」，点击可快速开关当前场景，不必打开规则管理。
+- **持久化最近启用场景**：
+  - 在 PouchDB meta 文档保存 `lastActiveRuleId`。
+  - 应用启动或 viewer 重新注册后，自动恢复该场景的启用状态。
+  - 场景被删除时清空 `lastActiveRuleId`。
+- **多窗口语义**：启用状态以 viewer 为单一来源，主进程持有；任一窗口切换后广播给同 viewer 的其他窗口，不做每窗口独立状态，避免同一设备收到互相矛盾的 Mock 结果。
+- 设备（device）继续继承其 owner viewer 的启用状态。
 
 #### 4.1.4 数据模型变更
 
 - `MockRecordDoc` 新增：`name`、`match`、`response`、`variants`、`activeVariantId`、`source`。
-- 历史记录保留 `record` 字段，作为来源快照与回滚依据。
-- `MockRuleDoc` 不变；meta 文档新增 `lastActiveRuleId`。
+- `match` 新增字段：
+  - `version`：匹配 schema 版本，当前为 `1`；
+  - `level`：`loose | standard | strict | custom`，仅用于展示与批量操作；
+  - `priority`：`number | null`，默认 `null`；
+  - `derivation`：`{ source, autoIgnoredKeys, suggestions, pathParameterized, analyzedAt }`；
+  - `body`：预留，v1.1 固定 `{ mode: 'ignore' }`。
+- 历史记录保留 `record` 字段，作为来源快照与回滚依据；记录级新增 `matchInvalid`（字符串原因），表示该记录无法生成有效匹配条件，默认禁用但不删除。
+- `MockRuleDoc` 不变；meta 文档新增 `lastActiveRuleId`、`mockSchemaVersion`。
 - `MockRecord.id` 对应 `_id`：
   - 历史记录：保持 `rec_<sha1(ruleId + url)>`；
   - 新记录：`rec_<uuid>`。
-- 不再使用 `record.url` 作为记录唯一键；修改 URL 只更新内容，不重建文档。
+- `url` 保留为展示与旧版本兼容字段，不再作为唯一键；唯一性改为**匹配指纹**（归一化后的 method + host + path + query + headers + body 完全一致）。
+- 匹配指纹用于：保存前重复检测、录制去重、导入合并提示。指纹只比较条件，不比较响应与变体。
 
 #### 4.1.5 UI 交互
 
 **记录列表：**
 
-- 显示：名称（默认取 Path）、Method、Host、优先级、启用状态、变体数。
-- 支持搜索：名称、Path、Host。
-- 支持排序：优先级 / 创建时间 / 更新时间。
-- 同 Path 多方法不再合并。
+- 显示：名称（默认取 Path）、Method、Host、档位、匹配摘要、启用状态、变体数、冲突标记。
+- 匹配摘要示例：`/v1/users/* · 标准 · 忽略 ts,sign`。
+- 支持搜索：名称、Path、Host、匹配摘要。
+- 支持排序：手动优先级 / 更新时间 / 创建时间；默认按更新时间降序。
+- 同 Path 多方法不再合并；同 Path 不同条件的记录并列展示，并用摘要区分。
+- 冲突标记：重复（红）、可能被遮蔽（黄）、匹配无效（灰），hover 说明原因与建议。
 
 **匹配 Tab：**
 
+- 顶部：档位选择（宽松 / 标准 / 严格 / 自定义），切换档位展示将增加/移除的条件预览，确认后生效。
 - Method：下拉（ANY + 常见方法）。
-- Host：输入框，空 = 任意；支持 `*.example.com`。
-- Path：类型下拉 + 输入框；正则模式显示「高级」提示。
+- Host：输入框，空 = 任意；支持 `*.example.com` 与显式端口；提示「不带端口表示任意端口」。
+- Path：类型下拉 + 输入框；识别到 ID 参数化时显示「已参数化：10086 → *」并允许还原；正则模式折叠在「高级」中。
 - Query：
   - 模式切换：忽略 / 匹配；
-  - 条件表格：键、操作符、值、忽略大小写；
-  - 忽略键：标签输入，展示自动识别建议；
-  - 允许额外参数：开关（新记录默认开，历史记录默认关）。
+  - 条件表格：键、操作符、值、忽略大小写、多值语义（任一/全部）；
+  - 忽略键：标签输入，按来源区分「自动（证据）」「建议」「手动」，可一键撤销；
+  - 允许额外参数：开关（标准档默认开，严格档默认关）。
 - Header：
-  - 条件表格：键、操作符、值；
-  - 常用 Header 建议：`x-tenant-id`、`x-user-role`、`x-exp`。
-- 优先级：数字输入 + 上移/下移。
-- 启用：开关。
-- 底部：实时「用当前请求测试匹配」按钮（如果有选中的实时请求）。
+  - 条件表格：键、操作符、值、忽略键；
+  - 常用 Header 建议：`x-tenant-id`、`x-user-role`、`x-exp`；
+  - 默认不生成条件，提示「Header 波动大，建议仅在需要区分分支时添加」。
+- Body：本期只读展示「当前版本不参与匹配」，不提供编辑。
+- 优先级：高级折叠项，数字输入；默认「自动」。
+- 底部：实时「用当前请求测试匹配」按钮，展示命中记录、档位与忽略键；未命中时直接展示诊断。
+- 稳定性建议区：展示「发现 3 个动态参数」「2 个 Path 段可参数化」「1 个业务参数未参与匹配」，支持逐项应用/撤销。
 
 **未命中面板：**
 
-- 标题：`未命中：最接近「{记录名}」`
-- 表格：维度 / 期望 / 实际 / 说明
-- 操作：`编辑该记录`、`忽略此参数`、`复制诊断信息`
+- 标题：`未命中：最接近「{记录名}」（相似度 78%）`
+- 表格：维度 / 期望 / 实际 / 说明 / 建议动作
+- 操作：`忽略该参数`、`放宽为宽松`、`编辑该记录`、`复制诊断信息`
+
+**命中解释面板：**
+
+- 请求详情「Mock 匹配」区块展示：命中记录、档位、变体、通过条件、忽略键、排序依据、耗时。
+- 若命中依赖忽略键，显示「命中（已忽略 3 个动态参数）」与「收紧匹配」。
+
+**迁移复核：**
+
+- 迁移完成后一次性提示：「已为 N 条规则自动忽略 M 个动态参数，查看详情」。
+- 复核页按规则列出自动忽略键、Path 参数化、被禁用记录，支持单条/全部撤销。
 
 #### 4.1.6 接口变更
 
 | 接口 | 变更 |
 |---|---|
-| `GET /_appmock/getMockRecords` | 返回新的 `MockRecord` 结构（含 match/response/variants） |
-| `POST /_appmock/saveMockRecord` | 入参改为 `{ ruleId, recordId?, record }`；`recordId` 为空表示新建 |
+| `GET /_appmock/getMockRecords` | 返回新的 `MockRecord` 结构（含 match/response/variants/derivation），并附带 `matchWarnings`（重复/遮蔽/无效） |
+| `POST /_appmock/saveMockRecord` | 入参改为 `{ ruleId, recordId?, record }`；`recordId` 为空表示新建；保存前校验匹配指纹唯一 |
 | `POST /_appmock/deleteMockRecord` | 入参改为 `{ ruleId, recordId }` |
 | `GET /_appmock/getActiveMockRule` | 返回当前启用场景；若内存无状态则从 `lastActiveRuleId` 恢复 |
-| `POST /_appmock/saveMockRule` | 保持 `isMock` 语义；同步写入/清除 `lastActiveRuleId` |
-| `POST /_appmock/matchMockRecord` | 新增：用指定请求上下文测试匹配，返回命中记录或诊断 |
+| `POST /_appmock/saveMockRule` | 保持 `isMock` 语义；同步写入/清除 `lastActiveRuleId`；切换状态广播给同 viewer 的其他窗口 |
+| `POST /_appmock/matchMockRecord` | 新增：入参 `{ ruleId, request: { method, url, headers } }`；返回 `{ recordId, matchLevel, explain, ignoredKeys, miss }`，供“测试匹配”和录制去重使用 |
 | `GET /_appmock/getMockMiss` | 可选：按 requestId 查询未命中诊断（若未随推送返回） |
+| `POST /_appmock/analyzeMockMatch` | 可选（P1）：对草稿规则做稳定性分析与冲突检测，返回建议列表 |
+
+- `GET /_appmock/getMockRecordByUrl` 保留，但仅作为历史记录兜底；R1 接入后录制去重优先使用 `matchMockRecord`。
 
 #### 4.1.7 边界与异常
 
 | 场景 | 行为 |
 |---|---|
 | 历史记录没有 `method` | `method=ANY` |
-| 历史记录 URL 无法解析 | 迁移时跳过并记录错误，不阻塞启动；该记录标记 `matchInvalid` |
+| 历史记录 URL 无法解析 | **保留文档**，`match.enabled=false` 并标记 `matchInvalid`；不跳过、不删除，不阻塞启动 |
+| 历史记录无 Query | `query.mode=ignore`，`allowExtra=true` |
+| 历史记录有 Query | 按稳定性分析自动忽略高风险动态键；其余保留 equals；`allowExtra=true`；生成迁移报告 |
+| 语义参数（version/type/tenant 等） | 永不自动忽略；即使多次录制值变化也只建议 |
 | 正则非法 | 保存失败，提示具体错误；不影响其他记录 |
-| 场景记录超过 5,000 条 | 启动匹配时告警；只加载前 5,000 条，并在 UI 提示 |
+| 记录数 5,000–10,000 | 提示拆分场景，但全部参与匹配，不静默截断 |
+| 记录数 > 10,000 | 拒绝启用该场景，要求拆分或删除 |
 | 未启用场景 | 不匹配，直接转发；不显示未命中诊断 |
 | 设备 UID 离线 | 沿用现有逻辑：无记录、无 Mock；诊断提示 UID 不匹配 |
-| 同一优先级多条命中 | 按 createdAt 升序，先录制者优先 |
-| Query 键重复 | 多值比较，任一值满足条件即通过 |
+| 排序完全并列（优先级、Path 类型、条件数都相同） | `updatedAt` 降序，最近更新的优先 |
+| Query 键重复 | 默认任一颗值满足即通过；`multiValue=all` 时全部值满足才通过 |
+| Query 空值 | `?a=` 与 `?a` 区分；`exists` 两者都通过，`equals ''` 只匹配前者 |
+| Host 缺少 `x-mock-host` | 回落真实 `Host` 头；两者都没有时按「任意 Host」处理并记录诊断 |
 | Header 值包含换行 | 校验拒绝，避免响应头注入 |
+| 导入含 Body 条件 | 拒绝并提示「当前版本不支持请求体匹配」，不静默降级 |
 
 #### 4.1.8 验收标准
 
 | 编号 | Given / When / Then |
 |---|---|
-| AC-R1-01 | Given 录制了 `GET /v1/users?ts=123&sign=abc&id=1`，When 把 `ts`、`sign` 加入忽略列表，Then 请求 `?ts=456&sign=xyz&id=1` 命中 |
+| AC-R1-01 | Given 同一接口两次录制中 `ts`、`sign` 值不同，When 再次请求 `?ts=456&sign=xyz&id=1`，Then 无需手动操作即命中，并在命中解释中标注 `ts`、`sign` 已忽略 |
 | AC-R1-02 | Given 同一 Path 有 GET 和 POST 两条记录，When 分别发送 GET/POST，Then 各自命中，不互相覆盖 |
-| AC-R1-03 | Given 两条记录 Host 分别为 `api.dev.com` 和 `api.test.com`，When 请求带对应 `x-mock-host`，Then 命中正确记录 |
+| AC-R1-03 | Given 两条记录 Host 分别为 `api.dev.com` 和 `api.test.com`，When 请求分别带对应 `x-mock-host`，Then 命中正确记录；缺少该头时回落真实 `Host` 仍可命中 |
 | AC-R1-04 | Given Path 配置 `/v1/users/*`，When 请求 `/v1/users/10086`，Then 命中 |
-| AC-R1-05 | Given 场景内两条记录 priority 分别为 10 和 0 且都匹配，When 请求，Then 命中 priority=10 的记录 |
-| AC-R1-06 | Given 请求未命中但存在相似 Path 记录，When 查看详情，Then 显示失败维度和期望/实际值 |
-| AC-R1-07 | Given 应用重启，When 打开主界面，Then 上次启用的场景自动恢复 |
-| AC-R1-08 | Given 1,000 条记录，When 连续发送 1,000 次请求，Then 匹配 p95 ≤ 5ms，无内存持续增长 |
-| AC-R1-09 | Given 历史规则，When 升级到 v1.1，Then 原有命中行为保持（除 Query 顺序变为不敏感外），无数据丢失 |
+| AC-R1-05 | Given 两条记录都匹配，一条手动 priority=10、另一条自动，When 请求，Then 命中 priority=10 |
+| AC-R1-06 | Given 未命中且存在相似 Path，When 查看详情，Then 显示相似度、失败维度、期望/实际值和可执行建议；无相似 Path 时不展示灰标 |
+| AC-R1-07 | Given 应用重启，When 打开主界面，Then 上次启用的场景自动恢复；同 viewer 多窗口状态一致 |
+| AC-R1-08 | Given 1,000 条记录、90% miss 流量，When 连续发送 1,000 次请求，Then 命中 p95 ≤ 1ms、未命中 p95 ≤ 3ms、整体 p95 ≤ 5ms，无内存持续增长 |
+| AC-R1-09 | Given 历史规则升级到 v1.1，When 启动迁移，Then 无数据丢失；无法解析 URL 的记录被保留并禁用；含动态参数的记录自动放宽且出现在迁移复核中 |
+| AC-R1-10 | Given 旧记录 `POST /order`（宽松）与新记录 `POST /order?type=refund`（标准）都匹配，When 请求 `?type=refund`，Then 命中新记录；两条条件完全并列时命中最近更新的一条 |
+| AC-R1-11 | Given 多次录制中 `version=1/2` 变化、`ts` 变化，When 执行稳定性分析，Then `ts` 自动忽略，`version` 只出现在建议中且默认仍作为条件 |
+| AC-R1-12 | Given 两次录制 `/v1/users/10086` 与 `/v1/users/10087`，When 分析完成，Then Path 参数化为 `/v1/users/*`（可在 UI 撤销），两个请求都命中 |
+| AC-R1-13 | Given 标准档 `allowExtra=true` 且条件为 `detail=1`，When 请求额外带 `foo=bar`，Then 仍命中；切换严格档后不命中 |
+| AC-R1-14 | Given 条件 `id=1`，When 请求 `?id=1&id=2`，Then “任一”语义命中、“全部”语义不命中 |
+| AC-R1-15 | Given 录制 URL 含 `%E4%B8%AD`、`+` 和尾斜杠，When 请求使用等价编码或不同尾斜杠，Then 归一化后命中 |
+| AC-R1-16 | Given 一次命中依赖忽略键，When 查看请求详情，Then 展示命中记录、档位、通过条件、忽略键与排序依据，并提供「收紧匹配」 |
+| AC-R1-17 | Given 规则 A 完全覆盖规则 B 的匹配条件，When 打开记录列表，Then B 显示「可能永远不会命中」并给出禁用/编辑建议 |
+| AC-R1-18 | Given 场景有 6,000 条记录，When 启用场景，Then 提示拆分但全部参与匹配；超过 10,000 条时拒绝启用并说明原因 |
+| AC-R1-19 | Given 保存时与已有记录匹配指纹完全一致，When 点击保存，Then 阻止并提示打开已有记录；仅 URL 相同但条件不同的记录允许保存 |
+| AC-R1-20 | Given 导入含 `body.mode=jsonSubset` 的规则包，When 执行导入，Then 明确拒绝该记录并提示版本不支持，不降级为忽略 |
 
 ---
 
@@ -552,7 +708,7 @@ interface MockMissDiagnostic {
 |---|---|---|
 | 状态码 / 响应头 / 响应体 / 延迟 / 变体结构化编辑 | 已交付 | — |
 | 模板变量、测试渲染、`previewMockRecord` | **本期未实现**；`{{...}}` 按原文返回 | W4 R2-b（模板与预览）未进入本期交付，先保证编辑、存储、命中链路 |
-| 编辑器 4 个 Tab（响应 / 变体 / 匹配 / 原始） | 本期 3 个 Tab（响应 / 变体 / 原始），无「匹配」 | R1 匹配引擎未接入，记录仍按 `ruleId + url` 精确命中 |
+| 编辑器 4 个 Tab（响应 / 变体 / 匹配 / 原始） | 本期 3 个 Tab（响应 / 变体 / 原始），无「匹配」 | 交付 R2 时 R1 尚未接入，记录按 `ruleId + url` 精确命中；R1 接入后按 4.1 增加「匹配」Tab |
 | 切换当前变体后立即保存 | 改动进入草稿，保存按钮 / Ctrl+S 显式保存 | 与统一未保存保护一致，避免每次点击都写库 |
 | 记录列表行显示当前变体名 | 列表显示有效状态码、变体数量、「当前」标记；变体名在变体条中展示 | 列表行宽有限，避免名称被截断 |
 | 响应头保存时过滤逐跳头 | 保存时只校验；实际发送与录制回填时统一过滤 | 保留用户配置，同时保证不透传非法/长度/压缩头 |
@@ -682,10 +838,12 @@ interface MockMissDiagnostic {
 | 响应体超过 2MB | 阻止保存 |
 | 变体数 > 20 | 阻止新增与保存 |
 | `activeVariantId` 不存在 | 阻止保存（提示「当前变体不存在」） |
-| 同一规则内 URL 重复 | 阻止保存（提示 `url [x] 已存在`） |
+| 同一规则内匹配指纹重复 | 阻止保存（提示「匹配条件与记录 [x] 完全一致」）；仅 URL 相同但条件不同允许保存 |
 | `expectedUpdatedAt` 与库中不一致 | 阻止覆盖，提示「记录已被其他人修改，请刷新后重试」 |
 | JSON 非法 | 警告，不阻止保存 |
-| 正则非法 / 模板表达式未知 | 本期不适用（匹配与模板未交付） |
+| 正则非法 | 阻止保存并提示具体错误（R1 接入后生效） |
+| 模板表达式未知 | 本期不适用（模板未交付） |
+| `match.body.mode` 非 `ignore` | 阻止保存（v1.1 不支持请求体匹配） |
 
 #### 4.2.4 数据模型与存储
 
@@ -693,8 +851,9 @@ interface MockMissDiagnostic {
 
 - `MockResponseHeaders` 为 `Record<string, string | string[]>`，支持同名多值头。
 - `MockResponseDef` 增加 `bodyEncoding?: 'utf8' | 'base64'`；`binary` 时固定为 `base64`。
-- `MockRecord.url` 本期仍作为匹配键：命中时按 `ruleId + url` 精确查单条记录，不做 Method / Query / Header 匹配（R1 未接入）。
-- 同一规则内 `url` 唯一；重复 URL 保存直接报错，不自动合并。
+- `MockRecord.url` 保留为展示与旧版本兼容字段；R1 接入后命中按 `match` 条件执行，不再按 `ruleId + url` 查单条记录。
+- 同一规则内以**匹配指纹**（归一化后的 method + host + path + query + headers + body）判重；仅 URL 相同但条件不同的记录允许保存。
+- R1 未交付的过渡期，仍按 `ruleId + url` 命中；此行为仅用于回滚，不作为目标态。
 - 保存返回 `MockRecordSaveResult { id, updatedAt }`，用于后续保存的乐观锁。
 - PouchDB 存储拆分为：
   - `rule` 文档：只存规则名称/描述等元信息；
@@ -764,7 +923,7 @@ interface MockMissDiagnostic {
 | bodyType=binary 但 body 非空 | 按 base64 存储、解码发送；编辑器只显示体积，不编辑正文 |
 | 设备级延迟与变体延迟同时存在 | 变体 `delayMs > 0` 时覆盖设备延迟，不叠加 |
 | 并发保存同一条记录 | `expectedUpdatedAt` 乐观锁；PouchDB 版本冲突内部重试 2 次，仍冲突则提示「记录已被其他人修改，请刷新后重试」 |
-| 同一规则内 URL 重复 | 阻止保存并提示 `url [x] 已存在` |
+| 同一规则内匹配指纹重复 | 阻止保存并提示「匹配条件与记录 [x] 完全一致」 |
 | 状态码非法（历史数据） | 发送前回退 200，避免 Express `RangeError` |
 | JSON 响应体非法 | 允许保存；发送时按原文返回 |
 | 旧数据升级 | v2 规则/记录自动拆分为独立文档并补齐结构化响应；迁移前备份 `.v3.bak`；迁移记录保留旧 `record` 字段以支持回滚 |
@@ -1020,15 +1179,17 @@ interface MockMissDiagnostic {
 - 读取 `log.entries[]`；
 - 每个 entry 生成一条记录：
   - `match.method` = request.method；
-  - `match.host` = request.url 的 hostname；
+  - `match.host` = request.url 的 hostname（显式端口；无端口=任意）；
   - `match.pathType` = exact；
-  - `match.path` = request.url 的 pathname；
-  - `match.query`：按 URL 参数生成 equals 条件，`allowExtra=false`；
+  - `match.path` = request.url 的 pathname；ID 形态段只建议参数化，不自动；
+  - `match.query`：剔除高风险动态键（E2）后生成 equals 条件，`ignoreKeys` 记录剔除项，`allowExtra=true`；单条 HAR 没有跨录制证据，不执行 E1 自动忽略；
+  - `match.level` = standard；`match.priority` = null；
   - `response`：status、headers、body（`content.encoding=base64` 时解码）；
   - `bodyType`：按 `content.mimeType` 推断；
   - `source`：请求 URL/Method/Headers/Body。
 - 跳过无 response 的 entry，并计入「跳过」；
-- 不自动忽略动态参数，但在 UI 提示「检测到可能变化的参数」；
+- 动态参数建议与 Path 参数化建议在导入结果中展示，可批量应用；
+- 含 `request.postData` 时只写入 `source`，不生成 `match.body` 条件；
 - 限制 1,000 条 entry；超出提示分批导入。
 
 #### 4.4.6 数据与接口
@@ -1071,6 +1232,180 @@ interface MockMissDiagnostic {
 
 ---
 
+### 4.5 R5 录制与规则管理流程精简（增量需求）
+
+> 本需求由 2026-11-07 的 Mock 录制链路评审产生，属于 v1.1 的增量范围，优先于 R1/R3/R4 中尚未交付的部分。
+
+#### 4.5.1 背景与目标
+
+当前「从一次请求录制为 Mock」要经过 5 个动作：详情页点书签 → 打开规则管理器 → 点中间云图标保存记录 → 打开规则开关 → 关闭面板。录制入口还是一个无文案的书签图标，用户无法预判目标规则、是否已录制、录完是否生效。评审同时发现以下具体缺陷：
+
+| 问题 | 影响 |
+|---|---|
+| 录制后只生成「未保存草稿」，且 `isNew` 不计入 dirty | 再点「+」/切换记录/关闭面板会静默丢弃已填写内容 |
+| 保存有三个入口（编辑器头部、中间竖栏、Ctrl+S） | 视觉主次不清；竖栏图标只靠 opacity 置灰，仍可点击 |
+| 保存无重入保护，匹配指纹唯一性只在保存时查一次 | 双击「录制/保存」可能产出两条条件相同的记录，或误报乐观锁冲突 |
+| 重复 url、乐观锁冲突都显示「记录保存失败」 | 用户不知道原因，也不知道下一步做什么 |
+| 录制入口与保存入口分工模糊 | 用户以为「点了书签就录好了」 |
+
+本期目标：
+
+1. 把「看到请求 → Mock 生效」从 5 步缩短到 2 步（录制 Mock → 录制并启用）。
+2. 全产品统一三个动词：**录制**（请求写入规则）、**保存**（编辑器落盘）、**启用**（规则对当前客户端生效）。
+3. 录制/保存的失败可解释、可操作；重复点击不产生重复数据。
+
+#### 4.5.2 用户故事
+
+- US-R5-01：作为前端开发，我想在请求详情里一步把这次响应录成 Mock 并启用，不进入规则管理界面。
+- US-R5-02：作为联调开发，我想在录制前看清「录到哪条规则」，并能直接新建规则。
+- US-R5-03：作为已有规则的维护者，我再次录制同一接口时希望更新已有记录，而不是得到重复项。
+- US-R5-04：作为规则管理者，我保存失败时要能区分「路径重复」「被其他人修改」「字段非法」并知道怎么处理。
+
+#### 4.5.3 交互流程
+
+**主路径（快速录制）**
+
+1. 请求详情顶部点击「录制 Mock」。
+2. 面板显示：请求 `METHOD /path`、目标规则、重复提示、动作按钮。
+3. 点击「录制并启用」→ 记录落盘 → 规则对当前客户端启用 → 通知「已录制并启用 · 点击查看」。
+4. 点击通知打开规则管理器，直接选中该规则和该记录。
+
+**仅录制**
+
+- 记录落盘但不启用；通知「已录制到 [规则]，启用后生效」，并提供「启用」入口（P1）。
+
+**录制后编辑**
+
+- 先落盘再打开规则管理器定位到该记录，编辑器内继续修改并保存。
+- 从详情页进入规则管理器时不再产生「未保存草稿」，避免草稿丢失类问题。
+
+**重复录制**
+
+- 录制去重不再看原始 URL，而是看**现有规则能否命中本次请求**（复用 R1 Matcher）：
+  - 现有记录能命中本次请求，且本次录制不会带来新的稳定条件 → 提示「该接口已录制过，将更新已有记录」，主按钮变为「更新并启用」；
+  - 现有记录不能命中，或本次请求带有新的稳定分支条件（如 `type=refund`）→ 提示「将新建一条记录」，避免覆盖原分支；
+  - 用户可在面板中手动切换「更新已有 / 另存为新记录」。
+- 更新语义：以本次抓到的状态码/响应头/响应体覆盖基础响应；保留已有记录的 `id`、`variants`、`activeVariantId`、`createdAt` 与非空名称。
+- 首次录制时按 4.1.3 的稳定性分析生成标准档匹配条件；同一接口的后续录制会重新分析并更新 `derivation`。
+
+**规则管理路径（P0 范围）**
+
+- 「+ 新建记录」入口位于记录列表头；保存只保留编辑器头部按钮 / Ctrl+S；中间竖栏的保存与新建图标移除。
+
+#### 4.5.4 功能规则
+
+##### 1）详情页录制入口
+
+| 项 | 规则 |
+|---|---|
+| 入口样式 | 文字按钮「录制 Mock」（图标 + 文案），窄屏可只保留图标 + `title` |
+| 面板内容 | 请求摘要；目标规则；规则搜索；内联新建规则；重复提示；启用替换提示；动作按钮 |
+| 默认目标规则 | 当前启用规则 → 最近使用规则（P2 持久化到 `localStorage`）→ 无规则时引导内联新建 |
+| 规则列表 | 默认按最近使用/创建排序；支持关键字搜索；当前启用规则带「启用中」标记 |
+| 内联新建 | 输入名称后出现「新建规则『xxx』」；录制时先创建规则再写入记录；描述可为空 |
+| 重复检测 | 选择规则后调用 `matchMockRecord(ruleId, request)`；命中则切换为更新语义；未命中但 `getMockRecordByUrl` 命中历史记录时，提示可更新并重新派生条件 |
+| 动作 | 「录制并启用」（主）与「仅录制」（次）；重复场景为「更新并启用 / 仅更新」 |
+| 启用替换 | 若当前已启用其他规则，面板提示「启用后将替换 [当前规则]」 |
+| 结果 | 记录成功、启用成功 → 成功通知；记录成功、启用失败 → 「已录制，但启用失败」并保留记录 |
+| 通知 | 持续 ≥ 2s，可点击打开规则管理器并定位到规则与记录 |
+| 防护 | 录制中禁止重复提交；`url` 为空时禁用入口 |
+
+##### 2）录制上下文与深链
+
+- 请求详情不再通过 `withCurRecord` 布尔值让管理器自动生成草稿。
+- 打开规则管理器时传入上下文 `{ ruleId, record? }`：
+  - `ruleId`：打开并加载该规则；
+  - `record`：将记录并入列表并直接进入编辑态（用于通知「查看」）；
+- 管理器关闭时清空上下文，避免下次打开残留。
+
+##### 3）状态与文案
+
+| 状态 | 界面表现 | 文案 |
+|---|---|---|
+| 新建草稿 | 列表首行出现草稿行（浅色底 + 「未保存」），可一键丢弃 | 新建记录 / 未保存 |
+| 录制草稿 | 编辑器头部「未保存」标签，编辑器内可保存 | 保存 |
+| 已保存·未启用 | 规则开关关闭；顶部提示条可一键启用 | 当前规则未启用，Mock 不会生效 |
+| 已保存·已启用 | 规则开关开启；列表记录可被请求命中 | 启用中 |
+
+- 统一动词：录制 / 保存 / 启用。禁止使用「更新记录」「写入」「→」等混合说法。
+- 「新建」统一使用 `plus` 图标；保存统一使用同一图标（编辑器头部）。
+
+##### 4）规则管理器的保存约束（P0）
+
+| 约束 | 规则 |
+|---|---|
+| 保存入口 | 编辑器头部「保存」按钮 + Ctrl/⌘+S；中间竖栏保存/新建图标移除 |
+| 重入保护 | `saving` 为真时再次触发直接返回；按钮进入 loading |
+| 禁用语义 | 无改动/新建未填写/保存中：按钮真实禁用（不可点击），并给出原因 tooltip |
+| 保存前重复检测 | 保存前比较匹配指纹；与不是当前记录的指纹完全一致时，弹窗「匹配条件与记录 [x] 完全一致，是否打开已有记录？」 |
+| 冲突处理 | 乐观锁冲突时不直接丢弃，弹窗提供「加载最新版本」与「覆盖保存」；覆盖时先取最新 `updatedAt` 再写入本地内容 |
+| 错误分型 | 冲突 / 匹配指纹重复 / 校验失败 / 未知错误分别展示，未知错误才使用通用「记录保存失败」 |
+| 新建记录 | 空白草稿；`isNew` 同样计入 dirty 与未保存提示，草稿行可显式丢弃 |
+| 保存反馈 | 保存成功后列表行高亮 1.2s 并滚动到可视区，草稿行随之消失 |
+
+##### 5）错误与并发
+
+| 场景 | 表现 | 处理 |
+|---|---|---|
+| 目标规则已有可命中记录 | 面板提前提示，不发起写入 | 主按钮改为更新语义 |
+| 并发窗口抢先写入相同匹配指纹 | 保存被拒绝 | 提示「匹配条件已存在」并提供打开已有记录 |
+| 并发修改同一记录 | 乐观锁 409 | 弹窗提供「加载最新版本 / 覆盖保存」 |
+| 重复点击保存 | 第二次请求被拦截 | 前端 `saving` 早退 + 按钮禁用 |
+| 记录成功、启用失败 | 记录已落盘 | 明示部分成功，允许重试启用 |
+| 渲染层校验失败 | 不请求服务端 | 提示首个错误并定位到字段：路径 / 响应页签 / 变体页签 |
+
+##### 6）录制历史与撤销（P2）
+
+| 项 | 规则 |
+|---|---|
+| 范围 | 最近 10 次录制，仅本次运行内存保留，不写 `localStorage`（记录快照可能含 2MB 响应体） |
+| 展示 | 面板底部展示最近 3 条：记录名、目标规则、新建/更新 |
+| 撤销 | 仅最近一次可撤销；新建 → 删除该记录；更新 → 用录制前快照写回（基于最新 `updatedAt`） |
+| 冲突 | 撤销写回遇到并发修改时提示冲突，不静默覆盖 |
+
+#### 4.5.5 接口变更
+
+| 方法 | 路径 | 参数 | 返回 |
+|---|---|---|---|
+| GET | `/_appmock/getMockRecord` | `recordId` | `MockRecord \| null` |
+| GET | `/_appmock/getMockRecordByUrl` | `ruleId`、`url` | `MockRecord \| null`（历史兜底） |
+| POST | `/_appmock/matchMockRecord` | `ruleId`、request | 命中记录或 miss（R1 新增） |
+
+- 三个接口只读，不改变 schema。
+- 服务端 `saveMockRecord` 的重复校验由 url 改为匹配指纹；乐观锁语义保持不变。
+- 渲染层请求层新增可选 `silentError`，录制/保存流程自行展示本地化错误，避免服务端原始错误与兜底提示重复弹出。
+
+#### 4.5.6 验收标准
+
+| 编号 | Given / When / Then |
+|---|---|
+| AC-R5-01 | Given 选中一条请求且存在启用规则，When 点「录制 Mock → 录制并启用」，Then 记录保存且规则启用，通知可点击定位到该记录 |
+| AC-R5-02 | Given 一条未命中的请求，When 点「仅录制」，Then 记录保存但规则开关保持原状态，并提示启用后生效 |
+| AC-R5-03 | Given 目标规则已存在能命中本次请求的记录，When 打开录制面板，Then 显示「将更新已有记录」，保存后原记录 id/变体不变；若现有记录不能命中，则提示「将新建一条记录」 |
+| AC-R5-04 | Given 没有任何规则，When 输入规则名并录制，Then 自动创建规则、写入记录并按选择启用 |
+| AC-R5-05 | Given 当前启用规则 A，When 录制到规则 B 并启用，Then 面板提前提示替换 A，完成后 B 生效 |
+| AC-R5-06 | Given 记录保存中，When 连续点击保存，Then 只发送一次请求，不产生重复记录或冲突提示 |
+| AC-R5-07 | Given 新建记录输入了内容，When 再点「+」或切换记录，Then 提示未保存 |
+| AC-R5-08 | Given 保存时匹配指纹与规则内其他记录完全一致，Then 弹窗说明并提供打开已有记录，而不是通用保存失败；仅 URL 相同但条件不同允许保存 |
+| AC-R5-09 | Given 保存时记录已被其他窗口修改，Then 弹窗提供「加载最新版本」与「覆盖保存」，选择覆盖后本地内容生效 |
+| AC-R5-10 | Given 从通知打开规则管理器，Then 自动选中对应规则与记录，不生成额外草稿 |
+| AC-R5-11 | Given 记录列表为空，When 打开规则管理器或选中空规则，Then 列表与编辑器展示统一空态图标与文案 |
+| AC-R5-12 | Given 新建或编辑记录，When 点击保存且内容未通过校验，Then 自动切到对应页签并聚焦首个出错字段 |
+| AC-R5-13 | Given 当前规则未启用，When 选中该规则，Then 顶部展示未启用提示条，可一键启用 |
+| AC-R5-14 | Given 保存成功后，Then 列表行高亮并滚动到可视区，新建草稿行消失 |
+| AC-R5-15 | Given 没有启用规则但曾录制过，When 打开录制面板，Then 默认选中最近使用规则 |
+| AC-R5-16 | Given 刚完成一次录制，When 在面板中撤销，Then 新建记录被删除或更新记录恢复为录制前内容 |
+
+#### 4.5.7 交付分期
+
+| 阶段 | 范围 | 状态 |
+|---|---|---|
+| P0 | 详情页录制面板（目标规则、内联新建、重复提示、录制并启用/仅录制）、共享录制 action、按 url/id 查询接口、深链、保存重入/真禁用/错误分型、移除 `withCurRecord` 自动草稿、中间竖栏图标移除并由列表头「+ 新建记录」承接 | 本次实现 |
+| P1 | 列表头草稿行、`isNew` 计入 dirty、保存后高亮定位、未启用 banner、字段级校验定位、空态文案与图标统一 | 本次实现 |
+| P2 | 冲突「覆盖/重新加载」双选项、最近使用规则持久化、录制历史与撤销、i18n 全量文案 | 本次实现 |
+
+---
+
 ## 5. 接口设计
 
 ### 5.1 接口清单
@@ -1078,9 +1413,11 @@ interface MockMissDiagnostic {
 | 方法 | 路径 | 类型 | 说明 |
 |---|---|---|---|
 | GET | `/_appmock/getMockRecords` | 变更 | 返回 `MockRecord[]` + 分页 |
+| GET | `/_appmock/getMockRecord` | 新增 | 按 `recordId` 取单条记录（冲突恢复、深链定位） |
+| GET | `/_appmock/getMockRecordByUrl` | 新增 | 按 `ruleId + url` 取单条记录（历史兜底；R1 接入后优先用 Matcher 去重） |
 | POST | `/_appmock/saveMockRecord` | 变更 | 保存完整记录；`recordId` 为空表示新建 |
 | POST | `/_appmock/deleteMockRecord` | 变更 | 按 `recordId` 删除 |
-| POST | `/_appmock/matchMockRecord` | 新增 | 用样例请求测试匹配 |
+| POST | `/_appmock/matchMockRecord` | 新增 | 用样例请求测试匹配；返回命中解释或 miss，供录制去重复用 |
 | POST | `/_appmock/previewMockRecord` | 新增 | 服务端渲染预览 |
 | GET | `/_appmock/exportMockPack` | 新增 | 导出规则包 |
 | POST | `/_appmock/importMockPack` | 新增 | 导入规则包 |
@@ -1107,21 +1444,32 @@ interface MockMissDiagnostic {
         "ruleId": "rule_1",
         "name": "用户详情",
         "match": {
+          "version": 1,
+          "level": "standard",
           "method": "GET",
           "host": "api.example.com",
-          "pathType": "exact",
-          "path": "/v1/users/10086",
+          "pathType": "glob",
+          "path": "/v1/users/*",
           "pathIgnoreCase": false,
           "ignoreTrailingSlash": true,
           "query": {
             "mode": "match",
             "ignoreKeys": ["timestamp", "sign"],
-            "conditions": [{ "key": "detail", "op": "equals", "value": "1" }],
-            "allowExtra": true
+            "conditions": [{ "key": "detail", "op": "equals", "value": "1", "source": "recording" }],
+            "allowExtra": true,
+            "multiValue": "any"
           },
-          "headers": [],
-          "priority": 0,
-          "enabled": true
+          "headers": { "ignoreKeys": [], "conditions": [] },
+          "body": { "mode": "ignore" },
+          "priority": null,
+          "enabled": true,
+          "derivation": {
+            "source": "recording",
+            "autoIgnoredKeys": ["timestamp", "sign"],
+            "suggestions": [],
+            "pathParameterized": true,
+            "analyzedAt": 1762310400000
+          }
         },
         "response": {
           "statusCode": 200,
@@ -1148,13 +1496,16 @@ interface MockMissDiagnostic {
           "capturedAt": 1762310400000
         },
         "createdAt": 1762310400000,
-        "updatedAt": 1762310400000
+        "updatedAt": 1762310400000,
+        "matchWarnings": []
       }
     ],
     "hasMore": false
   }
 }
 ```
+
+- `matchWarnings`：`duplicate`（匹配指纹重复）、`shadowed`（可能被覆盖）、`invalid`（匹配条件无效）。
 
 #### 5.2.2 `POST /_appmock/previewMockRecord`
 
@@ -1303,40 +1654,50 @@ interface MockMissDiagnostic {
 
 ### 6.1 迁移版本
 
-- 当前 schema：v2（规则/记录分文档）。
-- 目标 schema：v3（新增匹配、响应、变体、来源快照）。
+- 当前 schema：v3（规则/记录分文档，记录已是结构化响应模型；对应 `MockRepo.SCHEMA_VERSION = 3`）。
+- 目标 schema：v4（新增派生匹配、稳定性分析结果与匹配指纹）。
 - 迁移在 `MockService.init()` → `MockRepo.init()` 中执行。
 
 ### 6.2 迁移步骤
 
-1. **备份**：将 `Mock.Rules` 复制到 `Mock.Rules.v2.bak`（PouchDB replicate，只执行一次）。
+1. **备份**：将 `Mock.Rules` 复制到 `Mock.Rules.v4.bak`（PouchDB replicate，只执行一次），并写 meta 标记，失败不阻塞启动。
 2. **遍历记录文档**（`type=record`）：
-   - 缺少 `match` 时生成默认匹配规则；
+   - 缺少 `match` 时进入「派生匹配」流程（见 6.3），不是简单逐参数 equals；
    - 缺少 `response` 时从旧字段生成；
    - 缺少 `variants` 时设为 `[]`；
    - 缺少 `source` 时从 `record` 生成；
-   - 保留旧字段 `record`。
-3. **写入 meta**：`{ version: 3, migratedAt, lastActiveRuleId? }`。
-4. **建索引**：保留现有索引；新增 `type, ruleId, createdAt` 已有，无需变更。
-5. **校验**：统计迁移前后记录数；不一致时记录错误日志，不阻塞启动。
+   - 保留旧字段 `record` 与 `url`。
+3. **稳定性分析**：按 `method + 归一化 path` 分组，执行 4.1.3 的证据分级，生成 `ignoreKeys`、Path 参数化与建议。
+4. **写入 meta**：`{ version: 4, mockSchemaVersion: 1, migratedAt, lastActiveRuleId? }`。
+5. **生成迁移报告**：每条规则记录自动忽略键、Path 参数化、被禁用记录、失败原因；供 UI 复核与撤销。
+6. **建索引**：保留现有索引；新增 `type, ruleId, updatedAt` 以支持默认排序。
+7. **校验**：统计迁移前后记录数；不一致时记录错误日志，不阻塞启动，但迁移报告标记为「需人工检查」。
 
 ### 6.3 历史记录默认匹配规则
 
 | 字段 | 默认值 | 说明 |
 |---|---|---|
-| method | `record.method` 或 `ANY` | 修复 GET/POST 覆盖 |
-| host | `''`（任意） | 保持旧行为 |
-| pathType | `exact` | 与旧逻辑一致 |
-| path | URL pathname | 解析失败则标记 invalid |
+| method | `record.method` / `source.method` / `ANY` | 修复 GET/POST 覆盖；缺失才 ANY |
+| host | `''`（任意） | 保持旧行为；新录制默认录制 Host |
+| pathType | `exact` | 与旧逻辑一致；Path ID 段命中参数化证据时改为 `glob` |
+| path | URL pathname | 解析失败则保留文档、`enabled=false`、`matchInvalid` |
 | pathIgnoreCase | `false` | 路径大小写敏感 |
 | ignoreTrailingSlash | `true` | 用户体验优化 |
-| query.mode | `match` | 旧逻辑校验 Query |
-| query.conditions | 每个 Query 参数 equals | 保持旧语义 |
-| query.ignoreKeys | `[]` | 不自动忽略 |
-| query.allowExtra | `false` | 保持旧语义（不允许额外参数） |
-| headers | `[]` | 不校验 |
-| priority | `0` | 按创建时间排序 |
-| enabled | `true` | 默认启用 |
+| query.mode | 有 Query 为 `match`，无 Query 为 `ignore` | 无 Query 的规则不被新增参数打断 |
+| query.conditions | 剔除自动忽略键后，剩余参数 equals | 不保留动态噪声 |
+| query.ignoreKeys | E1/E2 自动忽略键 | 记录证据；可在迁移复核中撤销 |
+| query.allowExtra | `true` | 有意的行为变化，避免额外参数导致 miss |
+| query.multiValue | `any` | 兼容旧行为 |
+| headers | `{ ignoreKeys: [], conditions: [] }` | 不校验 |
+| body | `{ mode: 'ignore' }` | 本期不支持 |
+| level | `standard`；无 Query 时为 `loose` | 展示用 |
+| priority | `null` | 自动排序 |
+| derivation.source | `migration` | 记录自动放宽来源 |
+| enabled | `true`（`matchInvalid` 除外） | 默认启用 |
+
+- **不自动忽略**：`version`、`v`、`type`、`tenant`、`role`、`exp`、`time`、`page`、`size`、`cursor`、`status`、`lang`、`locale` 等语义键。
+- **无法解析 URL**：保留文档、禁用、写 `matchInvalid`，计入迁移报告，不删除。
+- **行为变化必须披露**：Query 顺序不敏感、`allowExtra=true`、动态键自动忽略、Method 变为精确匹配；写入发布说明。
 
 ### 6.4 历史响应默认值
 
@@ -1350,11 +1711,15 @@ interface MockMissDiagnostic {
 | variants | `[]` |
 | activeVariantId | `null` |
 
-### 6.5 回滚
+### 6.5 回滚与复核
 
-- 旧字段保留，旧版本可继续读取。
-- 新版本写入的新记录，旧版本无法识别，但不会破坏旧数据。
-- 如需完整回滚，使用 `Mock.Rules.v2.bak` 恢复。
+- 旧字段保留，旧版本可继续读取历史记录。
+- 新版本写入的新记录旧版本无法识别，但不会破坏旧数据；新记录同时保留 `url` 便于降级排查。
+- 迁移后一次性提示「已自动放宽 N 条规则」，复核页支持：
+  - 单条撤销自动忽略键；
+  - 单条恢复录制精确匹配（严格档）；
+  - 全局撤销本次迁移的自动放宽。
+- 如需完整回滚，使用 `Mock.Rules.v4.bak` 恢复。
 
 ---
 
@@ -1364,17 +1729,19 @@ interface MockMissDiagnostic {
 
 | 项 | 要求 |
 |---|---|
-| 匹配耗时 | 1,000 条记录 p95 ≤ 5ms |
+| 匹配耗时（命中） | 1,000 条记录 p95 ≤ 1ms；5,000 条 p95 ≤ 3ms |
+| 匹配耗时（未命中） | 1,000 条记录 p95 ≤ 3ms；5,000 条 p95 ≤ 8ms |
+| 整体代理额外开销 | 匹配 + 响应组装 p95 ≤ 5ms（90% miss 流量） |
 | 模板渲染 | 单次 ≤ 2ms（1KB Body） |
 | 编辑器加载 | 1,000 条记录列表首屏 ≤ 1s |
 | 导入 1,000 条 | ≤ 10s，带进度 |
 | 导出 1,000 条 | ≤ 5s |
-| 内存 | 匹配缓存不超过记录总量的 2 倍；单场景上限 5,000 条 |
+| 内存 | 编译缓存 + 1,000 条 LRU 记忆化；5,000 条提示拆分但不截断，10,000 条拒绝启用 |
 
 ### 7.2 安全
 
 - 模板引擎不使用 `eval`/`Function`，只支持白名单表达式。
-- 正则长度限制 + 灾难性回溯校验。
+- 正则：长度 ≤ 200、被匹配 Path 截断到 2,048 字符、保存时拒绝嵌套量词等明显高风险模式、编译缓存；不承诺覆盖所有灾难性回溯，UI 提示风险。
 - 响应头值禁止 CRLF，防止头注入。
 - 导入文件只接受 JSON/HAR，限制大小与记录数。
 - 导出默认脱敏敏感请求头。
@@ -1392,21 +1759,26 @@ interface MockMissDiagnostic {
 
 - 代理错误环形缓冲（最近 20 条）。
 - 匹配命中/未命中计数（本地内存）。
+- `mockHitWithIgnoredKeys`：依赖自动忽略键的命中次数，用于评估误命中风险。
 - 导入/导出结果日志。
-- 迁移日志：记录数、耗时、失败项。
+- 迁移日志：记录数、耗时、失败项、自动忽略键数量、Path 参数化数量。
 
 ### 7.5 文档
 
 - 更新 `docs/使用说明.md`：
-  - 新的匹配维度与示例；
+  - 录制派生匹配模型：身份 / 分支 / 噪声、三档松紧、稳定性分析；
+  - 冲突解析顺序与手动优先级；
+  - 命中解释与未命中诊断；
   - 结构化编辑器与变体；
-  - 模板变量表；
   - 导入/导出；
   - 接入向导与诊断。
 - 发布说明中标注行为变化：
   - Query 顺序不再影响匹配；
+  - 历史 Query 不再要求全部参数相等：高置信动态键自动忽略，允许额外参数；
+  - `version`、`type`、`tenant` 等语义参数不会被自动忽略；
   - 历史记录按录制 Method 匹配（GET/POST 不再互相覆盖）；
-  - 记录 ID 不再随 URL 变化。
+  - 排序不再“先录制者优先”，改为“更具体 / 最近更新优先”；
+  - 记录唯一性由 URL 改为匹配指纹，记录 ID 不再随 URL 变化。
 
 ---
 
@@ -1425,6 +1797,8 @@ interface MockMissDiagnostic {
 | `firstMockHitAt` | 首次 Mock 命中时间 |
 | `mockHitTotal` | Mock 命中次数 |
 | `mockMissTotal` | 启用场景下未命中次数 |
+| `mockHitWithIgnoredKeys` | 依赖自动忽略键的命中次数 |
+| `matchMigrationReverted` | 迁移后撤销自动放宽的次数 |
 | `ruleCount` / `recordCount` / `variantCount` | 当前数据量 |
 | `importCount` / `exportCount` | 导入导出次数 |
 | `templateWarningTotal` | 模板渲染警告次数 |
@@ -1443,23 +1817,32 @@ interface MockMissDiagnostic {
 
 | 模块 | 用例 |
 |---|---|
-| Matcher | Method/Host/Path 四种类型/Query 条件/忽略键/allowExtra/优先级/并列排序 |
-| Matcher | 多值 Query、重复 Header、大小写、尾斜杠 |
+| Matcher | Method/Host/Path 四种类型/Query 条件/忽略键/allowExtra/multiValue |
+| Matcher | 解析顺序：手动优先级 → Path 类型 → 条件数 → updatedAt；新旧规则冲突 |
+| Matcher | 归一化：`+`/`%20`、百分号编码、空值 vs 缺省、尾斜杠、大小写、重复 Header |
+| Matcher | Host：`x-mock-host` / `Host` 回落、通配符不含 apex、显式端口 vs 任意端口、IPv6 |
+| Matcher | Path 参数化：数字/UUID 段、版本段不参数化、单次录制只建议 |
+| Stability | 证据分级：E1/E2 自动忽略、E3/E4 建议、E5 语义键永不自动忽略 |
+| Conflict | 重复指纹、遮蔽检测（exact/prefix）、不可达规则 |
+| Diagnostics | 相似度评分、top-1 物化、阈值、无相似 Path 不展示 |
 | Template | 内置变量、请求变量、未知变量、异常、超大输出、注入字符 |
-| Migration | v2 → v3 字段完整性、幂等、无效 URL、记录数一致 |
-| Import/Export | 规则包往返、HAR 解析、非法文件、超限、脱敏 |
+| Migration | v2 → v3 字段完整性、幂等、无效 URL 保留禁用、动态键自动忽略、记录数一致 |
+| Import/Export | 规则包往返、HAR 解析、Body 条件拒绝、非法文件、超限、脱敏 |
 | Diagnostics | 错误码映射、超时、不可达目标 |
 
 ### 9.2 集成测试
 
 | 场景 | 预期 |
 |---|---|
-| 带动态 Query 的请求命中 | 忽略键生效，返回 Mock |
-| 未命中 | 转发上游 + 推送未命中诊断 |
+| 带动态 Query 的请求命中 | 无需手动忽略即命中，命中解释标注忽略键 |
+| 新录制覆盖旧规则 | 更具体/更新的规则优先，不需要手改优先级 |
+| 未命中 | 转发上游 + 推送最近记录、相似度与失败维度 |
+| 命中后收紧 | 将被忽略键转为条件，后续请求按新条件匹配 |
 | 变体切换 | 立即返回新变体 |
 | 保存记录 | 匹配缓存失效，新规则立即生效 |
-| 应用重启 | 最近启用场景恢复 |
-| 导入规则包 | 规则/记录/变体一致 |
+| 应用重启 | 最近启用场景恢复；多窗口状态一致 |
+| 迁移旧库 | 自动放宽有报告、可撤销、零丢失 |
+| 导入规则包 | 规则/记录/变体一致；含 Body 条件明确拒绝 |
 | 导入 HAR | 记录生成正确，二进制解码正确 |
 
 ### 9.3 手工测试矩阵
@@ -1477,9 +1860,11 @@ interface MockMissDiagnostic {
 
 ### 9.4 发布前检查清单
 
-- [ ] schema v3 迁移在旧数据副本上验证通过
+- [ ] schema v4 迁移在旧数据副本上验证通过
 - [ ] 备份文件生成成功
+- [ ] 迁移报告生成，自动忽略键可撤销
 - [ ] 旧版本数据可被新版本读取
+- [ ] 命中/未命中诊断在真实 App 上抽样验证
 - [ ] 新增接口在 HTTP/HTTPS 下均可用
 - [ ] 桌面端与 Web 端行为差异符合预期
 - [ ] 中英文文案完整
@@ -1495,18 +1880,20 @@ interface MockMissDiagnostic {
 
 | 周 | 工作内容 | 产出 |
 |---|---|---|
-| W1 | 数据模型、schema v3 迁移、Matcher 核心与单测 | 迁移脚本、Matcher 单测 |
-| W2 | Matcher 接入代理、缓存、未命中诊断、场景状态持久化 | 命中率可测，诊断可展示 |
+| W1 | 数据模型、schema v4 迁移、Matcher 核心、稳定性分析、冲突解析与单测 | 迁移脚本、Matcher 与派生规则单测 |
+| W2 | Matcher 接入代理、缓存、命中解释、未命中诊断、场景状态持久化 | 命中率可测，命中/未命中均可解释 |
 | W3 | 结构化编辑器：响应 Tab、Header 表格、保存接口 | 可结构化编辑并保存 |
 | W4 | 变体、模板引擎、预览接口、编辑器校验 | 变体/模板可用 |
 | W5 | 接入向导、健康检查、诊断接口与诊断中心 | 新用户可自助接入 |
 | W6 | 导入/导出、HAR、回归测试、文档、发布 | v1.1.0 |
 
+> R5 为增量需求，不改变上述里程碑路径：P0 直接插入当前开发迭代；P1/P2 在 R1–R4 收尾后按剩余容量排期。
+
 ### 里程碑
 
 | 里程碑 | 时间 | 退出标准 |
 |---|---|---|
-| M1：Matcher 可用 | W2 末 | 真实 App 录制规则命中率 ≥ 80%（3 个 App 验证） |
+| M1：Matcher 可用 | W2 末 | 真实 App 录制规则命中率 ≥ 80%（3 个 App 验证）；迁移自动放宽可复核/撤销 |
 | M2：编辑器可用 | W4 末 | 3 分钟内创建 3 个变体；模板渲染正确 |
 | M3：接入自助 | W5 末 | 新用户 10 分钟内完成首个请求和首个 Mock |
 | M4：可发布 | W6 末 | 全部 AC 通过；迁移零丢失；文档更新 |
@@ -1517,12 +1904,15 @@ interface MockMissDiagnostic {
 
 | 风险 | 概率 | 影响 | 应对 |
 |---|---|---|---|
-| 历史规则迁移后行为变化引发投诉 | 中 | 高 | 发布说明明确；保留旧字段与备份；提供「恢复旧匹配」选项（后续） |
-| 正则导致性能问题 | 中 | 中 | 长度限制、灾难性回溯校验、正则仅高级模式 |
+| 历史规则迁移后行为变化引发投诉 | 中 | 高 | 发布说明明确；保留旧字段、url 与备份；迁移复核页支持单条/全局撤销自动放宽 |
+| 自动忽略过度放宽导致误命中 | 中 | 高 | 证据分级（E1/E2 才自动）；语义键永不自动忽略；命中解释标注忽略键；提供收紧/撤销；本地指标 `mockHitWithIgnoredKeys` |
+| Path 参数化把不同资源合并 | 中 | 中 | 仅 ID 形态段 + 多次录制证据才自动；单次只建议；可撤销 |
+| 排序策略变化导致旧规则不再优先 | 中 | 高 | 冲突检测、排序依据展示、发布说明；手动优先级可强制覆盖 |
+| 正则导致性能问题 | 中 | 中 | 长度/输入截断、编译缓存、高风险模式拒绝、正则仅高级模式 |
 | 模板引擎安全漏洞 | 低 | 高 | 白名单、无 eval、输出限制、单测覆盖注入 |
-| 编辑器复杂度导致开发延期 | 中 | 中 | 先做响应 Tab + 变体；原始 JSON 保留；匹配 Tab 复用现有表单组件 |
+| 编辑器复杂度导致开发延期 | 中 | 中 | 先做响应 Tab + 变体；匹配 Tab 按档位优先，条件编辑后置；原始 JSON 保留 |
 | 导入大文件卡顿 | 中 | 中 | 限制 50MB/5,000 条；分批写入；进度提示 |
-| 诊断误报/漏报 | 中 | 中 | 每步独立超时；报告附原始错误；允许复制报告反馈 |
+| 诊断误报/漏报 | 中 | 中 | 相似度阈值可调；每步独立超时；报告附原始错误；允许复制反馈 |
 | 与 Next 阶段功能耦合 | 中 | 低 | 本期只做匹配/编辑/导入导出；断点/改写另行设计 |
 | Web 版本能力差异 | 低 | 中 | 明确隐藏桌面专属项；文案提示 |
 
@@ -1543,8 +1933,13 @@ interface MockMissDiagnostic {
 |---|---|
 | 新记录 ID | 使用 `rec_<uuid>`；历史记录保持原 `_id` |
 | 历史记录 Method | 使用录制 Method；缺失则 `ANY` |
-| 历史记录 Query | 保持「全部参数必须匹配」，但顺序不敏感；`allowExtra=false` |
-| 新记录 Query 默认 | `allowExtra=true`；动态参数只建议、不自动忽略 |
+| 历史记录 Query | 顺序不敏感；E1/E2 高置信动态键自动忽略；`allowExtra=true`；语义键不自动忽略 |
+| 新记录 Query 默认 | 标准档：稳定键作为条件、动态键自动忽略、`allowExtra=true` |
+| 匹配唯一性 | 由 URL 改为匹配指纹（method+host+path+query+headers+body） |
+| 匹配排序 | 手动 priority（未设置为 null）→ Path 具体度 → 条件数 → `updatedAt` 降序 |
+| 匹配松紧 | 宽松 / 标准 / 严格 / 自定义；标准为录制与迁移默认 |
+| 请求体匹配 | v1.1 仅预留 schema，引擎只支持 `ignore`；UI 不提供编辑 |
+| 多窗口启用状态 | 以 viewer 为单一来源，主进程持有并广播，不做每窗口独立状态 |
 | 变体延迟 | 变体 `delayMs>0` 时覆盖设备级延迟，不叠加 |
 | 模板语法 | `{{ expression }}`，白名单，不使用 eval |
 | 启用场景持久化 | 保存 `lastActiveRuleId`，启动时恢复 |
@@ -1552,12 +1947,20 @@ interface MockMissDiagnostic {
 | 导入默认模式 | 新建场景；合并默认「跳过」 |
 | 导出脱敏 | 默认脱敏敏感请求头，可关闭 |
 | 示例场景 | 向导提供一键创建，可选 |
+| 录制入口 | 请求详情页「录制 Mock」面板；不再通过「书签 → 规则管理器 → 保存」隐式录制 |
+| 录制目标规则 | 默认当前启用规则 → 最近使用规则 → 内联新建；目标始终显式可见 |
+| 再次录制 | 由 Matcher 判断现有记录能否命中本次请求：能命中则更新（保留变体/名称），不能命中则新建分支记录；用户可手动切换 |
+| 录制与启用 | 「录制并启用」一步生效；「仅录制」明确提示启用后生效；替换其他启用规则时给出提示 |
+| 保存入口 | 记录保存只保留编辑器头部按钮 / Ctrl+S；中间竖栏图标移除 |
 
 ### 12.2 待确认
 
 | 问题 | 需要谁确认 | 建议 |
 |---|---|---|
-| 是否需要支持请求体（JSON 字段）匹配 | 产品/研发 | 本期不做，放入 Next |
+| Path 参数化是否允许自动执行 | 产品 | 有多次录制证据时自动、单次只建议；对 ID 形态严格限定，可撤销 |
+| 迁移时 Host 是否保持「任意」 | 产品 | 保持任意以兼容旧行为；新录制默认精确 Host |
+| 语义键集合是否允许用户自定义 | 产品 | 本期内置，设置中只读展示；后续开放 |
+| 自动忽略是否提供「全局关闭」 | 产品 | 本期不提供全局关闭，只提供单条/本次迁移撤销 |
 | 正则是否默认对普通用户隐藏 | 产品 | 默认折叠在「高级」中 |
 | 变体数量上限 20 是否合理 | 研发 | 先 20，后续按需调整 |
 | 导入合并是否需要「覆盖」之外的「按匹配指纹合并」 | 产品 | 本期只按 recordId；指纹合并放 Next |
@@ -1568,57 +1971,126 @@ interface MockMissDiagnostic {
 
 ## 附录 A：匹配规则示例
 
-### A.1 动态 Query 忽略
+### A.1 录制派生：标准档 + 自动忽略 + Path 参数化
+
+两次录制：`GET /v1/users/10086?detail=1&ts=1&sign=a`、`GET /v1/users/10087?detail=1&ts=2&sign=b`。
 
 ```json
 {
+  "version": 1,
+  "level": "standard",
   "method": "GET",
   "host": "api.example.com",
-  "pathType": "exact",
-  "path": "/v1/users/10086",
+  "pathType": "glob",
+  "path": "/v1/users/*",
+  "pathIgnoreCase": false,
+  "ignoreTrailingSlash": true,
   "query": {
     "mode": "match",
-    "ignoreKeys": ["timestamp", "sign", "deviceId"],
+    "ignoreKeys": ["ts", "sign"],
     "conditions": [
-      { "key": "detail", "op": "equals", "value": "1" }
+      { "key": "detail", "op": "equals", "value": "1", "source": "recording" }
     ],
-    "allowExtra": true
+    "allowExtra": true,
+    "multiValue": "any"
+  },
+  "headers": { "ignoreKeys": [], "conditions": [] },
+  "body": { "mode": "ignore" },
+  "priority": null,
+  "enabled": true,
+  "derivation": {
+    "source": "recording",
+    "autoIgnoredKeys": ["ts", "sign"],
+    "suggestions": [],
+    "pathParameterized": true,
+    "analyzedAt": 1762310400000
   }
 }
 ```
 
 匹配：
 
-- `GET /v1/users/10086?detail=1&timestamp=1&sign=a&deviceId=x` → 命中
-- `GET /v1/users/10086?detail=2&timestamp=1` → 不命中（detail 不符）
+- `GET /v1/users/20001?detail=1&ts=9&sign=z` → 命中（Path 参数化 + 动态键忽略）
+- `GET /v1/users/20001?detail=2&ts=9` → 不命中（detail 不符）
 
-### A.2 通配 Path + Header 条件
+### A.2 严格档：区分业务分支
 
 ```json
 {
+  "version": 1,
+  "level": "strict",
   "method": "POST",
-  "host": "*.example.com",
-  "pathType": "glob",
-  "path": "/v1/orders/*",
-  "query": { "mode": "ignore", "ignoreKeys": [], "conditions": [], "allowExtra": true },
-  "headers": [
-    { "key": "x-tenant-id", "op": "exists" }
-  ],
-  "priority": 10
+  "host": "api.example.com",
+  "pathType": "exact",
+  "path": "/v1/orders",
+  "query": {
+    "mode": "match",
+    "ignoreKeys": [],
+    "conditions": [{ "key": "type", "op": "equals", "value": "refund" }],
+    "allowExtra": false,
+    "multiValue": "all"
+  },
+  "headers": {
+    "ignoreKeys": [],
+    "conditions": [{ "key": "x-tenant-id", "op": "exists", "source": "manual" }]
+  },
+  "body": { "mode": "ignore" },
+  "priority": null,
+  "enabled": true
 }
 ```
 
-### A.3 正则 Path
+### A.3 宽松档：整条接口同一响应
 
 ```json
 {
+  "version": 1,
+  "level": "loose",
+  "method": "GET",
+  "host": "",
+  "pathType": "exact",
+  "path": "/v1/config",
+  "query": { "mode": "ignore", "ignoreKeys": [], "conditions": [], "allowExtra": true, "multiValue": "any" },
+  "headers": { "ignoreKeys": [], "conditions": [] },
+  "body": { "mode": "ignore" },
+  "priority": null,
+  "enabled": true
+}
+```
+
+### A.4 冲突解析
+
+```text
+规则 A：POST /order            level=loose   priority=null  updatedAt=100
+规则 B：POST /order?type=refund level=strict  priority=null  updatedAt=200
+
+请求 POST /order?type=refund：
+1. 两者都没有手动 priority；
+2. Path 都是 exact，具体度相同；
+3. B 有 1 个 Query 条件且 allowExtra=false，A 没有 → B 更具体；
+4. 命中 B。
+```
+
+### A.5 正则 Path（高级）+ Body 预留
+
+```json
+{
+  "version": 1,
+  "level": "custom",
   "method": "ANY",
   "host": "",
   "pathType": "regex",
   "path": "^/v1/users/\\d+$",
-  "query": { "mode": "ignore", "ignoreKeys": [], "conditions": [], "allowExtra": true }
+  "query": { "mode": "ignore", "ignoreKeys": [], "conditions": [], "allowExtra": true, "multiValue": "any" },
+  "headers": { "ignoreKeys": [], "conditions": [] },
+  "body": { "mode": "ignore" },
+  "priority": 10,
+  "enabled": true
 }
 ```
+
+- 正则按整段 Path 全匹配，引擎自动加锚点；`priority=10` 表示手动优先于自动排序。
+- `body.mode` 在 v1.1 只能是 `ignore`；导入其他值会被拒绝。
 
 ---
 
@@ -1644,21 +2116,32 @@ interface MockMissDiagnostic {
           "id": "rec_3f2c9a7e",
           "name": "用户详情",
           "match": {
+            "version": 1,
+            "level": "standard",
             "method": "GET",
             "host": "api.example.com",
-            "pathType": "exact",
-            "path": "/v1/users/10086",
+            "pathType": "glob",
+            "path": "/v1/users/*",
             "pathIgnoreCase": false,
             "ignoreTrailingSlash": true,
             "query": {
               "mode": "match",
               "ignoreKeys": ["timestamp", "sign"],
-              "conditions": [{ "key": "detail", "op": "equals", "value": "1" }],
-              "allowExtra": true
+              "conditions": [{ "key": "detail", "op": "equals", "value": "1", "source": "recording" }],
+              "allowExtra": true,
+              "multiValue": "any"
             },
-            "headers": [],
-            "priority": 0,
-            "enabled": true
+            "headers": { "ignoreKeys": [], "conditions": [] },
+            "body": { "mode": "ignore" },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "recording",
+              "autoIgnoredKeys": ["timestamp", "sign"],
+              "suggestions": [],
+              "pathParameterized": true,
+              "analyzedAt": 1762310400000
+            }
           },
           "response": {
             "statusCode": 200,
@@ -1711,15 +2194,18 @@ interface MockMissDiagnostic {
 | HAR 字段 | MockRecord 字段 |
 |---|---|
 | `request.method` | `match.method` |
-| `request.url` hostname | `match.host` |
-| `request.url` pathname | `match.path` |
-| `request.url` query | `match.query.conditions`（equals，allowExtra=false） |
+| `request.url` hostname | `match.host`（显式端口；无端口=任意） |
+| `request.url` pathname | `match.path`；ID 形态段只建议参数化，不自动 |
+| `request.url` query | 剔除高风险动态键后写 `match.query.conditions`（equals）；`ignoreKeys` 记录剔除项；`allowExtra=true`；单条 HAR 无跨录制证据，不做 E1 自动忽略 |
 | `response.status` | `response.statusCode` |
 | `response.headers` | `response.headers` |
 | `response.content.text` | `response.body`（base64 解码） |
 | `response.content.mimeType` | `response.bodyType` |
 | `request.headers` | `source.headers` |
 | `request.postData.text` | `source.requestBody` |
+
+- HAR 导入不支持请求体匹配：`request.postData` 只写入 `source`，不生成 `match.body` 条件。
+- 导入后执行一次场景内稳定性分析；若出现同接口的其他记录，可升级为 E1 自动忽略。
 
 ---
 
@@ -1737,9 +2223,14 @@ interface MockMissDiagnostic {
 | UID 不匹配 | 设备 | 请求 UID 与当前桌面端不一致 | 使用正确的 `x-mock-uid` |
 | 无 `/_proxy` 前缀 | 链路 | 请求未经过代理 | 检查 URL 拼接 |
 | 当前无启用场景 | Mock | 未启用 Mock 场景 | 打开场景开关 |
-| 未命中（Query 不同） | Mock | Query 参数不匹配 | 忽略动态参数或修改条件 |
+| 未命中（Query 不同） | Mock | Query 参数不匹配 | 忽略动态参数、放宽为宽松或修改条件 |
 | 未命中（Method 不同） | Mock | 请求方法不匹配 | 修改 Method 或设为 ANY |
-| 未命中（Host 不同） | Mock | Host 不匹配 | 修改 Host 或设为任意 |
-| 未命中（Path 不同） | Mock | Path 不匹配 | 修改 Path/匹配类型 |
+| 未命中（Host 不同） | Mock | Host 不匹配 | 修改 Host 或设为任意；检查 `x-mock-host` |
+| 未命中（Path 不同） | Mock | Path 不匹配 | 修改 Path/匹配类型或应用 Path 参数化建议 |
+| 匹配指纹重复 | Mock | 已有记录的条件完全相同 | 打开已有记录，避免重复保存 |
+| 规则可能被遮蔽 | Mock | 该规则可能永远不会命中 | 检查更高优先级的同类规则，调整优先级或条件 |
+| 命中依赖忽略键 | Mock | 命中（已忽略 N 个动态参数） | 如担心误命中，使用「收紧匹配」 |
+| 记录匹配无效 | Mock | 该记录无法解析出有效匹配条件 | 编辑 Path/Query 或删除记录；原数据保留 |
+| 导入含请求体条件 | 数据 | 当前版本不支持请求体匹配 | 移除 `body` 条件或升级版本 |
 | 模板渲染失败 | Mock | 模板变量无法解析 | 检查变量名与请求上下文 |
 | 导入格式错误 | 数据 | 文件不是有效的规则包/HAR | 检查文件格式与版本 |

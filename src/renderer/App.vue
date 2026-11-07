@@ -40,8 +40,7 @@ const commonStore = CommonStore()
 const i18n = useI18n()
 const router = useRouter()
 const canRender = ref(false)
-const active = ref<number>(0)
-const enableDebug = true
+const enableDebug = __DEV__
 const showLoading = ref<boolean>(false)
 const loadingTimer = setTimeout(() => {
   if (!canRender.value) showLoading.value = true
@@ -61,7 +60,6 @@ async function onConfigReady(config?: LocalServerConfig) {
   clearTimeout(loadingTimer)
   showLoading.value = false
   router.replace(commonStore.onboarded ? '/proxy' : '/onboarding')
-  active.value = 1
 }
 
 onMounted(async () => {

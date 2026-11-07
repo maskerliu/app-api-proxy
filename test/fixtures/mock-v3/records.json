@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 3,
+  "migratedAt": 1699999990000,
+  "note": "v3 Mock.Rules 记录文档副本（已脱敏）。不含 meta 与设计文档，仅用于 v3→v4 迁移回归。",
+  "docs": [
+    {
+      "_id": "rec_a1",
+      "type": "record",
+      "ruleId": "rule_users",
+      "name": "用户列表(admin)",
+      "url": "/v1/users?ts=1699999900000&sign=aaa&role=admin",
+      "response": {
+        "statusCode": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"code\":0,\"data\":[{\"id\":1}]}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": {
+        "method": "GET",
+        "url": "/v1/users?ts=1699999900000&sign=aaa&role=admin",
+        "statusCode": 200
+      },
+      "createdAt": 1699999900000,
+      "updatedAt": 1699999900000
+    },
+    {
+      "_id": "rec_a2",
+      "type": "record",
+      "ruleId": "rule_users",
+      "name": "用户列表(admin) 二次录制",
+      "url": "/v1/users?ts=1699999911111&sign=bbb&role=admin",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "{\"code\":0}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": {
+        "method": "GET",
+        "url": "/v1/users?ts=1699999911111&sign=bbb&role=admin",
+        "statusCode": 200
+      },
+      "createdAt": 1699999911111,
+      "updatedAt": 1699999911111
+    },
+    {
+      "_id": "rec_user_10086",
+      "type": "record",
+      "ruleId": "rule_users",
+      "name": "用户详情 10086",
+      "url": "/v1/users/10086?x=1",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "{\"id\":10086}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "/v1/users/10086?x=1", "statusCode": 200 },
+      "createdAt": 1699999920000,
+      "updatedAt": 1699999920000
+    },
+    {
+      "_id": "rec_user_10087",
+      "type": "record",
+      "ruleId": "rule_users",
+      "name": "用户详情 10087",
+      "url": "/v1/users/10087?x=1",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "{\"id\":10087}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "/v1/users/10087?x=1", "statusCode": 200 },
+      "createdAt": 1699999921000,
+      "updatedAt": 1699999921000
+    },
+    {
+      "_id": "rec_orders_get",
+      "type": "record",
+      "ruleId": "rule_orders",
+      "name": "订单详情 GET",
+      "url": "/v1/orders/detail?orderId=1",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "{\"order\":1}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "/v1/orders/detail?orderId=1", "statusCode": 200 },
+      "createdAt": 1699999930000,
+      "updatedAt": 1699999930000
+    },
+    {
+      "_id": "rec_orders_post",
+      "type": "record",
+      "ruleId": "rule_orders",
+      "name": "订单详情 POST",
+      "url": "/v1/orders/detail?orderId=1",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "{\"order\":1}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "POST", "url": "/v1/orders/detail?orderId=1", "statusCode": 200 },
+      "createdAt": 1699999931000,
+      "updatedAt": 1699999931000
+    },
+    {
+      "_id": "rec_cn",
+      "type": "record",
+      "ruleId": "rule_search",
+      "name": "中文搜索",
+      "url": "/v1/search?q=%E4%B8%AD%E6%96%87&page=1",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "{\"total\":0}",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": {
+        "method": "GET",
+        "url": "/v1/search?q=%E4%B8%AD%E6%96%87&page=1",
+        "statusCode": 200
+      },
+      "createdAt": 1699999940000,
+      "updatedAt": 1699999940000
+    },
+    {
+      "_id": "rec_broken",
+      "type": "record",
+      "ruleId": "rule_users",
+      "name": "无法解析的录制 URL",
+      "url": "http://[::1?x=1",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "",
+        "bodyType": "json",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "http://[::1?x=1", "statusCode": 200 },
+      "createdAt": 1699999950000,
+      "updatedAt": 1699999950000
+    },
+    {
+      "_id": "rec_ping_old",
+      "type": "record",
+      "ruleId": "rule_health",
+      "name": "健康检查旧记录",
+      "url": "/v1/ping?role=admin",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "old",
+        "bodyType": "text",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "/v1/ping?role=admin", "statusCode": 200 },
+      "createdAt": 1699999960000,
+      "updatedAt": 1699999960000
+    },
+    {
+      "_id": "rec_ping_new",
+      "type": "record",
+      "ruleId": "rule_health",
+      "name": "健康检查新记录",
+      "url": "/v1/ping?role=admin",
+      "response": {
+        "statusCode": 200,
+        "headers": {},
+        "body": "new",
+        "bodyType": "text",
+        "delayMs": 0
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "/v1/ping?role=admin", "statusCode": 200 },
+      "createdAt": 1699999961000,
+      "updatedAt": 1699999961000
+    },
+    {
+      "_id": "rec_legacy_snapshot",
+      "type": "record",
+      "ruleId": "rule_legacy",
+      "name": "旧版本记录快照",
+      "url": "/legacy/echo?ts=1",
+      "response": {
+        "statusCode": 201,
+        "headers": {},
+        "body": "{\"legacy\":true}",
+        "bodyType": "json",
+        "delayMs": 120
+      },
+      "variants": [],
+      "activeVariantId": null,
+      "source": { "method": "GET", "url": "/legacy/echo?ts=1", "statusCode": 201 },
+      "record": {
+        "id": 1,
+        "type": 5001,
+        "url": "/legacy/echo?ts=1",
+        "method": "GET",
+        "statusCode": 201,
+        "data": "{\"legacy\":true}"
+      },
+      "createdAt": 1699999970000,
+      "updatedAt": 1699999970000
+    }
+  ]
+}

@@ -12,11 +12,9 @@ import type { LocalServerConfig } from '@shared/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, IS_DEV, USER_DATA_DIR } from './MainConst'
 import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
-import { CommonService, MockService, ProxyService, PushService } from './service'
+import { CommonService, MockService, ProxyService, PushService, SocketProxyService } from './service'
 
 export class MainServer {
-
-  private buildConfig = JSON.parse(process.env.BUILD_CONFIG)
 
   private httpServer: Server
   private httpApp: Application
@@ -28,6 +26,7 @@ export class MainServer {
   private mockService: MockService
   private proxyService: ProxyService
   private pushService: PushService
+  private socketProxyService: SocketProxyService
 
   bootstrap() {
     this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
@@ -36,12 +35,14 @@ export class MainServer {
     this.commonService = bizContainer.get(IocTypes.CommonService)
     this.pushService = bizContainer.get(IocTypes.PushService)
     this.proxyService = bizContainer.get(IocTypes.ProxyService)
+    this.socketProxyService = bizContainer.get(IocTypes.SocketProxyService)
     this.mockService = bizContainer.get(IocTypes.MocksService)
 
     // uid 生命周期结束（断开/重新注册）时清掉该 uid 的代理与 Mock 状态，避免残留串到下一个客户端
     this.pushService.onClientClosed = (uid: string) => {
       this.proxyService.clearClientState(uid)
       this.mockService.clearClientState(uid)
+      this.socketProxyService.clearClientState(uid)
     }
   }
 
@@ -103,6 +104,13 @@ export class MainServer {
   }
 
   public async stop(timeout: number = 5000): Promise<void> {
+    // 长连接必须先关，否则 server.close() 会一直等到超时
+    try {
+      this.socketProxyService.closeAll()
+    } catch (err) {
+      console.warn('close socket proxy failed:', err)
+    }
+
     const server = this.httpServer
     if (server == null) return
     this.httpServer = null
@@ -197,6 +205,7 @@ export class MainServer {
       this.httpServer = HTTP.createServer(this.httpApp)
     }
     this.pushService.bindServer(this.httpServer)
+    this.socketProxyService.bindServer(this.httpServer)
 
     this.httpServer.addListener('close', () => {
       console.log('close http server')

@@ -1,9 +1,9 @@
 <template>
   <div class="response-form" :class="{ 'fill-body': fillBody, 'no-meta': !showMeta }">
     <div v-if="showMeta" class="form-row">
-      <van-field class="status-field" type="digit" :label="$t('mock.editor.statusCode')"
+      <van-field ref="statusField" class="status-field" type="digit" :label="$t('mock.editor.statusCode')"
         :placeholder="$t('mock.editor.statusCode')" v-model="statusText" />
-      <van-field class="delay-field" type="digit" :label="$t('mock.editor.delay')"
+      <van-field ref="delayField" class="delay-field" type="digit" :label="$t('mock.editor.delay')"
         :placeholder="$t('mock.editor.delay')" v-model="delayText">
         <template #extra>
           <span class="field-unit">ms</span>
@@ -17,7 +17,7 @@
           <van-button class="header-add" size="mini" plain type="primary" icon="plus" @click.stop="addHeader">
           </van-button>
         </template>
-        <div class="header-list">
+        <div ref="headerList" class="header-list">
           <div v-for="(row, idx) in headerRows" :key="idx" class="header-row">
             <van-field class="header-key" v-model="row.key" :placeholder="$t('mock.editor.headerKey')"
               @update:model-value="applyHeaders" />
@@ -30,7 +30,8 @@
       </van-collapse-item>
     </van-collapse>
 
-    <div class="form-section body-section" :style="fillBody ? { paddingBottom: `${sectionPadBottom}px` } : null">
+    <div ref="bodySection" class="form-section body-section"
+      :style="fillBody ? { paddingBottom: `${sectionPadBottom}px` } : null">
       <div class="section-head body-head">
         <span class="section-title">{{ $t('mock.editor.body') }}</span>
         <van-radio-group v-model="bodyTypeValue" direction="horizontal" class="body-type">
@@ -71,6 +72,7 @@
 
 <script lang="ts" setup>
 import { MOCK_MAX_BODY_BYTES, ProxyMock, base64ToText, textToBase64, utf8ByteLength } from '@shared'
+import type { FieldInstance } from 'vant'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import VueAceEditor from '../../components/VueAceEditor.vue'
 
@@ -83,6 +85,10 @@ const headerRows = ref<Array<{ key: string, value: string }>>([])
 const expandedSections = ref<string[]>([])
 const bodyEditor = ref<InstanceType<typeof VueAceEditor>>()
 const editorWrap = ref<HTMLElement>()
+const bodySection = ref<HTMLElement>()
+const headerList = ref<HTMLElement>()
+const statusField = ref<FieldInstance>()
+const delayField = ref<FieldInstance>()
 const fillInset = ref(0)
 // Ace 按整行决定高度，不足一行的余量补进卡片下内边距，底边才能贴合面板底部
 const sectionPadBottom = ref(4)
@@ -269,7 +275,11 @@ function applyHeaders() {
 }
 
 function addHeader() {
-  headerRows.value.push({ key: '', value: '' })
+  // 折叠状态下新增行不可见，先展开再插入
+  if (!expandedSections.value.includes('headers')) {
+    expandedSections.value = [...expandedSections.value, 'headers']
+  }
+  headerRows.value.unshift({ key: '', value: '' })
 }
 
 function removeHeader(index: number) {
@@ -292,6 +302,33 @@ function compactBody() {
     // 非法 JSON 保持原样
   }
 }
+
+// 校验失败时把用户带到对应控件：能聚焦的字段直接聚焦，其余滚动到可视区
+function focusField(code: string) {
+  if (code === 'statusRange') {
+    statusField.value?.focus()
+    return
+  }
+  if (code === 'delayRange') {
+    delayField.value?.focus()
+    return
+  }
+  if (code === 'headerName' || code === 'headerValue') {
+    if (!expandedSections.value.includes('headers')) {
+      expandedSections.value = [...expandedSections.value, 'headers']
+    }
+    nextTick(() => {
+      const selector = code === 'headerName' ? '.header-key input' : '.header-value input'
+      const input = headerList.value?.querySelector(selector) as HTMLInputElement
+      input?.focus()
+      input?.scrollIntoView({ block: 'nearest' })
+    })
+    return
+  }
+  bodySection.value?.scrollIntoView({ block: 'nearest' })
+}
+
+defineExpose({ focusField })
 </script>
 
 <style scoped>

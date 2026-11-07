@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WS Lab · 推送控制台</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>WS Lab</span>
+      <span class="brand-sub">长连接端到端测试</span>
+    </div>
+    <nav>
+      <a href="/">客户端</a>
+      <a class="active" href="/admin">推送控制台</a>
+    </nav>
+  </header>
+
+  <main class="layout admin-layout">
+    <section class="card">
+      <div class="card-head">
+        <h2>在线连接</h2>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="autoRefresh" checked />自动刷新</label>
+          <button class="btn small" id="refreshBtn">刷新</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><span class="stat-label">在线连接</span><strong id="statClients">0</strong></div>
+        <div class="stat-card"><span class="stat-label">累计接收</span><strong id="statReceived">0</strong></div>
+        <div class="stat-card"><span class="stat-label">累计发送</span><strong id="statSent">0</strong></div>
+        <div class="stat-card"><span class="stat-label">运行时长</span><strong id="statUptime">-</strong></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>ID</th>
+              <th>IP</th>
+              <th>状态</th>
+              <th>收 / 发</th>
+              <th>连接时间</th>
+            </tr>
+          </thead>
+          <tbody id="clientRows">
+            <tr>
+              <td colspan="6" class="empty">正在加载…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">点击表格行选择推送目标，再点一次取消选择；未选择时推送给全部在线连接。</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>推送控制</h2>
+        <span class="target-badge" id="targetBadge">全部在线连接</span>
+      </div>
+
+      <div class="seg" id="typeSeg">
+        <button type="button" class="seg-btn active" data-type="text">文本</button>
+        <button type="button" class="seg-btn" data-type="binary">二进制（Base64）</button>
+      </div>
+
+      <label class="field" style="margin-top: 12px;">
+        <span class="label">消息内容</span>
+        <textarea id="pushData" rows="5" spellcheck="false"
+          placeholder='{"event":"tick","ts":1700000000000}'></textarea>
+      </label>
+
+      <div class="grid two">
+        <label class="field">
+          <span class="label">间隔推送（ms）</span>
+          <input id="intervalMs" type="number" min="100" step="100" value="1000" />
+        </label>
+        <div class="field" style="justify-content: flex-end;">
+          <span class="muted" id="intervalMeta">未启动</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="pushBtn">发送一次</button>
+        <button class="btn" id="intervalBtn">开始定时推送</button>
+      </div>
+
+      <hr />
+
+      <h3>关闭连接</h3>
+      <div class="grid two">
+        <label class="field">
+          <span class="label">Close code</span>
+          <input id="closeCode" type="number" value="1000" />
+        </label>
+        <label class="field">
+          <span class="label">原因</span>
+          <input id="closeReason" value="lab closed" spellcheck="false" />
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn danger" id="closeBtn">关闭连接</button>
+      </div>
+      <p class="hint">文本推送会包一层 <code>{ kind: 'push' }</code> 信封；二进制按 Base64 解码后原样发送。</p>
+    </section>
+
+    <section class="card span-all">
+      <div class="card-head">
+        <h2>服务端日志</h2>
+        <span class="muted" id="logMeta">-</span>
+      </div>
+      <div class="logs" id="logs">
+        <div class="logs-empty">暂无日志</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="/admin.js"></script>
+</body>
+
+</html>

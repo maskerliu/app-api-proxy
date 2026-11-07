@@ -3,7 +3,9 @@ import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
-import { CommonService, DiagnosticService, MockService, ProxyService, PushService } from '../service'
+import {
+  CommonService, DiagnosticService, MockService, ProxyService, PushService, SocketProxyService,
+} from '../service'
 import { BaseRouter, ParamType } from './base.router'
 
 interface ReqResp {
@@ -22,6 +24,8 @@ export class AppMockRouter extends BaseRouter {
   private mockService: MockService
   @inject(IocTypes.ProxyService)
   private proxyService: ProxyService
+  @inject(IocTypes.SocketProxyService)
+  private socketProxyService: SocketProxyService
   @inject(IocTypes.DiagnosticService)
   private diagnosticService: DiagnosticService
 
@@ -180,6 +184,12 @@ export class AppMockRouter extends BaseRouter {
       params: [{ key: 'uid', type: ParamType.Query }]
     })
 
+    // 新窗口/刷新后恢复仍在进行的 WS 连接，5030 徽标与列表共用
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetSocketConnections, func: 'getActiveConnections', target: 'socketProxyService'
+    })
+
     this.addApiInfo({
       method: BizNetwork.Method_Get,
       path: API_URL.SearchMockRules, func: 'searchMockRules', target: 'mockService',
@@ -211,6 +221,21 @@ export class AppMockRouter extends BaseRouter {
         { key: 'ruleId', type: ParamType.Query },
         { key: 'offset', type: ParamType.Query },
         { key: 'limit', type: ParamType.Query }
+      ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetMockRecord, func: 'getMockRecord', target: 'mockService',
+      params: [{ key: 'recordId', type: ParamType.Query }]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GetMockRecordByUrl, func: 'getMockRecordByUrl', target: 'mockService',
+      params: [
+        { key: 'ruleId', type: ParamType.Query },
+        { key: 'url', type: ParamType.Query }
       ]
     })
 
@@ -249,13 +274,37 @@ export class AppMockRouter extends BaseRouter {
       ]
     })
 
+    // R1 匹配引擎接口：框架统一返回 HTTP 200，桩以 { code: 'notImplemented' } 表达
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: '/upload', func: 'upload', target: 'mockService',
+      path: API_URL.MATCH_MOCK_RECORD, func: 'matchMockRecord', target: 'mockService',
+      params: [{ key: 'request', type: ParamType.FormBody }]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.ANALYZE_MOCK_MATCH, func: 'analyzeMockMatch', target: 'mockService',
       params: [
         { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
-        { key: 'file', type: ParamType.FormBody }
+        { key: 'request', type: ParamType.FormBody }
       ]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GET_MOCK_MIGRATION_REPORT, func: 'getMockMigrationReport', target: 'mockService'
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.REVERT_MOCK_MATCH, func: 'revertMockMatch', target: 'mockService',
+      params: [{ key: 'request', type: ParamType.FormBody }]
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.GET_MOCK_MATCH_WARNINGS, func: 'getMockMatchWarnings', target: 'mockService',
+      params: [{ key: 'ruleId', type: ParamType.Query }]
     })
 
   }

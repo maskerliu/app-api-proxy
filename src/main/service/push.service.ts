@@ -2,6 +2,7 @@ import { Server } from 'http'
 import { injectable } from 'inversify'
 import { Connection, createServer, Server as SockServer } from 'sockjs'
 import { ProxyMock } from '@shared/proxy.models'
+import type { MockStatusBroadcast } from '@shared/mock.models'
 import { generateUid } from '@shared/uid'
 
 type PushClient = { conn: Connection, uid: string, username: string, connId: string }
@@ -45,9 +46,22 @@ export class PushService {
     this.safeWrite(this.resolveOwnerUid(clientUid), data)
   }
 
-  public sendProxyMessage(clientUid: string, data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord) {
+  // Mock 开关是多窗口共享状态：任一窗口切换后广播给所有 viewer
+  public broadcastMockStatus(status: MockStatusBroadcast) {
+    const msg: ProxyMock.PushMsg<MockStatusBroadcast> = {
+      type: ProxyMock.PushMsgType.TXT,
+      payload: {
+        type: ProxyMock.BizType.MockStatus,
+        content: status,
+      }
+    }
+    this.pushClients.forEach((_, uid) => this.safeWrite(uid, msg))
+  }
 
-    let pushMsg: ProxyMock.PushMsg<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord> = {
+  public sendProxyMessage(clientUid: string,
+    data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord) {
+
+    let pushMsg: ProxyMock.PushMsg<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord> = {
       type: ProxyMock.PushMsgType.TXT,
       payload: {
         type: ProxyMock.BizType.Proxy,

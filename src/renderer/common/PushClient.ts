@@ -107,6 +107,10 @@ export class PushClient {
         this.commonStore.updateClientInfos(msg.content)
         break
       }
+      case ProxyMock.BizType.MockStatus: {
+        this.commonStore.updateMockStatus(msg.content)
+        break
+      }
     }
   }
 }

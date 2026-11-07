@@ -1,4 +1,5 @@
 import type { Connection } from 'sockjs'
+import type { MockHitMeta, MockLimitState, MockMatchRule, MockMatchWarning } from './mock.models'
 
 /**
  * 纯模型层：只包含类型、枚举与无副作用的类，
@@ -43,6 +44,8 @@ export namespace ProxyMock {
     data?: any
     responseHeaders?: any // 响应头
     responseData?: any // 响应数据
+    // R1 命中/未命中元数据，仅 REQUEST_END 携带
+    mock?: MockHitMeta
   }
 
   export interface MockResponse {
@@ -88,8 +91,14 @@ export namespace ProxyMock {
     id: string
     ruleId: string
     name: string
-    // 当前版本仍以 URL 精确命中，R1 匹配引擎接入后由 match 条件取代
-    url: string
+    // 展示与旧版本兼容字段；唯一性由 matchFingerprint 决定，仅有 match 时可为空
+    url?: string
+    // R1 匹配条件；历史记录在 v3→v4 迁移时生成
+    match?: MockMatchRule
+    matchInvalid?: string
+    matchFingerprint?: string
+    // 列表接口返回的冲突标记，不持久化
+    matchWarnings?: MockMatchWarning[]
     response: MockResponseDef
     variants: MockVariant[]
     activeVariantId: string | null
@@ -110,6 +119,61 @@ export namespace ProxyMock {
     }
   }
 
+  export type SocketPhase = 'open' | 'frames' | 'close'
+  export type SocketDirection = 'c2s' | 's2c'
+  export type SocketOpcode = 'text' | 'binary' | 'ping' | 'pong' | 'close'
+  export type SocketCloseBy = 'client' | 'upstream' | 'proxy'
+
+  export interface SocketFrame {
+    seq: number
+    dir: SocketDirection
+    opcode: SocketOpcode
+    at: number // 相对连接开始的毫秒数
+    size: number // 原始字节数
+    data: string // 文本原样；二进制 base64；超限截断
+    encoding: 'utf8' | 'base64'
+    truncated?: boolean
+    mock?: boolean
+  }
+
+  export interface SocketRecord extends ProxyRequestRecord {
+    type: PorxyType.SOCKET
+    wsPhase: SocketPhase
+    wsId: number
+    // 握手阶段
+    subprotocol?: string
+    requestHeaders?: Record<string, string | string[]>
+    responseHeaders?: Record<string, string | string[]>
+    // 消息阶段
+    frames?: SocketFrame[]
+    // 结束阶段
+    closeCode?: number
+    closeReason?: string
+    closeBy?: SocketCloseBy
+    bytesSent?: number
+    bytesReceived?: number
+    frameCount?: number
+    droppedFrames?: number
+    // 失败诊断（WS-E01 ~ WS-E12）
+    errorCode?: string
+    errorMessage?: string
+  }
+
+  export enum SocketErrorCode {
+    MISSING_TARGET = 'WS-E01',
+    UNKNOWN_UID = 'WS-E02',
+    UNSUPPORTED_PROTOCOL = 'WS-E03',
+    CONNECT_FAILED = 'WS-E04',
+    TLS_FAILED = 'WS-E05',
+    UPSTREAM_REJECTED = 'WS-E06',
+    HANDSHAKE_TIMEOUT = 'WS-E07',
+    SUBPROTOCOL_MISMATCH = 'WS-E08',
+    UNSUPPORTED_VERSION = 'WS-E09',
+    TOO_MANY_CONNECTIONS = 'WS-E10',
+    MESSAGE_TOO_LARGE = 'WS-E11',
+    INTERNAL_ERROR = 'WS-E12',
+  }
+
   export class MockRule {
     _id: string
     _rev: string
@@ -118,6 +182,8 @@ export namespace ProxyMock {
     isMock?: boolean = false
     // 仅渲染层使用的列表缓存，不参与持久化；key 为记录 ID
     requests: Map<string, MockRecord> = new Map()
+    // 规则详情接口返回的记录规模提示，不持久化
+    limitState?: MockLimitState
   }
 
   export interface MockRecordPage {
@@ -186,6 +252,7 @@ export namespace ProxyMock {
     IM = 0,
     Proxy = 1,
     ClientInfos = 2,
+    MockStatus = 3,
   }
 
   export interface PushMsg<T> {

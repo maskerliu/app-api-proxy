@@ -9,13 +9,13 @@ export const AppName = 'AppApiProxy'
 
 export const IocTypes = {
   AppMockRouter: Symbol.for('AppMockRouter'),
-  MapiRouter: Symbol.for('MapiRouter'),
   ProxyRouter: Symbol.for('ProxyRouter'),
-  MapiService: Symbol.for('MapiService'),
   CommonService: Symbol.for('CommonService'),
   PushService: Symbol.for('PushService'),
   MocksService: Symbol.for('MockService'),
   ProxyService: Symbol.for('ProxyService'),
+  SocketProxyService: Symbol.for('SocketProxyService'),
   DiagnosticService: Symbol.for('DiagnosticService'),
-  MockRepo: Symbol.for('MockRepo')
+  MockRepo: Symbol.for('MockRepo'),
+  MockCache: Symbol.for('MockCache')
 }

@@ -8,6 +8,11 @@ export interface BizResponse<T> {
   code: number
   msg?: string
   data?: T
+  // 结构化业务错误附加字段（Mock 匹配引擎使用；errorCode 与 msg 内容一致）
+  errorCode?: string
+  detail?: string
+  existingRecordId?: string
+  issues?: Array<{ code: string; field?: string; detail?: string }>
 }
 
 /**

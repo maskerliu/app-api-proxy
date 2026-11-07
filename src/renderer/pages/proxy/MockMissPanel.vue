@@ -1,0 +1,206 @@
+<template>
+  <section class="miss-panel">
+    <header class="miss-head">
+      <div class="miss-title">
+        <van-icon name="warning-o" class="miss-icon" />
+        <span v-if="miss.recordName">{{ $t('mock.miss.title', {
+          record: miss.recordName, score: scorePercent
+        }) }}</span>
+        <span v-else>{{ $t('mock.miss.noCandidate') }}</span>
+      </div>
+      <van-button size="mini" plain icon="description" :title="$t('mock.miss.copy')" @click="copyDiagnosis" />
+    </header>
+
+    <div v-if="degraded" class="miss-degraded">{{ $t('mock.miss.degraded') }}</div>
+
+    <div v-if="miss.failures?.length > 0" class="miss-table">
+      <div class="miss-row miss-row-head">
+        <span>{{ $t('mock.miss.dimension') }}</span>
+        <span>{{ $t('mock.miss.expected') }}</span>
+        <span>{{ $t('mock.miss.actual') }}</span>
+        <span>{{ $t('mock.miss.action') }}</span>
+      </div>
+      <div v-for="(failure, idx) in miss.failures" :key="idx" class="miss-row">
+        <span class="miss-dimension">{{ dimensionText(failure.dimension) }}</span>
+        <span class="miss-value" :title="failure.expected">{{ failure.expected }}</span>
+        <span class="miss-value" :title="failure.actual">{{ failure.actual }}</span>
+        <span class="miss-action">
+          <van-button v-if="failure.key" size="mini" plain type="primary" @click="emit('ignore-key', failure)">
+            {{ $t('mock.miss.ignoreKey') }}
+          </van-button>
+          <van-button v-else-if="failure.detail === 'extraKeys'" size="mini" plain type="warning"
+            @click="emit('loosen')">
+            {{ $t('mock.miss.loosen') }}
+          </van-button>
+          <span v-else class="miss-detail">{{ failure.detail ? detailText(failure.detail) : '' }}</span>
+        </span>
+      </div>
+    </div>
+
+    <footer class="miss-actions">
+      <van-button size="mini" plain type="primary" @click="emit('edit')">{{ $t('mock.miss.editRecord') }}</van-button>
+      <van-button size="mini" plain @click="emit('loosen')">{{ $t('mock.miss.loosen') }}</van-button>
+      <van-button size="mini" plain @click="copyDiagnosis">{{ $t('mock.miss.copy') }}</van-button>
+    </footer>
+  </section>
+</template>
+
+<script lang="ts" setup>
+import type { MockMissDiagnostic, MockMissFailure } from '@shared/mock.models'
+import { showNotify } from 'vant'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const props = defineProps<{
+  miss: MockMissDiagnostic
+  degraded?: boolean
+}>()
+const emit = defineEmits<{
+  'ignore-key': [failure: MockMissFailure]
+  loosen: []
+  edit: []
+}>()
+const { t } = useI18n()
+
+const miss = computed(() => props.miss)
+const scorePercent = computed(() => Math.round((Number(props.miss?.score) || 0) * 100))
+
+function dimensionText(dimension: string): string {
+  return t(`mock.miss.dim.${dimension}`)
+}
+
+function detailText(detail: string): string {
+  const known = ['conditionMismatch', 'extraKeys']
+  return known.indexOf(detail) >= 0 ? t(`mock.miss.detail.${detail}`) : detail
+}
+
+async function copyDiagnosis() {
+  const text = buildMarkdown()
+  try {
+    if (window.mainApi) {
+      await window.mainApi.writeClipboard(text)
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      throw new Error('clipboard unavailable')
+    }
+    showNotify({ message: t('mock.miss.copied'), type: 'success', duration: 800 })
+  } catch (err) {
+    showNotify({ message: t('mock.miss.copyFailed'), type: 'warning', duration: 1200 })
+  }
+}
+
+// 复制为可读 Markdown；服务端诊断已脱敏，这里不再还原任何值
+function buildMarkdown(): string {
+  const lines: string[] = []
+  lines.push(`### ${t('mock.miss.title', {
+    record: miss.value?.recordName ?? '', score: scorePercent.value
+  })}`)
+  if (props.degraded) lines.push(`> ${t('mock.miss.degraded')}`)
+  if (miss.value?.failures?.length > 0) {
+    lines.push('')
+    lines.push(`| ${t('mock.miss.dimension')} | ${t('mock.miss.expected')} | ${t('mock.miss.actual')} |`)
+    lines.push('| --- | --- | --- |')
+    for (const failure of miss.value.failures) {
+      lines.push(`| ${dimensionText(failure.dimension)} | ${failure.expected} | ${failure.actual} |`)
+    }
+  }
+  return lines.join('\n')
+}
+</script>
+
+<style scoped>
+.miss-panel {
+  padding: 8px;
+  border: 1px solid var(--van-warning-color);
+  border-radius: var(--van-radius-lg);
+  background: rgba(255, 151, 106, 0.08);
+}
+
+.miss-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.miss-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--van-warning-color);
+  font-size: var(--van-font-size-md);
+}
+
+.miss-icon {
+  flex: none;
+}
+
+.miss-degraded {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: var(--van-radius-md);
+  background: rgba(255, 151, 106, 0.16);
+  color: var(--van-warning-color);
+  font-size: var(--van-font-size-sm);
+}
+
+.miss-table {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.miss-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--van-radius-md);
+  background: var(--van-background-2);
+  font-size: var(--van-font-size-sm);
+}
+
+.miss-row-head {
+  background: transparent;
+  color: var(--van-text-color-3);
+}
+
+.miss-dimension {
+  color: var(--van-text-color-2);
+}
+
+.miss-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  word-break: break-all;
+}
+
+.miss-action {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.miss-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--van-text-color-3);
+}
+
+.miss-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+</style>

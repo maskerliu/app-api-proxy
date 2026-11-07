@@ -1,8 +1,7 @@
 export * from './common.service'
 export * from './diagnostic.service'
 export * from './mock.service'
+export * from './mock.cache'
 export * from './proxy.service'
+export * from './socket-proxy.service'
 export * from './push.service'
-
-export * from './mapi.service'
-

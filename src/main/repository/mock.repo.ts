@@ -3,20 +3,33 @@ import { injectable } from 'inversify'
 import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
+import type {
+  MigrationReport, MockMigrationReportItem, MockMatchRule, RevertMockRequest, RevertMockResponse,
+} from '@shared/mock.models'
+import { MockError } from '@shared/mock.errors'
 import {
-  inferBodyType, normalizeMockRecord, sanitizeResponseHeaders
+  inferBodyType, normalizeMatchRule, normalizeMockRecord, sanitizeResponseHeaders
 } from '@shared/mock.validation'
 import { USER_DATA_DIR } from '../MainConst'
+import { analyzeMatchStability, createMatchFromUrl, restoreStrict } from '../service/mock.derive'
+import {
+  MigrationPatch, applyMigrationPatch, fingerprintOf, planMigrationV4,
+} from '../service/mock.migration'
 import BaseRepo from './base.repo'
 
 const RULE_TYPE = 'rule'
 const RECORD_TYPE = 'record'
 // PouchDB 只允许 _design/ 与 _local/ 作为下划线开头的保留 ID
 const META_ID = 'mock_schema_meta'
+const MIGRATION_REPORT_ID = 'mock_migration_report'
+const MATCH_SCHEMA_VERSION = 1
 // 2: 规则元信息与请求记录拆分为独立文档
 // 3: 记录改为结构化响应模型，新记录使用 rec_<uuid>
+// 4: 记录携带 match 条件与匹配指纹（R1 匹配引擎）
 const LEGACY_SCHEMA_VERSION = 2
-const SCHEMA_VERSION = 3
+const RECORD_SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
+const RECORD_PREFIX = 'rec_'
 
 const RULE_SEARCH_LIMIT = 15
 const RULE_SCAN_LIMIT = 1000
@@ -24,6 +37,8 @@ const RECORD_PAGE_LIMIT = 100
 const MAX_RECORD_PAGE_LIMIT = 500
 const DELETE_BATCH = 200
 const CONFLICT_RETRY = 2
+const MIGRATION_BATCH = 50
+const MIGRATION_SYNC_LIMIT = 2000
 
 interface DocMeta {
   _id: string
@@ -42,8 +57,12 @@ interface MockRuleDoc extends DocMeta {
 interface MockRecordDoc extends DocMeta {
   type: typeof RECORD_TYPE
   ruleId: string
-  url: string
+  // 展示与旧版本兼容字段；唯一性由 matchFingerprint 决定
+  url?: string
   name: string
+  match?: MockMatchRule
+  matchFingerprint?: string
+  matchInvalid?: string
   response: ProxyMock.MockResponseDef
   variants: ProxyMock.MockVariant[]
   activeVariantId: string | null
@@ -52,6 +71,20 @@ interface MockRecordDoc extends DocMeta {
   updatedAt: number
   // 旧版本回滚兼容：仅从 v2 迁移来的记录保留并同步更新，新记录不写该字段
   record?: ProxyMock.ProxyRequestRecord
+}
+
+// 迁移分析只需要匹配相关字段，避免把响应体整体读入内存
+export interface MockRecordSummary {
+  _id: string
+  ruleId: string
+  url?: string
+  name?: string
+  match?: MockMatchRule
+  matchFingerprint?: string
+  matchInvalid?: string
+  source?: ProxyMock.MockRecordSource
+  createdAt: number
+  updatedAt: number
 }
 
 interface LegacyRuleDoc extends DocMeta {
@@ -66,7 +99,29 @@ interface LegacyRuleDoc extends DocMeta {
 interface MockMetaDoc extends DocMeta {
   version: number
   backupVersion?: number
+  mockSchemaVersion?: number
+  migratedAt?: number
+  migrationPending?: boolean
+  migrationStatus?: MigrationReport['status']
+  lastActiveRuleId?: string | null
   updatedAt: number
+}
+
+const RECORD_SUMMARY_FIELDS = [
+  '_id', 'ruleId', 'url', 'name', 'match', 'matchFingerprint', 'matchInvalid',
+  'source', 'createdAt', 'updatedAt',
+]
+
+interface MockMigrationReportDoc extends DocMeta, MigrationReport {
+  type: 'migration-report'
+}
+
+export interface MockRecordChangeEvent {
+  type: 'upsert' | 'remove' | 'reset'
+  ruleId?: string
+  recordId?: string
+  /** upsert 时携带最新记录，缓存据此做增量编译，避免回读 */
+  record?: ProxyMock.MockRecord
 }
 
 /**
@@ -79,6 +134,13 @@ interface MockMetaDoc extends DocMeta {
 export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
   private initTask: Promise<void> = null
+  private migrationTask: Promise<void> = null
+  private migrationPending = false
+  // 后台迁移时只阻止尚未迁移完成的规则写入，已处理规则可继续保存
+  private migrationRuleIds = new Set<string>()
+  private migratedRules = new Set<string>()
+  private saveQueues = new Map<string, Promise<any>>()
+  private recordListeners: Array<(event: MockRecordChangeEvent) => void> = []
 
   constructor() {
     super()
@@ -104,9 +166,80 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     await this.pouchdb.createIndex({
       index: { fields: ['type', 'ruleId', 'url'], name: 'idx-mock-record-url' }
     })
+    await this.pouchdb.createIndex({
+      index: { fields: ['type', 'ruleId', 'matchFingerprint'], name: 'idx-mock-record-fingerprint' }
+    })
+    await this.pouchdb.createIndex({
+      index: { fields: ['type', 'ruleId', 'updatedAt'], name: 'idx-mock-record-updated' }
+    })
     await this.backupOnce()
     await this.migrateLegacy()
     await this.migrateRecordsV3()
+    await this.scheduleMigrationV4()
+  }
+
+  /** 大库标记 pending 后后台迁移，不阻塞启动 */
+  private async scheduleMigrationV4() {
+    const meta = await this.getMeta()
+    if (this.isMigratedV4(meta)) {
+      this.migrationPending = false
+      return
+    }
+
+    const total = await this.countRecords()
+    if (total > MIGRATION_SYNC_LIMIT) {
+      this.migrationPending = true
+      await this.saveMeta({ migrationPending: true, migrationStatus: 'pending' })
+      this.migrationTask = this.migrateRecordsV4(total)
+        .catch(err => {
+          this.migrationPending = true
+          console.error('mock v4 migration failed:', err)
+          this.saveMeta({ migrationStatus: 'failed' }).catch(() => { })
+        })
+      return
+    }
+
+    try {
+      await this.migrateRecordsV4(total)
+    } catch (err) {
+      // 迁移失败时阻止写入，读路径仍可按旧字段展示，避免应用无法启动
+      this.migrationPending = true
+      console.error('mock v4 migration failed:', err)
+    }
+  }
+
+  private isMigratedV4(meta: MockMetaDoc): boolean {
+    return (meta?.version ?? 0) >= SCHEMA_VERSION
+      && (meta?.mockSchemaVersion ?? 0) >= MATCH_SCHEMA_VERSION
+  }
+
+  public isMigrationPending(): boolean {
+    return this.migrationPending
+  }
+
+  /** 保存/删除/迁移完成后触发；回调异常不影响保存结果 */
+  public onRecordChanged(listener: (event: MockRecordChangeEvent) => void): void {
+    this.recordListeners.push(listener)
+  }
+
+  private notifyRecordChanged(event: MockRecordChangeEvent) {
+    for (const listener of this.recordListeners) {
+      try {
+        listener(event)
+      } catch (err) {
+        console.warn('mock record change listener failed:', (err as Error)?.message ?? err)
+      }
+    }
+  }
+
+  private enqueueSave<T>(ruleId: string, task: () => Promise<T>): Promise<T> {
+    const previous = this.saveQueues.get(ruleId) ?? Promise.resolve()
+    const next = previous.catch(() => { }).then(task)
+    this.saveQueues.set(ruleId, next)
+    next.finally(() => {
+      if (this.saveQueues.get(ruleId) === next) this.saveQueues.delete(ruleId)
+    }).catch(() => { })
+    return next
   }
 
   public async search(field?: string, query?: string, returnFields?: Array<string>) {
@@ -172,11 +305,128 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   }
 
   public async delete(ruleId: string): Promise<boolean> {
-    await this.removeRecords(ruleId)
-    const rule = await this.getDoc<MockRuleDoc>(ruleId)
-    if (rule == null || rule.type !== RULE_TYPE) return false
-    const resp = await this.pouchdb.remove(rule._id, rule._rev!)
-    return resp.ok
+    const removed = await this.enqueueSave(ruleId, async () => {
+      await this.removeRecords(ruleId)
+      const rule = await this.getDoc<MockRuleDoc>(ruleId)
+      if (rule == null || rule.type !== RULE_TYPE) return false
+      const resp = await this.pouchdb.remove(rule._id, rule._rev!)
+      return resp.ok
+    })
+    if (!removed) return false
+
+    this.notifyRecordChanged({ type: 'remove', ruleId })
+    await this.clearRuleFromReport(ruleId)
+    if ((await this.getLastActiveRuleId()) === ruleId) await this.setLastActiveRuleId(null)
+    return true
+  }
+
+  public async countRecords(ruleId?: string): Promise<number> {
+    if (ruleId != null) {
+      let count = 0
+      let bookmark: string = null
+      while (true) {
+        const request: any = {
+          selector: { type: RECORD_TYPE, ruleId },
+          sort: ['type', 'ruleId', 'createdAt'],
+          fields: ['_id'],
+          limit: 1000,
+        }
+        if (bookmark != null) request.bookmark = bookmark
+        const page = await this.pouchdb.find(request)
+        count += page.docs.length
+        if (page.docs.length < 1000) return count
+        bookmark = (page as any).bookmark
+        if (bookmark == null) return count
+      }
+    }
+
+    let count = 0
+    let startkey = RECORD_PREFIX
+    while (true) {
+      const options: any = { startkey, endkey: `${RECORD_PREFIX}\ufff0`, limit: 2000 }
+      if (startkey !== RECORD_PREFIX) options.skip = 1
+      const page = await this.pouchdb.allDocs(options)
+      count += page.rows.length
+      if (page.rows.length < 2000) return count
+      startkey = page.rows[page.rows.length - 1].id
+    }
+  }
+
+  /** 规则级元信息分页遍历：缓存编译只依赖 match，不带响应体 */
+  public async listRecordSummaries(ruleId: string, pageSize: number = 500): Promise<MockRecordSummary[]> {
+    const result: MockRecordSummary[] = []
+    let bookmark: string = null
+    while (true) {
+      const request: any = {
+        selector: { type: RECORD_TYPE, ruleId },
+        sort: ['type', 'ruleId', 'createdAt'],
+        fields: RECORD_SUMMARY_FIELDS,
+        limit: pageSize,
+      }
+      if (bookmark != null) request.bookmark = bookmark
+      const page = await this.pouchdb.find(request)
+      result.push(...(page.docs as unknown as MockRecordSummary[]))
+      if (page.docs.length < pageSize) return result
+      bookmark = (page as any).bookmark
+      if (bookmark == null) return result
+    }
+  }
+
+  /** 迁移与派生只需匹配相关字段，分页读取避免整库响应体进内存 */
+  public async listAllRecordSummaries(pageSize: number = 500): Promise<MockRecordSummary[]> {
+    const result: MockRecordSummary[] = []
+    let bookmark: string = null
+    while (true) {
+      const request: any = {
+        selector: { type: RECORD_TYPE },
+        sort: ['type'],
+        fields: RECORD_SUMMARY_FIELDS,
+        limit: pageSize,
+      }
+      if (bookmark != null) request.bookmark = bookmark
+      const page = await this.pouchdb.find(request)
+      result.push(...(page.docs as unknown as MockRecordSummary[]))
+      if (page.docs.length < pageSize) return result
+      bookmark = (page as any).bookmark
+      if (bookmark == null) return result
+    }
+  }
+
+  /** 命中缓存重建用：按创建时间稳定分页拿到规则下全部记录 */
+  public async listAllRecords(ruleId: string, pageSize: number = 200): Promise<ProxyMock.MockRecord[]> {
+    const result: ProxyMock.MockRecord[] = []
+    await this.iterateRecords(ruleId, record => { result.push(record) }, pageSize)
+    return result
+  }
+
+  /** 分页遍历规则下全部记录，不受列表 MAX_RECORD_PAGE_LIMIT 限制 */
+  public async iterateRecords(ruleId: string,
+    visitor: (record: ProxyMock.MockRecord) => Promise<void> | void,
+    pageSize: number = 100): Promise<void> {
+    if (ruleId == null) return
+    let bookmark: string = null
+    while (true) {
+      const request: any = {
+        selector: { type: RECORD_TYPE, ruleId },
+        sort: ['type', 'ruleId', 'createdAt'],
+        limit: pageSize,
+      }
+      if (bookmark != null) request.bookmark = bookmark
+      const page = await this.pouchdb.find(request)
+      for (const doc of page.docs as unknown as MockRecordDoc[]) await visitor(this.toRecord(doc))
+      if (page.docs.length < pageSize) return
+      bookmark = (page as any).bookmark
+      if (bookmark == null) return
+    }
+  }
+
+  public async getLastActiveRuleId(): Promise<string | null> {
+    const meta = await this.getMeta()
+    return meta?.lastActiveRuleId ?? null
+  }
+
+  public async setLastActiveRuleId(ruleId: string | null): Promise<void> {
+    await this.saveMeta({ lastActiveRuleId: ruleId ?? null })
   }
 
   public async listRecords(ruleId: string, offset: number = 0, limit: number = RECORD_PAGE_LIMIT): Promise<ProxyMock.MockRecordPage> {
@@ -197,7 +447,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     }
   }
 
-  /** Mock 命中路径：R1 匹配引擎接入前仍按 ruleId + url 取单条记录 */
+  /** @deprecated R1 匹配引擎接入后仅作历史兜底：按 ruleId + url 取单条记录 */
   public async getRecord(ruleId: string, url: string): Promise<ProxyMock.MockRecord> {
     if (ruleId == null || url == null) return null
     const docs = await this.find({
@@ -219,91 +469,135 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
   /**
    * 全量保存记录；record.id 为空时新建 UUID 文档。
+   * 唯一性由匹配指纹决定（url 只用于展示与旧版本兼容）；
    * expectedUpdatedAt 用于乐观锁，与当前 updatedAt 不一致时抛 409。
    */
   public async saveRecord(
     record: ProxyMock.MockRecord,
     expectedUpdatedAt?: number
   ): Promise<ProxyMock.MockRecordSaveResult> {
-    if (record?.ruleId == null) throw new Error('Mock规则不存在')
-    if (record?.url == null || record.url === '') throw new Error('请求数据缺少url字段')
+    if (record?.ruleId == null) throw new MockError('ruleMissing')
 
     const normalized = normalizeMockRecord(record)
-    const duplicate = await this.findByUrl(record.ruleId, normalized.url)
-    if (duplicate != null && duplicate._id !== record.id) {
-      throw new Error(`url [${normalized.url}] 已存在`)
-    }
+    const url = normalized.url || normalized.source?.url || ''
+    // 旧编辑器只保存 url：写入时就派生 match（含 E2 噪声键忽略），避免游离开匹配引擎
+    const match = normalized.match != null
+      ? normalizeMatchRule(normalized.match)
+      : this.deriveMatch(normalized, url)
+    if (match == null && url === '') throw new MockError('matchMissing')
+    const fingerprint = match == null ? null : fingerprintOf(match)
+    const name = normalized.name || url || match?.path || ''
+    const ruleId = normalized.ruleId
 
-    const now = Date.now()
-    if (normalized.id == null) {
-      const doc: MockRecordDoc = {
-        _id: `rec_${randomUUID()}`,
-        type: RECORD_TYPE,
-        ruleId: normalized.ruleId,
-        url: normalized.url,
-        name: normalized.name,
-        response: normalized.response,
-        variants: normalized.variants,
-        activeVariantId: normalized.activeVariantId,
-        source: normalized.source,
-        createdAt: now,
-        updatedAt: now
-      }
-      await this.pouchdb.put(doc)
-      return { id: doc._id, updatedAt: now }
-    }
-
-    for (let attempt = 0; ; attempt++) {
-      const current = await this.getDoc<MockRecordDoc>(normalized.id)
-      if (current == null || current.type !== RECORD_TYPE) throw new Error('Mock记录不存在')
-      if (current.ruleId !== normalized.ruleId) throw new Error('Mock记录不属于该规则')
-      if (expectedUpdatedAt != null && current.updatedAt !== expectedUpdatedAt) {
-        const conflict: any = new Error('记录已被其他人修改，请刷新后重试')
-        conflict.status = 409
-        throw conflict
+    // 同一规则的查重与写入串行化，避免并发保存绕过指纹唯一校验
+    return this.enqueueSave(ruleId, async () => {
+      if (this.migrationPending && this.migrationRuleIds.has(ruleId) && !this.migratedRules.has(ruleId)) {
+        throw new MockError('migrationFailed', 'mock migration in progress')
       }
 
-      const doc: MockRecordDoc = {
-        _id: current._id,
-        _rev: current._rev,
-        type: RECORD_TYPE,
-        ruleId: normalized.ruleId,
-        url: normalized.url,
-        name: normalized.name,
-        response: normalized.response,
-        variants: normalized.variants,
-        activeVariantId: normalized.activeVariantId,
-        source: normalized.source,
-        createdAt: current.createdAt ?? now,
-        updatedAt: now
-      }
-      // 迁移记录保留旧结构，回滚旧版本时仍能读取
-      if (current.record != null) {
-        doc.record = this.toCompatRecord(normalized)
+      if (fingerprint != null) {
+        const duplicate = await this.findByFingerprint(ruleId, fingerprint)
+        if (duplicate != null && duplicate._id !== normalized.id) {
+          throw new MockError('matchDuplicate', undefined, duplicate._id)
+        }
       }
 
-      try {
+      const now = Date.now()
+      if (normalized.id == null) {
+        const doc: MockRecordDoc = {
+          _id: `${RECORD_PREFIX}${randomUUID()}`,
+          type: RECORD_TYPE,
+          ruleId,
+          url,
+          name,
+          match,
+          matchFingerprint: fingerprint,
+          response: normalized.response,
+          variants: normalized.variants,
+          activeVariantId: normalized.activeVariantId,
+          source: normalized.source,
+          createdAt: now,
+          updatedAt: now
+        }
         await this.pouchdb.put(doc)
+        this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: this.toRecord(doc) })
         return { id: doc._id, updatedAt: now }
-      } catch (err: any) {
-        if (err?.status === 409 && attempt < CONFLICT_RETRY) continue
-        throw err
       }
-    }
+
+      for (let attempt = 0; ; attempt++) {
+        const current = await this.getDoc<MockRecordDoc>(normalized.id)
+        if (current == null || current.type !== RECORD_TYPE) throw new MockError('recordMissing')
+        if (current.ruleId !== ruleId) throw new MockError('ruleMissing')
+        if (expectedUpdatedAt != null && current.updatedAt !== expectedUpdatedAt) {
+          const conflict: any = new Error('记录已被其他人修改，请刷新后重试')
+          conflict.status = 409
+          throw conflict
+        }
+
+        const doc: MockRecordDoc = {
+          _id: current._id,
+          _rev: current._rev,
+          type: RECORD_TYPE,
+          ruleId,
+          url,
+          name,
+          match,
+          matchFingerprint: fingerprint,
+          response: normalized.response,
+          variants: normalized.variants,
+          activeVariantId: normalized.activeVariantId,
+          source: normalized.source,
+          createdAt: current.createdAt ?? now,
+          updatedAt: now
+        }
+        // 迁移记录保留旧结构，回滚旧版本时仍能读取
+        if (current.record != null) {
+          doc.record = this.toCompatRecord(normalized)
+        }
+
+        try {
+          await this.pouchdb.put(doc)
+          this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: this.toRecord(doc) })
+          return { id: doc._id, updatedAt: now }
+        } catch (err: any) {
+          if (err?.status === 409 && attempt < CONFLICT_RETRY) continue
+          throw err
+        }
+      }
+    })
   }
 
   public async removeRecord(recordId: string): Promise<boolean> {
     if (recordId == null) return false
     const doc = await this.getDoc<MockRecordDoc>(recordId)
     if (doc == null || doc.type !== RECORD_TYPE) return false
-    const resp = await this.pouchdb.remove(doc._id, doc._rev!)
-    return resp.ok
+
+    const removed = await this.enqueueSave(doc.ruleId, async () => {
+      const current = await this.getDoc<MockRecordDoc>(recordId)
+      if (current == null || current.type !== RECORD_TYPE) return false
+      const resp = await this.pouchdb.remove(current._id, current._rev!)
+      return resp.ok
+    })
+    if (removed) this.notifyRecordChanged({ type: 'remove', ruleId: doc.ruleId, recordId })
+    return removed
   }
 
-  private async findByUrl(ruleId: string, url: string): Promise<MockRecordDoc> {
+  private deriveMatch(record: ProxyMock.MockRecord, url: string): MockMatchRule | null {
+    if (url === '') return null
+    const draft: ProxyMock.MockRecord = { ...record, url, id: record.id ?? 'draft' }
+    const analyzed = analyzeMatchStability([draft], {
+      source: record.source != null ? 'recording' : 'manual',
+      analyzedAt: Date.now(),
+    })
+    return analyzed[0]?.match ?? createMatchFromUrl(url, {
+      method: record.source?.method,
+      source: record.source != null ? 'recording' : 'manual',
+    })
+  }
+
+  private async findByFingerprint(ruleId: string, fingerprint: string): Promise<MockRecordDoc> {
     const docs = await this.find({
-      selector: { type: RECORD_TYPE, ruleId, url },
-      sort: ['type', 'ruleId', 'url'],
+      selector: { type: RECORD_TYPE, ruleId, matchFingerprint: fingerprint },
       limit: 1
     } as any) as unknown as MockRecordDoc[]
     return docs[0] ?? null
@@ -315,7 +609,10 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         id: doc._id,
         ruleId: doc.ruleId,
         name: doc.name,
-        url: doc.url,
+        url: doc.url ?? doc.source?.url ?? '',
+        match: doc.match,
+        matchFingerprint: doc.matchFingerprint,
+        matchInvalid: doc.matchInvalid,
         response: doc.response,
         variants: doc.variants,
         activeVariantId: doc.activeVariantId,
@@ -332,6 +629,9 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       ruleId: doc.ruleId,
       name: doc.name ?? legacy.url ?? doc.url,
       url: doc.url,
+      match: doc.match,
+      matchFingerprint: doc.matchFingerprint,
+      matchInvalid: doc.matchInvalid,
       response: this.responseFromLegacy(legacy),
       variants: [],
       activeVariantId: null,
@@ -495,7 +795,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   /** v2 -> v3：旧记录补齐结构化响应字段，保留 _id 与 record 兼容字段 */
   private async migrateRecordsV3() {
     const meta = await this.getMeta()
-    if ((meta?.version ?? 0) >= SCHEMA_VERSION) return
+    if ((meta?.version ?? 0) >= RECORD_SCHEMA_VERSION) return
 
     let startkey: string = null
     while (true) {
@@ -527,8 +827,273 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       }
     }
 
-    await this.saveMeta({ version: SCHEMA_VERSION })
+    await this.saveMeta({ version: RECORD_SCHEMA_VERSION })
     console.log('mock schema migrated to v3')
+  }
+
+  /**
+   * v3 -> v4：按规则做稳定性分析生成匹配条件与指纹。
+   * - 已有 match.version=1 的记录不覆盖，只补指纹
+   * - URL 无法解析的记录标记 matchInvalid 并停用
+   * - 指纹重复保留 updatedAt 最新，其余标记 duplicateAfterMigration
+   * 报告先落库再写 meta，失败可重入。
+   */
+  private async migrateRecordsV4(total: number) {
+    const meta = await this.getMeta()
+    if (this.isMigratedV4(meta)) return
+
+    const startedAt = Date.now()
+    const summaries = await this.listAllRecordSummaries()
+    const byRule = new Map<string, MockRecordSummary[]>()
+    for (const summary of summaries) {
+      if (summary.ruleId == null) continue
+      const list = byRule.get(summary.ruleId) ?? []
+      list.push(summary)
+      byRule.set(summary.ruleId, list)
+    }
+
+    const report: MigrationReport = {
+      migratedAt: startedAt,
+      status: 'running',
+      totalRecords: total || summaries.length,
+      processedRecords: 0,
+      autoRelaxedRecords: 0,
+      autoIgnoredKeyCount: 0,
+      parameterizedPathCount: 0,
+      invalidRecords: 0,
+      items: [],
+      duplicates: [],
+      errors: [],
+    }
+    this.migrationRuleIds = new Set(byRule.keys())
+    this.migratedRules = new Set()
+
+    try {
+      for (const [ruleId, list] of byRule) {
+        const plan = planMigrationV4(
+          list.map(summary => ({
+            record: this.summaryToRecord(summary),
+            keepMatch: summary.match?.version === 1,
+            name: summary.name,
+          })),
+          startedAt,
+        )
+
+        report.autoRelaxedRecords += plan.autoRelaxedRecords
+        report.autoIgnoredKeyCount += plan.autoIgnoredKeyCount
+        report.parameterizedPathCount += plan.parameterizedPathCount
+        report.invalidRecords += plan.invalidRecords
+        report.items.push(...plan.items)
+        report.duplicates.push(...plan.duplicates)
+
+        await this.applyMatchPatches(plan.patches, report)
+        this.migratedRules.add(ruleId)
+        report.processedRecords += list.length
+      }
+
+      report.status = 'completed'
+      report.migratedAt = Date.now()
+      report.processedRecords = summaries.length
+      report.durationMs = report.migratedAt - startedAt
+      report.peakHeapUsedMb = Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+      await this.saveMigrationReport(report)
+      await this.saveMeta({
+        version: SCHEMA_VERSION,
+        mockSchemaVersion: MATCH_SCHEMA_VERSION,
+        migratedAt: report.migratedAt,
+        migrationPending: false,
+        migrationStatus: 'completed',
+      })
+      this.migrationPending = false
+      this.migrationRuleIds.clear()
+      this.migratedRules.clear()
+      this.notifyRecordChanged({ type: 'reset' })
+      console.log(`mock schema migrated to v4: ${summaries.length} records`)
+    } catch (err) {
+      report.status = 'failed'
+      report.errors = [{ recordId: '', reason: (err as Error)?.message ?? String(err) }]
+      await this.saveMigrationReport(report).catch(() => { })
+      await this.saveMeta({ migrationStatus: 'failed' }).catch(() => { })
+      throw err
+    }
+  }
+
+  private summaryToRecord(summary: MockRecordSummary): ProxyMock.MockRecord {
+    return normalizeMockRecord({
+      id: summary._id,
+      ruleId: summary.ruleId,
+      name: summary.name ?? '',
+      url: summary.url ?? summary.source?.url ?? '',
+      match: summary.match,
+      matchFingerprint: summary.matchFingerprint,
+      matchInvalid: summary.matchInvalid,
+      source: summary.source,
+      createdAt: summary.createdAt,
+      updatedAt: summary.updatedAt,
+    })
+  }
+
+  private async applyMatchPatches(patches: MigrationPatch[], report?: MigrationReport) {
+    for (let i = 0; i < patches.length; i += MIGRATION_BATCH) {
+      const chunk = patches.slice(i, i + MIGRATION_BATCH)
+      const patchById = new Map(chunk.map(it => [it.recordId, it]))
+      const rows = await this.pouchdb.allDocs({
+        keys: chunk.map(it => it.recordId),
+        include_docs: true,
+      })
+      const docs: MockRecordDoc[] = []
+      for (const row of rows.rows) {
+        const doc = (row as any).doc as MockRecordDoc
+        if (doc == null) continue
+        const patch = patchById.get(doc._id)
+        if (patch == null) continue
+
+        applyMigrationPatch(doc, patch)
+        docs.push(doc)
+      }
+      if (docs.length === 0) continue
+
+      const results = await this.pouchdb.bulkDocs(docs as any) as any[]
+      const retry: MockRecordDoc[] = []
+      for (let index = 0; index < results.length; index++) {
+        const result = results[index]
+        if (result?.error == null) continue
+        if (result.status === 409) {
+          // 迁移期间可能被外部进程修改：重新取 rev 后单条重试
+          if (docs[index] != null) retry.push(docs[index])
+          continue
+        }
+        report?.errors.push({
+          recordId: result.id ?? docs[index]?._id ?? '',
+          reason: result.message ?? result.name ?? 'writeFailed',
+        })
+      }
+      for (const doc of retry) {
+        try {
+          await this.putWithRetry(doc)
+        } catch (err) {
+          report?.errors.push({
+            recordId: doc._id,
+            reason: (err as Error)?.message ?? String(err),
+          })
+        }
+      }
+    }
+  }
+
+  public async getMigrationReport(): Promise<MigrationReport | null> {
+    const doc = await this.getDoc<MockMigrationReportDoc>(MIGRATION_REPORT_ID)
+    if (doc == null) return null
+    const { _id, _rev, type, ...report } = doc as any
+    return report as MigrationReport
+  }
+
+  public async revertMatch(request: RevertMockRequest): Promise<RevertMockResponse> {
+    const result: RevertMockResponse = { reverted: 0, failed: [], duplicateDisabled: [] }
+    const report = await this.getMigrationReport()
+    const now = Date.now()
+    const targets: Array<{ recordId: string; item?: MockMigrationReportItem }> = []
+
+    if (request?.scope === 'all') {
+      for (const item of report?.items ?? []) {
+        if (item.invalidReason != null || item.revertedAt != null) continue
+        if (request.ruleId != null && item.ruleId !== request.ruleId) continue
+        targets.push({ recordId: item.recordId, item })
+      }
+    } else {
+      if (request?.recordId == null) throw new MockError('recordMissing')
+      targets.push({
+        recordId: request.recordId,
+        item: report?.items?.find(it => it.recordId === request.recordId),
+      })
+    }
+
+    for (const target of targets) {
+      const record = await this.getRecordById(target.recordId)
+      if (record == null) {
+        result.failed.push({ recordId: target.recordId, reason: 'recordMissing' })
+        continue
+      }
+      const reverted = await this.revertRecord(record, now, result)
+      if (reverted && target.item != null) target.item.revertedAt = now
+    }
+
+    if (report != null && targets.some(it => it.item != null)) {
+      await this.saveMigrationReport(report)
+    }
+    return result
+  }
+
+  private async revertRecord(record: ProxyMock.MockRecord, analyzedAt: number,
+    result: RevertMockResponse): Promise<boolean> {
+    if (record.match == null) {
+      result.failed.push({ recordId: record.id, reason: 'matchMissing' })
+      return false
+    }
+
+    const restored = restoreStrict(record, analyzedAt)
+    if (restored.match == null || restored.reason != null) {
+      result.failed.push({ recordId: record.id, reason: restored.reason ?? 'sourceMissing' })
+      return false
+    }
+
+    try {
+      // 撤销是显式迁移动作，不受 UI 乐观锁影响
+      await this.saveRecord({ ...record, match: restored.match, matchInvalid: undefined })
+      result.reverted++
+      return true
+    } catch (err) {
+      if (err instanceof MockError && err.code === 'matchDuplicate') {
+        // 撤销后与另一条记录条件相同：按最新优先停用本条并写回报告
+        await this.markRecordInvalid(record.id, 'duplicateAfterRevert')
+        result.failed.push({ recordId: record.id, reason: 'matchDuplicate' })
+        result.duplicateDisabled.push(record.id)
+        return false
+      }
+      result.failed.push({ recordId: record.id, reason: (err as Error)?.message ?? String(err) })
+      return false
+    }
+  }
+
+  private async markRecordInvalid(recordId: string, reason: string) {
+    const doc = await this.getDoc<MockRecordDoc>(recordId)
+    if (doc == null || doc.type !== RECORD_TYPE) return
+    await this.enqueueSave(doc.ruleId, async () => {
+      const current = await this.getDoc<MockRecordDoc>(recordId)
+      if (current == null) return
+      current.matchInvalid = reason
+      if (current.match != null) current.match.enabled = false
+      await this.pouchdb.put(current)
+      this.notifyRecordChanged({
+        type: 'upsert', ruleId: current.ruleId, recordId,
+        record: this.toRecord(current),
+      })
+    })
+  }
+
+  private async saveMigrationReport(report: MigrationReport) {
+    for (let attempt = 0; ; attempt++) {
+      const existing = await this.getDoc<MockMigrationReportDoc>(MIGRATION_REPORT_ID)
+      const doc: any = { _id: MIGRATION_REPORT_ID, type: 'migration-report', ...report }
+      if (existing != null) doc._rev = existing._rev
+      try {
+        await this.pouchdb.put(doc)
+        return
+      } catch (err: any) {
+        if (err?.status === 409 && attempt < CONFLICT_RETRY) continue
+        throw err
+      }
+    }
+  }
+
+  /** 删除规则时同步清理迁移报告中的条目，避免复核页出现悬空记录 */
+  private async clearRuleFromReport(ruleId: string) {
+    const report = await this.getMigrationReport()
+    if (report?.items == null) return
+    const next = report.items.filter(it => it.ruleId !== ruleId)
+    if (next.length === report.items.length) return
+    report.items = next
+    await this.saveMigrationReport(report)
   }
 
   private async migrateRule(doc: LegacyRuleDoc) {
@@ -613,15 +1178,26 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   }
 
   private async saveMeta(patch: Partial<MockMetaDoc>) {
-    const meta = await this.getMeta()
-    const doc: any = {
-      _id: META_ID,
-      version: meta?.version ?? 0,
-      backupVersion: meta?.backupVersion ?? 0,
-      updatedAt: Date.now(),
-      ...patch
+    for (let attempt = 0; ; attempt++) {
+      const meta = await this.getMeta()
+      // 保留未在本次 patch 中出现的字段（migrationPending / lastActiveRuleId 等）
+      const doc: any = {
+        ...(meta ?? {}),
+        _id: META_ID,
+        version: meta?.version ?? 0,
+        backupVersion: meta?.backupVersion ?? 0,
+        updatedAt: Date.now(),
+        ...patch,
+      }
+      delete doc._rev
+      if (meta != null) doc._rev = meta._rev
+      try {
+        await this.pouchdb.put(doc)
+        return
+      } catch (err: any) {
+        if (err?.status === 409 && attempt < CONFLICT_RETRY) continue
+        throw err
+      }
     }
-    if (meta != null) doc._rev = meta._rev
-    await this.pouchdb.put(doc)
   }
 }

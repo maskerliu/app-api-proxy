@@ -17,8 +17,18 @@ const COLORS: string[] = [
 
 // 单条响应在主进程已截断到 1MB，40 条是展示上限，避免长时间挂机内存持续增长
 const MAX_RECORDS = 40
+// 主进程同样限制 1000 帧，这里兜底防止窗口重开/异常批次突破上限
+const MAX_SOCKET_FRAMES = 1000
 
-type RecordItem = ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord
+type RecordItem = ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord
+
+function isSocket(record: RecordItem): record is ProxyMock.SocketRecord {
+  return record.type === ProxyMock.PorxyType.SOCKET
+}
+
+function isLiveSocket(record: RecordItem): boolean {
+  return isSocket(record) && record.wsPhase !== 'close'
+}
 
 function isFiltered(record: RecordItem, types: string[], keyword: string): boolean {
   if (record.type == ProxyMock.PorxyType.REQUEST_START ||
@@ -27,8 +37,12 @@ function isFiltered(record: RecordItem, types: string[], keyword: string): boole
       String((record as ProxyMock.ProxyRequestRecord).url ?? '').indexOf(keyword) == -1
   }
 
-  if (record.type == ProxyMock.PorxyType.STATISTICS ||
-    record.type == ProxyMock.PorxyType.SOCKET) {
+  if (isSocket(record)) {
+    return types.indexOf(String(record.type)) == -1 ||
+      (keyword.length > 0 && String(record.url ?? '').indexOf(keyword) == -1)
+  }
+
+  if (record.type == ProxyMock.PorxyType.STATISTICS) {
     return types.indexOf(String(record.type)) == -1
   }
 
@@ -63,9 +77,29 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         result.push(record)
       }
       return result
-    }
-  },
+    },
+    // 5030 入口徽标：只统计仍在进行的连接，不受列表淘汰影响
+    activeSocketCount(state): number {
+      let count = 0
+      state.records.forEach(it => { if (isLiveSocket(it)) count++ })
+      return count
+    },
+    },
   actions: {
+    // 刷新/新窗口时恢复仍在进行的连接（只补缺失项，不覆盖实时帧）
+    applySocketSnapshot(records: ProxyMock.SocketRecord[]) {
+      for (const record of records ?? []) {
+        if (this.records.has(record.id)) continue
+        this.insertRecord(record)
+      }
+      this.isChanged = new Date().getTime()
+    },
+    insertRecord(record: RecordItem) {
+      record.timelineColor = COLORS[record.id % COLORS.length]
+      if (!this.records.has(record.id)) this.order.push(record.id)
+      this.records.set(record.id, record)
+      this.trimRecords()
+    },
     updateRecord(record: RecordItem) {
       switch (record.type) {
         case ProxyMock.PorxyType.REQUEST_START:
@@ -86,6 +120,11 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
           tmpRecord.responseData = this.parseResponseData(proxyRecord.responseData)
           tmpRecord.statusCode = proxyRecord.statusCode
           tmpRecord.time = proxyRecord.time
+          // 命中/未命中元数据随 REQUEST_END 合并，详情页据此渲染 Mock 区块
+          tmpRecord.mock = proxyRecord.mock
+          break
+        case ProxyMock.PorxyType.SOCKET:
+          this.updateSocketRecord(record as ProxyMock.SocketRecord)
           break
         default:
           console.error("unsupport record type")
@@ -95,10 +134,46 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       if (this.curRecordId != -1 && !this.records.has(this.curRecordId)) this.curRecordId = -1
       this.isChanged = new Date().getTime()
     },
+    updateSocketRecord(record: ProxyMock.SocketRecord) {
+      const existing = this.records.get(record.id) as ProxyMock.SocketRecord
+      if (existing == null) {
+        // 失败连接只推 close；刷新后也可能先收到 frames/close，都按新行补入
+        record.frames = record.wsPhase === 'frames' ? (record.frames ?? []) : []
+        this.insertRecord(record)
+        return
+      }
+
+      if (record.wsPhase === 'frames') {
+        const frames = (existing.frames ?? []).concat(record.frames ?? [])
+        existing.frames = frames.length > MAX_SOCKET_FRAMES
+          ? frames.slice(frames.length - MAX_SOCKET_FRAMES) : frames
+        existing.frameCount = record.frameCount ?? existing.frameCount
+        existing.droppedFrames = record.droppedFrames ?? existing.droppedFrames
+        existing.bytesSent = record.bytesSent ?? existing.bytesSent
+        existing.bytesReceived = record.bytesReceived ?? existing.bytesReceived
+        return
+      }
+
+      if (record.wsPhase === 'open') {
+        existing.wsPhase = 'open'
+        existing.url = record.url ?? existing.url
+        existing.subprotocol = record.subprotocol ?? existing.subprotocol
+        existing.requestHeaders = record.requestHeaders ?? existing.requestHeaders
+        existing.responseHeaders = record.responseHeaders ?? existing.responseHeaders
+        return
+      }
+
+      // close：保留已累积的帧，只更新结束信息
+      const frames = existing.frames ?? []
+      Object.assign(existing, record)
+      existing.frames = frames
+      existing.wsPhase = 'close'
+    },
     trimRecords() {
       while (this.order.length > MAX_RECORDS) {
-        // 选中项不参与淘汰，避免正在查看的详情被删掉
-        const evictedIdx = this.order.findIndex(id => id !== this.curRecordId)
+        // 选中项与进行中的连接不参与淘汰，避免详情或 5030 徽标失真
+        const evictedIdx = this.order.findIndex(id => id !== this.curRecordId
+          && !isLiveSocket(this.records.get(id)))
         if (evictedIdx < 0) break
         const [evicted] = this.order.splice(evictedIdx, 1)
         this.records.delete(evicted)

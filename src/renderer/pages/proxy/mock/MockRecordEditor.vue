@@ -4,7 +4,7 @@
       <div class="head-fields">
         <van-field class="name-field" label-width="40px" center v-model="record.name" :label="$t('mock.editor.name')"
           :placeholder="$t('mock.editor.namePlaceholder')" />
-        <van-field class="path-field" label-width="40px" v-model="record.url" :label="$t('mock.editor.path')"
+        <van-field ref="pathField" class="path-field" label-width="40px" v-model="record.url" :label="$t('mock.editor.path')"
           :placeholder="$t('mock.editor.pathPlaceholder')" />
       </div>
       <div class="head-actions">
@@ -18,7 +18,13 @@
     <van-tabs v-model:active="activeTab" class="editor-tabs" shrink>
       <van-tab :title="$t('mock.editor.tab.response')" name="response">
         <div class="tab-body response-tab">
-          <mock-response-form v-model="baseResponse" fill-body />
+          <mock-response-form ref="baseResponseForm" v-model="baseResponse" fill-body />
+        </div>
+      </van-tab>
+
+      <van-tab :title="$t('mock.editor.tab.match')" name="match">
+        <div class="tab-body match-tab">
+          <mock-match-tab ref="matchForm" :record="record" />
         </div>
       </van-tab>
 
@@ -26,7 +32,7 @@
         <div class="tab-body variants-tab">
           <div class="variant-bar">
             <div ref="variantStrip" class="variant-strip">
-              <van-button v-for="variant in record.variants" :key="variant.id" size="mini"
+              <van-button v-for="variant in record.variants" :key="variant.id" size="mini" class="variant-chip"
                 :type="variant.id === selectedVariantId ? 'primary' : 'default'"
                 :plain="variant.id !== selectedVariantId" :title="variant.name" @click="selectVariant(variant)">
                 <span class="variant-chip-name">{{ variant.name || $t('mock.editor.variantName') }}</span>
@@ -78,7 +84,7 @@
                 </template>
               </van-button>
             </div>
-            <mock-response-form v-if="selectedVariant != null" v-model="selectedVariantModel" fill-body
+            <mock-response-form v-if="selectedVariant != null" ref="variantForm" v-model="selectedVariantModel" fill-body
               :show-meta="false" />
             <div v-else class="variant-empty">{{ $t('mock.editor.selectVariant') }}</div>
           </div>
@@ -103,9 +109,12 @@
 
 <script lang="ts" setup>
 import { MOCK_MAX_VARIANTS, ProxyMock } from '@shared'
+import type { MockValidationIssue } from '@shared'
+import type { FieldInstance } from 'vant'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VueAceEditor from '../../components/VueAceEditor.vue'
+import MockMatchTab from '../MockMatchTab.vue'
 import MockResponseForm from './MockResponseForm.vue'
 import { createVariant, toRawJson } from './mock.record'
 
@@ -118,9 +127,13 @@ const props = defineProps<{
 const emit = defineEmits<{ save: [], change: [] }>()
 const { t } = useI18n()
 
-const activeTab = ref<'response' | 'variants' | 'raw'>('response')
+const activeTab = ref<'response' | 'match' | 'variants' | 'raw'>('response')
 const selectedVariantId = ref<string>(null)
 const variantStrip = ref<HTMLElement>()
+const pathField = ref<FieldInstance>()
+const baseResponseForm = ref<InstanceType<typeof MockResponseForm>>()
+const matchForm = ref<InstanceType<typeof MockMatchTab>>()
+const variantForm = ref<InstanceType<typeof MockResponseForm>>()
 const rawText = ref<string>('')
 const rawError = ref<string>('')
 
@@ -247,12 +260,40 @@ function toggleActive(variant: ProxyMock.MockVariant) {
   record.value.activeVariantId = record.value.activeVariantId === variant.id ? null : variant.id
 }
 
+// 校验失败后定位：路径直接聚焦，响应/变体字段切到对应页签再聚焦
+function focusField(issue: MockValidationIssue) {
+  const field = issue.field ?? ''
+  if (field === 'url') {
+    pathField.value?.focus()
+    return
+  }
+  if (field.startsWith('match')) {
+    activeTab.value = 'match'
+    nextTick(() => nextTick(() => matchForm.value?.focusField(issue.code)))
+    return
+  }
+  if (field.startsWith('variants') || field === 'activeVariantId') {
+    const index = Number.parseInt(field.match(/^variants\[(\d+)\]/)?.[1] ?? '')
+    const variant = Number.isInteger(index) ? record.value.variants[index] : null
+    if (variant != null) selectedVariantId.value = variant.id
+    activeTab.value = 'variants'
+    ensureVariantSelected()
+    nextTick(() => nextTick(() => variantForm.value?.focusField(issue.code)))
+    return
+  }
+  activeTab.value = 'response'
+  nextTick(() => nextTick(() => baseResponseForm.value?.focusField(issue.code)))
+}
+
+defineExpose({ focusField })
+
 function applyRaw() {
   try {
     const parsed = JSON.parse(rawText.value)
     if (parsed == null || typeof parsed !== 'object') throw new Error('invalid')
     record.value.name = parsed.name ?? record.value.name
     record.value.url = parsed.url ?? record.value.url
+    record.value.match = parsed.match ?? record.value.match
     record.value.response = parsed.response ?? record.value.response
     record.value.variants = Array.isArray(parsed.variants) ? parsed.variants : []
     record.value.activeVariantId = parsed.activeVariantId ?? null
@@ -302,6 +343,11 @@ function applyRaw() {
   align-items: center;
   gap: 8px;
   flex: none;
+}
+
+/* 保存是主操作，图标随正文字号走，不再继承 mini 的 xs */
+.editor-head :deep(.van-button--mini) {
+  font-size: var(--van-font-size-md);
 }
 
 .editor-tabs {
@@ -382,12 +428,21 @@ function applyRaw() {
   background: var(--van-border-color);
 }
 
+/* 变体条内的按钮/胶囊统一用正文字号，图标按钮不再继承 mini 的 xs */
+.variant-bar :deep(.van-button--mini) {
+  font-size: var(--van-font-size-md);
+}
+
+.variant-bar :deep(.van-tag) {
+  font-size: var(--van-font-size-sm);
+}
+
 /* 变体胶囊直接用 van-button（mini + round），选中态由 primary 实心样式提供 */
 .variant-chip {
   flex: none;
   max-width: 180px;
   padding: 0 10px;
-  font-size: var(--van-font-size-sm);
+  font-size: var(--van-font-size-md);
 }
 
 /* mini 按钮自带相邻外边距，条内统一交给 gap 控制 */
@@ -416,7 +471,7 @@ function applyRaw() {
 
 .variant-chip-status {
   flex: none;
-  font-size: var(--van-font-size-xs);
+  font-size: var(--van-font-size-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -442,7 +497,7 @@ function applyRaw() {
 
 .variant-chip-check {
   flex: none;
-  font-size: 12px;
+  font-size: 1em;
   color: var(--van-success-color);
 }
 
@@ -457,7 +512,7 @@ function applyRaw() {
 /* 与变体胶囊同字号，窄空间下文字不折行 */
 .variant-add {
   flex: none;
-  font-size: var(--van-font-size-sm);
+  font-size: var(--van-font-size-md);
   white-space: nowrap;
 }
 
@@ -493,7 +548,7 @@ function applyRaw() {
   flex: none;
   padding: 4px 6px;
   border-radius: var(--van-radius-md);
-  font-size: 12px;
+  font-size: var(--van-font-size-md);
 }
 
 .variant-meta-field :deep(.van-field__label) {
@@ -501,25 +556,26 @@ function applyRaw() {
   margin-right: 4px;
   width: auto;
   color: var(--van-text-color-2);
-  font-size: 12px;
+  font-size: var(--van-font-size-md);
 }
 
 .variant-meta-field :deep(.van-field__control) {
-  font-size: 12px;
+  font-size: var(--van-font-size-md);
   font-variant-numeric: tabular-nums;
 }
 
+/* 宽度按英文 “Status Code” + 数值预留，避免最大字号下标签挤掉输入值 */
 .variant-status-field {
-  width: 92px;
+  width: 136px;
 }
 
 .variant-delay-field {
-  width: 104px;
+  width: 124px;
 }
 
 .meta-unit {
   color: var(--van-text-color-2);
-  font-size: 12px;
+  font-size: var(--van-font-size-sm);
 }
 
 .variant-active {
@@ -531,7 +587,7 @@ function applyRaw() {
 
 .variant-active-label {
   color: var(--van-text-color-2);
-  font-size: var(--van-font-size-sm);
+  font-size: var(--van-font-size-md);
   white-space: nowrap;
 }
 
@@ -552,7 +608,7 @@ function applyRaw() {
   flex: 1 1 auto;
   min-height: 0;
   color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
+  font-size: var(--van-font-size-md);
 }
 
 .raw-body {

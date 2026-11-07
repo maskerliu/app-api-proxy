@@ -2,7 +2,7 @@
   <van-row class="mgr-content">
     <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - 10px);"
       :style="{ paddingTop: isWeb ? '0' : '10px' }">
-      <van-col class="rule-search-col">
+      <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
           placement="bottom-start" :show-arrow="false" :offset="[0, 2]">
           <template #reference>
@@ -38,12 +38,21 @@
         </van-popover>
       </van-col>
       <van-col class="rule-head-col">
-        <van-cell :clickable="false" center :title="`[${curRule?.name == null ? $t('mock.rule.name') : curRule?.name}]`"
-          style="padding: 5px 10px;" :title-style="{ flexGrow: 1.2 }" value-class="rule-mgr-cell-value">
+        <van-cell :clickable="false" center style="padding: 5px 10px;" :title-style="{ flexGrow: 1.2 }"
+          value-class="rule-mgr-cell-value">
           <template #icon>
             <van-icon class="iconfont icon-cancel" :class="{ 'rule-cancel-disabled': curRule._id == null }" size="20"
               style="margin-right: 10px;" :style="{ color: curRule._id == null ? 'var(--van-gray-5)' : 'red' }"
               @click="onRuleSelect(null)" />
+          </template>
+          <template #title>
+            <div class="rule-head-title">
+              <span class="rule-head-name">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
+              <van-tag v-if="curRule._id != null" class="rule-state-tag" plain
+                :type="curRule.isMock ? 'success' : 'warning'" :title="mockStateTip">
+                {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
+              </van-tag>
+            </div>
           </template>
           <template #label>
             <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -64,97 +73,183 @@
             </van-button>
           </template>
           <template #right-icon>
-            <van-switch v-model="curRule.isMock" style="margin: 0 35px 0 10px;" @change="onMockSwitchChanged(curRule)"
-              :disabled="curRule._id == null" />
+            <div class="rule-mock-switch" :title="mockStateTip">
+              <span class="rule-mock-switch-label">{{ $t('mock.rule.mockLabel') }}</span>
+              <van-switch v-model="curRule.isMock" @change="onMockSwitchChanged(curRule)"
+                :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
+            </div>
           </template>
         </van-cell>
       </van-col>
     </van-row>
     <van-row class="mgr-body">
-      <OverlayScrollbarsComponent class="border-bg record-list" :options="scrollOptions" defer>
-        <van-list>
-          <van-cell center v-for="record in [...curRule.requests.values()]" :key="record.id"
-            @click="onRecordSelected(record)" v-if="curRule != null && curRule.requests != null" clickable is-link>
-            <template #title>
-              <div class="record-snap">{{ record.name || record.url }}</div>
-            </template>
-            <template #label>
-              <van-tag plain :type="effectiveResponse(record).statusCode == 200 ? 'success' : 'danger'">
-                [http]{{ effectiveResponse(record).statusCode }}
-              </van-tag>
-              <van-tag v-if="record.variants.length > 0" plain type="primary" style="margin-left: 5px">
-                {{ $t('mock.editor.variantCount', { count: record.variants.length }) }}
-              </van-tag>
-              <van-tag v-if="record.activeVariantId" plain type="success" style="margin-left: 5px">
-                {{ $t('mock.editor.active') }}
-              </van-tag>
-            </template>
-            <template #right-icon>
-              <van-button plain type="danger" size="mini" @click.stop="onRecordDelete(record.id)">
-                <template #icon>
-                  <van-icon class="iconfont icon-delete" />
-                </template>
-              </van-button>
-            </template>
-          </van-cell>
-          <van-cell v-if="recordHasMore" clickable center @click="loadRecords()">
-            <template #title>
-              <span class="record-load-more">{{ recordLoading ? '加载中...' : '加载更多' }}</span>
-            </template>
-          </van-cell>
-        </van-list>
-      </OverlayScrollbarsComponent>
-      <van-col class="record-actions" style="padding-top: 50px">
-        <van-icon class="iconfont icon-cloud-sync" :class="{ 'record-save-disabled': !canSaveRecord }" size="16"
-          style="color: #3498db; padding: 5px" :title="$t('mock.record.update')" @click="onRecordSave" />
-        <van-icon class="iconfont icon-add-rule" size="16" style="color: #3498db; padding: 5px; margin-top: 10px;"
-          :title="$t('mock.editor.newRecord')" @click="addRecord" />
+      <van-col class="record-pane">
+        <div class="record-pane-head">
+          <span class="record-pane-title">{{ $t('mock.records') }}</span>
+          <van-button class="record-new-btn" plain type="primary" size="mini" icon="plus"
+            :disabled="curRule._id == null" @click="addRecord"></van-button>
+        </div>
+        <div class="record-filter">
+          <van-field v-model="recordKeyword" class="record-search" clearable left-icon="search"
+            :placeholder="$t('mock.list.searchPlaceholder')" />
+          <mini-select :model-value="recordSort" class="record-sort" :options="sortOptions"
+            @update:model-value="onSortChange" />
+        </div>
+        <van-notice-bar v-if="curRule.limitState?.warn" class="record-limit" wrapable :scrollable="false"
+          :class="{ 'is-reject': curRule.limitState.reject }"
+          :text="curRule.limitState.reject
+            ? $t('mock.list.limitReject', { count: curRule.limitState.count, limit: MOCK_RECORD_REJECT_LIMIT })
+            : $t('mock.list.limitWarn', { count: curRule.limitState.count })" />
+        <OverlayScrollbarsComponent ref="recordListRef" class="border-bg record-list" :options="scrollOptions" defer>
+          <van-empty v-if="curRule._id != null && recordTotal === 0 && !isNew && !recordLoading" image="search"
+            image-size="64" :description="$t('mock.recordsEmpty')" />
+          <van-empty v-else-if="recordTotal > 0 && recordList.length === 0" image="search" image-size="64"
+            :description="$t('mock.list.noMatch')">
+            <van-button size="mini" plain type="primary" @click="recordKeyword = ''">
+              {{ $t('mock.list.clearFilter') }}
+            </van-button>
+          </van-empty>
+          <van-list>
+            <van-cell v-if="isNew && draft != null" center clickable class="record-row record-draft-row"
+              @click="recordEditorRef?.focusField({ code: 'urlEmpty', field: 'url' })">
+              <template #title>
+                <div class="record-line">
+                  <span class="record-title">{{ draft.name || $t('mock.editor.newRecord') }}</span>
+                  <span class="record-draft-tag">{{ $t('mock.editor.unsaved') }}</span>
+                </div>
+              </template>
+              <template #label>
+                <div v-if="draft.url" class="record-line record-line--meta">
+                  <span class="record-path">{{ draft.url }}</span>
+                </div>
+              </template>
+              <template #right-icon>
+                <van-icon name="cross" class="record-action record-action--muted" @click.stop="discardDraft" />
+              </template>
+            </van-cell>
+            <van-cell center clickable v-for="row in recordRows" :key="row.record.id"
+              @click="onRecordSelected(row.record)" :data-record-id="row.record.id"
+              class="record-row" :class="{ 'record-row--selected': row.record.id === curRecordId, 'record-flash': row.record.id === flashRecordId }">
+              <template #title>
+                <div class="record-line">
+                  <span v-if="row.summary" class="record-method" :class="`record-method--${methodTone(row.summary.method)}`">
+                    {{ row.summary.method }}
+                  </span>
+                  <span class="record-title" :class="{ 'record-title--scroll': row.record.id === curRecordId }"
+                    :title="row.titleHint">
+                    <span class="record-title-text">{{ row.title }}</span>
+                  </span>
+                </div>
+              </template>
+              <template #label>
+                <div class="record-line record-line--meta">
+                  <span v-if="row.summary" class="record-level"
+                    :class="`record-level--${levelTagType(row.summary.level)}`"
+                    :title="$t(`mock.match.levelHint.${row.summary.level}`)">
+                    {{ $t(`mock.match.level.${row.summary.level}`) }}
+                  </span>
+                  <span v-if="row.subPath" class="record-path" :title="row.subPath">{{ row.subPath }}</span>
+                  <span v-if="row.ignoreKeys.length > 0" class="record-meta"
+                    :title="row.ignoreKeys.join(',')">
+                    {{ $t('mock.list.ignoredCount', { count: row.ignoreKeys.length }) }}
+                  </span>
+                  <span v-if="row.variantCount > 0" class="record-meta record-meta--variant">
+                    {{ $t('mock.editor.variantCount', { count: row.variantCount }) }}
+                  </span>
+                  <span v-if="row.active" class="record-meta record-meta--active">
+                    {{ $t('mock.editor.active') }}
+                  </span>
+                  <span v-if="row.warning" class="record-warn"
+                    :class="`record-warn--${warningTagType(row.warning.type)}`"
+                    :title="warningTitle(row.record)">
+                    <van-icon name="warning-o" />
+                    {{ $t(warningLabelKey(row.warning.type)) }}
+                    <template v-if="row.warningExtra > 0">+{{ row.warningExtra }}</template>
+                  </span>
+                  <span class="record-status" :class="row.statusOk ? 'is-ok' : 'is-bad'"
+                    :title="`HTTP ${row.statusCode}`">
+                    [http]{{ row.statusCode }}
+                  </span>
+                </div>
+              </template>
+              <template #right-icon>
+                <van-icon class="iconfont icon-delete record-action record-action--danger"
+                  :title="$t('mock.record.delete.title')" @click.stop="onRecordDelete(row.record.id)" />
+              </template>
+            </van-cell>
+            <van-cell v-if="recordHasMore" clickable center class="record-load-more-cell" @click="loadRecords()">
+              <template #title>
+                <span class="record-load-more">
+                  {{ recordLoading ? $t('common.loading') : $t('mock.loadMore') }}
+                </span>
+              </template>
+            </van-cell>
+          </van-list>
+        </OverlayScrollbarsComponent>
       </van-col>
 
       <van-col class="rule-editor-col">
-        <mock-record-editor v-if="draft != null" v-model:record="draft" :dirty="dirty" :saving="saving"
-          :new-record="isNew" @save="onRecordSave" />
-        <div v-else class="editor-placeholder">{{ $t('mock.editor.noRecord') }}</div>
+        <mock-record-editor v-if="draft != null" ref="recordEditorRef" v-model:record="draft" :dirty="dirty"
+          :saving="saving" :new-record="isNew" @save="onRecordSave" />
+        <van-empty v-else class="editor-placeholder" image="search" image-size="80"
+          :description="curRule._id == null ? $t('mock.editor.noRule') : $t('mock.editor.noRecord')" />
       </van-col>
     </van-row>
 
-    <van-dialog :title="$t('mock.rule.delete.title')" :show="showRuleDelete" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" @cancel="showRuleDelete = false"
+    <van-dialog :title="$t('mock.rule.delete.title')" v-model:show="showRuleDelete" show-cancel-button
+      :cancel-button-text="$t('common.cancel')"
       :confirm-button-text="$t('common.done')" @confirm="onRuleDeleteConfirm"
       :message="$t('mock.rule.delete.confirm', { rule: curRule != null ? curRule.name : '' })" />
 
-    <van-dialog :title="$t('mock.rule.title')" :show="showRuleEdit" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" @cancel="showRuleEdit = false" :confirm-button-text="$t('common.done')"
-      @confirm="onSave">
-      <van-form ref="form" labvan-width="90px" v-if="curRule != null">
+    <van-dialog :title="$t('mock.rule.title')" v-model:show="showRuleEdit" show-cancel-button
+      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
+      :before-close="onRuleEditClose">
+      <van-form ref="form" label-width="90px" v-if="curRule != null">
         <van-field :label="$t('mock.rule.name')" v-model="curRule.name" :placeholder="$t('mock.rule.name')" />
         <van-field rows="4" type="textarea" v-model="curRule.desc" :placeholder="$t('mock.rule.desc')" />
       </van-form>
     </van-dialog>
 
-    <van-dialog :title="$t('mock.record.delete.title')" :show="showRecordDelete" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" @cancel="showRecordDelete = false"
+    <van-dialog :title="$t('mock.record.delete.title')" v-model:show="showRecordDelete" show-cancel-button
+      :cancel-button-text="$t('common.cancel')"
       :confirm-button-text="$t('common.done')" @confirm="onRecordDeleteConfirm"
       :message="$t('mock.record.delete.confirm')" />
+
+    <van-dialog v-model:show="showConflict" :title="$t('mock.record.conflictTitle')" :show-confirm-button="false">
+      <div class="conflict-message">{{ $t('mock.record.conflictMessage') }}</div>
+      <div class="conflict-actions">
+        <van-button size="small" plain @click="showConflict = false">{{ $t('common.cancel') }}</van-button>
+        <van-button size="small" plain type="primary" @click="onConflictReload">
+          {{ $t('mock.record.reload') }}
+        </van-button>
+        <van-button size="small" type="primary" :loading="saving" @click="onConflictOverwrite">
+          {{ $t('mock.record.overwrite') }}
+        </van-button>
+      </div>
+    </van-dialog>
+
   </van-row>
 </template>
 
 <script lang="ts" setup>
 import {
-  deleteMockRecord, deleteMockRule, getActiveMockRule, getMockRecords, getMockRuleDetail, ProxyMock,
-  saveMockRecord, saveMockRule, searchMockRules, validateMockRecord
+  canonicalMatch, deleteMockRecord, deleteMockRule, getActiveMockRule, getMockRecord,
+  getMockRecords, getMockRuleDetail, levelOf, MOCK_ANY_METHOD, MOCK_RECORD_REJECT_LIMIT, ProxyMock, saveMockRecord,
+  saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showConfirmDialog, showNotify } from 'vant'
-import { computed, inject, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MiniSelect from '../../common/MiniSelect.vue'
 import { scrollOptions } from '../../common/scroll'
-import { ProxyRecordStore } from '../../store'
 import MockRecordEditor from './mock/MockRecordEditor.vue'
-import { cloneRecord, prettifyRecordJson, recordFromRequest } from './mock/mock.record'
+import { matchesKeyword, sortRecords, summaryOf, warningLabelKey } from './mock/match.helper'
+import { describeMockSaveError, normalizeErrorText } from './mock/mock.errors'
+import { cloneRecord, emptyRecord, prettifyRecordJson } from './mock/mock.record'
+import { findRecordByUrl, MockMgrTarget } from './mock/recording'
 
 const { t } = useI18n()
-const recordStore = ProxyRecordStore()
 const searchBox = ref<HTMLElement>()
 const keyword = ref<string>('')
 const showSearchResult = ref<boolean>(false)
@@ -165,7 +260,10 @@ const pendingDeleteId = ref<string>(null)
 const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
+const showConflict = ref(false)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
+const recordListWidth = ref<number>(0)
+let recordListObserver: ResizeObserver = null
 const draft = ref<ProxyMock.MockRecord>(null)
 const savedSnapshot = ref<string>('')
 const saving = ref(false)
@@ -173,17 +271,122 @@ const isNew = ref(false)
 const recordOffset = ref(0)
 const recordHasMore = ref(false)
 const recordLoading = ref(false)
+const recordListRef = ref<InstanceType<typeof OverlayScrollbarsComponent>>()
+const flashRecordId = ref<string>(null)
+const recordEditorRef = ref<InstanceType<typeof MockRecordEditor>>()
+const recordKeyword = ref('')
+type RecordSort = 'updated' | 'created' | 'priority'
+const recordSort = ref<RecordSort>('updated')
 
-const dirty = computed(() => draft.value != null && !isNew.value && JSON.stringify(draft.value) !== savedSnapshot.value)
-const canSaveRecord = computed(() => draft.value != null && !saving.value && (dirty.value || isNew.value))
+// 新建草稿的初始快照同样参与比较，填入内容后才会进入未保存状态
+const dirty = computed(() => draft.value != null && recordSnapshot(draft.value) !== savedSnapshot.value)
+
+// 档位会被交互临时标记成 custom；比较前按结构重新识别，
+// 否则“添加条件后又删除”这类回到原状的操作会一直算作未保存
+function recordSnapshot(record: ProxyMock.MockRecord): string {
+  const copy = cloneRecord(record)
+  if (copy?.match != null) copy.match.level = levelOf(copy.match)
+  return JSON.stringify(copy)
+}
 const effectiveResponse = ProxyMock.effectiveResponse
+const recordCount = computed(() => curRule.value?.requests?.size ?? 0)
+const recordTotal = computed(() => curRule.value?.limitState?.count ?? recordCount.value)
+// 列表筛选与排序都在已加载页内完成，翻页后同样生效
+const recordList = computed(() => sortRecords(
+  [...(curRule.value?.requests?.values() ?? [])].filter(it => matchesKeyword(it, recordKeyword.value)),
+  recordSort.value))
+
+// 行内容一次性算好：标题取名称/Path，副标题只在能补充信息时展示，避免与标题重复
+const recordRows = computed(() => recordList.value.map(record => {
+  const summary = summaryOf(record)
+  const response = effectiveResponse(record)
+  const warnings = record.matchWarnings ?? []
+  const path = summary?.path ?? ''
+  const name = record.name ?? ''
+  // 录制自动生成的名称就是「方法 + URL」，展示时改用干净的 path，避免和方法色块重复
+  const autoName = summary != null && name.startsWith(`${summary.method} `)
+  const title = autoName || name === '' ? (path || record.url || name) : name
+  // 标题已经是 path 时，第二行只补 host，避免同一路径出现两次
+  const subPath = summary == null ? '' : title === path ? summary.host : `${summary.host}${summary.path}`
+  const ignoreKeys = summary?.ignoredKeys ?? []
+  const variantCount = record.variants?.length ?? 0
+  const active = record.activeVariantId != null
+  const warning = warnings[0] ?? null
+  return {
+    record,
+    summary,
+    subPath,
+    ignoreKeys,
+    variantCount,
+    active,
+    warning,
+    title,
+    titleHint: record.url || name || path,
+    statusCode: response.statusCode,
+    statusOk: response.statusCode == 200,
+    warningExtra: Math.max(0, warnings.length - 1),
+  }
+}))
+
+function levelTagType(level: string): 'primary' | 'success' | 'warning' | 'danger' {
+  if (level === 'strict') return 'danger'
+  if (level === 'standard') return 'primary'
+  if (level === 'loose') return 'success'
+  return 'warning'
+}
+
+// 方法用小色块区分，便于在列表中按请求类型快速扫读
+function methodTone(method: string): 'get' | 'post' | 'danger' | 'any' | 'other' {
+  const value = String(method ?? '').toUpperCase()
+  if (value === 'GET') return 'get'
+  if (value === 'POST') return 'post'
+  if (value === 'DELETE') return 'danger'
+  if (MOCK_ANY_METHOD === value) return 'any'
+  return 'other'
+}
+
+function warningTagType(type: string): 'danger' | 'warning' | 'default' {
+  if (type === 'duplicate') return 'danger'
+  if (type === 'shadowed' || type === 'unreachable') return 'warning'
+  return 'default'
+}
+
+const sortOptions = computed(() => [
+  { value: 'updated', label: t('mock.list.sortUpdated') },
+  { value: 'created', label: t('mock.list.sortCreated') },
+  { value: 'priority', label: t('mock.list.sortPriority') },
+])
+
+function onSortChange(value: string) {
+  recordSort.value = value as RecordSort
+}
+
+function warningTitle(record: ProxyMock.MockRecord): string {
+  return (record.matchWarnings ?? []).map(it => t(warningLabelKey(it.type))).join(' / ')
+}
+
+// 开关与状态标签共用同一提示，避免两处文案不一致
+const mockStateTip = computed(() => {
+  if (curRule.value?._id == null) return t('mock.editor.selectRuleFirst')
+  // 超过上限只阻止开启；已开启时仍允许关闭
+  if (curRule.value.limitState?.reject === true && !curRule.value.isMock) {
+    return t('mock.list.limitReject', {
+      count: curRule.value.limitState.count, limit: MOCK_RECORD_REJECT_LIMIT
+    })
+  }
+  return curRule.value.isMock ? t('mock.rule.enabledTip') : t('mock.rule.disabledTip')
+})
+
+// 顶部搜索框与左侧记录列表同宽：列表宽度受窗口宽度影响，测量后同步
+const searchColStyle = computed(() => recordListWidth.value > 0 ? { width: `${recordListWidth.value}px` } : null)
 
 const RECORD_PAGE_SIZE = 100
 
 let detailTask: Promise<void> = null
 let recordLoadSeq = 0
+let flashTimer: ReturnType<typeof setTimeout> = null
 
-const withCurRecord = inject<Ref<boolean>>('withCurRecord')
+const mockMgrTarget = inject<Ref<MockMgrTarget>>('mockMgrTarget', null)
 
 const isWeb = window.isWeb
 
@@ -191,17 +394,42 @@ onMounted(() => {
   window.addEventListener('resize', updateSearchWidth)
   updateSearchWidth()
 
+  // 记录列表宽度随窗口/媒体查询变化，直接测量后回写给搜索列
+  const listHost = recordListRef.value?.$el as HTMLElement
+  if (listHost != null) {
+    recordListObserver = new ResizeObserver(() => {
+      recordListWidth.value = listHost.offsetWidth
+    })
+    recordListObserver.observe(listHost)
+  }
+
   curRule.value = new ProxyMock.MockRule()
-  selectActiveMockRule()
+  const target = mockMgrTarget?.value
+  if (target?.ruleId != null) {
+    void openTargetRule(target)
+  } else {
+    selectActiveMockRule()
+  }
+})
+
+// 面板打开期间再次录制并点击「查看」时，直接切换定位
+watch(() => mockMgrTarget?.value, (target) => {
+  if (target?.ruleId != null) void openTargetRule(target)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateSearchWidth)
+  recordListObserver?.disconnect()
+  recordListObserver = null
+  if (flashTimer != null) clearTimeout(flashTimer)
 })
 
 watch(showSearchResult, (show) => {
   if (show) updateSearchWidth()
 })
+
+// 搜索列宽度变化后，结果面板宽度需要按新的输入框宽度重算
+watch(recordListWidth, () => nextTick(updateSearchWidth))
 
 function updateSearchWidth() {
   searchWidth.value = searchBox.value?.offsetWidth ?? 0
@@ -210,10 +438,6 @@ function updateSearchWidth() {
 function onSearchBoxClick() {
   if (keyword.value != '' && rules.value?.length > 0) showSearchResult.value = true
 }
-
-watch(withCurRecord, (isWithRecord) => {
-  if (isWithRecord && curRule.value?._id != null && draft.value == null) startNewRecord()
-})
 
 watch(keyword, async () => {
   if (keyword.value == '') {
@@ -230,18 +454,63 @@ watch(keyword, async () => {
   } catch (err) {
     if (keyword.value !== kw) return
     rules.value = []
-    showNotify({ message: '未找到匹配的规则', type: 'danger', duration: 800 })
+    showNotify({ message: t('common.searchNoMatch'), type: 'danger', duration: 800 })
   }
   showSearchResult.value = true
 })
 
 function startNewRecord() {
   if (curRule.value?._id == null) return
-  const source = withCurRecord.value ? recordStore.curRecord() : null
-  draft.value = recordFromRequest(curRule.value._id, source)
-  savedSnapshot.value = ''
+  draft.value = emptyRecord(curRule.value._id)
+  savedSnapshot.value = recordSnapshot(draft.value)
   isNew.value = true
   curRecordId.value = null
+  nextTick(() => recordEditorRef.value?.focusField({ code: 'urlEmpty', field: 'url' }))
+}
+
+// 深链 / 重复 URL / 冲突恢复共用：把一条记录装入列表并进入编辑态
+function openRecord(record: ProxyMock.MockRecord) {
+  if (record == null) return
+  if (curRule.value.requests == null) curRule.value.requests = new Map()
+  curRule.value.requests.set(record.id, record)
+  curRecordId.value = record.id
+  draft.value = prettifyRecordJson(cloneRecord(record))
+  savedSnapshot.value = recordSnapshot(draft.value)
+  isNew.value = false
+}
+
+function discardDraft() {
+  draft.value = null
+  savedSnapshot.value = ''
+  isNew.value = false
+  curRecordId.value = null
+}
+
+function locateRecord(id: string, flash: boolean = false) {
+  if (id == null) return
+  if (flash) {
+    flashRecordId.value = id
+    if (flashTimer != null) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => {
+      flashRecordId.value = null
+      flashTimer = null
+    }, 1200)
+  }
+  nextTick(() => {
+    const host = recordListRef.value?.$el as HTMLElement
+    host?.querySelector(`[data-record-id="${id}"]`)?.scrollIntoView({ block: 'nearest' })
+  })
+}
+
+async function openTargetRule(target: MockMgrTarget) {
+  if (target.record != null && target.record.ruleId != null && target.record.ruleId !== target.ruleId) return
+  curRule.value = { _id: target.ruleId } as ProxyMock.MockRule
+  detailTask = fetchMockRuleDetail()
+  await detailTask
+  if (target.record != null && curRule.value?._id === target.ruleId) {
+    openRecord(target.record)
+    locateRecord(target.record.id)
+  }
 }
 
 async function addRecord() {
@@ -255,6 +524,8 @@ async function addRecord() {
 }
 
 async function onRecordSave() {
+  // 重入保护：保存中重复点击不再发请求，否则新建可能落两条同 url 记录
+  if (saving.value) return
   if (curRule.value?._id == null) {
     showNotify({ message: t('mock.editor.selectRuleFirst'), type: 'warning', duration: 800 })
     return
@@ -265,35 +536,131 @@ async function onRecordSave() {
 
   const issues = validateMockRecord(draft.value)
   if (issues.length > 0) {
-    showNotify({ message: t(`mock.editor.validation.${issues[0].code}`), type: 'warning', duration: 1200 })
+    const issue = issues[0]
+    showNotify({ message: t(`mock.editor.validation.${issue.code}`), type: 'warning', duration: 1500 })
+    recordEditorRef.value?.focusField(issue)
     return
   }
 
   if (detailTask != null) await detailTask
   saving.value = true
   try {
-    const expectedUpdatedAt = isNew.value ? null : draft.value.updatedAt
-    const result = await saveMockRecord(draft.value, expectedUpdatedAt)
+    // 保存前先查重，避免拿服务端错误去提示；唯一性以匹配条件为准
+    const duplicate = await findRecordByUrl(curRule.value._id, draft.value.url)
+    if (duplicate != null && duplicate.id !== draft.value.id && isSameMatch(duplicate, draft.value)) {
+      if (await confirmOpenExisting()) openRecord(duplicate)
+      return
+    }
+
+    const expectedUpdatedAt = isNew.value ? undefined : draft.value.updatedAt
+    const result = await saveMockRecord(draft.value, expectedUpdatedAt, { silentError: true })
     const saved = cloneRecord(draft.value)
     saved.id = result.id
     saved.updatedAt = result.updatedAt
-
-    if (curRule.value.requests == null) curRule.value.requests = new Map()
-    curRule.value.requests.set(saved.id, saved)
-    curRecordId.value = saved.id
-    draft.value = saved
-    savedSnapshot.value = JSON.stringify(saved)
-    isNew.value = false
-    showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 600 })
-  } catch (err: any) {
-    const message = String(err ?? '')
-    showNotify({
-      message: message.indexOf('已被其他人修改') >= 0 ? t('mock.editor.saveConflict') : t('mock.editor.saveFailed'),
-      type: 'danger',
-      duration: 1500
-    })
+    openRecord(saved)
+    locateRecord(saved.id, true)
+    showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 1000 })
+  } catch (err) {
+    const info = describeMockSaveError(err)
+    if (info.kind === 'conflict') {
+      // 冲突时保留本地内容，由用户选择覆盖保存或加载最新版本
+      showConflict.value = true
+      return
+    }
+    if (info.kind === 'duplicateUrl') {
+      const existing = info.existingRecordId != null
+        ? await getMockRecord(info.existingRecordId, { silentError: true })
+        : await findRecordByUrl(curRule.value._id, draft.value.url)
+      if (existing != null && existing.id !== draft.value.id && await confirmOpenExisting()) {
+        openRecord(existing)
+        return
+      }
+      showNotify({ message: t('mock.recordPanel.duplicateMessage'), type: 'warning', duration: 1500 })
+      return
+    }
+    if (info.kind === 'validation' && info.code) {
+      showNotify({ message: t(`mock.editor.validation.${info.code}`), type: 'warning', duration: 1500 })
+      return
+    }
+    showNotify({ message: t('mock.editor.saveFailed'), type: 'danger', duration: 1500 })
   } finally {
     saving.value = false
+  }
+}
+
+/** 双方都有 match 时按匹配条件判断重复；旧记录无 match 时退回 url 比较 */
+function isSameMatch(left: ProxyMock.MockRecord, right: ProxyMock.MockRecord): boolean {
+  if (left?.match == null || right?.match == null) return true
+  return canonicalMatch(left.match) === canonicalMatch(right.match)
+}
+
+async function confirmOpenExisting(): Promise<boolean> {
+  try {
+    await showConfirmDialog({
+      title: t('mock.record.openExistingTitle'),
+      message: t('mock.record.openExistingMessage', { rule: curRule.value?.name ?? '' }),
+      confirmButtonText: t('mock.record.openExisting'),
+      cancelButtonText: t('mock.record.keepEditing')
+    })
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+async function onConflictReload() {
+  showConflict.value = false
+  await reloadLatest()
+}
+
+// 覆盖保存：以服务端最新 updatedAt 作为期望值重试，保留本地内容
+async function onConflictOverwrite() {
+  showConflict.value = false
+  const recordId = draft.value?.id
+  if (recordId == null || saving.value) return
+  saving.value = true
+  try {
+    const latest = await getMockRecord(recordId, { silentError: true })
+    if (latest == null) {
+      showNotify({ message: t('mock.record.missing'), type: 'warning', duration: 1500 })
+      return
+    }
+    const result = await saveMockRecord(draft.value, latest.updatedAt, { silentError: true })
+    const saved = cloneRecord(draft.value)
+    saved.id = result.id
+    saved.updatedAt = result.updatedAt
+    openRecord(saved)
+    locateRecord(saved.id, true)
+    showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 1000 })
+  } catch (err) {
+    const info = describeMockSaveError(err)
+    if (info.kind === 'conflict') {
+      showConflict.value = true
+      return
+    }
+    if (info.kind === 'duplicateUrl') {
+      showNotify({ message: t('mock.recordPanel.duplicateMessage'), type: 'warning', duration: 1500 })
+      return
+    }
+    showNotify({ message: t('mock.editor.saveFailed'), type: 'danger', duration: 1500 })
+  } finally {
+    saving.value = false
+  }
+}
+
+async function reloadLatest() {
+  const recordId = draft.value?.id
+  if (recordId == null) return
+  try {
+    const latest = await getMockRecord(recordId, { silentError: true })
+    if (latest == null) {
+      showNotify({ message: t('mock.record.missing'), type: 'warning', duration: 1500 })
+      return
+    }
+    openRecord(latest)
+    showNotify({ message: t('mock.record.latestLoaded'), type: 'success', duration: 800 })
+  } catch (err) {
+    showNotify({ message: t('mock.record.latestLoadFailed'), type: 'danger', duration: 1200 })
   }
 }
 
@@ -360,10 +727,9 @@ async function fetchMockRuleDetail() {
     savedSnapshot.value = ''
     isNew.value = false
     await loadRecords(true)
-    if (withCurRecord.value && draft.value == null) startNewRecord()
   } catch (err) {
     if (curRule.value?._id !== ruleId) return
-    showNotify({ message: '未找到对应规则', type: 'warning', duration: 1000 })
+    showNotify({ message: t('mock.ruleNotFound'), type: 'warning', duration: 1000 })
   }
 }
 
@@ -390,16 +756,30 @@ async function loadRecords(reset: boolean = false) {
     recordOffset.value += page?.items?.length ?? 0
     recordHasMore.value = page?.hasMore === true
   } catch (err) {
-    if (seq === recordLoadSeq) showNotify({ message: '记录加载失败', type: 'danger', duration: 1200 })
+    if (seq === recordLoadSeq) showNotify({ message: t('mock.recordLoadFailed'), type: 'danger', duration: 1200 })
   } finally {
     if (seq === recordLoadSeq) recordLoading.value = false
   }
 }
 
+// 弹窗直接绑定 curRule，取消或保存失败时回滚，避免标题栏显示未保存的名称
+const ruleEditBackup = ref<{ name: string, desc: string }>(null)
+
 function onRuleEdit(rule?: ProxyMock.MockRule) {
   curRule.value = rule == null ? new ProxyMock.MockRule() : rule
+  ruleEditBackup.value = { name: curRule.value.name ?? '', desc: curRule.value.desc ?? '' }
   showSearchResult.value = false
   showRuleEdit.value = true
+}
+
+function onRuleEditClose(action: string): Promise<boolean> | boolean {
+  if (action === 'confirm') return saveRule(true)
+  if (ruleEditBackup.value != null && curRule.value != null) {
+    curRule.value.name = ruleEditBackup.value.name
+    curRule.value.desc = ruleEditBackup.value.desc
+  }
+  ruleEditBackup.value = null
+  return true
 }
 
 function onRuleDelete(rule: ProxyMock.MockRule) {
@@ -422,29 +802,75 @@ async function onRuleDeleteConfirm() {
     recordHasMore.value = false
     showRuleDelete.value = false
   } catch (err) {
-    showNotify({ message: '删除失败', type: 'warning', duration: 1000 })
+    showNotify({ message: t('mock.deleteFailed'), type: 'warning', duration: 1000 })
   }
 }
 
-function onMockSwitchChanged(rule: ProxyMock.MockRule) {
+async function onMockSwitchChanged(rule: ProxyMock.MockRule) {
   curRule.value = rule
-  onSave()
+  const next = rule.isMock
+  // 状态切换用专用提示，保存失败必须回退开关，避免界面与实际生效状态不一致
+  if (!await saveRule(false)) {
+    rule.isMock = !next
+    return
+  }
+  showNotify({
+    message: next ? t('mock.rule.enabledToast') : t('mock.rule.disabledToast'),
+    type: next ? 'success' : 'warning',
+    duration: 800
+  })
 }
 
-async function onSave() {
-  if (curRule.value == null || curRule.value.name == null) return
+function onSave(): Promise<boolean> {
+  return saveRule(true)
+}
+
+async function saveRule(notifySuccess: boolean): Promise<boolean> {
+  if (curRule.value == null) return false
+
+  const name = (curRule.value.name ?? '').trim()
+  if (name === '') {
+    showNotify({ message: t('mock.rule.nameRequired'), type: 'warning', duration: 1000 })
+    return false
+  }
+  curRule.value.name = name
 
   const isNewRule = curRule.value._id == null
+  let saved = false
   try {
     // 只保存规则元信息，请求记录由 onRecordSave 单独落盘
     curRule.value._id = await saveMockRule(curRule.value)
     // 已有规则无需重载记录，避免切换开关/改名时丢掉已加载的分页
     if (isNewRule) await fetchMockRuleDetail()
-    showNotify({ message: '规则更新成功', type: 'success', duration: 500 })
+    saved = true
+    if (notifySuccess) showNotify({ message: t('mock.ruleSaveSuccess'), type: 'success', duration: 500 })
+    // 搜索结果带名称缓存，改名后不刷新会继续显示旧名字
+    await refreshRuleSearch()
   } catch (err) {
-    showNotify({ message: '规则更新失败', type: 'danger', duration: 1200 })
+    // 规则在别处被删除时服务端只会返回“不存在”，提示重新选择比笼统失败更明确
+    const message = normalizeErrorText(err).includes('不存在')
+      ? t('mock.ruleNotFound')
+      : t('mock.ruleSaveFailed')
+    showNotify({ message, type: 'danger', duration: 1200 })
   }
-  showRuleEdit.value = false
+  // 保存失败时保留弹窗，避免用户丢失刚输入的名称
+  if (saved) {
+    ruleEditBackup.value = null
+    showRuleEdit.value = false
+  }
+  return saved
+}
+
+async function refreshRuleSearch() {
+  const kw = keyword.value
+  if (kw === '') return
+  try {
+    const result = await searchMockRules(kw)
+    if (keyword.value !== kw) return
+    rules.value = result ?? []
+  } catch (err) {
+    // 刷新失败不影响已保存结果
+  }
 }
 
 async function onRecordSelected(record: ProxyMock.MockRecord) {
@@ -453,7 +879,7 @@ async function onRecordSelected(record: ProxyMock.MockRecord) {
   curRecordId.value = record.id
   draft.value = prettifyRecordJson(cloneRecord(record))
   // 快照取自格式化后的草稿，仅改变展示时不会出现“未保存”
-  savedSnapshot.value = JSON.stringify(draft.value)
+  savedSnapshot.value = recordSnapshot(draft.value)
   isNew.value = false
 }
 
@@ -480,7 +906,7 @@ async function onRecordDeleteConfirm() {
       isNew.value = false
     }
   } catch (err) {
-    showNotify({ message: '删除失败', type: 'warning', duration: 1000 })
+    showNotify({ message: t('mock.deleteFailed'), type: 'warning', duration: 1000 })
   }
 }
 </script>
@@ -491,6 +917,7 @@ async function onRecordDeleteConfirm() {
   flex-direction: column;
   /* van-row 默认 wrap，列方向下高度超出弹层时会把主体换到右侧列并移出可视区 */
   flex-wrap: nowrap;
+  position: relative;
   width: min(80vw, 1600px);
   min-width: min(375px, 100vw);
   max-width: 100vw;
@@ -504,17 +931,19 @@ async function onRecordDeleteConfirm() {
   flex: none;
 }
 
-.rule-search-col,
-.rule-head-col {
-  /* 基准宽度固定为 0，避免右侧规则名称/描述变长时挤压搜索框 */
-  flex: 1 1 0;
-  min-width: min(348px, 100%);
-}
-
-/* 与右侧两行高度的规则信息居中对齐 */
 .rule-search-col {
+  /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表宽度减去左右各 5px 外边距 */
+  flex: none;
+  width: calc(min(300px, 34%) - 10px);
+  /* 与右侧两行高度的规则信息居中对齐 */
   display: flex;
   align-items: center;
+}
+
+.rule-head-col {
+  /* 搜索列宽度固定后，剩余空间全部给规则信息列 */
+  flex: 1 1 0;
+  min-width: min(348px, 100%);
 }
 
 .mgr-body {
@@ -525,21 +954,361 @@ async function onRecordDeleteConfirm() {
   flex-wrap: nowrap;
 }
 
-.record-list {
+.record-pane {
+  display: flex;
+  flex-direction: column;
   width: min(300px, 34%);
-  height: calc(100% - 10px);
+  /* 列表自带 5px 外边距，撑满主体高度后底边才能与右侧编辑器对齐 */
+  height: 100%;
+  min-height: 0;
+}
+
+.record-pane-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* 左侧与筛选行搜索图标对齐：筛选 10px + 输入框 8px；右侧与单元格内边距对齐 */
+  padding: 4px 20px 4px 18px;
+}
+
+.record-pane-title {
+  font-size: var(--van-font-size-md);
+  font-weight: 500;
+  color: var(--van-text-color);
+}
+
+/* 列表头的小按钮高度与内边距随全局字号缩放，图标继承按钮字号 */
+.record-pane-head :deep(.van-button--mini) {
+  height: calc(var(--van-font-size-md) * 1.85);
+  padding: 0 calc(var(--van-font-size-md) * .31);
+  border-radius: calc(var(--van-font-size-md) * .31);
+}
+
+.record-new-btn {
+  flex: none;
+}
+
+.record-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 0 10px 4px;
+}
+
+.record-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 8px;
+  border-radius: var(--van-radius-md);
+}
+
+.record-search :deep(.van-field__control) {
+  font-size: var(--van-font-size-sm);
+}
+
+.record-sort {
+  flex: none;
+  /* 触发条与 MiniSelect 弹层同用 sm；预留全局 1px 字距，最大字号下中英文标签都不截断 */
+  width: 104px;
+}
+
+.record-limit {
+  flex: none;
+  margin: 0 5px 4px;
+  padding: 4px 8px;
+  /* 限额提示是告警文案，不应落在最小号 */
+  font-size: var(--van-font-size-sm);
+}
+
+.record-limit.is-reject {
+  --van-notice-bar-text-color: var(--van-danger-color);
+  --van-notice-bar-background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
+}
+
+/* 记录行：两行固定结构（标识行 + 元信息行），行高收住，长文本统一尾部省略 */
+.record-row {
+  /* 行内尺寸随全局字号缩放：正文 md 为基准，配色块按 md 的 0.77 倍跟随 */
+  --record-line-font: var(--van-font-size-md);
+  --record-chip-font: calc(var(--record-line-font) * .77);
+  font-size: var(--record-line-font);
+  padding: calc(var(--record-line-font) * .5) calc(var(--record-line-font) * .77);
+  min-height: calc(var(--record-line-font) * 3.7);
+}
+
+.record-row :deep(.van-cell__title) {
+  min-width: 0;
+}
+
+.record-row :deep(.van-cell__label) {
+  margin-top: calc(var(--record-line-font) * .15);
+}
+
+.record-row:hover {
+  background: var(--van-active-color);
+}
+
+/* 选中态：左侧色条 + 淡底，替代只靠点击态区分 */
+.record-row--selected {
+  background: rgba(25, 137, 250, .08);
+}
+
+.record-row--selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--record-line-font) * .23);
+  background: var(--van-primary-color);
+}
+
+.record-row--selected:hover {
+  background: rgba(25, 137, 250, .12);
+}
+
+.record-line {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--record-line-font) * .385);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.record-line--meta {
+  gap: calc(var(--record-line-font) * .46);
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-xs);
+  line-height: 1.78;
+}
+
+/* 方法/状态色块与 van-tag 同字号，跟随系统字号设置 */
+.record-method,
+.record-status {
+  flex: none;
+  padding: 0 .44em;
+  border-radius: .33em;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: var(--van-tag-font-size);
+  font-weight: 600;
+  line-height: 1.78;
+}
+
+.record-method--get {
+  color: var(--van-primary-color);
+  background: rgba(25, 137, 250, .12);
+}
+
+.record-method--post {
+  color: var(--van-success-color);
+  background: rgba(7, 193, 96, .12);
+}
+
+.record-method--danger {
+  color: var(--van-danger-color);
+  background: rgba(238, 10, 36, .1);
+}
+
+.record-method--any {
+  color: var(--van-text-color-2);
+  background: var(--van-active-color);
+}
+
+.record-method--other {
+  color: var(--van-warning-color);
+  background: rgba(255, 151, 106, .16);
+}
+
+.record-level {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .33em;
+  font-size: var(--van-font-size-xs);
+  line-height: 1.78;
+  cursor: default;
+}
+
+.record-level::before {
+  content: '';
+  width: .55em;
+  height: .55em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.record-level--danger {
+  color: var(--van-danger-color);
+}
+
+.record-level--primary {
+  color: var(--van-primary-color);
+}
+
+.record-level--success {
+  color: var(--van-success-color);
+}
+
+.record-level--warning {
+  color: var(--van-warning-color);
+}
+
+.record-status {
+  margin-left: auto;
+}
+
+.record-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--van-text-color);
+  font-size: var(--van-font-size-md);
+  font-weight: 600;
+  line-height: 1.54;
+}
+
+.record-title-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  /* 仅选中行滚动：取消选中后立即回到默认省略状态 */
+  transform: none;
+  animation: none;
+}
+
+/* 选中行的记录名在可视宽度内来回滚动，长路径无需悬停即可看全 */
+.record-title--scroll {
+  container-type: inline-size;
+}
+
+.record-title--scroll .record-title-text {
+  max-width: none;
+  padding-right: calc(var(--record-line-font) * .92);
+  animation: record-title-marquee 5s ease-in-out infinite alternate;
+}
+
+@keyframes record-title-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+
+  88%,
+  100% {
+    transform: translateX(min(0px, calc(-100% + 100cqw)));
+  }
+}
+
+.record-status.is-ok {
+  color: var(--van-success-color);
+  background: rgba(7, 193, 96, .12);
+}
+
+.record-status.is-bad {
+  color: var(--van-danger-color);
+  background: rgba(238, 10, 36, .1);
+}
+
+.record-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--van-text-color-3);
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+}
+
+.record-meta {
+  flex: none;
+  white-space: nowrap;
+}
+
+.record-meta--variant {
+  color: var(--van-primary-color);
+}
+
+.record-meta--active {
+  color: var(--van-success-color);
+}
+
+/* 告警只显示第一条，其余折叠成 +N，完整说明放在 title 里 */
+.record-warn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .22em;
+  white-space: nowrap;
+}
+
+.record-warn .van-icon {
+  /* 文本行内图标跟随所在行的字号 */
+  font-size: 1em;
+}
+
+.record-warn--danger {
+  color: var(--van-danger-color);
+}
+
+.record-warn--warning {
+  color: var(--van-warning-color);
+}
+
+.record-warn--default {
+  color: var(--van-text-color-3);
+}
+
+/* 行内操作：裸图标，热区与字号同比缩放，悬停才强调 */
+.record-action {
+  flex: none;
+  padding: .27em;
+  margin-left: .4em;
+  border-radius: .27em;
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-lg);
+  cursor: pointer;
+  transition: color .15s, background-color .15s;
+}
+
+.record-action--danger:hover {
+  color: var(--van-danger-color);
+  background: rgba(238, 10, 36, .08);
+}
+
+.record-action--muted:hover {
+  color: var(--van-text-color);
+  background: var(--van-active-color);
+}
+
+.record-draft-tag {
+  flex: none;
+  padding: 0 .44em;
+  border-radius: .33em;
+  color: var(--van-warning-color);
+  background: rgba(255, 151, 106, .16);
+  font-size: var(--van-tag-font-size);
+  line-height: 1.78;
+}
+
+.record-load-more-cell {
+  padding: .46em .77em;
+}
+
+.record-list {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .record-load-more {
   color: var(--van-primary-color);
   font-size: var(--van-font-size-sm);
-}
-
-/* 保存/新增记录按钮在记录与编辑器之间纵向排列 */
-.record-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 .rule-editor-col {
@@ -558,12 +1327,70 @@ async function onRecordDeleteConfirm() {
 .editor-placeholder {
   margin: auto;
   color: var(--van-text-color-3);
+}
+
+/* 规则状态收拢在头部：名称后的标签是唯一状态说明，避免与开关重复 */
+.rule-head-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rule-head-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rule-state-tag {
+  flex: none;
+}
+
+.rule-mock-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+}
+
+.rule-mock-switch-label {
+  color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
-.record-save-disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+/* 草稿行：与正式记录区分，避免用户以为已落盘 */
+.record-draft-row {
+  background: rgba(255, 151, 106, .12);
+}
+
+.record-flash {
+  animation: record-flash 1.2s ease-out;
+}
+
+@keyframes record-flash {
+  0% {
+    background: rgba(25, 137, 250, .24);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+.conflict-message {
+  padding: 12px 16px 0;
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-md);
+  line-height: 1.5;
+}
+
+.conflict-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px;
 }
 
 .mgr-content :deep(.van-popover__wrapper) {
@@ -620,36 +1447,15 @@ async function onRecordDeleteConfirm() {
   width: 100%;
 }
 
-.record-snap {
-  border-radius: 4px;
-  /* border: 1px #ddd dashed; */
-  font-size: var(--van-font-size-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-  max-width: 220px;
-  display: block;
-  direction: rtl;
-  margin-bottom: 5px;
-}
-
 /* 窄屏下记录列表与编辑区上下排列，避免编辑区被挤到不可用宽度 */
 @media (max-width: 640px) {
   .mgr-body {
     flex-direction: column;
   }
 
-  .record-list {
-    width: calc(100% - 10px);
+  .record-pane {
+    width: 100%;
     height: 36%;
-  }
-
-  .record-actions {
-    padding-top: 0 !important;
-    flex-direction: row;
-    justify-content: center;
-    padding-bottom: 5px;
   }
 
   .rule-editor-col {

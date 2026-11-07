@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ConfigProviderTheme, ConfigProviderThemeVars, showNotify } from 'vant'
 import type { LocalServerConfig } from '@shared/base.models'
+import type { MockStatusBroadcast } from '@shared/mock.models'
 import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID, updateUpdateServer } from '@shared'
 import { API_URL } from '@shared/api.const'
 import { PushClient } from '../common'
@@ -44,6 +45,12 @@ const FONT_SIZE_MD_OFFSET = 4
 
 export { FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_MD_OFFSET }
 
+interface MockStatusState {
+  ruleId: string
+  ruleName: string
+  enabled: boolean
+}
+
 export const CommonStore = defineStore('Common', {
   state: () => {
     return {
@@ -58,7 +65,9 @@ export const CommonStore = defineStore('Common', {
       registerUrl: '',
       clientInfos: [] as Array<ProxyMock.ClientInfo>,
       serverConfig: {} as LocalServerConfig,
-      onboarded: false
+      onboarded: false,
+      // 多窗口同步的全局 Mock 开关状态
+      mockStatus: { ruleId: '', ruleName: '', enabled: false } as MockStatusState
     }
   },
   actions: {
@@ -169,6 +178,15 @@ export const CommonStore = defineStore('Common', {
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {
       this.clientInfos = [...clientInfos]
+    },
+    // 其他窗口切换 Mock 后同步本地展示状态
+    updateMockStatus(status: MockStatusBroadcast) {
+      if (status == null) return
+      this.mockStatus = {
+        ruleId: status.enabled ? (status.ruleId ?? '') : '',
+        ruleName: status.enabled ? (status.ruleName ?? '') : '',
+        enabled: status.enabled === true,
+      }
     },
     async markOnboarded() {
       this.onboarded = true

@@ -22,7 +22,10 @@
     "pub:full": "yarn pkg && node --import tsx .build-scripts/publish.ts --target=full",
     "postinstall": "yarn electron-builder install-app-deps",
     "rebuild": "electron-rebuild",
-    "updateServer": "node --import tsx .build-scripts/update-server.ts"
+    "updateServer": "node --import tsx .build-scripts/update-server.ts",
+    "ws-lab": "node tools/ws-lab/server.mjs",
+    "ws-lab:client": "node tools/ws-lab/node-client.mjs",
+    "ws-lab:smoke": "node tools/ws-lab/smoke.mjs"
   },
   "config": {
     "port": 8884,
@@ -65,7 +68,8 @@
     "pouchdb-node": "^9.0.0",
     "reflect-metadata": "^0.2.2",
     "sockjs": "^0.3.24",
-    "tcp-port-used": "^1.0.2"
+    "tcp-port-used": "^1.0.2",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
@@ -84,6 +88,7 @@
     "@types/source-map-support": "^0.5.10",
     "@types/spinnies": "^0.5.3",
     "@types/tcp-port-used": "^1.0.4",
+    "@types/ws": "^8.5.10",
     "@vant/touch-emulator": "^1.5.0",
     "@vue/compiler-sfc": "^3.5.12",
     "ace-builds": "^1.43.6",

@@ -103,7 +103,16 @@ export abstract class BaseRouter {
       if (err instanceof BizFail) {
         bizResp = { code: err.code, msg: err.msg }
       } else {
-        bizResp = { code: BizCode.ERROR, msg: err.toString() }
+        // Error.toString() 会带 "Error: " 前缀，直接展示给用户时去掉
+        bizResp = { code: BizCode.ERROR, msg: err instanceof Error ? err.message : String(err) }
+        // Mock 匹配引擎的结构化错误：错误码与冲突记录 ID 供 UI 定位，不改变原有 msg 行为
+        const extra = err as any
+        if (extra?.name === 'MockError') {
+          bizResp.errorCode = extra.code
+          if (extra.detail != null) bizResp.detail = extra.detail
+          if (extra.existingRecordId != null) bizResp.existingRecordId = extra.existingRecordId
+        }
+        if (Array.isArray(extra?.issues)) bizResp.issues = extra.issues
       }
     } finally {
       resp.json(bizResp)
