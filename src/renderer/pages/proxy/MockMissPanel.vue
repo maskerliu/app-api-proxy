@@ -50,6 +50,7 @@ import type { MockMissDiagnostic, MockMissFailure } from '@shared/mock.models'
 import { showNotify } from 'vant'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { copyToClipboard } from '../../common/clipboard'
 
 const props = defineProps<{
   miss: MockMissDiagnostic
@@ -77,13 +78,7 @@ function detailText(detail: string): string {
 async function copyDiagnosis() {
   const text = buildMarkdown()
   try {
-    if (window.mainApi) {
-      await window.mainApi.writeClipboard(text)
-    } else if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
-    } else {
-      throw new Error('clipboard unavailable')
-    }
+    await copyToClipboard(text)
     showNotify({ message: t('mock.miss.copied'), type: 'success', duration: 800 })
   } catch (err) {
     showNotify({ message: t('mock.miss.copyFailed'), type: 'warning', duration: 1200 })
@@ -111,22 +106,26 @@ function buildMarkdown(): string {
 
 <style scoped>
 .miss-panel {
-  padding: 8px;
+  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
+  --sp-md: calc(var(--van-font-size-md) * 0.4615);
+  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
+  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
+  padding: var(--sp-lg);
   border: 1px solid var(--van-warning-color);
   border-radius: var(--van-radius-lg);
-  background: rgba(255, 151, 106, 0.08);
+  background: color-mix(in srgb, var(--van-warning-color) 8%, transparent);
 }
 
 .miss-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
 }
 
 .miss-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   flex: 1 1 auto;
   min-width: 0;
   color: var(--van-warning-color);
@@ -138,27 +137,27 @@ function buildMarkdown(): string {
 }
 
 .miss-degraded {
-  margin-top: 6px;
-  padding: 4px 8px;
+  margin-top: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-lg);
   border-radius: var(--van-radius-md);
-  background: rgba(255, 151, 106, 0.16);
+  background: color-mix(in srgb, var(--van-warning-color) 16%, transparent);
   color: var(--van-warning-color);
   font-size: var(--van-font-size-sm);
 }
 
 .miss-table {
-  margin-top: 8px;
+  margin-top: var(--sp-lg);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-xs);
 }
 
 .miss-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  grid-template-columns: calc(var(--van-font-size-md) * 4.923) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
   font-size: var(--van-font-size-sm);
@@ -178,7 +177,7 @@ function buildMarkdown(): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   word-break: break-all;
 }
 
@@ -200,7 +199,7 @@ function buildMarkdown(): string {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: var(--sp-md);
+  margin-top: var(--sp-lg);
 }
 </style>

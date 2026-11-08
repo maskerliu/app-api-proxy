@@ -4,7 +4,7 @@ import type {
 } from '@shared/mock.models'
 import {
   MOCK_ANY_METHOD, MOCK_HIGH_RISK_KEYS, MOCK_METHODS, MOCK_MATCH_LEVELS, MOCK_PATH_TYPES,
-  MOCK_QUERY_OPERATORS, MOCK_SENSITIVE_KEYS, MOCK_SEMANTIC_KEYS, createDefaultMatch, levelOf, normalizeHost,
+  MOCK_QUERY_OPERATORS, MOCK_SEMANTIC_KEYS, createDefaultMatch, levelOf, normalizeHost,
 } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
 
@@ -17,7 +17,6 @@ export const PATH_TYPES = MOCK_PATH_TYPES
 export const QUERY_OPERATORS = MOCK_QUERY_OPERATORS
 export const RISK_KEYS = new Set<string>(MOCK_HIGH_RISK_KEYS)
 export const SEMANTIC_KEYS = new Set<string>(MOCK_SEMANTIC_KEYS)
-export const SENSITIVE_KEYS = new Set<string>(MOCK_SENSITIVE_KEYS)
 
 export interface MatchSummary {
   method: string
@@ -38,6 +37,7 @@ export interface LevelPresetDiff {
   allowExtraTo: boolean
   headersCleared: number
   pathChanged: boolean
+  levelChanged: boolean
   empty: boolean
 }
 
@@ -73,16 +73,6 @@ export function hostOfUrl(url: string): string {
   const parsed = safeUrl(url)
   if (parsed == null || parsed.hostname === 'placeholder.local') return ''
   return parsed.port ? `${parsed.hostname}:${parsed.port}` : parsed.hostname
-}
-
-export function queryKeysOfUrl(url: string): string[] {
-  const parsed = safeUrl(url)
-  if (parsed == null) return []
-  const keys: string[] = []
-  parsed.searchParams.forEach((_, key) => {
-    if (keys.indexOf(key) === -1) keys.push(key)
-  })
-  return keys
 }
 
 /** 记录缺失 match 时，用录制来源补一份默认条件，保证匹配 Tab 可直接编辑 */
@@ -213,14 +203,15 @@ export function previewLevel(level: MockMatchLevel, record: ProxyMock.MockRecord
     },
     headers: { ignoreKeys: current.headers.ignoreKeys, conditions: [] },
   })
-  next.level = levelOf(next)
+  next.level = 'standard'
   return { level, match: next, diff: diffOf(current, next), changed: true }
 }
 
 function emptyDiff(): LevelPresetDiff {
   return {
     addedKeys: [], removedKeys: [], ignoredAdded: [], ignoredRemoved: [],
-    allowExtraFrom: true, allowExtraTo: true, headersCleared: 0, pathChanged: false, empty: true,
+    allowExtraFrom: true, allowExtraTo: true, headersCleared: 0, pathChanged: false,
+    levelChanged: false, empty: true,
   }
 }
 
@@ -238,13 +229,14 @@ export function diffOf(before: MockMatchRule, after: MockMatchRule): LevelPreset
   const headersCleared = Math.max(0,
     (before.headers?.conditions?.length ?? 0) - (after.headers?.conditions?.length ?? 0))
   const pathChanged = before.path !== after.path || before.pathType !== after.pathType
+  const levelChanged = before.level !== after.level
 
   return {
     addedKeys, removedKeys, ignoredAdded, ignoredRemoved,
-    allowExtraFrom, allowExtraTo, headersCleared, pathChanged,
+    allowExtraFrom, allowExtraTo, headersCleared, pathChanged, levelChanged,
     empty: addedKeys.length === 0 && removedKeys.length === 0
       && ignoredAdded.length === 0 && ignoredRemoved.length === 0
-      && allowExtraFrom === allowExtraTo && headersCleared === 0 && !pathChanged,
+      && allowExtraFrom === allowExtraTo && headersCleared === 0 && !pathChanged && !levelChanged,
   }
 }
 
@@ -259,10 +251,6 @@ export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
 export function addHeaderCondition(match: MockMatchRule, name: string = ''): void {
   if (match.headers == null) match.headers = { ignoreKeys: [], conditions: [] }
   match.headers.conditions.push({ name, op: 'equals', value: '', source: 'manual' })
-}
-
-export function isQueryOperator(value: string): value is MockQueryOperator {
-  return (MOCK_QUERY_OPERATORS as readonly string[]).includes(value)
 }
 
 export function operatorNeedsValue(op: MockQueryOperator): boolean {
@@ -283,20 +271,6 @@ export function orderingLabelKey(ordering: MockMatchOrdering): string {
 
 export function warningLabelKey(type: MockMatchWarningType): string {
   return `mock.list.warning.${type}`
-}
-
-/** 敏感键在 UI 中不得回显明文 */
-export function maskSensitive(key: string, value: string): string {
-  if (value == null || value === '') return value ?? ''
-  return SENSITIVE_KEYS.has(String(key ?? '').toLowerCase()) ? '***' : value
-}
-
-export function isKnownLevel(value: string): value is MockMatchLevel {
-  return (MOCK_MATCH_LEVELS as readonly string[]).includes(value)
-}
-
-export function isKnownPathType(value: string): boolean {
-  return (MOCK_PATH_TYPES as readonly string[]).includes(value)
 }
 
 export function sortRecords(records: ProxyMock.MockRecord[], sort: 'updated' | 'created' | 'priority'): ProxyMock.MockRecord[] {

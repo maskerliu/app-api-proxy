@@ -8,11 +8,6 @@ export default createRouter({
       redirect: '/proxy'
     },
     {
-      path: '/welcome',
-      name: 'Welcome',
-      component: require('../pages/welcome/Welcome.vue').default
-    },
-    {
       path: '/onboarding',
       name: 'Onboarding',
       component: require('../pages/onboarding/Onboarding.vue').default
@@ -26,16 +21,6 @@ export default createRouter({
       path: '/proxy',
       name: 'Proxy',
       component: require('../pages/proxy/Proxy.vue').default
-    },
-    {
-      path: '/lab',
-      name: 'Lab',
-      component: require('../pages/lab/Lab.vue').default
-    },
-    {
-      path: '/message',
-      name: 'Message',
-      component: require('../pages/message/Message.vue').default
     },
     {
       path: '/settings',

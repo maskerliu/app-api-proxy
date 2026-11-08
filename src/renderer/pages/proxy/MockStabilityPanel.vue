@@ -209,11 +209,15 @@ async function showConfirm(message: string) {
 
 <style scoped>
 .stability-panel {
-  padding: 8px;
+  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
+  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
+  --sp-md: calc(var(--van-font-size-md) * 0.4615);
+  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
+  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
+  padding: var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
-  /* 面板内未单独指定颜色的文本跟随明暗主题 */
   color: var(--van-text-color);
 }
 
@@ -221,7 +225,7 @@ async function showConfirm(message: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-lg);
 }
 
 .panel-title {
@@ -230,22 +234,22 @@ async function showConfirm(message: string) {
 }
 
 .panel-block {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--sp-lg);
+  padding-top: var(--sp-lg);
   border-top: 1px dashed var(--van-border-color);
 }
 
 .panel-block:first-of-type {
   border-top: 0;
-  padding-top: 4px;
+  padding-top: var(--sp-sm);
 }
 
 .block-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-sm);
 }
 
 .block-title {
@@ -256,14 +260,14 @@ async function showConfirm(message: string) {
 .key-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-sm);
 }
 
 .key-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
+  gap: var(--sp-lg);
+  padding: var(--sp-sm) var(--sp-md);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
 }
@@ -278,16 +282,15 @@ async function showConfirm(message: string) {
 .key-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   flex: 1 1 auto;
   min-width: 0;
 }
 
 .key-name {
   flex: none;
-  /* 超长键名在行内换行，不把右侧操作挤出可视区 */
   max-width: 60%;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-md);
   word-break: break-all;
 }
@@ -314,7 +317,7 @@ async function showConfirm(message: string) {
 .path-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
 }
 
 /* 长路径挤占空间时按钮不收缩，文案保持单行 */
@@ -330,27 +333,27 @@ async function showConfirm(message: string) {
 
 .path-value {
   display: block;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-md);
   word-break: break-all;
 }
 
 .path-original {
   display: block;
-  margin-top: 2px;
+  margin-top: var(--sp-xs);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
 }
 
 .panel-empty {
-  margin: 4px 0 0;
+  margin: var(--sp-sm) 0 0;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
 
 .panel-hint {
-  margin: 6px 0 0;
+  margin: var(--sp-md) 0 0;
   color: var(--van-warning-color);
   font-size: var(--van-font-size-sm);
 }

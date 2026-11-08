@@ -165,7 +165,7 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
   /* 抵消外层 van-cell__value 的右对齐，与请求头键值样式保持一致 */
   text-align: left;
   /* label 与 input 统一为 Ace 编辑器字体 */
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-md);
   user-select: text;
 }
@@ -186,7 +186,7 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
 }
 
 .body-text {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+  font-family: var(--mono-font);
   white-space: pre-wrap;
   word-break: break-all;
   text-align: left;

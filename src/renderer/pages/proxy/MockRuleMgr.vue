@@ -1,13 +1,13 @@
 <template>
   <van-row class="mgr-content">
     <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - 10px);"
-      :style="{ paddingTop: isWeb ? '0' : '10px' }">
+      :style="{ paddingTop: isWeb ? '0' : 'calc(var(--van-font-size-md) * 0.7692)' }">
       <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
           placement="bottom-start" :show-arrow="false" :offset="[0, 2]">
           <template #reference>
             <div ref="searchBox" style="width: 100%;" @click="onSearchBoxClick">
-              <van-search class="rule-search" show-action :clearable="false" v-model="keyword" style="padding: 0;"
+              <van-search class="rule-search" show-action :clearable="false" v-model="keyword"
                 :placeholder="$t('common.searchPlaceholder')">
                 <template #action>
                   <van-button class="rule-add-btn" plain type="primary" size="small" icon="plus"
@@ -20,15 +20,15 @@
           <OverlayScrollbarsComponent class="search-result"
             :style="searchWidth > 0 ? { width: searchWidth + 'px' } : null" :options="scrollOptions" defer>
             <van-list :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
-              <van-cell center class="rule-snap-item1" is-link v-for="(rule, idx) in rules" :title="rule.name"
+              <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
                 :label="rule.desc" @click="onRuleSelect(rule)">
                 <template #value>
                   <div>
-                    <van-icon class="iconfont icon-edit" size="16" style="color: #3498db; padding: 5px"
+                    <van-icon class="iconfont icon-edit result-action-icon result-action-icon--primary"
                       @click.stop="onRuleEdit(rule)" />
-                    <van-icon class="iconfont icon-delete" size="16" style="color: red; padding: 5px"
+                    <van-icon class="iconfont icon-delete result-action-icon result-action-icon--danger"
                       @click.stop="onRuleDelete(rule)" />
-                    <van-icon class="iconfont icon-upload" size="16" style="color: red; padding: 5px"
+                    <van-icon class="iconfont icon-upload result-action-icon result-action-icon--danger"
                       @click.stop="onSave" />
                   </div>
                 </template>
@@ -38,11 +38,11 @@
         </van-popover>
       </van-col>
       <van-col class="rule-head-col">
-        <van-cell :clickable="false" center style="padding: 5px 10px;" :title-style="{ flexGrow: 1.2 }"
+        <van-cell :clickable="false" center class="rule-head-cell" :title-style="{ flexGrow: 1.2 }"
           value-class="rule-mgr-cell-value">
           <template #icon>
-            <van-icon class="iconfont icon-cancel" :class="{ 'rule-cancel-disabled': curRule._id == null }" size="20"
-              style="margin-right: 10px;" :style="{ color: curRule._id == null ? 'var(--van-gray-5)' : 'red' }"
+            <van-icon class="iconfont icon-cancel rule-cancel-icon" :class="{ 'rule-cancel-disabled': curRule._id == null }"
+              :style="{ color: curRule._id == null ? 'var(--van-gray-5)' : 'var(--van-danger-color)' }"
               @click="onRuleSelect(null)" />
           </template>
           <template #title>
@@ -61,15 +61,15 @@
           </template>
           <template #value>
             <van-button plain type="primary" size="small" @click="onRuleEdit(curRule)" :disabled="curRule._id == null">
-              <van-icon class="iconfont icon-edit" size="14" />
+              <van-icon class="iconfont icon-edit btn-action-icon" />
             </van-button>
             <van-button plain type="danger" size="small" @click="onRuleDelete(curRule)" :disabled="curRule._id == null"
-              style="margin-left: 10px;">
-              <van-icon class="iconfont icon-delete" size="14" style="color: red;" />
+              class="btn-action-gap">
+              <van-icon class="iconfont icon-delete btn-action-icon btn-action-icon--danger" />
             </van-button>
             <van-button plain type="primary" size="small" @click="onSave" :disabled="curRule._id == null"
-              style="margin-left: 10px;">
-              <van-icon class="iconfont icon-cloud-sync" size="14" />
+              class="btn-action-gap">
+              <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
             </van-button>
           </template>
           <template #right-icon>
@@ -90,14 +90,13 @@
             :disabled="curRule._id == null" @click="addRecord"></van-button>
         </div>
         <div class="record-filter">
-          <van-field v-model="recordKeyword" class="record-search" clearable left-icon="search"
+          <van-search v-model="recordKeyword" class="record-search" clearable
             :placeholder="$t('mock.list.searchPlaceholder')" />
           <mini-select :model-value="recordSort" class="record-sort" :options="sortOptions"
             @update:model-value="onSortChange" />
         </div>
         <van-notice-bar v-if="curRule.limitState?.warn" class="record-limit" wrapable :scrollable="false"
-          :class="{ 'is-reject': curRule.limitState.reject }"
-          :text="curRule.limitState.reject
+          :class="{ 'is-reject': curRule.limitState.reject }" :text="curRule.limitState.reject
             ? $t('mock.list.limitReject', { count: curRule.limitState.count, limit: MOCK_RECORD_REJECT_LIMIT })
             : $t('mock.list.limitWarn', { count: curRule.limitState.count })" />
         <OverlayScrollbarsComponent ref="recordListRef" class="border-bg record-list" :options="scrollOptions" defer>
@@ -115,7 +114,7 @@
               <template #title>
                 <div class="record-line">
                   <span class="record-title">{{ draft.name || $t('mock.editor.newRecord') }}</span>
-                  <span class="record-draft-tag">{{ $t('mock.editor.unsaved') }}</span>
+                  <van-tag plain type="warning" class="record-draft-tag">{{ $t('mock.editor.unsaved') }}</van-tag>
                 </div>
               </template>
               <template #label>
@@ -128,13 +127,14 @@
               </template>
             </van-cell>
             <van-cell center clickable v-for="row in recordRows" :key="row.record.id"
-              @click="onRecordSelected(row.record)" :data-record-id="row.record.id"
-              class="record-row" :class="{ 'record-row--selected': row.record.id === curRecordId, 'record-flash': row.record.id === flashRecordId }">
+              @click="onRecordSelected(row.record)" :data-record-id="row.record.id" class="record-row"
+              :class="{ 'record-row--selected': row.record.id === curRecordId, 'record-flash': row.record.id === flashRecordId }">
               <template #title>
                 <div class="record-line">
-                  <span v-if="row.summary" class="record-method" :class="`record-method--${methodTone(row.summary.method)}`">
-                    {{ row.summary.method }}
-                  </span>
+                  <van-tag v-if="row.summary" :type="methodTagType(row.summary.method)" class="record-method"
+                    :title="row.summary.method">
+                    {{ row.summary.method.charAt(0) }}
+                  </van-tag>
                   <span class="record-title" :class="{ 'record-title--scroll': row.record.id === curRecordId }"
                     :title="row.titleHint">
                     <span class="record-title-text">{{ row.title }}</span>
@@ -143,38 +143,31 @@
               </template>
               <template #label>
                 <div class="record-line record-line--meta">
-                  <span v-if="row.summary" class="record-level"
-                    :class="`record-level--${levelTagType(row.summary.level)}`"
-                    :title="$t(`mock.match.levelHint.${row.summary.level}`)">
-                    {{ $t(`mock.match.level.${row.summary.level}`) }}
-                  </span>
                   <span v-if="row.subPath" class="record-path" :title="row.subPath">{{ row.subPath }}</span>
-                  <span v-if="row.ignoreKeys.length > 0" class="record-meta"
-                    :title="row.ignoreKeys.join(',')">
-                    {{ $t('mock.list.ignoredCount', { count: row.ignoreKeys.length }) }}
-                  </span>
-                  <span v-if="row.variantCount > 0" class="record-meta record-meta--variant">
-                    {{ $t('mock.editor.variantCount', { count: row.variantCount }) }}
-                  </span>
                   <span v-if="row.active" class="record-meta record-meta--active">
                     {{ $t('mock.editor.active') }}
                   </span>
-                  <span v-if="row.warning" class="record-warn"
-                    :class="`record-warn--${warningTagType(row.warning.type)}`"
+                  <van-tag v-if="row.warning" plain :type="warningTagType(row.warning.type)" class="record-warn"
                     :title="warningTitle(row.record)">
                     <van-icon name="warning-o" />
                     {{ $t(warningLabelKey(row.warning.type)) }}
                     <template v-if="row.warningExtra > 0">+{{ row.warningExtra }}</template>
-                  </span>
-                  <span class="record-status" :class="row.statusOk ? 'is-ok' : 'is-bad'"
-                    :title="`HTTP ${row.statusCode}`">
-                    [http]{{ row.statusCode }}
+                  </van-tag>
+                  <span class="record-status-group">
+                    <van-tag v-if="row.summary" plain :type="levelTagType(row.summary.level)" class="record-level"
+                      :title="$t(`mock.match.levelHint.${row.summary.level}`)">
+                      {{ $t(`mock.match.level.${row.summary.level}`) }}
+                    </van-tag>
+                    <van-tag plain :type="row.statusOk ? 'success' : 'danger'" class="record-status"
+                      :title="`HTTP ${row.statusCode}`">
+                      {{ row.statusCode }}
+                    </van-tag>
                   </span>
                 </div>
               </template>
               <template #right-icon>
                 <van-icon class="iconfont icon-delete record-action record-action--danger"
-                  :title="$t('mock.record.delete.title')" @click.stop="onRecordDelete(row.record.id)" />
+                  @click.stop="onRecordDelete(row.record.id)" />
               </template>
             </van-cell>
             <van-cell v-if="recordHasMore" clickable center class="record-load-more-cell" @click="loadRecords()">
@@ -197,8 +190,7 @@
     </van-row>
 
     <van-dialog :title="$t('mock.rule.delete.title')" v-model:show="showRuleDelete" show-cancel-button
-      :cancel-button-text="$t('common.cancel')"
-      :confirm-button-text="$t('common.done')" @confirm="onRuleDeleteConfirm"
+      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')" @confirm="onRuleDeleteConfirm"
       :message="$t('mock.rule.delete.confirm', { rule: curRule != null ? curRule.name : '' })" />
 
     <van-dialog :title="$t('mock.rule.title')" v-model:show="showRuleEdit" show-cancel-button
@@ -211,9 +203,8 @@
     </van-dialog>
 
     <van-dialog :title="$t('mock.record.delete.title')" v-model:show="showRecordDelete" show-cancel-button
-      :cancel-button-text="$t('common.cancel')"
-      :confirm-button-text="$t('common.done')" @confirm="onRecordDeleteConfirm"
-      :message="$t('mock.record.delete.confirm')" />
+      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
+      @confirm="onRecordDeleteConfirm" :message="$t('mock.record.delete.confirm')" />
 
     <van-dialog v-model:show="showConflict" :title="$t('mock.record.conflictTitle')" :show-confirm-button="false">
       <div class="conflict-message">{{ $t('mock.record.conflictMessage') }}</div>
@@ -336,13 +327,13 @@ function levelTagType(level: string): 'primary' | 'success' | 'warning' | 'dange
 }
 
 // 方法用小色块区分，便于在列表中按请求类型快速扫读
-function methodTone(method: string): 'get' | 'post' | 'danger' | 'any' | 'other' {
+function methodTagType(method: string): 'primary' | 'success' | 'warning' | 'danger' | 'default' {
   const value = String(method ?? '').toUpperCase()
-  if (value === 'GET') return 'get'
-  if (value === 'POST') return 'post'
+  if (value === 'GET') return 'primary'
+  if (value === 'POST') return 'success'
   if (value === 'DELETE') return 'danger'
-  if (MOCK_ANY_METHOD === value) return 'any'
-  return 'other'
+  if (MOCK_ANY_METHOD === value) return 'warning'
+  return 'default'
 }
 
 function warningTagType(type: string): 'danger' | 'warning' | 'default' {
@@ -929,12 +920,13 @@ async function onRecordDeleteConfirm() {
 
 .top-bar {
   flex: none;
+  flex-wrap: nowrap;
 }
 
 .rule-search-col {
-  /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表宽度减去左右各 5px 外边距 */
+  /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表宽度减去左右外边距 */
   flex: none;
-  width: calc(min(300px, 34%) - 10px);
+  width: calc(min(300px, 34%) - calc(var(--van-font-size-md) * 0.7692));
   /* 与右侧两行高度的规则信息居中对齐 */
   display: flex;
   align-items: center;
@@ -943,7 +935,8 @@ async function onRecordDeleteConfirm() {
 .rule-head-col {
   /* 搜索列宽度固定后，剩余空间全部给规则信息列 */
   flex: 1 1 0;
-  min-width: min(348px, 100%);
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .mgr-body {
@@ -968,9 +961,9 @@ async function onRecordDeleteConfirm() {
   flex: none;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: calc(var(--van-font-size-md) * 0.6154);
   /* 左侧与筛选行搜索图标对齐：筛选 10px + 输入框 8px；右侧与单元格内边距对齐 */
-  padding: 4px 20px 4px 18px;
+  padding: calc(var(--van-font-size-md) * 0.3077) calc(var(--van-font-size-md) * 1.5385) calc(var(--van-font-size-md) * 0.3077) calc(var(--van-font-size-md) * 1.3846);
 }
 
 .record-pane-title {
@@ -993,32 +986,94 @@ async function onRecordDeleteConfirm() {
 .record-filter {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(var(--van-font-size-md) * 0.4615);
   flex: none;
-  padding: 0 10px 4px;
+  padding: 0 calc(var(--van-font-size-md) * 0.7692) calc(var(--van-font-size-md) * 0.3077);
+  /* 搜索框与筛选下拉共享同一行高，字号切换时始终对齐 */
+  --record-row-h: calc(var(--van-font-size-md) * 2.3077);
 }
 
 .record-search {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 2px 8px;
-  border-radius: var(--van-radius-md);
+  height: var(--record-row-h) !important;
+  max-height: var(--record-row-h) !important;
+  min-height: var(--record-row-h) !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  overflow: hidden;
+  --van-search-padding: 0;
+  --van-search-input-height: var(--record-row-h);
+  --van-cell-vertical-padding: 0;
+}
+
+.record-search :deep(.van-cell) {
+  padding: 0 !important;
+  box-sizing: border-box;
+  height: var(--record-row-h) !important;
+  max-height: var(--record-row-h) !important;
+  min-height: var(--record-row-h) !important;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.record-search :deep(.van-cell::after),
+.record-search :deep(.van-cell::before) {
+  display: none !important;
+}
+
+.record-search :deep(.van-search__shape) {
+  height: 100% !important;
+  box-sizing: border-box;
+}
+
+.record-search :deep(.van-field) {
+  height: 100% !important;
+  padding: 0 !important;
+}
+
+.record-search :deep(.van-field__body) {
+  display: flex;
+  align-items: center;
+  height: 100% !important;
+  padding: 0 !important;
 }
 
 .record-search :deep(.van-field__control) {
+  height: auto;
+  line-height: normal;
+  padding: 0 !important;
+}
+
+.record-search :deep(.van-search__content) {
   font-size: var(--van-font-size-sm);
+  height: 100% !important;
+  display: flex;
+  align-items: center;
+  padding: 0 !important;
+}
+
+.record-search :deep(.van-field__left-icon),
+.record-search :deep(.van-field__right-icon) {
+  display: flex;
+  align-items: center;
+  height: 100% !important;
 }
 
 .record-sort {
   flex: none;
   /* 触发条与 MiniSelect 弹层同用 sm；预留全局 1px 字距，最大字号下中英文标签都不截断 */
-  width: 104px;
+  width: calc(var(--van-font-size-md) * 8);
+  height: var(--record-row-h);
+  box-sizing: border-box;
+  --mini-select-bar-height: var(--record-row-h);
 }
 
 .record-limit {
   flex: none;
-  margin: 0 5px 4px;
-  padding: 4px 8px;
+  margin: 0 calc(var(--van-font-size-md) * 0.3846) calc(var(--van-font-size-md) * 0.3077);
+  padding: calc(var(--van-font-size-md) * 0.3077) calc(var(--van-font-size-md) * 0.6154);
   /* 限额提示是告警文案，不应落在最小号 */
   font-size: var(--van-font-size-sm);
 }
@@ -1043,7 +1098,8 @@ async function onRecordDeleteConfirm() {
 }
 
 .record-row :deep(.van-cell__label) {
-  margin-top: calc(var(--record-line-font) * .15);
+  margin-top: calc(var(--record-line-font) * .35);
+  min-width: 0;
 }
 
 .record-row:hover {
@@ -1052,7 +1108,7 @@ async function onRecordDeleteConfirm() {
 
 /* 选中态：左侧色条 + 淡底，替代只靠点击态区分 */
 .record-row--selected {
-  background: rgba(25, 137, 250, .08);
+  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
 }
 
 .record-row--selected::before {
@@ -1066,7 +1122,7 @@ async function onRecordDeleteConfirm() {
 }
 
 .record-row--selected:hover {
-  background: rgba(25, 137, 250, .12);
+  background: color-mix(in srgb, var(--van-primary-color) 12%, transparent);
 }
 
 .record-line {
@@ -1082,81 +1138,40 @@ async function onRecordDeleteConfirm() {
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
   line-height: 1.78;
+  min-width: 0;
 }
 
-/* 方法/状态色块与 van-tag 同字号，跟随系统字号设置 */
-.record-method,
-.record-status {
+/* 方法色块：正方形圆角，跟随系统字号 */
+.record-method {
   flex: none;
-  padding: 0 .44em;
-  border-radius: .33em;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: var(--van-tag-font-size);
+  width: calc(var(--record-line-font) * 1.6);
+  height: calc(var(--record-line-font) * 1.6);
+  border-radius: calc(var(--record-line-font) * .35);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono-font);
   font-weight: 600;
-  line-height: 1.78;
 }
 
-.record-method--get {
-  color: var(--van-primary-color);
-  background: rgba(25, 137, 250, .12);
-}
-
-.record-method--post {
-  color: var(--van-success-color);
-  background: rgba(7, 193, 96, .12);
-}
-
-.record-method--danger {
-  color: var(--van-danger-color);
-  background: rgba(238, 10, 36, .1);
-}
-
-.record-method--any {
-  color: var(--van-text-color-2);
-  background: var(--van-active-color);
-}
-
-.record-method--other {
-  color: var(--van-warning-color);
-  background: rgba(255, 151, 106, .16);
+.record-status-group {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--record-line-font) * 0.3);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .record-level {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: .33em;
-  font-size: var(--van-font-size-xs);
-  line-height: 1.78;
   cursor: default;
 }
 
-.record-level::before {
-  content: '';
-  width: .55em;
-  height: .55em;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.record-level--danger {
-  color: var(--van-danger-color);
-}
-
-.record-level--primary {
-  color: var(--van-primary-color);
-}
-
-.record-level--success {
-  color: var(--van-success-color);
-}
-
-.record-level--warning {
-  color: var(--van-warning-color);
-}
-
 .record-status {
-  margin-left: auto;
+  flex: none;
+  font-family: var(--mono-font);
+  font-weight: 600;
 }
 
 .record-title {
@@ -1195,6 +1210,7 @@ async function onRecordDeleteConfirm() {
 }
 
 @keyframes record-title-marquee {
+
   0%,
   12% {
     transform: translateX(0);
@@ -1206,16 +1222,6 @@ async function onRecordDeleteConfirm() {
   }
 }
 
-.record-status.is-ok {
-  color: var(--van-success-color);
-  background: rgba(7, 193, 96, .12);
-}
-
-.record-status.is-bad {
-  color: var(--van-danger-color);
-  background: rgba(238, 10, 36, .1);
-}
-
 .record-path {
   flex: 1 1 auto;
   min-width: 0;
@@ -1223,7 +1229,7 @@ async function onRecordDeleteConfirm() {
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--van-text-color-3);
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
 }
 
 .record-meta {
@@ -1242,27 +1248,11 @@ async function onRecordDeleteConfirm() {
 /* 告警只显示第一条，其余折叠成 +N，完整说明放在 title 里 */
 .record-warn {
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: .22em;
-  white-space: nowrap;
 }
 
-.record-warn .van-icon {
+.record-warn :deep(.van-icon) {
   /* 文本行内图标跟随所在行的字号 */
   font-size: 1em;
-}
-
-.record-warn--danger {
-  color: var(--van-danger-color);
-}
-
-.record-warn--warning {
-  color: var(--van-warning-color);
-}
-
-.record-warn--default {
-  color: var(--van-text-color-3);
 }
 
 /* 行内操作：裸图标，热区与字号同比缩放，悬停才强调 */
@@ -1279,22 +1269,12 @@ async function onRecordDeleteConfirm() {
 
 .record-action--danger:hover {
   color: var(--van-danger-color);
-  background: rgba(238, 10, 36, .08);
+  background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
 }
 
 .record-action--muted:hover {
   color: var(--van-text-color);
   background: var(--van-active-color);
-}
-
-.record-draft-tag {
-  flex: none;
-  padding: 0 .44em;
-  border-radius: .33em;
-  color: var(--van-warning-color);
-  background: rgba(255, 151, 106, .16);
-  font-size: var(--van-tag-font-size);
-  line-height: 1.78;
 }
 
 .record-load-more-cell {
@@ -1317,10 +1297,10 @@ async function onRecordDeleteConfirm() {
   /* flex-basis 归零，避免内容固有宽度参与换行判断 */
   flex: 1 1 0;
   min-width: 0;
-  height: calc(100% - 10px);
-  /* 左侧列表有 5px 外边距，这里同步下移，两侧底边才能对齐 */
-  margin-top: 5px;
-  padding: 0 5px;
+  height: calc(100% - calc(var(--van-font-size-md) * 0.7692));
+  /* 左侧列表有外边距，这里同步下移，两侧底边才能对齐 */
+  margin-top: calc(var(--van-font-size-md) * 0.3846);
+  padding: 0 calc(var(--van-font-size-md) * 0.3846);
   position: relative;
 }
 
@@ -1333,7 +1313,7 @@ async function onRecordDeleteConfirm() {
 .rule-head-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(var(--van-font-size-md) * 0.4615);
   min-width: 0;
 }
 
@@ -1351,8 +1331,8 @@ async function onRecordDeleteConfirm() {
 .rule-mock-switch {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-left: 10px;
+  gap: calc(var(--van-font-size-md) * 0.4615);
+  margin-left: calc(var(--van-font-size-md) * 0.7692);
 }
 
 .rule-mock-switch-label {
@@ -1362,7 +1342,7 @@ async function onRecordDeleteConfirm() {
 
 /* 草稿行：与正式记录区分，避免用户以为已落盘 */
 .record-draft-row {
-  background: rgba(255, 151, 106, .12);
+  background: color-mix(in srgb, var(--van-warning-color) 12%, transparent);
 }
 
 .record-flash {
@@ -1371,7 +1351,7 @@ async function onRecordDeleteConfirm() {
 
 @keyframes record-flash {
   0% {
-    background: rgba(25, 137, 250, .24);
+    background: color-mix(in srgb, var(--van-primary-color) 24%, transparent);
   }
 
   100% {
@@ -1380,7 +1360,7 @@ async function onRecordDeleteConfirm() {
 }
 
 .conflict-message {
-  padding: 12px 16px 0;
+  padding: calc(var(--van-font-size-md) * 0.9231) calc(var(--van-font-size-md) * 1.2308) 0;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
   line-height: 1.5;
@@ -1389,8 +1369,8 @@ async function onRecordDeleteConfirm() {
 .conflict-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 16px;
+  gap: calc(var(--van-font-size-md) * 0.6154);
+  padding: calc(var(--van-font-size-md) * 1.2308);
 }
 
 .mgr-content :deep(.van-popover__wrapper) {
@@ -1401,6 +1381,75 @@ async function onRecordDeleteConfirm() {
 /* 规则名/描述过长时收缩并省略，避免把右侧操作按钮挤出可视区 */
 .rule-cancel-disabled {
   cursor: not-allowed;
+}
+
+.rule-cancel-icon {
+  font-size: calc(var(--van-font-size-md) * 1.5385);
+  margin-right: calc(var(--van-font-size-md) * 0.7692);
+}
+
+.rule-head-cell :deep(.van-cell) {
+  padding: calc(var(--van-font-size-md) * 0.3846) calc(var(--van-font-size-md) * 0.7692);
+  flex-wrap: nowrap;
+}
+
+.rule-head-cell :deep(.van-cell__title) {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rule-head-cell :deep(.van-cell__value),
+.rule-head-cell :deep(.van-cell__right-icon) {
+  flex: none;
+  white-space: nowrap;
+}
+
+.result-action-icon {
+  font-size: calc(var(--van-font-size-md) * 1.2308);
+  padding: calc(var(--van-font-size-md) * 0.3846);
+  cursor: pointer;
+}
+
+.result-action-icon--primary {
+  color: var(--van-primary-color);
+}
+
+.result-action-icon--danger {
+  color: var(--van-danger-color);
+}
+
+.btn-action-icon {
+  font-size: calc(var(--van-font-size-md) * 1.0769);
+}
+
+.btn-action-icon--danger {
+  color: var(--van-danger-color);
+}
+
+.btn-action-gap {
+  margin-left: calc(var(--van-font-size-md) * 0.7692);
+}
+
+.rule-mgr-cell-value {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex: none !important;
+  /* 三个按钮 + 两个间距的最小宽度，防止换行 */
+  min-width: calc(var(--van-font-size-md) * 10);
+}
+
+.rule-mgr-cell-value :deep(.van-button--small) {
+  flex: none;
+  width: calc(var(--van-font-size-md) * 2.4615);
+  height: calc(var(--van-font-size-md) * 2.4615);
+  padding: 0;
+  --van-button-small-height: calc(var(--van-font-size-md) * 2.4615);
+  --van-button-small-padding: 0;
 }
 
 .rule-head-col :deep(.van-cell__title) {
@@ -1416,13 +1465,19 @@ async function onRecordDeleteConfirm() {
   transform: none;
 }
 
+.rule-search {
+  --van-search-padding: calc(var(--van-font-size-md) * 0.3077) calc(var(--van-font-size-md) * 0.6154);
+  --van-search-input-height: calc(var(--van-font-size-md) * 2.3077);
+  --van-cell-vertical-padding: 0;
+}
+
 /* 收窄 search action 的可点击区域，避免 + 按钮被撑成长条 */
 .rule-search :deep(.van-search__action) {
   display: flex;
   align-items: stretch;
   align-self: stretch;
   height: var(--van-search-input-height);
-  padding: 0 4px;
+  padding: 0 calc(var(--van-font-size-md) * 0.3077);
   cursor: default;
 }
 
@@ -1435,7 +1490,7 @@ async function onRecordDeleteConfirm() {
   flex: none;
   box-sizing: border-box;
   width: var(--van-search-input-height);
-  height: 32px;
+  height: var(--van-search-input-height);
   padding: 0;
 }
 

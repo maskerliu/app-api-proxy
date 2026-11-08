@@ -141,10 +141,6 @@ export const CommonStore = defineStore('Common', {
     sendMessage(params: ProxyMock.PushMsg<any>) {
       pushClient.send(params)
     },
-    publishMessage(message: string) {
-      // here just mock a device to send a fake monitor data for test
-
-    },
     updateServerConfig(config?: LocalServerConfig) {
       this.serverConfig = config ? config : this.serverConfig
       updateUpdateServer(this.serverConfig.updateServer)

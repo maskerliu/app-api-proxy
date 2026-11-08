@@ -28,11 +28,11 @@
       <div class="mock-global-bar" :class="{ 'is-on': mockEnabled }" @click="toggleMock">
         <i class="iconfont icon-rule mock-global-icon"></i>
         <span class="mock-global-text">{{ mockLabel }}</span>
-        <van-switch :model-value="mockEnabled" :loading="mockToggling" size="16px" @click.stop="toggleMock" />
+        <van-switch :model-value="mockEnabled" :loading="mockToggling" class="mock-global-switch" @click.stop="toggleMock" />
       </div>
-      <van-field v-model="proxyDelay" type="number" placeholder="延迟(ms)" center label-width="6.5rem">
+      <van-field v-model="proxyDelay" type="number" placeholder="延迟(ms)" center class="proxy-delay-field">
         <template #label>
-          <van-popover v-model:show="showClientPicker" placement="bottom-start" style="min-width: 220px;">
+          <van-popover v-model:show="showClientPicker" placement="bottom-start" class="client-picker-popup">
             <OverlayScrollbarsComponent class="client-picker-list" :options="scrollOptions" defer>
               <van-cell v-for="item in clientInfos" :key="item.uid" clickable :title="clientLabel(item)"
                 :title-style="{ color: item.uid == targetUid ? 'var(--van-primary-color)' : '' }"
@@ -43,25 +43,23 @@
               <div class="client-picker">
                 <van-icon class="iconfont icon-network-data client-picker-icon" />
                 <span class="client-picker-name">{{ targetLabel }}</span>
-                <van-icon name="arrow-down" size="10" />
+                <van-icon name="arrow-down" class="client-picker-arrow" />
               </div>
             </template>
           </van-popover>
         </template>
         <template #button>
           <van-button plain size="mini" type="primary" @click="saveProxyDelay">
-            <van-icon class="iconfont icon-cloud-sync" style="font-size: 1rem;" />
+            <van-icon class="iconfont icon-cloud-sync action-icon" />
           </van-button>
         </template>
       </van-field>
-      <van-field v-model="recordStore.filterKeyword" :placeholder="$t('common.searchPlaceholder')" clearable center
-        left-icon="filter-o" style="margin-top: 5px">
-        <template #button>
-          <van-button plain size="mini" type="primary" @click="recordStore.clearRecords">
-            <van-icon class="iconfont icon-remove" style="font-size: 1rem;" />
-          </van-button>
+      <van-search v-model="recordStore.filterKeyword" show-action class="record-search"
+        :placeholder="$t('common.searchPlaceholder')">
+        <template #action>
+          <van-icon class="iconfont icon-remove action-icon" @click="recordStore.clearRecords" />
         </template>
-      </van-field>
+      </van-search>
 
       <OverlayScrollbarsComponent class="snap-panel border-bg" :options="scrollOptions" defer>
         <div v-if="showSocketEmpty" class="socket-empty-state">
@@ -116,6 +114,7 @@ import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from '
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
+import { copyToClipboard } from '../../common/clipboard'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -123,6 +122,7 @@ import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
 import SocketDetail from './SocketDetail.vue'
 import { MockMgrTarget } from './mock/recording'
+import { readRecentRuleId } from './mock/rule.recent'
 
 const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
 const proxyDelay = ref('0')
@@ -141,7 +141,6 @@ const showMockRuleMgr = ref<boolean>(false)
 const mockMgrTarget = ref<MockMgrTarget>(null)
 const showSettings = ref<boolean>(false)
 
-const RECENT_RULE_KEY = 'mock.lastRuleId'
 const mockRuleId = ref('')
 const mockRuleName = ref('')
 const mockToggling = ref(false)
@@ -162,8 +161,6 @@ const showSocketEmpty = computed(() => recordStore.proxyTypes.includes(String(Pr
 provide('mockMgrTarget', mockMgrTarget)
 provide('showSettings', showSettings)
 provide('openMockRuleMgr', openMockRuleMgr)
-
-let mockRecordId = -1
 
 onMounted(async () => {
   window.mainApi?.onOpenMockRuleMgr(() => { openRuleMgr() })
@@ -230,14 +227,6 @@ async function refreshMockRule() {
   }
 }
 
-function recentRuleId(): string {
-  try {
-    return window.localStorage.getItem(RECENT_RULE_KEY) ?? ''
-  } catch (err) {
-    return ''
-  }
-}
-
 // 关闭时直接停用当前场景；开启时优先恢复上次使用的场景，没有则进入规则管理器
 async function toggleMock() {
   if (mockToggling.value) return
@@ -251,7 +240,7 @@ async function toggleMock() {
       return
     }
 
-    const ruleId = recentRuleId()
+    const ruleId = readRecentRuleId()
     if (ruleId === '') {
       openMockRuleMgr(null)
       showNotify({ message: t('mock.global.selectRule'), type: 'warning', duration: 1200 })
@@ -357,24 +346,11 @@ async function copyRegisterUrl() {
     return
   }
   try {
-    if (window.mainApi) {
-      await window.mainApi.writeClipboard(url)
-    } else {
-      await navigator.clipboard.writeText(url)
-    }
+    await copyToClipboard(url)
     showNotify({ message: '链接已复制到剪贴板', type: 'success', duration: 800 })
   } catch (err) {
     showNotify({ message: '复制失败，请手动复制', type: 'danger', duration: 1200 })
   }
-}
-
-function onMockRecordStart() {
-  mockRecordId = new Date().getTime()
-  recordStore.mockRecordStart(mockRecordId)
-  setTimeout(() => {
-    recordStore.mockRecordEnd(mockRecordId)
-  }, Math.random() * 1000)
-
 }
 
 </script>
@@ -455,22 +431,22 @@ function onMockRecordStart() {
   padding: 4px 8px;
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   word-break: break-all;
 }
 
 .client-picker {
   display: flex;
   align-items: center;
-  max-width: 6.2rem;
+  max-width: calc(var(--van-font-size-md) * 7.692);
   color: var(--van-text-color);
   cursor: pointer;
 }
 
 .client-picker-icon {
-  font-size: 15px;
+  font-size: calc(var(--van-font-size-md) * 1.1538);
   color: var(--van-gray-8);
-  margin-right: 3px;
+  margin-right: calc(var(--van-font-size-md) * 0.2308);
 }
 
 .client-picker-name {
@@ -478,24 +454,32 @@ function onMockRecordStart() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 3px;
+  margin-right: calc(var(--van-font-size-md) * 0.2308);
+}
+
+.client-picker-arrow {
+  font-size: calc(var(--van-font-size-md) * 0.7692);
+}
+
+.client-picker-popup {
+  min-width: calc(var(--van-font-size-md) * 16.923);
 }
 
 .snap-panel {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  margin: 5px 0 0 0;
+  margin: calc(var(--van-font-size-md) * 0.3846) 0 0 0;
 }
 
 /* 全局 Mock 开关：状态与场景名同处一行，点击整行即可切换 */
 .mock-global-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(var(--van-font-size-md) * 0.4615);
   flex: none;
-  margin-top: 4px;
-  padding: 2px 8px;
+  margin-top: calc(var(--van-font-size-md) * 0.3077);
+  padding: calc(var(--van-font-size-md) * 0.1538) calc(var(--van-font-size-md) * 0.6154);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
@@ -506,13 +490,17 @@ function onMockRecordStart() {
 
 .mock-global-bar.is-on {
   border-color: var(--van-success-color);
-  background: rgba(7, 193, 96, 0.08);
+  background: color-mix(in srgb, var(--van-success-color) 8%, transparent);
   color: var(--van-success-color);
 }
 
 .mock-global-icon {
   flex: none;
-  font-size: 14px;
+  font-size: calc(var(--van-font-size-md) * 1.0769);
+}
+
+.mock-global-switch {
+  --van-switch-size: calc(var(--van-font-size-md) * 1.2308);
 }
 
 .mock-global-text {
@@ -524,6 +512,54 @@ function onMockRecordStart() {
 
 .client-picker-list {
   max-height: 45vh;
+}
+
+.proxy-delay-field {
+  --van-field-label-width: calc(var(--van-font-size-md) * 8);
+}
+
+.record-search {
+  margin-top: calc(var(--van-font-size-md) * 0.3846);
+  --van-search-padding: 0;
+  --van-search-input-height: calc(var(--van-font-size-md) * 2.6154);
+  --van-cell-vertical-padding: 0;
+}
+
+.record-search :deep(.van-search__content) {
+  display: flex;
+  align-items: center;
+}
+
+.record-search :deep(.van-cell) {
+  padding: 0;
+}
+
+.record-search :deep(.van-field__body) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.record-search :deep(.van-field__control) {
+  height: var(--van-search-input-height);
+  line-height: var(--van-search-input-height);
+}
+
+.record-search :deep(.van-search__action) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--van-font-size-md) * 2.6154);
+  height: var(--van-search-input-height);
+  padding: 0;
+}
+
+.record-search :deep(.van-search__action .action-icon) {
+  font-size: calc(var(--van-font-size-md) * 1.8462);
+}
+
+.action-icon {
+  font-size: calc(var(--van-font-size-md) * 0.7692);
 }
 
 /* 窄窗口下左右面板改为上下堆叠，列表占上方固定比例，详情占剩余空间 */

@@ -1,5 +1,5 @@
 <template>
-  <van-form class="debug-panel" label-align="right" colon>
+  <van-cell-group class="debug-panel" label-align="right" colon>
     <van-cell-group inset :title="$t('debug.common.title')">
       <van-cell :title="$t('debug.common.versionCheck')" clickable @click="toNew"></van-cell>
       <van-cell :title="$t('debug.common.devTools')" clickable @click="openDevTools"></van-cell>
@@ -14,7 +14,7 @@
         <template #left-icon>
           <div style="display: flex; justify-content: center;">
             <van-icon class="iconfont icon-link" style="color: var(--van-gray-8)" />
-            <div style="position: absolute; bottom: -5px; left: 0; font-size: var(--van-font-size-xs); color: red;">{{ bandwidth }}kbps
+            <div style="position: absolute; bottom: -5px; left: 0; font-size: var(--van-font-size-xs); color: var(--van-danger-color);">{{ bandwidth }}kbps
             </div>
           </div>
         </template>
@@ -44,7 +44,7 @@
       <canvas ref="offscreen" style="display: none;"></canvas>
       <video ref="preVideo" autoplay style="display: none;"></video>
     </van-cell-group>
-  </van-form>
+  </van-cell-group>
 </template>
 
 <script lang="ts" setup>
@@ -345,23 +345,6 @@ async function onSSE() {
 </script>
 
 <style scoped>
-.drag-ball {
-  position: absolute;
-  z-index: 10003;
-  right: 0;
-  top: 70%;
-  width: 2.5em;
-  height: 2.5em;
-  background: #e1e1e1aa;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0px 0px 10px 2px skyblue;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-}
-
 .debug-panel {
   width: 100%;
   min-width: min(375px, 100vw);

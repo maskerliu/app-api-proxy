@@ -50,7 +50,7 @@
         </span>
       </div>
       <div v-else style="display: flex; align-items: center; direction: rtl; width: 100%; margin-top: 25px;">
-        <span class="request-snap-timecost" v-bind:style="{ color: (source.time ?? 0) > 500 ? '#e74c3c' : '#2ecc71' }">
+        <span class="request-snap-timecost" v-bind:style="{ color: (source.time ?? 0) > 500 ? 'var(--van-danger-color)' : 'var(--van-success-color)' }">
           耗时: <span class="timecost-value">{{ source.time != null ? source.time : "-----" }}</span> ms
         </span>
         <van-tag plain :type="parseInt(source.responseData.code) === 2000 ? 'success' : 'warning'"
@@ -73,13 +73,13 @@
           {{ $t('mock.miss.badge', { score: missBadge }) }}
         </van-tag>
         <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
-          style="font-size: 1.1rem; color: brown; font-weight: bold;" />
+          style="font-size: 1.1rem; color: var(--van-warning-color); font-weight: bold;" />
 
       </div>
     </template>
     <template #right-icon>
-      <van-loading size="20" color="#8e44ad" style="margin-right: 5px;" v-if="showLoading" />
-      <van-icon v-else name="arrow" size="20" color="grey" style="margin-right: 5px;" />
+      <van-loading size="20" color="var(--van-primary-color)" style="margin-right: 5px;" v-if="showLoading" />
+      <van-icon v-else name="arrow" size="20" color="var(--van-text-color-3)" style="margin-right: 5px;" />
     </template>
   </van-cell>
 </template>
@@ -165,7 +165,7 @@ const recordStore = ProxyRecordStore()
 .item-timeline-dot {
   border-radius: 7px;
   border: 2px dashed;
-  border-color: #2980b9;
+  border-color: var(--van-primary-color);
   width: 10px;
   height: 10px;
   margin-top: 15px;
@@ -175,19 +175,19 @@ const recordStore = ProxyRecordStore()
 .stat-snap-pid {
   max-width: 100px;
   font-size: var(--van-font-size-xs);
-  color: #8c7ae6;
+  color: var(--van-primary-color);
 }
 
 .stat-snap-eid {
   max-width: 100px;
   font-size: var(--van-font-size-xs);
-  color: #e1b12c;
+  color: var(--van-warning-color);
   margin-top: 5px;
 }
 
 .stat-snap-type {
   font-size: var(--van-font-size-xs);
-  color: #d35400;
+  color: var(--van-danger-color);
 }
 
 .request-snap-timecost {

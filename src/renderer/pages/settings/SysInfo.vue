@@ -2,32 +2,20 @@
   <van-cell-group inset :title="$t('settings.sys.title')" :style="{ paddingTop: isWeb ? '0' : '10px' }">
     <van-field center :label="$t('settings.sys.protocol')" label-width="10rem" readonly>
       <template #input>
-        <van-tabs v-model:active="protocol" type="card" style="margin: 0;">
-          <van-tab title="https[2]" :title-style="{ width: '5rem' }"></van-tab>
-          <van-tab title="http" :title-style="{ width: '5rem' }"></van-tab>
-        </van-tabs>
+        <van-radio-group v-model="protocol" direction="horizontal">
+          <van-radio :name="0">https</van-radio>
+          <van-radio :name="1">http</van-radio>
+        </van-radio-group>
       </template>
     </van-field>
 
     <van-field :label="$t('settings.sys.server')" label-width="10rem" readonly>
       <template #input>
-        <van-popover v-model:show="showPopover" placement="bottom-start" style="min-width: 300px"
-          v-if="commonStore.serverConfig.ips">
-          <van-cell v-for="item in commonStore.serverConfig.ips" :value="item.address" clickable is-link
-            @click="onSelectIP(item)">
-            <template #title>
-              <div style="max-width: 140px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
-                {{ item.name }}
-              </div>
-            </template>
-          </van-cell>
-
-          <template #reference>
-            <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
-              {{ curServerIp?.address }}
-            </div>
-          </template>
-        </van-popover>
+        <MiniSelect
+          :model-value="curServerIp?.address"
+          :options="ipOptions"
+          :placeholder="$t('settings.sys.server')"
+          @change="onSelectIPByAddress" />
       </template>
     </van-field>
 
@@ -52,8 +40,9 @@
 <script lang="ts" setup>
 import { LocalIP } from '@shared'
 import { showNotify } from 'vant'
-import { inject, onMounted, ref, Ref, watch } from 'vue'
+import { computed, inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MiniSelect from '../../common/MiniSelect.vue'
 import { CommonStore } from '../../store'
 
 type SettingPreference = {
@@ -67,10 +56,16 @@ type SettingPreference = {
 const { t } = useI18n()
 const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
-const showPopover = ref<boolean>(false)
 const isWeb = window.isWeb
 const showSettings = inject<Ref<boolean>>('showSettings')
 const protocol = ref(0)
+
+const ipOptions = computed(() =>
+  (commonStore.serverConfig.ips ?? []).map(ip => ({
+    label: `${ip.name}  ${ip.address}`,
+    value: ip.address,
+  })),
+)
 
 let perferences = [
   { tooltip: 'settings.sys.serverDomain', key: 'domain' },
@@ -103,7 +98,11 @@ watch(() => protocol.value, () => {
 function onSelectIP(ip: LocalIP) {
   curServerIp.value = ip
   commonStore.serverConfig.ip = ip.address
-  showPopover.value = false
+}
+
+function onSelectIPByAddress(address: string) {
+  const ip = (commonStore.serverConfig.ips ?? []).find(x => x.address === address)
+  if (ip) onSelectIP(ip)
 }
 
 async function onSave() {
@@ -122,16 +121,3 @@ async function onSave() {
 }
 
 </script>
-
-<style scoped>
-.single-line {
-  max-width: 80px;
-  font-size: var(--van-font-size-sm);
-  color: #34495e;
-  padding: 5px;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-</style>

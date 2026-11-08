@@ -2,18 +2,18 @@
   <van-cell-group inset title=" ">
     <van-field center :label="$t('settings.sys.theme')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-theme" style="margin-left: 15px;" />
+        <van-icon class="iconfont icon-theme setting-cell-icon" />
       </template>
       <template #right-icon>
         <van-radio-group v-model="commonStore.theme" direction="horizontal" style="height: 26px;"
           @change="commonStore.updateTheme">
           <van-radio name="light">
             <van-icon class="iconfont icon-theme-light theme-icon"
-              :style="{ color: commonStore.theme == 'light' ? '#3498db' : 'gray' }" />
+              :style="{ color: commonStore.theme == 'light' ? 'var(--van-primary-color)' : 'var(--van-gray-5)' }" />
           </van-radio>
           <van-radio name="dark">
             <van-icon class="iconfont icon-theme-dark theme-icon"
-              :style="{ color: commonStore.theme == 'dark' ? '#3498db' : 'gray' }" />
+              :style="{ color: commonStore.theme == 'dark' ? 'var(--van-primary-color)' : 'var(--van-gray-5)' }" />
           </van-radio>
         </van-radio-group>
       </template>
@@ -21,24 +21,19 @@
 
     <van-field center input-align="right" :label="$t('settings.sys.fontsize')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-font-size" style="margin-left: 15px;" />
+        <van-icon class="iconfont icon-font-size setting-cell-icon" />
       </template>
       <template #input>
-        <van-popover v-model:show="showFontSizes" placement="bottom-end" style="min-width: 140px">
-          <van-cell v-for="size in fontSizes" :title="`${size}`" clickable is-link @click="onSelectFontSize(size)">
-          </van-cell>
-          <template #reference>
-            <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
-              {{ commonStore.fontSize }}
-            </div>
-          </template>
-        </van-popover>
+        <MiniSelect
+          :model-value="String(commonStore.fontSize)"
+          :options="fontSizeOptions"
+          @change="onSelectFontSizeStr" />
       </template>
     </van-field>
 
     <van-field center input-align="right" :label="$t('settings.sys.version')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-info" style="margin-left: 15px;" />
+        <van-icon class="iconfont icon-info setting-cell-icon" />
       </template>
       <template #input>
         <div style="height: 33px;display: flex; align-items: center; justify-content: center;" @click="onVersionCheck">
@@ -56,25 +51,20 @@
 
     <van-field center input-align="right" :label="$t('settings.sys.lang')" label-width="4rem" :readonly="true">
       <template #left-icon>
-        <van-icon class="iconfont icon-lang" style="margin-left: 15px;" />
+        <van-icon class="iconfont icon-lang setting-cell-icon" />
       </template>
       <template #input>
-        <van-popover v-model:show="showLangs" placement="bottom-end" style="min-width: 140px">
-          <van-cell v-for="item in langs" :title="item" clickable is-link @click="onSelectLang(item)">
-          </van-cell>
-          <template #reference>
-            <div style="min-width: 120px; height: 1rem; padding: 2px; margin-top: -5px;">
-              {{ commonStore.lang }}
-            </div>
-          </template>
-        </van-popover>
+        <MiniSelect
+          :model-value="commonStore.lang"
+          :options="langOptions"
+          @change="onSelectLang" />
       </template>
     </van-field>
 
     <van-popup round v-model:show="showDownload" :closeable="!showRestart" :close-on-click-overlay="false"
       teleport="#app" @close="onPopupClose">
       <van-row class="version-popup" justify="center">
-        <van-icon class="iconfont icon-version-update" style="color: green; font-size: 2rem;" />
+        <van-icon class="iconfont icon-version-update" style="color: var(--van-success-color); font-size: 2rem;" />
         <OverlayScrollbarsComponent class="update-message" :options="scrollOptions" defer>
           <pre class="update-message-text">{{ newVersion.message }}</pre>
         </OverlayScrollbarsComponent>
@@ -95,8 +85,9 @@
 import { Version, versionCheck } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showNotify, showToast } from 'vant'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MiniSelect from '../../common/MiniSelect.vue'
 import { scrollOptions } from '../../common/scroll'
 import { CommonStore, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../../store'
 
@@ -104,8 +95,6 @@ const commonStore = CommonStore()
 const i18n = useI18n()
 const versionChecking = ref<boolean>(false)
 const hasNewVersion = ref<boolean>(false)
-const showLangs = ref<boolean>(false)
-const showFontSizes = ref<boolean>(false)
 const showDownload = ref<boolean>(false)
 const showRestart = ref<boolean>(false)
 const downloading = ref<boolean>(false)
@@ -113,9 +102,10 @@ const downloadProgress = ref<number>(0)
 
 let newVersion: Version = null
 
-const value1 = ref(0)
 const langs = ['en', 'zh-CN']
 const fontSizes = Array.from({ length: FONT_SIZE_MAX - FONT_SIZE_MIN + 1 }, (_v, i) => FONT_SIZE_MIN + i)
+const langOptions = computed(() => langs.map(l => ({ label: l, value: l })))
+const fontSizeOptions = computed(() => fontSizes.map(n => ({ label: String(n), value: String(n) })))
 
 onMounted(() => {
   window.mainApi?.onDownloadUpdate((...args: any) => {
@@ -146,14 +136,16 @@ watch(downloadProgress, () => {
 
 function onSelectLang(_lang: string) {
   commonStore.updateLang(_lang)
-  showLangs.value = false
   i18n.locale.value = _lang
+}
+
+function onSelectFontSizeStr(size: string) {
+  onSelectFontSize(Number(size))
 }
 
 function onSelectFontSize(size: number) {
   commonStore.fontSize = size
   commonStore.updateFontSize()
-  showFontSizes.value = false
 }
 
 async function onVersionCheck() {
@@ -198,6 +190,10 @@ function restart() {
 
 </script>
 <style lang="css" scoped>
+.setting-cell-icon {
+  margin-left: 15px;
+}
+
 .theme-icon {
   font-size: 1.6rem;
 }

@@ -15,19 +15,12 @@
     <van-popup v-model:show="commonStore.showDebugPanel" position="left" closeable close-icon="close">
       <debug-panel />
     </van-popup>
-
-    <van-overlay :show="showLoading" teleport="#app"
-      style="width:100vw; height: 100vh; align-items: center; flex-direction: column; z-index: 2000;">
-      <van-row justify="center" class="loading">
-        <van-loading />
-        <div style="margin: 5px 15px;">{{ $t('common.loading') }}</div>
-      </van-row>
-    </van-overlay>
   </van-config-provider>
 </template>
 
 <script lang="ts" setup>
-import { defineAsyncComponent, onMounted, provide, ref } from 'vue'
+import { showLoadingToast } from 'vant'
+import { defineAsyncComponent, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { LocalServerConfig } from '@shared'
@@ -41,16 +34,17 @@ const i18n = useI18n()
 const router = useRouter()
 const canRender = ref(false)
 const enableDebug = __DEV__
-const showLoading = ref<boolean>(false)
+// 启动 200ms 内未完成配置则弹全局加载 toast；配置就绪后调用 closeLoading 关闭
+let closeLoading: (() => void) | null = null
 const loadingTimer = setTimeout(() => {
-  if (!canRender.value) showLoading.value = true
+  if (!canRender.value) {
+    closeLoading = showLoadingToast({ message: i18n.t('common.loading'), forbidClick: true, duration: 0 })
+  }
 }, 200)
 const offset = ref({
   x: window.innerWidth - 42,
   y: window.innerHeight - 150
 })
-
-provide('showLoading', showLoading)
 
 async function onConfigReady(config?: LocalServerConfig) {
   await commonStore.init(config)
@@ -58,7 +52,8 @@ async function onConfigReady(config?: LocalServerConfig) {
   window.mainApi?.setAppTheme(commonStore.theme)
   canRender.value = true
   clearTimeout(loadingTimer)
-  showLoading.value = false
+  closeLoading?.()
+  closeLoading = null
   router.replace(commonStore.onboarded ? '/proxy' : '/onboarding')
 }
 
@@ -142,8 +137,6 @@ function onOpenDebugPanel() {
 .border-bg {
   margin: 5px;
   padding: 0;
-  /* border-radius: 8px; */
-  /* border: 1px solid #e1e1e1; */
   box-shadow: 0px 12px 8px -12px #000;
 }
 
@@ -178,26 +171,44 @@ function onOpenDebugPanel() {
   z-index: 1;
 }
 
-.loading {
-  width: min(240px, 60vw);
-  min-width: 160px;
-  padding: 10px 5px;
-  margin: 20vh auto;
-  background-color: #262f37e0;
-  border-radius: 10px;
-  font-size: var(--van-font-size-md);
-  color: #bdc3c7;
-}
-
 .rule-mgr-cell-value {
   flex: 0 0 120px !important;
 }
 
-.van-tabs__nav--card {
-  box-sizing: border-box;
-  height: var(--van-tabs-card-height);
-  margin: 0;
-  border: var(--van-border-width) solid var(--van-tabs-default-color);
-  border-radius: var(--van-radius-sm);
+:root {
+  --mono-font: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+}
+
+.header-collapse {
+  margin: var(--van-padding-md) var(--van-padding-md) 0;
+  overflow: hidden;
+  border-radius: var(--van-radius-lg);
+  background: var(--van-cell-group-background);
+}
+
+.header-list {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 6px;
+  padding: 5px 15px;
+  font-family: var(--mono-font);
+  font-size: var(--van-font-size-md);
+  user-select: text;
+}
+
+.header-row {
+  display: contents;
+}
+
+.header-key {
+  color: var(--van-text-color-2);
+  word-break: break-all;
+}
+
+.header-value {
+  color: var(--van-text-color);
+  white-space: pre-line;
+  word-break: break-all;
 }
 </style>

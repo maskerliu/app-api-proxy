@@ -7,7 +7,7 @@
           <span>{{ $t('onboarding.title') }}</span>
         </div>
         <div class="onboarding-subtitle">{{ $t('onboarding.subtitle') }}</div>
-        <van-steps :active="step" active-color="#62bc3e" inactive-color="var(--van-gray-5)">
+        <van-steps :active="step" active-color="var(--van-success-color)" inactive-color="var(--van-gray-5)">
           <van-step>{{ $t('onboarding.step.service') }}</van-step>
           <van-step>{{ $t('onboarding.step.client') }}</van-step>
           <van-step>{{ $t('onboarding.step.verify') }}</van-step>
@@ -19,7 +19,7 @@
         <!-- 1. 服务就绪 -->
         <div v-if="step === 0" class="step-panel">
           <div class="step-head">
-            <i class="iconfont icon-check step-icon" :style="{ color: health?.ok ? '#62bc3e' : 'var(--van-gray-5)' }" />
+            <i class="iconfont icon-check step-icon" :style="{ color: health?.ok ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
             <span>{{ $t('onboarding.service.title') }}</span>
           </div>
           <div class="step-desc">{{ $t('onboarding.service.desc') }}</div>
@@ -32,7 +32,7 @@
             <van-cell :title="$t('onboarding.service.uptime')" :value="formatDuration(health?.uptimeSec)" />
           </van-cell-group>
           <van-notice-bar v-if="config.portValid === false" wrapable :scrollable="false"
-            color="#ed6a0c" background="#fffbe8" :text="$t('onboarding.service.portInvalid')">
+            color="var(--van-warning-color)" background="color-mix(in srgb, var(--van-warning-color) 10%, transparent)" :text="$t('onboarding.service.portInvalid')">
             <template #left-icon>
               <i class="iconfont icon-warning notice-icon" />
             </template>
@@ -72,9 +72,9 @@
               <van-field v-model="targetHost" :label="$t('onboarding.client.targetHost')" label-width="110"
                 :placeholder="$t('onboarding.client.targetHostPlaceholder')" clearable />
               <div class="col-title">{{ $t('onboarding.client.snippet') }}</div>
-              <van-tabs v-model:active="snippetIndex" shrink class="snippet-tabs">
-                <van-tab v-for="item in snippets" :key="item.lang" :title="item.label" />
-              </van-tabs>
+              <van-radio-group v-model="snippetIndex" direction="horizontal" class="snippet-tabs">
+                <van-radio v-for="(item, idx) in snippets" :key="item.lang" :name="idx">{{ item.label }}</van-radio>
+              </van-radio-group>
               <div class="snippet">
                 <SnippetAce :mode="activeSnippet.mode" :code="activeSnippet.code" />
               </div>
@@ -96,14 +96,14 @@
         <div v-else-if="step === 2" class="step-panel">
           <div class="step-head">
             <i class="iconfont step-icon" :class="received ? 'icon-check' : 'icon-refresh'"
-              :style="{ color: received ? '#62bc3e' : 'var(--van-gray-5)' }" />
+              :style="{ color: received ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
             <span>{{ $t('onboarding.verify.title') }}</span>
             <van-loading v-if="!received" size="14" style="margin-left: 6px;" />
           </div>
           <div class="step-desc">{{ $t('onboarding.verify.desc') }}</div>
 
           <van-notice-bar v-if="latestRequest" wrapable :scrollable="false"
-            color="#62bc3e" background="#eef9e8" :text="$t('onboarding.verify.received')">
+            color="var(--van-success-color)" background="color-mix(in srgb, var(--van-success-color) 8%, transparent)" :text="$t('onboarding.verify.received')">
             <template #left-icon>
               <i class="iconfont icon-check notice-icon" />
             </template>
@@ -124,7 +124,7 @@
           <van-empty v-else image="search" :description="$t('onboarding.verify.empty')" />
 
           <van-notice-bar v-if="unknownRequests.length > 0" wrapable :scrollable="false"
-            color="#ed6a0c" background="#fffbe8" :text="$t('onboarding.verify.unknownUidTip')">
+            color="var(--van-warning-color)" background="color-mix(in srgb, var(--van-warning-color) 10%, transparent)" :text="$t('onboarding.verify.unknownUidTip')">
             <template #left-icon>
               <i class="iconfont icon-warning notice-icon" />
             </template>
@@ -147,7 +147,7 @@
         <div v-else class="step-panel">
           <div class="step-head">
             <i class="iconfont step-icon" :class="mockHit ? 'icon-check' : 'icon-mock'"
-              :style="{ color: mockHit ? '#62bc3e' : 'var(--van-primary-color)' }" />
+              :style="{ color: mockHit ? 'var(--van-success-color)' : 'var(--van-primary-color)' }" />
             <span>{{ $t('onboarding.mock.title') }}</span>
           </div>
           <div class="step-desc">{{ $t('onboarding.mock.desc') }}</div>
@@ -172,13 +172,13 @@
 
           <template v-if="mockCreated">
             <van-notice-bar v-if="mockHit" wrapable :scrollable="false"
-              color="#62bc3e" background="#eef9e8" :text="$t('onboarding.mock.hit')">
+              color="var(--van-success-color)" background="color-mix(in srgb, var(--van-success-color) 8%, transparent)" :text="$t('onboarding.mock.hit')">
               <template #left-icon>
                 <i class="iconfont icon-check notice-icon" />
               </template>
             </van-notice-bar>
             <van-notice-bar v-else wrapable :scrollable="false"
-              color="#1989fa" background="#ecf9ff" :text="$t('onboarding.mock.testing')">
+              color="var(--van-primary-color)" background="color-mix(in srgb, var(--van-primary-color) 8%, transparent)" :text="$t('onboarding.mock.testing')">
               <template #left-icon>
                 <i class="iconfont icon-refresh notice-icon" />
               </template>
@@ -221,6 +221,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
+import { formatDuration } from '../../common/format'
+import { copyToClipboard } from '../../common/clipboard'
 import { CommonStore } from '../../store'
 import SnippetAce from './SnippetAce.vue'
 import { buildSnippets } from './snippets'
@@ -298,20 +300,11 @@ async function refreshHealth(manual = false) {
 async function copyText(text: string, message: string) {
   if (!text) return
   try {
-    if (window.mainApi) await window.mainApi.writeClipboard(text)
-    else await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     showNotify({ message, type: 'success', duration: 800 })
   } catch (err) {
     showNotify({ message: t('common.copyFailed'), type: 'danger', duration: 1200 })
   }
-}
-
-function formatDuration(seconds?: number) {  const total = Math.max(0, Math.floor(seconds ?? 0))
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}m`
-  if (minutes > 0) return `${minutes}m ${total % 60}s`
-  return `${total}s`
 }
 
 function useLatestRequest() {
@@ -564,8 +557,8 @@ onBeforeUnmount(() => {
   }
 }
 
-.snippet-tabs :deep(.van-tabs__content) {
-  display: none;
+.snippet-tabs {
+  margin-bottom: 4px;
 }
 
 .snippet {

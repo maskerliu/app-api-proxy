@@ -1,23 +1,23 @@
 <template>
   <OverlayScrollbarsComponent class="settings" :options="scrollOptions" defer>
-    <van-form label-align="right" colon>
+    <div label-align="right" colon>
       <sys-info />
       <van-cell-group inset :title="$t('settings.help.title')">
-        <van-cell :title="$t('settings.help.onboarding')" is-link @click="open('/onboarding')">
-          <template #icon>
-            <i class="iconfont icon-help cell-icon" />
+        <van-field :label="$t('settings.help.onboarding')" is-link readonly @click="open('/onboarding')">
+          <template #left-icon>
+            <van-icon class="iconfont icon-help setting-cell-icon" />
           </template>
-        </van-cell>
-        <van-cell :title="$t('settings.help.diagnostic')" is-link @click="open('/diagnostic')">
-          <template #icon>
-            <i class="iconfont icon-diagnostic cell-icon" />
+        </van-field>
+        <van-field :label="$t('settings.help.diagnostic')" is-link readonly @click="open('/diagnostic')">
+          <template #left-icon>
+            <van-icon class="iconfont icon-diagnostic setting-cell-icon" />
           </template>
-        </van-cell>
+        </van-field>
       </van-cell-group>
       <version-theme />
       <local-resource-mgr />
       <client-mgr />
-    </van-form>
+    </div>
   </OverlayScrollbarsComponent>
 </template>
 
@@ -38,11 +38,8 @@ function open(path: string) {
 </script>
 
 <style scoped>
-/* 与 VersionTheme 字段图标保持相同左偏移与图标/文字间距 */
-.cell-icon {
+.setting-cell-icon {
   margin-left: 15px;
-  margin-right: var(--van-padding-base);
-  align-self: center;
 }
 </style>
 <style scoped>

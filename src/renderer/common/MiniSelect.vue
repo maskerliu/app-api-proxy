@@ -43,6 +43,10 @@ const measuredHeight = ref(0)
 const columns = computed(() => (props.options ?? []).map(it => ({ text: it.label, value: it.value })))
 const selectedText = computed(() => props.options.find(it => it.value === props.modelValue)?.label ?? null)
 
+function baseFontSize(): number {
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--van-font-size-md')) || 13
+}
+
 function barRect(): DOMRect | null {
   const bar = rootRef.value?.querySelector('.van-dropdown-menu__bar') as HTMLElement | null
   return bar == null ? null : bar.getBoundingClientRect()
@@ -58,7 +62,7 @@ function prepareDirection() {
   if (popup != null && popup.offsetHeight > 0) return
   const spaceBelow = window.innerHeight - rect.bottom - 8
   const spaceAbove = rect.top - 8
-  const estimated = measuredHeight.value || columns.value.length * 36
+  const estimated = measuredHeight.value || columns.value.length * baseFontSize() * 2.769
   opensUp.value = estimated > spaceBelow && spaceAbove > spaceBelow
 }
 
@@ -97,7 +101,8 @@ async function alignPopup() {
     content.style.width = ''
   }
 
-  const width = Math.min(Math.max(rect.width, naturalWidth, 120), window.innerWidth - 8)
+  const minWidth = baseFontSize() * 9.231
+  const width = Math.min(Math.max(rect.width, naturalWidth, minWidth), window.innerWidth - 8)
   popup.style.left = `${Math.max(4, Math.min(rect.left, window.innerWidth - width - 4))}px`
   popup.style.right = 'auto'
   popup.style.width = `${width}px`
@@ -109,9 +114,10 @@ async function alignPopup() {
   const spaceBelow = window.innerHeight - rect.bottom - 8
   const spaceAbove = rect.top - 8
   if (content != null) {
+    const fs = baseFontSize()
     const height = opensUp.value
       ? Math.min(contentHeight || spaceAbove, spaceAbove)
-      : Math.min(contentHeight || 320, Math.max(96, spaceBelow))
+      : Math.min(contentHeight || fs * 24.615, Math.max(fs * 7.385, spaceBelow))
     content.style.maxHeight = `${height}px`
   }
 }
@@ -167,7 +173,7 @@ function stackingZ(el: HTMLElement) {
 
 .mini-select :deep(.van-dropdown-menu__bar) {
   /* 使用方可按字号覆盖触发条高度，默认保持紧凑的 28px */
-  height: var(--mini-select-bar-height, 28px);
+  height: var(--mini-select-bar-height, calc(var(--van-font-size-md) * 2.1538));
   background: var(--van-background-2);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
@@ -175,19 +181,19 @@ function stackingZ(el: HTMLElement) {
 }
 
 .mini-select :deep(.van-dropdown-menu__item) {
-  padding: 0 4px;
+  padding: 0 calc(var(--van-font-size-md) * 0.3077);
 }
 
 .mini-select :deep(.van-dropdown-menu__title) {
   max-width: 100%;
-  padding: 0 16px 0 4px;
+  padding: 0 calc(var(--van-font-size-md) * 1.2308) 0 calc(var(--van-font-size-md) * 0.3077);
   /* 选中值跟随所在行的字号，不再单独定格 */
   font-size: inherit;
-  line-height: 20px;
+  line-height: calc(var(--van-font-size-md) * 1.5385);
 }
 
 .mini-select :deep(.van-dropdown-menu__title::after) {
-  right: 4px;
+  right: calc(var(--van-font-size-md) * 0.3077);
 }
 
 /* md 档用于表单内，行高随字号缩放，避免大字号下文字被 20px 行高卡住 */
@@ -197,12 +203,12 @@ function stackingZ(el: HTMLElement) {
 
 /* 向上弹时 Vant 的展开/收起箭头语义是反的，这里还原成收起向下、展开向上 */
 .mini-select--up :deep(.van-dropdown-menu__title--down)::after {
-  margin-top: -5px;
+  margin-top: calc(var(--van-font-size-md) * -0.3846);
   transform: rotate(-45deg);
 }
 
 .mini-select--up :deep(.van-dropdown-menu__title--active)::after {
-  margin-top: -1px;
+  margin-top: calc(var(--van-font-size-md) * -0.0769);
   transform: rotate(135deg);
 }
 
@@ -224,12 +230,12 @@ function stackingZ(el: HTMLElement) {
 }
 
 :global(.mini-select-popup .van-dropdown-item__option) {
-  padding: 6px 10px;
+  padding: calc(var(--van-font-size-md) * 0.4615) calc(var(--van-font-size-md) * 0.7692);
 }
 
 /* md 档弹层的选项行高与内边距随字号缩放：md 13px 时仍是 36px 行高 */
 :global(.mini-select-popup--font-md .van-dropdown-item__option) {
-  padding: calc(var(--van-font-size-md) * .46) 10px;
+  padding: calc(var(--van-font-size-md) * .46) calc(var(--van-font-size-md) * 0.7692);
   line-height: calc(var(--van-font-size-md) * 1.8462);
 }
 

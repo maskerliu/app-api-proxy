@@ -26,7 +26,6 @@ export const API_URL = {
     Sse: '/sse',
     Broadcast: '/sse/broadcast',
 
-    MApi: '/mapi',
     Proxy: '/_proxy',
     CorsMediaProxy: '/corsMediaProxy'
 }

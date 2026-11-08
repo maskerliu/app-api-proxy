@@ -13,16 +13,13 @@ export default {
     copyFailed: 'Copy failed, please copy manually'
   },
   proxy: {
-    setDelay: 'requst delay',
     filterPlaceholder: 'filter with keyword',
-    scanQrCode: 'scan QrCode to visit:',
     waitingRegister: 'connecting push channel, please wait...',
     requestHeader: 'Request Headers',
     requestParams: 'Request Parameters',
     requestBody: 'Request Body',
     responseHeader: 'Response Headers',
     responseBody: 'Response Body',
-    preview: 'Preview',
     socket: {
       dropped: '{count} dropped',
       all: 'All',
@@ -114,7 +111,6 @@ export default {
       },
     },
     record: {
-      update: 'Save Changes',
       delete: {
         title: 'Warning',
         confirm: 'are you sure to delete this record?'
@@ -174,13 +170,10 @@ export default {
       statusCode: 'Status Code',
       delay: 'Delay',
       headers: 'Response Headers',
-      addHeader: 'Add Header',
       headerKey: 'Header Name',
       headerValue: 'Value',
       noHeaders: 'No headers',
       body: 'Response Body',
-      format: 'Format',
-      compact: 'Compact',
       binaryTip: 'Binary response only shows its size ({size}); text editing is not supported yet',
       bodySize: 'Size: {size}',
       invalidJson: 'Invalid JSON; it will be returned as plain text',
@@ -195,7 +188,6 @@ export default {
       save: 'Save',
       saveSuccess: 'Record saved',
       saveFailed: 'Failed to save record',
-      saveConflict: 'The record was modified elsewhere. Refresh and try again.',
       noRecord: 'Select a record on the left, or click + to create one',
       noRule: 'Select or create a rule first',
       newRecord: 'New Record',
@@ -455,12 +447,10 @@ export default {
       port: 'Server Port',
       porterror: "Port has been used",
       serverDomain: 'Server Domain',
-      proxySocketPort: 'Socket Port',
       updateServer: 'App Update Server',
       apiDefineServer: 'API Define Server',
       statRuleServer: 'Stat Rule Server',
       dataProxyServer: 'Data Proxy Server',
-      mqttBroker: 'MQTT Broker',
       theme: 'Theme',
       fontsize: 'FontSize',
       lang: 'locales',
@@ -474,21 +464,9 @@ export default {
       placeholder: 'please enter message',
       btnSend: 'Send'
     },
-    games: {
-      title: 'Game Bundle Manager',
-      upload: 'Upload Game',
-      name: 'Name',
-      author: 'Author',
-      version: 'Version',
-      desc: 'Description',
-      icon: 'Icon',
-      snap: 'Previews',
-      res: 'Game Bundle'
-    },
     resources: {
       title: 'Manage Remote Static Resources',
-      upload: 'Upload File',
-      manage: 'Remote Resource Manage'
+      upload: 'Upload File'
     }
   },
   debug: {
@@ -496,9 +474,6 @@ export default {
       title: 'Common',
       versionCheck: 'Check Version',
       devTools: 'Developer Tools',
-    },
-    virtualClient: {
-      title: 'Virtual Client'
     }
   },
   onboarding: {
@@ -526,14 +501,12 @@ export default {
       portInvalid: 'The service port is unavailable. Change it in Settings and restart.',
       refresh: 'Check Again',
       copy: 'Copy Proxy URL',
-      copied: 'Proxy URL copied',
-      failed: 'Failed to load service status'
+      copied: 'Proxy URL copied'
     },
     client: {
       title: 'Connect from a device or code',
       desc: 'Scan the QR code to register a device, or use a snippet below with the desktop UID.',
       qrcode: 'Scan to register a device',
-      registerUrl: 'Register URL',
       targetHost: 'Target Host',
       targetHostPlaceholder: 'https://api.example.com',
       snippet: 'Code Snippet',
@@ -548,7 +521,6 @@ export default {
       waiting: 'Waiting for requests…',
       received: 'Request received',
       empty: 'No request yet. Try a snippet from the previous step.',
-      latest: 'Latest Request',
       unknownUid: 'Unknown UID detected',
       unknownUidTip: 'The request UID is not online. Make sure the x-mock-uid header matches the desktop UID.',
       currentUid: 'Desktop UID',
@@ -568,7 +540,6 @@ export default {
       created: 'Mock created and enabled',
       testing: 'Waiting for a hit…',
       hit: 'Mock hit',
-      retry: 'Wait Again',
       invalidJson: 'Response body is not valid JSON',
       invalidPath: 'Request path must start with /',
       createFailed: 'Failed to create mock',
@@ -578,12 +549,10 @@ export default {
   diagnostic: {
     title: 'Diagnostics',
     desc: 'Inspect service health, recent requests and errors, and test whether a target is reachable.',
-    back: 'Back',
     refresh: 'Refresh',
     report: 'Copy Report',
     reportCopied: 'Diagnostic report copied (masked)',
     reportFailed: 'Failed to copy report',
-    service: 'Service',
     address: 'Address',
     clients: 'Online Clients',
     viewers: 'Desktop',
@@ -606,7 +575,6 @@ export default {
     reachable: 'Reachable',
     unreachable: 'Unreachable',
     emptyTarget: 'Please enter a target address',
-    entry: 'Diagnostics',
     step: {
       dns: 'DNS',
       tcp: 'TCP',

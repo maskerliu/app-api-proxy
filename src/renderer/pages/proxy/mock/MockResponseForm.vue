@@ -40,12 +40,12 @@
         <div class="body-tools">
           <span class="body-size">{{ $t('mock.editor.bodySize', { size: bodySizeText }) }}</span>
           <div class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }">
-            <van-button size="mini" plain style="width: 24px;" @click="formatBody">
+            <van-button size="mini" plain class="tool-btn" @click="formatBody">
               <template #icon>
                 <van-icon class="iconfont icon-format" />
               </template>
             </van-button>
-            <van-button size="mini" plain style="width: 24px;" @click="compactBody">
+            <van-button size="mini" plain class="tool-btn" @click="compactBody">
               <template #icon>
                 <van-icon class="iconfont icon-compress" />
               </template>
@@ -333,7 +333,12 @@ defineExpose({ focusField })
 
 <style scoped>
 .response-form {
-  padding: 0 4px 8px;
+  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
+  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
+  --sp-md: calc(var(--van-font-size-md) * 0.4615);
+  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
+  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
+  padding: 0 var(--sp-sm) var(--sp-lg);
 }
 
 /* 响应体贴合弹层底部时去掉外围留白，避免多出可滚动的空白 */
@@ -343,7 +348,7 @@ defineExpose({ focusField })
 
 .form-row {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-xl);
 }
 
 .status-field {
@@ -360,8 +365,8 @@ defineExpose({ focusField })
 }
 
 .form-section {
-  margin-top: 10px;
-  padding: 8px;
+  margin-top: var(--sp-xl);
+  padding: var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
@@ -373,8 +378,10 @@ defineExpose({ focusField })
 }
 
 .header-collapse {
-  margin-top: 10px;
-  border: 1px solid var(--van-border-color);
+  margin-top: var(--sp-xl);
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--van-border-color) !important;
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
   overflow: hidden;
@@ -382,11 +389,11 @@ defineExpose({ focusField })
 
 /* 只调整折叠标题行，内容区的字段不要一起改 */
 .header-collapse :deep(.van-collapse-item > .van-cell) {
-  padding: 8px 12px;
+  padding: var(--sp-lg);
 }
 
 .header-collapse :deep(.van-collapse-item__content) {
-  padding: 0 8px 8px;
+  padding: 0 var(--sp-lg) var(--sp-lg);
 }
 
 .header-add {
@@ -396,8 +403,8 @@ defineExpose({ focusField })
 .section-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-md);
 }
 
 .section-title {
@@ -410,37 +417,37 @@ defineExpose({ focusField })
 .header-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-sm);
 }
 
 .header-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-sm);
 }
 
 .header-key {
   flex: 0 0 38%;
-  padding: 6px 8px;
+  padding: var(--sp-md) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .header-value {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 6px 8px;
+  padding: var(--sp-md) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .row-delete {
   flex: none;
-  padding: 6px;
+  padding: var(--sp-md);
   color: var(--van-danger-color);
   cursor: pointer;
 }
 
 .empty-tip {
-  padding: 4px 2px;
+  padding: var(--sp-sm) var(--sp-xs);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
@@ -454,7 +461,7 @@ defineExpose({ focusField })
 }
 
 .body-type :deep(.van-radio) {
-  margin-right: 10px;
+  margin-right: var(--sp-xl);
 }
 
 .body-type :deep(.van-radio__label) {
@@ -464,13 +471,13 @@ defineExpose({ focusField })
 .body-tools {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   margin-left: auto;
 }
 
 .body-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-md);
 }
 
 /* 仅隐藏可见性，仍占位，保证顶部行高恒定 */
@@ -481,14 +488,19 @@ defineExpose({ focusField })
 /* 体积紧贴格式化按钮左侧，不参与按钮等宽 */
 .body-size {
   flex: none;
-  margin-right: 2px;
+  margin-right: var(--sp-xs);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   white-space: nowrap;
 }
 
+.tool-btn {
+  flex: none;
+  width: calc(var(--van-font-size-md) * 1.846);
+}
+
 .body-editor {
-  min-height: 120px;
+  min-height: calc(var(--van-font-size-md) * 9.231);
 }
 
 /* 填充模式下高度由 Ace 行数决定，最小高度会妨碍收缩 */
@@ -497,11 +509,11 @@ defineExpose({ focusField })
 }
 
 .fill-body .body-section {
-  padding-bottom: 4px;
+  padding-bottom: var(--sp-sm);
 }
 
 .binary-tip {
-  padding: 12px;
+  padding: var(--sp-xl);
   border: 1px dashed var(--van-border-color);
   border-radius: var(--van-radius-md);
   color: var(--van-text-color-2);
@@ -512,7 +524,7 @@ defineExpose({ focusField })
 .body-warning {
   display: flex;
   justify-content: flex-end;
-  margin: 0 0 4px;
+  margin: 0 0 var(--sp-sm);
   font-size: var(--van-font-size-sm);
 }
 

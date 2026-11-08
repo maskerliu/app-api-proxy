@@ -2,27 +2,21 @@
   <div class="match-tab">
     <div class="level-bar">
       <span class="bar-label">{{ $t('mock.match.levelLabel') }}</span>
-      <div class="level-chips">
-        <van-button v-for="level in MATCH_LEVELS" :key="level" size="mini"
-          :type="currentLevel === level ? 'primary' : 'default'" :plain="currentLevel !== level"
-          @click="onLevelClick(level)">
-          {{ $t(`mock.match.level.${level}`) }}
-        </van-button>
-      </div>
+      <van-radio-group :model-value="currentLevel" direction="horizontal" class="level-chips"
+        @update:model-value="onLevelClick">
+        <van-radio v-for="level in MATCH_LEVELS" :key="level" :name="level">{{ $t(`mock.match.level.${level}`) }}</van-radio>
+      </van-radio-group>
     </div>
     <p class="level-hint">{{ $t(`mock.match.levelHint.${currentLevel}`) }}</p>
 
     <div v-if="pending != null" class="level-preview">
-      <div class="preview-title">
-        {{ $t('mock.match.diffTitle', { level: $t(`mock.match.level.${pending.level}`) }) }}
-      </div>
-      <div v-if="pending.reason === 'sourceMissing'" class="preview-line preview-warn">
+      <div v-if="pending.reason === 'sourceMissing'" class="preview-warn">
         {{ $t('mock.match.sourceMissing') }}
       </div>
-      <template v-else>
-        <div v-if="diffLines.length === 0" class="preview-line">{{ $t('mock.match.diffEmpty') }}</div>
-        <div v-for="(line, idx) in diffLines" :key="idx" class="preview-line">{{ line }}</div>
-      </template>
+      <div v-else-if="diffLines.length === 0" class="preview-empty">{{ $t('mock.match.diffEmpty') }}</div>
+      <div v-else class="preview-tags">
+        <span v-for="(line, idx) in diffLines" :key="idx" class="preview-tag">{{ line }}</span>
+      </div>
       <div class="preview-actions">
         <van-button size="mini" plain @click="pending = null">{{ $t('common.cancel') }}</van-button>
         <van-button size="mini" type="primary" :disabled="pending.reason === 'sourceMissing'"
@@ -544,10 +538,16 @@ defineExpose({ focusField })
   --match-control-line-height: calc(var(--van-font-size-md) * 1.8462);
   --match-control-padding-y: calc(var(--van-font-size-md) * .3077);
   --mini-select-bar-height: var(--match-control-height);
+  /* 间距档位：全部由字号推导，切换字号时等比缩放 */
+  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
+  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
+  --sp-md: calc(var(--van-font-size-md) * 0.4615);
+  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
+  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 8px;
+  gap: var(--sp-lg);
+  padding-bottom: var(--sp-lg);
 }
 
 /* mini 按钮默认继承 xs，表单里统一提到 sm，高度也随字号一起变化 */
@@ -565,9 +565,9 @@ defineExpose({ focusField })
 .level-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: var(--sp-lg);
 }
 
 .bar-label {
@@ -577,58 +577,62 @@ defineExpose({ focusField })
 
 .level-chips {
   display: flex;
-  gap: 6px;
+  gap: var(--sp-md);
   flex-wrap: wrap;
 }
 
-.level-chips :deep(.van-button) {
-  margin-left: 0;
-}
-
-/* 档位按钮是 2~3 字短语，默认 4px 水平内边距偏窄，按字号放宽到 8px */
-.level-bar .level-chips :deep(.van-button--mini) {
-  padding-left: calc(var(--van-font-size-md) * .615);
-  padding-right: calc(var(--van-font-size-md) * .615);
-}
-
 .level-hint {
-  margin: -2px 0 0;
+  margin: calc(var(--sp-xs) * -1) 0 0;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
 
 .level-preview {
-  padding: 8px;
-  border: 1px dashed var(--van-primary-color);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--van-primary-color);
   border-radius: var(--van-radius-lg);
-  background: rgba(25, 137, 250, 0.06);
-}
-
-.preview-title {
-  margin-bottom: 4px;
-  font-size: var(--van-font-size-md);
-  font-weight: 500;
-}
-
-.preview-line {
-  color: var(--van-text-color-2);
-  font-size: var(--van-font-size-sm);
-  line-height: 1.6;
+  background: color-mix(in srgb, var(--van-primary-color) 6%, transparent);
 }
 
 .preview-warn {
+  flex: 1;
   color: var(--van-warning-color);
+  font-size: var(--van-font-size-sm);
+}
+
+.preview-empty {
+  flex: 1;
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-sm);
+}
+
+.preview-tags {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+}
+
+.preview-tag {
+  padding: 2px 8px;
+  border-radius: var(--van-radius-sm);
+  background: color-mix(in srgb, var(--van-primary-color) 12%, transparent);
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-xs);
+  line-height: 1.5;
 }
 
 .preview-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--sp-xs);
+  flex-shrink: 0;
 }
 
 .section {
-  padding: 8px;
+  padding: var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
@@ -638,8 +642,8 @@ defineExpose({ focusField })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-md);
   color: var(--van-text-color);
   font-size: var(--van-font-size-md);
   font-weight: 500;
@@ -648,8 +652,8 @@ defineExpose({ focusField })
 .field-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 0;
+  gap: var(--sp-lg);
+  padding: var(--sp-xs) 0;
 }
 
 .path-row {
@@ -658,15 +662,15 @@ defineExpose({ focusField })
 
 .row-label {
   flex: none;
-  min-width: 48px;
+  min-width: calc(var(--van-font-size-md) * 3.692);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
 }
 
 /* 请求标识三行统一：标签固定列宽、置灰、右对齐，控件同宽描边 */
 .identity-row .row-label {
-  width: 62px;
-  min-width: 62px;
+  width: calc(var(--van-font-size-md) * 4.769);
+  min-width: calc(var(--van-font-size-md) * 4.769);
   text-align: right;
 }
 
@@ -675,7 +679,7 @@ defineExpose({ focusField })
   flex: 1 1 auto;
   min-width: 0;
   height: var(--match-control-height);
-  padding: 0 8px;
+  padding: 0 var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
@@ -696,22 +700,22 @@ defineExpose({ focusField })
 }
 
 .method-select {
-  width: 88px;
+  width: calc(var(--van-font-size-md) * 6.769);
 }
 
 .path-type-select {
-  width: 82px;
+  width: calc(var(--van-font-size-md) * 6.308);
 }
 
 .path-input {
-  flex: 1 1 160px;
+  flex: 1 1 calc(var(--van-font-size-md) * 12.308);;
 }
 
 .path-original {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--sp-lg);
+  margin-top: var(--sp-sm);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
@@ -724,7 +728,7 @@ defineExpose({ focusField })
 }
 
 .inline-radio :deep(.van-radio) {
-  margin-right: 10px;
+  margin-right: calc(var(--van-font-size-md) * 0.769);
 }
 
 .inline-radio :deep(.van-radio__label) {
@@ -732,8 +736,8 @@ defineExpose({ focusField })
 }
 
 .sub-block {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--sp-lg);
+  padding-top: var(--sp-lg);
   border-top: 1px dashed var(--van-border-color);
 }
 
@@ -741,8 +745,8 @@ defineExpose({ focusField })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-sm);
 }
 
 .sub-title {
@@ -752,11 +756,11 @@ defineExpose({ focusField })
 
 /* 匹配条件用折叠面板，标题行贴合区块样式，内容区不额外缩进 */
 .condition-collapse :deep(.van-collapse-item > .van-cell) {
-  padding: 2px 0;
+  padding: var(--sp-xs) 0;
 }
 
 .condition-collapse :deep(.van-collapse-item__content) {
-  padding: 4px 0 0;
+  padding: var(--sp-sm) 0 0;
 }
 
 .condition-collapse :deep(.van-collapse-item__title) {
@@ -766,31 +770,31 @@ defineExpose({ focusField })
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  min-height: 22px;
+  gap: var(--sp-md);
+  min-height: calc(var(--van-font-size-md) * 1.692);
 }
 
 .tag-list :deep(.van-tag) {
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
 }
 
 .add-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--sp-md);
+  margin-top: var(--sp-md);
 }
 
 .add-input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--match-control-padding-y) 8px;
+  padding: var(--match-control-padding-y) var(--sp-lg);
   line-height: var(--match-control-line-height);
   border-radius: var(--van-radius-md);
 }
 
 .empty-tip {
-  padding: 2px 0;
+  padding: var(--sp-xs) 0;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
@@ -798,33 +802,53 @@ defineExpose({ focusField })
 .condition-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-sm);
 }
 
 .condition-key {
   flex: 0 0 32%;
   min-width: 0;
-  padding: var(--match-control-padding-y) 8px;
-  line-height: var(--match-control-line-height);
+  height: var(--match-control-height);
+  padding: 0 var(--sp-lg);
+  border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
+  background: var(--van-background-2);
+}
+
+.condition-key::after {
+  display: none;
+}
+
+.condition-key :deep(.van-field__body) {
+  height: 100%;
 }
 
 .op-select {
-  width: 110px;
+  width: calc(var(--van-font-size-md) * 8.462);
 }
 
 .condition-value {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--match-control-padding-y) 8px;
-  line-height: var(--match-control-line-height);
+  height: var(--match-control-height);
+  padding: 0 var(--sp-lg);
+  border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
+  background: var(--van-background-2);
+}
+
+.condition-value::after {
+  display: none;
+}
+
+.condition-value :deep(.van-field__body) {
+  height: 100%;
 }
 
 .row-delete {
   flex: none;
-  padding: 6px;
+  padding: var(--sp-md);
   color: var(--van-danger-color);
   cursor: pointer;
 }
@@ -837,8 +861,8 @@ defineExpose({ focusField })
 .switch-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 0;
+  gap: var(--sp-lg);
+  padding: var(--sp-xs) 0;
 }
 
 /* 开关与输入框切换时保持行高不变，避免整行跳动 */
@@ -847,8 +871,8 @@ defineExpose({ focusField })
 }
 
 .priority-input {
-  width: 96px;
-  padding: 0 8px;
+  width: calc(var(--van-font-size-md) * 7.385);
+  padding: 0 var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
 
@@ -871,8 +895,8 @@ defineExpose({ focusField })
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: var(--sp-md);
+  margin-top: var(--sp-md);
 }
 
 .suggest-tag {
@@ -882,30 +906,40 @@ defineExpose({ focusField })
 .test-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   flex-wrap: wrap;
 }
 
 .test-url {
-  flex: 1 1 200px;
+  flex: 1 1 calc(var(--van-font-size-md) * 15.385);
   min-width: 0;
-  padding: var(--match-control-padding-y) 8px;
-  line-height: var(--match-control-line-height);
+  height: var(--match-control-height);
+  padding: 0 var(--sp-lg);
+  border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
+  background: var(--van-background-2);
+}
+
+.test-url::after {
+  display: none;
+}
+
+.test-url :deep(.van-field__body) {
+  height: 100%;
 }
 
 .test-error {
-  margin-top: 6px;
+  margin-top: var(--sp-md);
   color: var(--van-danger-color);
   font-size: var(--van-font-size-sm);
 }
 
 .test-hit {
-  margin-top: 8px;
-  padding: 8px;
+  margin-top: var(--sp-lg);
+  padding: var(--sp-lg);
   border: 1px solid var(--van-success-color);
   border-radius: var(--van-radius-lg);
-  background: rgba(7, 193, 96, 0.06);
+  background: color-mix(in srgb, var(--van-success-color) 6%, transparent);
 }
 
 .test-hit-title {
@@ -915,22 +949,22 @@ defineExpose({ focusField })
 }
 
 .test-hit-meta {
-  margin-top: 2px;
+  margin-top: var(--sp-xs);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
 .explain-list {
-  margin-top: 6px;
+  margin-top: var(--sp-md);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-xs);
 }
 
 .explain-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   font-size: var(--van-font-size-sm);
 }
 
@@ -940,7 +974,7 @@ defineExpose({ focusField })
 
 .explain-key {
   flex: none;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
 }
 
 .explain-value {

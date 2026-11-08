@@ -1,5 +1,5 @@
 <template>
-  <van-form ref="detailContainer" label-align="right" colon>
+  <van-cell-group label-align="right" colon>
     <div ref="urlBar" class="url-bar" :style="{ top: `${stickyTop}px`, marginTop: `${stickyTop}px` }">
       <van-cell-group inset title="">
         <van-cell center>
@@ -20,8 +20,8 @@
                 </div>
                 <div class="record-panel-url" :title="record?.url">{{ record?.method }} {{ record?.url }}</div>
 
-                <van-field v-model="ruleKeyword" clearable class="record-rule-search"
-                  :label="$t('mock.recordPanel.targetRule')" :placeholder="$t('mock.recordPanel.searchPlaceholder')" />
+                <van-search v-model="ruleKeyword" class="record-rule-search"
+                  :placeholder="$t('mock.recordPanel.searchPlaceholder')" />
                 <OverlayScrollbarsComponent class="record-rule-list" :options="scrollOptions" defer>
                   <div v-if="rulesLoading" class="record-rule-empty">{{ $t('mock.recordPanel.loading') }}</div>
                   <template v-else>
@@ -141,9 +141,6 @@
           </div>
         </div>
       </van-collapse-item>
-    </van-collapse>
-
-    <van-collapse v-model="expandedHeaders" :border="false" class="header-collapse" @transitionend="syncResponseFill">
       <van-collapse-item name="responseHeader" :title="$t('proxy.responseHeader')">
         <div class="header-list">
           <div v-for="(item, idx) in responseHeaders" :key="`${item.key}-${idx}`" class="header-row">
@@ -152,11 +149,7 @@
           </div>
         </div>
       </van-collapse-item>
-    </van-collapse>
-
-    <van-collapse v-if="requestParams.length > 0" v-model="expandedHeaders" :border="false" class="header-collapse"
-      @transitionend="syncResponseFill">
-      <van-collapse-item name="requestParams" :title="$t('proxy.requestParams')">
+      <van-collapse-item v-if="requestParams.length > 0" name="requestParams" :title="$t('proxy.requestParams')">
         <div class="header-list">
           <div v-for="(item, idx) in requestParams" :key="`${item.key}-${idx}`" class="header-row">
             <span class="header-key">{{ item.key }}</span>
@@ -181,7 +174,7 @@
         </template>
       </van-cell>
     </van-cell-group>
-  </van-form>
+  </van-cell-group>
 </template>
 
 <script lang="ts" setup>
@@ -191,10 +184,12 @@ import {
 } from '@shared'
 import type { MockHitMeta, MockMissFailure } from '@shared/mock.models'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
-import { Form, showConfirmDialog, showNotify, showToast } from 'vant'
+import { showConfirmDialog, showNotify, showToast } from 'vant'
 import { computed, inject, nextTick, onMounted, onUnmounted, PropType, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { scrollOptions } from '../../common/scroll'
+import { copyToClipboard } from '../../common/clipboard'
+import { toKeyValueEntries, type HeaderEntry } from '../../common/headerUtil'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import MockMissPanel from './MockMissPanel.vue'
 import { ensureRecordMatch, orderingLabelKey, previewLevel, summaryText } from './mock/match.helper'
@@ -203,6 +198,7 @@ import { cloneRecord } from './mock/mock.record'
 import type { MockRecordHistoryEntry } from './mock/record.history'
 import { listRecordHistory, pushRecordHistory, removeRecordHistory } from './mock/record.history'
 import { findRecordForRequest, MockMgrTarget, RecordRequestResult, recordRequestToRule } from './mock/recording'
+import { readRecentRuleId, rememberRule } from './mock/rule.recent'
 import ProxyRequestBody from './ProxyRequestBody.vue'
 
 // 吸顶位置相对右侧滚动容器计算：electron 标题栏拖拽区 32px，容器顶部距窗口 5px，
@@ -216,13 +212,11 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-const detailContainer = ref<typeof Form>()
 const detailResp = ref()
 const urlBar = ref<HTMLElement>()
 const responseEditor = ref<InstanceType<typeof VueAceEditor>>()
 // 吸顶区块占据的高度：响应体编辑器的最大高度 = 父容器高度 - 该值
 const stickyInset = ref(stickyTop)
-const apiDesc = ref<string>(null)
 const openMockRuleMgr = inject<(target?: MockMgrTarget) => void>('openMockRuleMgr')
 
 const showRecordPanel = ref(false)
@@ -244,7 +238,6 @@ let duplicateSeq = 0
 let ruleSearchSeq = 0
 let ruleSearchTimer: ReturnType<typeof setTimeout> = null
 
-const RECENT_RULE_KEY = 'mock.lastRuleId'
 const recentHistory = computed(() => recordHistory.value.slice(0, 3))
 
 const createName = computed(() => createMode.value ? ruleKeyword.value.trim() : '')
@@ -264,22 +257,6 @@ const willReplaceActive = computed(() => hasTarget.value && activeRuleId.value !
 const canRecord = computed(() => !recording.value && props.record?.url != null && hasTarget.value)
 
 const expandedHeaders = ref<string[]>([])
-
-interface HeaderEntry {
-  key: string
-  value: string
-}
-
-// 值可能是数组（如 set-cookie、同名 query 参数），按多行展示，和 Chrome 一致
-function toKeyValueEntries(source: Record<string, any> | null | undefined): HeaderEntry[] {
-  if (source == null) return []
-  return Object.keys(source).map(key => {
-    const value = source[key]
-    const text = Array.isArray(value) ? value.map(it => String(it ?? '')).join('\n')
-      : typeof value === 'object' && value != null ? JSON.stringify(value) : String(value ?? '')
-    return { key, value: text }
-  })
-}
 
 const requestHeaders = computed(() => toKeyValueEntries(props.record?.headers))
 const responseHeaders = computed(() => toKeyValueEntries(props.record?.responseHeaders))
@@ -404,30 +381,11 @@ async function copyLink() {
   }
 
   try {
-    if (window.mainApi) {
-      await window.mainApi.writeClipboard(url)
-    } else if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(url)
-    } else {
-      fallbackCopy(url)
-    }
+    await copyToClipboard(url)
     showToast(`[ ${url} ] ${t('mock.recordPanel.copied')}`)
   } catch (err) {
     showToast(t('common.copyFailed'))
   }
-}
-
-function fallbackCopy(text: string) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.style.position = 'fixed'
-  textarea.style.top = '0'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  const copied = document.execCommand('copy')
-  document.body.removeChild(textarea)
-  if (!copied) throw new Error('copy failed')
 }
 
 watch(showRecordPanel, (show) => {
@@ -462,23 +420,6 @@ async function onRecordPanelOpen() {
     ?? recordingRules.value.find(it => it._id === recentId)
     ?? recordingRules.value[0] ?? null
   selectRule(initial)
-}
-
-function readRecentRuleId(): string {
-  try {
-    return window.localStorage.getItem(RECENT_RULE_KEY) ?? ''
-  } catch (err) {
-    return ''
-  }
-}
-
-function rememberRule(ruleId: string) {
-  if (ruleId == null || ruleId === '') return
-  try {
-    window.localStorage.setItem(RECENT_RULE_KEY, ruleId)
-  } catch (err) {
-    // 隐私模式等场景写不进去，不影响录制
-  }
 }
 
 async function loadRuleList() {
@@ -667,18 +608,9 @@ function recordErrorMessage(err: unknown): string {
   }
   return info.message || t('mock.recordPanel.recordFailed')
 }
-
-function updated() {
-  this.$refs.inspectorPanel.scrollTop = 0
-  this.$nextTick(() => {
-    // detailContainer.value.$el.scrollTop = detailResp.value.$el.getBoundingClientRect().top
-  })
-}
 </script>
 
 <style scoped>
-.detail-content {}
-
 .url-bar {
   position: sticky;
   z-index: 99;
@@ -687,13 +619,6 @@ function updated() {
 /* 长 URL 不换行时标题项默认不收缩，会把右侧录制按钮挤出 van-cell（其 overflow:hidden 会直接裁掉） */
 .url-bar :deep(.van-cell__title) {
   min-width: 0;
-}
-
-.header-collapse {
-  margin: var(--van-padding-md) var(--van-padding-md) 0;
-  overflow: hidden;
-  border-radius: var(--van-radius-lg);
-  background: var(--van-cell-group-background);
 }
 
 /* 内容区块与折叠头部同宽：抵消 cell-group inset 的默认 5px 边距 */
@@ -707,40 +632,13 @@ function updated() {
   margin-top: calc(var(--van-padding-md));
 }
 
-.header-list {
-  display: grid;
-  grid-template-columns: fit-content(40%) minmax(0, 1fr);
-  column-gap: 16px;
-  row-gap: 6px;
-  padding: 5px 15px;
-  /* 与 Ace 编辑器（ace.css .ace_editor 默认栈）保持一致 */
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
-  font-size: var(--van-font-size-md);
-  user-select: text;
-}
-
-.header-row {
-  display: contents;
-}
-
-.header-key {
-  color: var(--van-text-color-2);
-  word-break: break-all;
-}
-
-.header-value {
-  color: var(--van-text-color);
-  white-space: pre-line;
-  word-break: break-all;
-}
-
 /* 命中解释：命中记录、忽略键、排序依据与耗时同属一个区块 */
 .mock-hit {
   margin: var(--van-padding-md) var(--van-padding-md) 0;
   padding: 8px 12px;
   border: 1px solid var(--van-success-color);
   border-radius: var(--van-radius-lg);
-  background: rgba(7, 193, 96, 0.08);
+  background: color-mix(in srgb, var(--van-success-color) 8%, transparent);
 }
 
 .hit-head {
@@ -783,7 +681,7 @@ function updated() {
 }
 
 .hit-value.mono {
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
 }
 
 .hit-meta {
@@ -837,7 +735,7 @@ function updated() {
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
   color: var(--van-text-color-2);
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-xs);
   white-space: nowrap;
   overflow: hidden;
@@ -848,10 +746,7 @@ function updated() {
   margin-top: 8px;
   padding: 2px 0;
   font-size: var(--van-font-size-sm);
-}
-
-.record-rule-search :deep(.van-field__label) {
-  color: var(--van-text-color-2);
+  --van-cell-vertical-padding: 0;
 }
 
 .record-rule-list {
@@ -926,12 +821,12 @@ function updated() {
 
 .record-hint-warn {
   color: var(--van-warning-color);
-  background: rgba(255, 151, 106, 0.12);
+  background: color-mix(in srgb, var(--van-warning-color) 12%, transparent);
 }
 
 .record-hint-info {
   color: var(--van-primary-color);
-  background: rgba(25, 137, 250, 0.08);
+  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
 }
 
 .record-panel-actions {

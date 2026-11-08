@@ -16,14 +16,14 @@
           </template>
           <template #icon>
             <van-icon class="iconfont icon-network-data" size="30"
-              :style="{ color: commonStore.uid == item.uid ? 'green' : 'gray' }" />
+              :style="{ color: commonStore.uid == item.uid ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
           </template>
         </van-grid-item>
       </van-grid>
     </OverlayScrollbarsComponent>
 
     <van-popup round v-model:show="dialogVisible" closeable close-icon="close" teleport="#app">
-      <van-form style="width: min(450px, calc(100vw - 60px)); margin: 15px">
+      <van-cell-group inset style="width: min(450px, calc(100vw - 60px)); margin: 15px">
         <van-field label="client id" :model-value="selectClient.uid" readonly />
         <van-field label="client key" :model-value="selectClient.connId" readonly />
         <van-field label="client ip" :model-value="`${selectClient.ip}:${selectClient.port}`" readonly />
@@ -33,7 +33,7 @@
             <van-button plain icon="guide-o" @click="sendMsg" size="small" />
           </template>
         </van-field>
-      </van-form>
+      </van-cell-group>
     </van-popup>
   </van-cell-group>
 </template>
@@ -64,7 +64,6 @@ onMounted(async () => {
 })
 
 function sendBroadcastMsg(): void {
-  commonStore.publishMessage(broadcastMsg.value)
   let msg: ProxyMock.PushMsg<any> = {
     type: ProxyMock.PushMsgType.TXT,
     payload: {

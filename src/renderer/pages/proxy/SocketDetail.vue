@@ -85,18 +85,15 @@
     <div class="socket-messages">
       <div class="msg-toolbar">
         <div class="msg-filter">
-          <van-button v-for="item in directionOptions" :key="item.value" size="mini" class="filter-btn"
-            :type="direction === item.value ? 'primary' : 'default'"
-            :plain="direction !== item.value" @click="direction = item.value">
-            {{ item.label }}
-          </van-button>
+          <van-radio-group v-model="direction" direction="horizontal" class="filter-btn-group">
+            <van-radio v-for="item in directionOptions" :key="item.value" :name="item.value">{{
+              item.label }}</van-radio>
+          </van-radio-group>
         </div>
         <div class="msg-filter">
-          <van-button v-for="item in categoryOptions" :key="item.value" size="mini" class="filter-btn"
-            :type="category === item.value ? 'primary' : 'default'"
-            :plain="category !== item.value" @click="category = item.value">
-            {{ item.label }}
-          </van-button>
+          <van-radio-group v-model="category" direction="horizontal" class="filter-btn-group">
+            <van-radio v-for="item in categoryOptions" :key="item.value" :name="item.value">{{ item.label }}</van-radio>
+          </van-radio-group>
         </div>
         <van-switch v-model="follow" size="16px" class="follow-switch" />
         <span class="follow-label" @click="follow = !follow">{{ $t('proxy.socket.follow') }}</span>
@@ -105,8 +102,8 @@
         </van-button>
         <span class="msg-count">{{ filteredFrames.length }} / {{ frames.length }}</span>
       </div>
-      <van-field v-model="keyword" clearable :placeholder="$t('proxy.socket.searchPlaceholder')"
-        left-icon="search" class="msg-search" />
+      <van-search v-model="keyword" clearable :placeholder="$t('proxy.socket.searchPlaceholder')"
+        class="msg-search" />
 
       <OverlayScrollbarsComponent ref="listRef" class="msg-list" :options="scrollOptions" defer>
         <div v-for="frame in filteredFrames" :key="frame.seq" class="msg-row"
@@ -153,6 +150,8 @@ import type { PropType } from 'vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { scrollOptions } from '../../common/scroll'
+import { copyToClipboard } from '../../common/clipboard'
+import { toKeyValueEntries, type HeaderEntry } from '../../common/headerUtil'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import {
   formatBytes, formatDuration, frameCategory, frameContent, framePreview,
@@ -180,7 +179,6 @@ let viewportEl: HTMLElement
 
 const socket = computed(() => props.record as ProxyMock.SocketRecord)
 const frames = computed(() => socket.value?.frames ?? [])
-const isLive = computed(() => socket.value != null && socket.value.wsPhase !== 'close')
 
 const directionOptions = computed<Array<{ value: Direction, label: string }>>(() => [
   { value: 'all', label: t('proxy.socket.all') },
@@ -251,21 +249,6 @@ const errorText = computed(() => {
   return te(key) ? t(key) : (record.errorMessage ?? record.errorCode)
 })
 
-interface HeaderEntry {
-  key: string
-  value: string
-}
-
-function toKeyValueEntries(source: Record<string, any> | null | undefined): HeaderEntry[] {
-  if (source == null) return []
-  return Object.keys(source).map(key => {
-    const value = source[key]
-    const text = Array.isArray(value) ? value.map(it => String(it ?? '')).join('\n')
-      : typeof value === 'object' && value != null ? JSON.stringify(value) : String(value ?? '')
-    return { key, value: text }
-  })
-}
-
 const requestHeaders = computed(() => toKeyValueEntries(socket.value?.requestHeaders))
 const responseHeaders = computed(() => toKeyValueEntries(socket.value?.responseHeaders))
 
@@ -290,8 +273,7 @@ function scrollToLatest() {
 
 async function copyText(text: string) {
   try {
-    if (window.mainApi) await window.mainApi.writeClipboard(text)
-    else await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     showToast(t('proxy.socket.copied'))
   } catch (err) {
     showToast(t('common.copyFailed'))
@@ -390,42 +372,9 @@ onUnmounted(() => {
   margin: 0 16px 10px;
   padding: 6px 10px;
   border-radius: var(--van-radius-md);
-  background: rgba(238, 10, 36, 0.08);
+  background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
   color: var(--van-danger-color);
   font-size: var(--van-font-size-sm);
-  word-break: break-all;
-}
-
-.header-collapse {
-  margin: var(--van-padding-md) var(--van-padding-md) 0;
-  overflow: hidden;
-  border-radius: var(--van-radius-lg);
-  background: var(--van-cell-group-background);
-}
-
-.header-list {
-  display: grid;
-  grid-template-columns: fit-content(40%) minmax(0, 1fr);
-  column-gap: 16px;
-  row-gap: 6px;
-  padding: 5px 15px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
-  font-size: var(--van-font-size-md);
-  user-select: text;
-}
-
-.header-row {
-  display: contents;
-}
-
-.header-key {
-  color: var(--van-text-color-2);
-  word-break: break-all;
-}
-
-.header-value {
-  color: var(--van-text-color);
-  white-space: pre-line;
   word-break: break-all;
 }
 
@@ -457,8 +406,11 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.filter-btn {
-  min-width: 42px;
+.filter-btn-group :deep(.van-radio) {
+  margin: 0;
+}
+
+.filter-btn-group :deep(.van-radio__label) {
   padding: 0 8px;
 }
 
@@ -483,6 +435,7 @@ onUnmounted(() => {
   margin-top: 6px;
   padding: 2px 12px;
   font-size: var(--van-font-size-sm);
+  --van-cell-vertical-padding: 0;
 }
 
 .msg-list {
@@ -499,7 +452,7 @@ onUnmounted(() => {
   height: 26px;
   padding: 0 10px;
   border-left: 2px solid transparent;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-xs);
   color: var(--van-text-color-2);
   cursor: pointer;
@@ -565,7 +518,7 @@ onUnmounted(() => {
 }
 
 .msg-opcode.binary {
-  color: #8e44ad;
+  color: var(--van-primary-color);
 }
 
 .msg-opcode.control {
@@ -629,7 +582,7 @@ onUnmounted(() => {
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--van-text-color-3);
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-xs);
 }
 

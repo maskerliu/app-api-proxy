@@ -12,16 +12,13 @@ export default {
     copyFailed: '复制失败，请手动复制'
   },
   proxy: {
-    setDelay: '延时时长',
     filterPlaceholder: '筛选关键字',
-    scanQrCode: '扫描二维码访问：',
     waitingRegister: '推送连接注册中，请稍后…',
     requestHeader: '请求头',
     requestParams: '请求参数',
     requestBody: '请求体',
     responseHeader: '响应头',
     responseBody: '响应数据',
-    preview: '预览',
     socket: {
       dropped: '丢弃 {count}',
       all: '全部',
@@ -113,7 +110,6 @@ export default {
       },
     },
     record: {
-      update: '保存修改',
       delete: {
         title: '警告⚠️',
         confirm: '确认要删除这条请求数据？'
@@ -173,13 +169,10 @@ export default {
       statusCode: '状态码',
       delay: '延迟',
       headers: '响应头',
-      addHeader: '添加响应头',
       headerKey: '响应头名称',
       headerValue: '值',
       noHeaders: '暂无响应头',
       body: '响应体',
-      format: '格式化',
-      compact: '压缩',
       binaryTip: '二进制响应仅展示大小（{size}），本期不支持文本编辑',
       bodySize: '体积：{size}',
       invalidJson: 'JSON 格式不合法，保存后仍按原文返回',
@@ -194,7 +187,6 @@ export default {
       save: '保存',
       saveSuccess: '记录已保存',
       saveFailed: '记录保存失败',
-      saveConflict: '记录已被其他人修改，请刷新后重试',
       noRecord: '从左侧选择一条记录，或点击 + 新建',
       noRule: '请先选择或新建规则',
       newRecord: '新建记录',
@@ -210,7 +202,7 @@ export default {
       noVariants: '暂无变体，新增后可一键切换',
       variantName: '变体名称',
       variantCount: '{count} 个变体',
-      active: '当前',
+      active: '启用中',
       activeHint: '生效',
       deleteVariant: '删除变体',
       selectVariant: '选择一个变体进行编辑',
@@ -455,11 +447,9 @@ export default {
       port: '代理Http服务端口',
       porterror: "端口已被占用，请更换",
       updateServer: '应用更新服务地址',
-      proxySocketPort: '代理长连服务端口',
       apiDefineServer: 'API定义服务地址',
       statRuleServer: '埋点规则服务地址',
       dataProxyServer: '代理数据服务地址',
-      mqttBroker: 'MQTT服务地址',
       theme: '主题',
       fontsize: '字号',
       lang: '语言',
@@ -473,21 +463,9 @@ export default {
       placeholder: '请输入内容',
       btnSend: '发送'
     },
-    games: {
-      title: '游戏资源管理',
-      upload: '上传游戏',
-      name: '游戏名',
-      author: '厂商',
-      version: '版本',
-      desc: '简介',
-      icon: '图标',
-      snap: '预览图',
-      res: '资源包'
-    },
     resources: {
       title: '静态资源管理',
-      upload: '上传文件',
-      manage: '远程资源管理'
+      upload: '上传文件'
     }
   },
   debug: {
@@ -495,9 +473,6 @@ export default {
       title: 'Common',
       versionCheck: 'Check Version',
       devTools: 'Developer Tools',
-    },
-    virtualClient: {
-      title: 'Virtual Client'
     }
   },
   onboarding: {
@@ -525,14 +500,12 @@ export default {
       portInvalid: '服务端口不可用，请到设置中更换端口后重启。',
       refresh: '重新检测',
       copy: '复制代理地址',
-      copied: '代理地址已复制',
-      failed: '服务状态获取失败'
+      copied: '代理地址已复制'
     },
     client: {
       title: '在设备或代码中接入代理',
       desc: '扫码注册设备，或直接使用下方代码片段发起请求（使用本机 UID）。',
       qrcode: '扫码注册设备',
-      registerUrl: '注册地址',
       targetHost: '真实服务地址',
       targetHostPlaceholder: 'https://api.example.com',
       snippet: '代码片段',
@@ -547,7 +520,6 @@ export default {
       waiting: '等待请求…',
       received: '已收到请求',
       empty: '还没有收到请求，请按上一步的代码片段发起一次请求',
-      latest: '最近请求',
       unknownUid: '检测到未注册的 UID',
       unknownUidTip: '请求使用的 UID 不在线，请确认请求头 x-mock-uid 与本机 UID 一致。',
       currentUid: '当前本机 UID',
@@ -567,7 +539,6 @@ export default {
       created: 'Mock 已创建并启用',
       testing: '等待命中…',
       hit: 'Mock 命中成功',
-      retry: '重新等待',
       invalidJson: '响应内容不是合法的 JSON',
       invalidPath: '请求路径需要以 / 开头',
       createFailed: 'Mock 创建失败',
@@ -577,12 +548,10 @@ export default {
   diagnostic: {
     title: '诊断中心',
     desc: '查看服务健康状态、最近请求与错误，并排查目标地址是否可达。',
-    back: '返回',
     refresh: '刷新',
     report: '复制诊断报告',
     reportCopied: '诊断报告已复制（已脱敏）',
     reportFailed: '报告复制失败',
-    service: '服务状态',
     address: '服务地址',
     clients: '在线客户端',
     viewers: '桌面端',
@@ -605,7 +574,6 @@ export default {
     reachable: '可达',
     unreachable: '不可达',
     emptyTarget: '请输入诊断目标地址',
-    entry: '诊断中心',
     step: {
       dns: 'DNS 解析',
       tcp: 'TCP 连接',

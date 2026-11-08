@@ -97,7 +97,8 @@
             <span class="raw-hint">{{ $t('mock.editor.rawHint') }}</span>
             <van-button size="mini" plain type="primary" @click="applyRaw">{{ $t('mock.editor.rawApply') }}</van-button>
           </div>
-          <van-notice-bar v-if="rawError" :text="rawError" mode="closeable" color="#ee0a24" background="#fff1f0" />
+          <van-notice-bar v-if="rawError" :text="rawError" mode="closeable"
+            color="var(--van-danger-color)" background="color-mix(in srgb, var(--van-danger-color) 8%, transparent)" />
           <div class="raw-editor">
             <vue-ace-editor v-model:data="rawText" lang="json" :fold="false" searchable />
           </div>
@@ -307,6 +308,11 @@ function applyRaw() {
 
 <style scoped>
 .record-editor {
+  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
+  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
+  --sp-md: calc(var(--van-font-size-md) * 0.4615);
+  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
+  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -316,8 +322,8 @@ function applyRaw() {
 .editor-head {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 0 4px;
+  gap: var(--sp-lg);
+  padding: 0 var(--sp-sm);
   flex: none;
 }
 
@@ -325,7 +331,7 @@ function applyRaw() {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: 4px;
+  gap: var(--sp-sm);
   min-width: 0;
 }
 
@@ -334,14 +340,14 @@ function applyRaw() {
 .path-field {
   flex: none;
   width: 100%;
-  padding: 6px 8px;
+  padding: var(--sp-md) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .head-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
   flex: none;
 }
 
@@ -355,7 +361,7 @@ function applyRaw() {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: 6px;
+  margin-top: var(--sp-md);
 }
 
 .editor-tabs :deep(.van-tabs__content) {
@@ -372,13 +378,13 @@ function applyRaw() {
 .editor-tabs :deep(.van-tab__panel) {
   height: 100%;
   overflow: auto;
-  padding: 0 4px;
+  padding: 0 var(--sp-sm);
   /* 预留滚动条宽度：展开响应头等操作触发溢出时，内容不会左右跳动 */
   scrollbar-gutter: stable;
 }
 
 .tab-body {
-  padding-bottom: 8px;
+  padding-bottom: var(--sp-lg);
 }
 
 /* 响应体已贴合面板底部，额外的下边距会撑出滚动条 */
@@ -389,7 +395,7 @@ function applyRaw() {
 .variants-tab {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-lg);
   height: 100%;
   min-height: 0;
   /* 变体编辑区已贴合面板底部 */
@@ -400,31 +406,31 @@ function applyRaw() {
 .variant-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
   flex: none;
   min-width: 0;
   /* 固定高度：出现横向滚动条时不改变编辑区位置 */
-  height: 32px;
-  margin-top: 5px;
+  height: calc(var(--van-font-size-md) * 2.462);
+  margin-top: calc(var(--van-font-size-md) * 0.3846);
 }
 
 .variant-strip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   flex: 1 1 auto;
   min-width: 0;
-  padding-bottom: 2px;
+  padding-bottom: var(--sp-xs);
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .variant-strip::-webkit-scrollbar {
-  height: 4px;
+  height: var(--sp-xs);
 }
 
 .variant-strip::-webkit-scrollbar-thumb {
-  border-radius: 2px;
+  border-radius: var(--sp-xs);
   background: var(--van-border-color);
 }
 
@@ -440,8 +446,8 @@ function applyRaw() {
 /* 变体胶囊直接用 van-button（mini + round），选中态由 primary 实心样式提供 */
 .variant-chip {
   flex: none;
-  max-width: 180px;
-  padding: 0 10px;
+  max-width: calc(var(--van-font-size-md) * 13.846);
+  padding: 0 var(--sp-xl);
   font-size: var(--van-font-size-md);
 }
 
@@ -457,7 +463,7 @@ function applyRaw() {
 .variant-chip :deep(.van-button__text) {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   min-width: 0;
   max-width: 100%;
 }
@@ -505,17 +511,6 @@ function applyRaw() {
   color: var(--van-white);
 }
 
-.variant-count {
-  flex: none;
-}
-
-/* 与变体胶囊同字号，窄空间下文字不折行 */
-.variant-add {
-  flex: none;
-  font-size: var(--van-font-size-md);
-  white-space: nowrap;
-}
-
 .variant-editor {
   flex: 1 1 auto;
   min-height: 0;
@@ -526,16 +521,16 @@ function applyRaw() {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-lg);
   min-width: 0;
 }
 
 /* 基准宽度取 0，换行判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作 */
 .variant-name-field {
   flex: 1 1 0;
-  min-width: 96px;
-  padding: 4px 8px;
+  min-width: calc(var(--van-font-size-md) * 7.385);
+  padding: var(--sp-sm) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
 
@@ -546,14 +541,14 @@ function applyRaw() {
 /* 状态码与延迟作为名称行的紧凑元信息，标签内联不占整行 */
 .variant-meta-field {
   flex: none;
-  padding: 4px 6px;
+  padding: var(--sp-sm) var(--sp-md);
   border-radius: var(--van-radius-md);
   font-size: var(--van-font-size-md);
 }
 
 .variant-meta-field :deep(.van-field__label) {
   flex: none;
-  margin-right: 4px;
+  margin-right: var(--sp-sm);
   width: auto;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
@@ -566,11 +561,11 @@ function applyRaw() {
 
 /* 宽度按英文 “Status Code” + 数值预留，避免最大字号下标签挤掉输入值 */
 .variant-status-field {
-  width: 136px;
+  width: calc(var(--van-font-size-md) * 10.462);
 }
 
 .variant-delay-field {
-  width: 124px;
+  width: calc(var(--van-font-size-md) * 9.538);
 }
 
 .meta-unit {
@@ -581,7 +576,7 @@ function applyRaw() {
 .variant-active {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-md);
   flex: none;
 }
 
@@ -595,16 +590,12 @@ function applyRaw() {
   flex: none;
 }
 
-.variant-delete {
-  flex: none;
-}
-
 .variant-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-lg);
   flex: 1 1 auto;
   min-height: 0;
   color: var(--van-text-color-3);
@@ -614,7 +605,7 @@ function applyRaw() {
 .raw-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-md);
   height: 100%;
   /* 高度已由面板限定，额外的下内边距会撑出滚动条 */
   padding-bottom: 0;
@@ -623,7 +614,7 @@ function applyRaw() {
 .raw-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
   flex: none;
 }
 
@@ -636,7 +627,7 @@ function applyRaw() {
 .raw-editor {
   position: relative;
   flex: 1 1 auto;
-  min-height: 160px;
+  min-height: calc(var(--van-font-size-md) * 12.308);
 }
 
 /* 铺满剩余高度，编辑器底边与面板/左侧列表底边对齐 */

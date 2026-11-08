@@ -29,7 +29,7 @@
         <van-cell-group inset>
           <van-cell :title="$t('onboarding.service.status')" :value="health?.ok ? $t('onboarding.service.running') : '--'">
             <template #icon>
-              <i class="iconfont icon-check status-icon" :style="{ color: health?.ok ? '#62bc3e' : 'var(--van-gray-5)' }" />
+              <i class="iconfont icon-check status-icon" :style="{ color: health?.ok ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
             </template>
           </van-cell>
           <van-cell :title="$t('diagnostic.address')"
@@ -109,6 +109,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
+import { formatDuration } from '../../common/format'
+import { copyToClipboard } from '../../common/clipboard'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -166,15 +168,6 @@ function maskUid(uid?: string) {
   return `${uid.slice(0, 4)}***${uid.slice(-2)}`
 }
 
-function formatDuration(seconds?: number) {
-  const total = Math.max(0, Math.floor(seconds ?? 0))
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}m`
-  if (minutes > 0) return `${minutes}m ${total % 60}s`
-  return `${total}s`
-}
-
 function formatTime(at?: number) {
   if (at == null) return '--'
   const date = new Date(at)
@@ -204,8 +197,7 @@ function buildReport() {
 async function copyReport() {
   const text = JSON.stringify(buildReport(), null, 2)
   try {
-    if (window.mainApi) await window.mainApi.writeClipboard(text)
-    else await navigator.clipboard.writeText(text)
+    await copyToClipboard(text)
     showNotify({ message: t('diagnostic.reportCopied'), type: 'success', duration: 1000 })
   } catch (err) {
     showNotify({ message: t('diagnostic.reportFailed'), type: 'danger', duration: 1200 })

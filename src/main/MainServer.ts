@@ -11,7 +11,7 @@ import { API_URL } from '@shared/api.const'
 import type { LocalServerConfig } from '@shared/base.models'
 import { bizContainer } from './IocContainer'
 import { IocTypes, IS_DEV, USER_DATA_DIR } from './MainConst'
-import { AppMockRouter, MapiRouter, ProxyRouter } from './router'
+import { AppMockRouter, ProxyRouter } from './router'
 import { CommonService, MockService, ProxyService, PushService, SocketProxyService } from './service'
 
 export class MainServer {
@@ -19,7 +19,6 @@ export class MainServer {
   private httpServer: Server
   private httpApp: Application
 
-  private mapiRouter: MapiRouter
   private appmockRouter: AppMockRouter
   private proxyRouter: ProxyRouter
   private commonService: CommonService
@@ -30,7 +29,6 @@ export class MainServer {
 
   bootstrap() {
     this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
-    this.mapiRouter = bizContainer.get(IocTypes.MapiRouter)
     this.proxyRouter = bizContainer.get(IocTypes.ProxyRouter)
     this.commonService = bizContainer.get(IocTypes.CommonService)
     this.pushService = bizContainer.get(IocTypes.PushService)
@@ -178,7 +176,6 @@ export class MainServer {
     const jsonParser = express.json({ limit: '50mb' })
 
     this.httpApp.use(API_URL.AppMock, formParser, textJsonParser, jsonParser, this.appmockRouter.router)
-    this.httpApp.use(API_URL.MApi, formParser, textJsonParser, jsonParser, this.mapiRouter.router)
     // 代理不能经过任何 body parser：需保留原始字节与 Content-Encoding，由 ProxyService 自行读取请求流
     this.httpApp.use(API_URL.Proxy, this.proxyRouter.router)
     this.httpApp.use(API_URL.CorsMediaProxy, this.proxyCorsMedia)

@@ -56,7 +56,7 @@ interface VueAceEditorProps {
 interface MatchToken { row: number, start: number, value: string }
 
 const data = defineModel<string>('data')
-let x = 0, y = 0, row = 0, col = 0, marker = 0, curRow = 0, curCol = 0
+let x = 0, y = 0, row = 0, col = 0, marker = 0
 let pressX = 0, pressY = 0
 let link: string = null
 let settingFromModel = false
