@@ -5,6 +5,7 @@ import { injectable } from 'inversify'
 import net from 'net'
 import tls from 'tls'
 import type { Diagnostic } from '@shared/diagnostic.models'
+import { toAbsoluteTarget } from '@shared/url'
 
 const MAX_BUFFER = 20
 const DIAGNOSE_BUDGET = 5000
@@ -114,17 +115,7 @@ export class DiagnosticService {
   private parseTarget(input: string): URL {
     const raw = String(input ?? '').trim()
     if (raw.length === 0) throw new Error('target is required')
-    const withProtocol = /^[a-z][a-z\d+\-.]*:\/\//i.test(raw) ? raw : `http://${raw}`
-    let url: URL
-    try {
-      url = new URL(withProtocol)
-    } catch (err) {
-      throw new Error(`invalid target: ${raw}`)
-    }
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      throw new Error(`unsupported protocol: ${url.protocol}`)
-    }
-    return url
+    return toAbsoluteTarget(raw, ['http:', 'https:'])
   }
 
   private remaining(startedAt: number): number {

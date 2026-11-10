@@ -1,6 +1,7 @@
 import type { ProxyMock } from './proxy.models'
 import type { MockErrorCode } from './mock.errors'
 import { HOP_BY_HOP_HEADERS, isHeaderName } from './http-header'
+import { stripTrailingSlash } from './url'
 import type {
   MockHeaderCondition,
   MockMatchDerivation,
@@ -302,11 +303,8 @@ export function validateMatchRule(match: MockMatchRule, fieldPrefix: string = 'm
 }
 
 function pathForFingerprint(match: MockMatchRule): string {
-  let path = match.pathIgnoreCase ? match.path.toLowerCase() : match.path
-  if (match.ignoreTrailingSlash && path.length > 1 && path.endsWith('/')) {
-    path = path.replace(/\/+$/, '') || '/'
-  }
-  return path
+  const path = match.pathIgnoreCase ? match.path.toLowerCase() : match.path
+  return match.ignoreTrailingSlash ? stripTrailingSlash(path, true) : path
 }
 
 function tupleKey(tuple: Array<string | number>): string {

@@ -168,6 +168,9 @@ describe('resolveTargetUrl', () => {
     const unsupported = routedError(() => resolveTargetUrl({ ...parsed, mockHost: 'ftp://example.com' }))
     assert.equal(unsupported.wsCode, ProxyMock.SocketErrorCode.UNSUPPORTED_PROTOCOL)
     assert.equal(unsupported.status, 400)
+    // 文案在 shared/url 之外重拼：协议名不带裸输入，非法地址要带
+    assert.equal(unsupported.message, 'unsupported target protocol: ftp:')
+    assert.equal(invalid.message, 'invalid target: http://')
   })
 })
 

@@ -9,6 +9,10 @@ import {
 } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
 import { headerValuesOf, MOCK_HOST_HEADER } from '@shared/http-header'
+import {
+  decodeQueryPart, normalizePathname, pathSegments, PLACEHOLDER_BASE, queryParts, splitHostPort,
+  stripTrailingSlash,
+} from '@shared/url'
 
 // Matcher：只做 CPU 计算，不读库、不写库、不抛业务异常。
 // 热路径（testMatch / compare）不构造字符串；只有最终命中与 top-1 诊断才物化文案。
@@ -94,26 +98,10 @@ export function maskValue(key: string, value: string): string {
 
 // ---------------- 归一化 ----------------
 
-function decodeQueryPart(value: string): string {
-  const plus = value.replace(/\+/g, ' ')
-  try {
-    return decodeURIComponent(plus)
-  } catch (err) {
-    return plus
-  }
-}
-
 function parseQuery(rawUrl: string): Map<string, NormalizedQueryValue> {
   const result = new Map<string, NormalizedQueryValue>()
-  const queryIndex = rawUrl.indexOf('?')
-  if (queryIndex < 0) return result
 
-  const hashIndex = rawUrl.indexOf('#', queryIndex)
-  const raw = rawUrl.slice(queryIndex + 1, hashIndex < 0 ? undefined : hashIndex)
-  if (raw === '') return result
-
-  for (const part of raw.split('&')) {
-    if (part === '') continue
+  for (const part of queryParts(rawUrl)) {
     const eq = part.indexOf('=')
     const rawKey = eq < 0 ? part : part.slice(0, eq)
     const key = decodeQueryPart(rawKey)
@@ -131,54 +119,20 @@ function parseQuery(rawUrl: string): Map<string, NormalizedQueryValue> {
   return result
 }
 
-function decodePath(pathname: string): string {
-  let value: string
-  try {
-    // decodeURI 不会把 %2F 还原成路径分隔符
-    value = decodeURI(pathname)
-  } catch (err) {
-    value = pathname
-  }
-  value = value.replace(/\/{2,}/g, '/')
-  if (!value.startsWith('/')) value = `/${value}`
-  return value
-}
-
-function splitHostPort(value: string): { host: string; port: number | null } {
-  const host = String(value ?? '').trim().toLowerCase()
-  if (host === '') return { host: '', port: null }
-
-  if (host.startsWith('[')) {
-    const end = host.indexOf(']')
-    if (end > 0) {
-      const hostname = host.slice(1, end)
-      const rest = host.slice(end + 1)
-      const matched = /^:(\d+)$/.exec(rest)
-      return { host: hostname, port: matched == null ? null : Number(matched[1]) }
-    }
-  }
-
-  const colon = host.lastIndexOf(':')
-  if (colon > 0 && /^\d+$/.test(host.slice(colon + 1))) {
-    return { host: host.slice(0, colon), port: Number(host.slice(colon + 1)) }
-  }
-  return { host, port: null }
-}
-
 export function normalizeRequest(input: MatcherRequestInput): NormalizedRequest {
   const rawUrl = String(input?.url ?? '')
   const method = String(input?.method ?? '').trim().toUpperCase()
 
   let pathname = '/'
   try {
-    pathname = new URL(rawUrl, 'http://placeholder.local').pathname
+    pathname = new URL(rawUrl, PLACEHOLDER_BASE).pathname
   } catch (err) {
     const question = rawUrl.indexOf('?')
     const hash = rawUrl.indexOf('#')
     const end = [question, hash].filter(it => it >= 0).sort((a, b) => a - b)[0]
     pathname = end == null ? rawUrl : rawUrl.slice(0, end)
   }
-  const path = decodePath(pathname)
+  const path = normalizePathname(pathname)
 
   const headers = new Map<string, string[]>()
   const sourceHeaders = input?.headers ?? {}
@@ -255,11 +209,8 @@ function compileRegex(pattern: string, flags: string): RegExp | null {
 }
 
 function pathForCompare(path: string, ignoreCase: boolean, ignoreTrailingSlash: boolean): string {
-  let value = ignoreCase ? path.toLowerCase() : path
-  if (ignoreTrailingSlash && value.length > 1 && value.endsWith('/')) {
-    value = value.replace(/\/+$/, '') || '/'
-  }
-  return value
+  const value = ignoreCase ? path.toLowerCase() : path
+  return ignoreTrailingSlash ? stripTrailingSlash(value, true) : value
 }
 
 function createPathTester(match: MockMatchRule): (path: string) => boolean {
@@ -579,10 +530,6 @@ export function explainMatch(compiled: CompiledMatchRecord, request: NormalizedR
 }
 
 // ---------------- 未命中诊断（两阶段） ----------------
-
-function pathSegments(path: string): string[] {
-  return String(path ?? '').split('/').filter(it => it !== '')
-}
 
 function sharedSegmentCount(a: string[], b: string[]): number {
   let shared = 0

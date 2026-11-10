@@ -8,6 +8,7 @@ import {
 } from '@shared/mock.models'
 import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
 import { MOCK_HOST_HEADER } from '@shared/http-header'
+import { parseLooseUrl, pathSegments } from '@shared/url'
 import { normalizeRequest } from './mock.matcher'
 
 // 录制派生：纯函数、无 IO。同一输入多次运行输出完全一致（时间由调用方注入）。
@@ -71,10 +72,6 @@ function isIdLikeSegment(segment: string): boolean {
   return UUID_REG.test(segment) || LONG_HEX_REG.test(segment)
 }
 
-function segmentsOf(path: string): string[] {
-  return String(path ?? '').split('/').filter(it => it !== '')
-}
-
 function pathOfSegments(segments: string[]): string {
   return `/${segments.join('/')}`
 }
@@ -127,11 +124,7 @@ export function createMatchFromUrl(url: string, options?: {
   analyzedAt?: number
 }): MockMatchRule | null {
   if (url == null || String(url).trim() === '') return null
-  try {
-    new URL(String(url), 'http://placeholder.local')
-  } catch (err) {
-    return null
-  }
+  if (parseLooseUrl(String(url)) == null) return null
 
   const normalized = normalizeRequest({ method: options?.method, url })
   const conditions: MockQueryCondition[] = []
@@ -175,7 +168,7 @@ function prepareRecord(record: ProxyMock.MockRecord): PreparedRecord | null {
     : createMatchFromUrl(url, { method: normalized.source?.method })
   if (base == null) return null
 
-  const segments = segmentsOf(base.path)
+  const segments = pathSegments(base.path)
   const groupSegments = segments.map((segment, index) => {
     if (index === 0) return segment
     return isIdLikeSegment(segment) ? '*' : segment

@@ -5,8 +5,16 @@ import {
   splitConnectionTokens,
 } from '@shared/http-header'
 import { ProxyMock } from '@shared/proxy.models'
+import {
+  decodeRawToken, stripTrailingSlash, toAbsoluteTarget, UrlTargetError,
+} from '@shared/url'
 
-export const RESERVED_QUERY = ['__mock_host', '__mock_uid']
+// 上游可以是 http/https（代理侧升级为 ws/wss）或直接的 ws/wss
+const TARGET_PROTOCOLS = ['http:', 'https:', 'ws:', 'wss:']
+
+export const MOCK_HOST_QUERY = '__mock_host'
+export const MOCK_UID_QUERY = '__mock_uid'
+export const RESERVED_QUERY = [MOCK_HOST_QUERY, MOCK_UID_QUERY]
 export const MAX_CLOSE_REASON = 123
 export const MAX_TEXT_FRAME = 256 * 1024
 export const MAX_BINARY_FRAME = 128 * 1024
@@ -69,11 +77,11 @@ export function parseProxyRequest(req: RequestLike): ParsedProxyRequest {
     if (part === '') continue
     const eq = part.indexOf('=')
     const rawKey = eq >= 0 ? part.slice(0, eq) : part
-    const key = safeDecode(rawKey)
+    const key = decodeRawToken(rawKey)
     if (RESERVED_QUERY.includes(key)) {
-      const value = eq >= 0 ? safeDecode(part.slice(eq + 1)) : ''
-      if (key === '__mock_uid' && uid == null) uid = emptyToNull(value)
-      if (key === '__mock_host' && mockHost == null) mockHost = emptyToNull(value)
+      const value = eq >= 0 ? decodeRawToken(part.slice(eq + 1)) : ''
+      if (key === MOCK_UID_QUERY && uid == null) uid = emptyToNull(value)
+      if (key === MOCK_HOST_QUERY && mockHost == null) mockHost = emptyToNull(value)
       continue
     }
     parts.push(part)
@@ -131,26 +139,19 @@ export function resolveTargetUrl(parsed: ParsedProxyRequest, config?: TargetConf
   }
 
   const raw = base.trim()
-  const withScheme = /^[a-z][a-z\d+\-.]*:\/\//i.test(raw) ? raw : `http://${raw}`
   let url: URL
   try {
-    url = new URL(withScheme)
+    url = toAbsoluteTarget(raw, TARGET_PROTOCOLS)
   } catch (err) {
+    if (err instanceof UrlTargetError && err.code === 'unsupported') {
+      throw routeError(ProxyMock.SocketErrorCode.UNSUPPORTED_PROTOCOL, 400,
+        `unsupported target protocol: ${err.detail}`)
+    }
     throw routeError(ProxyMock.SocketErrorCode.MISSING_TARGET, 400, `invalid target: ${raw}`)
   }
 
-  let protocol: string
-  switch (url.protocol) {
-    case 'http:': protocol = 'ws:'; break
-    case 'https:': protocol = 'wss:'; break
-    case 'ws:': protocol = 'ws:'; break
-    case 'wss:': protocol = 'wss:'; break
-    default:
-      throw routeError(ProxyMock.SocketErrorCode.UNSUPPORTED_PROTOCOL, 400,
-        `unsupported target protocol: ${url.protocol}`)
-  }
-
-  const basePath = url.pathname.replace(/\/+$/, '')
+  const protocol = url.protocol === 'https:' || url.protocol === 'wss:' ? 'wss:' : 'ws:'
+  const basePath = stripTrailingSlash(url.pathname)
   const path = basePath + (parsed.path.startsWith('/') ? parsed.path : `/${parsed.path}`)
   const targetUrl = `${protocol}//${url.host}${path}${parsed.query.length > 0 ? `?${parsed.query}` : ''}`
   // URL 构造一次确保拼接结果合法（非法字符直接拒绝，而不是让 ws 抛错）
@@ -189,26 +190,6 @@ export function sanitizeHeaders(headers: NodeJS.Dict<string | string[]>): Record
     if (value != null) result[key] = value
   }
   return result
-}
-
-export function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value)
-  } catch (err) {
-    return value
-  }
-}
-
-export function mockQueryValue(rawUrl: string, key: string): string | undefined {
-  const queryIndex = rawUrl.indexOf('?')
-  if (queryIndex < 0) return undefined
-  for (const part of rawUrl.slice(queryIndex + 1).split('&')) {
-    const eq = part.indexOf('=')
-    const rawKey = eq >= 0 ? part.slice(0, eq) : part
-    if (safeDecode(rawKey) !== key) continue
-    return emptyToNull(safeDecode(eq >= 0 ? part.slice(eq + 1) : '')) ?? undefined
-  }
-  return undefined
 }
 
 export function truncateReason(reason: string): string {

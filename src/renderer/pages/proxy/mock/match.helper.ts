@@ -7,6 +7,7 @@ import {
   MOCK_QUERY_OPERATORS, MOCK_SEMANTIC_KEYS, createDefaultMatch, levelOf, normalizeHost,
 } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
+import { parseLooseUrl, PLACEHOLDER_HOSTNAME } from '@shared/url'
 
 // 匹配 Tab 的纯展示工具：档位切换、摘要与差异预览都在渲染层完成，
 // 执行仍以服务端 Matcher 为准（保存后由服务端重新编译）。
@@ -57,12 +58,7 @@ export interface MatchTestSeed {
 
 function safeUrl(url: string): URL | null {
   const value = String(url ?? '').trim()
-  if (value === '') return null
-  try {
-    return new URL(value, 'http://placeholder.local')
-  } catch (err) {
-    return null
-  }
+  return value === '' ? null : parseLooseUrl(value)
 }
 
 export function pathOfUrl(url: string): string {
@@ -71,7 +67,7 @@ export function pathOfUrl(url: string): string {
 
 export function hostOfUrl(url: string): string {
   const parsed = safeUrl(url)
-  if (parsed == null || parsed.hostname === 'placeholder.local') return ''
+  if (parsed == null || parsed.hostname === PLACEHOLDER_HOSTNAME) return ''
   return parsed.port ? `${parsed.hostname}:${parsed.port}` : parsed.hostname
 }
 
