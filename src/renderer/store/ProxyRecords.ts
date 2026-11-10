@@ -17,8 +17,6 @@ const COLORS: string[] = [
 
 // 单条响应在主进程已截断到 1MB，40 条是展示上限，避免长时间挂机内存持续增长
 const MAX_RECORDS = 40
-// 主进程同样限制 1000 帧，这里兜底防止窗口重开/异常批次突破上限
-const MAX_SOCKET_FRAMES = 1000
 
 type RecordItem = ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord
 
@@ -110,7 +108,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       switch (record.type) {
         case ProxyMock.PorxyType.REQUEST_START:
         case ProxyMock.PorxyType.STATISTICS:
-          record.timelineColor = COLORS[record.timestamp % 10]
+          record.timelineColor = COLORS[record.timestamp % COLORS.length]
 
           if (!this.records.has(record.id)) this.order.push(record.id)
           this.records.set(record.id, record)
@@ -151,8 +149,9 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
 
       if (record.wsPhase === 'frames') {
         const frames = (existing.frames ?? []).concat(record.frames ?? [])
-        existing.frames = frames.length > MAX_SOCKET_FRAMES
-          ? frames.slice(frames.length - MAX_SOCKET_FRAMES) : frames
+        // 主进程已按同一个上限截断，这里兜底防止窗口重开/异常批次突破上限
+        existing.frames = frames.length > ProxyMock.SOCKET_MAX_FRAMES
+          ? frames.slice(frames.length - ProxyMock.SOCKET_MAX_FRAMES) : frames
         existing.frameCount = record.frameCount ?? existing.frameCount
         existing.droppedFrames = record.droppedFrames ?? existing.droppedFrames
         existing.bytesSent = record.bytesSent ?? existing.bytesSent

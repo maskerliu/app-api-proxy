@@ -17,7 +17,6 @@ import {
 } from './socket-proxy.contract'
 
 const MAX_CONNECTIONS = 128
-const MAX_STORED_FRAMES = 1000
 const MAX_PENDING_FRAMES = 1000
 const MAX_PENDING_BYTES = 4 * 1024 * 1024
 const BATCH_INTERVAL = 100
@@ -659,7 +658,7 @@ export class SocketProxyService {
     ctx.frameSeq++
     ctx.frameCount++
 
-    if (ctx.deliveredFrames + ctx.frames.length >= MAX_STORED_FRAMES) {
+    if (ctx.deliveredFrames + ctx.frames.length >= ProxyMock.SOCKET_MAX_FRAMES) {
       ctx.droppedFrames++
       return
     }
