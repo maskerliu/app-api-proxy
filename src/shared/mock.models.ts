@@ -399,10 +399,6 @@ export function levelOf(match?: MockMatchRule | null): MockMatchLevel {
   return 'custom'
 }
 
-export function isMatchEnabled(record?: ProxyMock.MockRecord | null): boolean {
-  return record?.match != null && record.match.enabled !== false && record.matchInvalid == null
-}
-
 export function recordLimitState(count: number): MockLimitState {
   const total = Number.isFinite(count) ? Math.max(0, count) : 0
   return {

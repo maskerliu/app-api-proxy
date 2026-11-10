@@ -109,7 +109,7 @@ export class PushService {
         content: result
       }
     })
-    this.boardcastClientInfos()
+    this.broadcastClientInfos()
     return result
   }
 
@@ -130,7 +130,7 @@ export class PushService {
         content: result
       }
     })
-    this.boardcastClientInfos()
+    this.broadcastClientInfos()
     return result
   }
 
@@ -192,7 +192,7 @@ export class PushService {
   }
 
   private removeClient(conn: Connection) {
-    if (this.detachConnection(conn)) this.boardcastClientInfos()
+    if (this.detachConnection(conn)) this.broadcastClientInfos()
   }
 
   // 移除连接持有的 uid（及其名下设备）；remapTo 用于同连接重新注册时迁移设备
@@ -258,7 +258,7 @@ export class PushService {
   private handleTXT(conn: any, msg: ProxyMock.PushMsg<any>) {
     switch (msg.payload.type) {
       case ProxyMock.BizType.IM: {
-        if (msg.to == null) { // boardcast to everyone
+        if (msg.to == null) { // broadcast to everyone
           this.pushClients.forEach((it, uid) => {
             if (it.uid != msg.from) this.safeWrite(uid, msg)
           })
@@ -270,7 +270,7 @@ export class PushService {
     }
   }
 
-  private boardcastClientInfos() {
+  private broadcastClientInfos() {
     const data = this.getAllPushClients()
 
     let msg: ProxyMock.PushMsg<Array<ProxyMock.ClientInfo>> = {

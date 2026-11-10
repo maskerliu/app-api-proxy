@@ -142,7 +142,7 @@ export class SocketProxyService {
       result.push({
         id: ctx.id,
         wsId: ctx.id,
-        type: ProxyMock.PorxyType.SOCKET,
+        type: ProxyMock.ProxyType.SOCKET,
         wsPhase: 'open',
         method: 'WS',
         url: ctx.url,
@@ -608,7 +608,7 @@ export class SocketProxyService {
     const record: ProxyMock.SocketRecord = {
       id: ctx.id,
       wsId: ctx.id,
-      type: ProxyMock.PorxyType.SOCKET,
+      type: ProxyMock.ProxyType.SOCKET,
       wsPhase: 'close',
       method: 'WS',
       url: ctx.url,
@@ -635,7 +635,7 @@ export class SocketProxyService {
     const record: ProxyMock.SocketRecord = {
       id: ctx.id,
       wsId: ctx.id,
-      type: ProxyMock.PorxyType.SOCKET,
+      type: ProxyMock.ProxyType.SOCKET,
       wsPhase: 'open',
       method: 'WS',
       url: ctx.url,
@@ -715,7 +715,7 @@ export class SocketProxyService {
     const record: ProxyMock.SocketRecord = {
       id: ctx.id,
       wsId: ctx.id,
-      type: ProxyMock.PorxyType.SOCKET,
+      type: ProxyMock.ProxyType.SOCKET,
       wsPhase: 'frames',
       method: 'WS',
       url: ctx.url,
@@ -772,7 +772,7 @@ export class SocketProxyService {
     const record: ProxyMock.SocketRecord = {
       id: opts.id,
       wsId: opts.id,
-      type: ProxyMock.PorxyType.SOCKET,
+      type: ProxyMock.ProxyType.SOCKET,
       wsPhase: 'close',
       method: 'WS',
       url: opts.url,

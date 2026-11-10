@@ -75,7 +75,7 @@ export class ProxyService {
       if (!err) {
         let record: ProxyMock.ProxyStatRecord = {
           id: new Date().getTime(),
-          type: ProxyMock.PorxyType.STATISTICS,
+          type: ProxyMock.ProxyType.STATISTICS,
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
@@ -139,7 +139,7 @@ export class ProxyService {
 
     const data: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
-      type: ProxyMock.PorxyType.REQUEST_START,
+      type: ProxyMock.ProxyType.REQUEST_START,
       url: req.url,
       method: req.method,
       headers: req.headers,
@@ -217,7 +217,7 @@ export class ProxyService {
         const record: ProxyMock.ProxyRequestRecord = {
           id: sessionId,
           url: req.url,
-          type: ProxyMock.PorxyType.REQUEST_END,
+          type: ProxyMock.ProxyType.REQUEST_END,
           statusCode: -100,
           responseHeaders: null,
           responseData: JSON.stringify({ error: err.message }),
@@ -313,7 +313,7 @@ export class ProxyService {
       const record: ProxyMock.ProxyRequestRecord = {
         id: sessionId,
         url: req.url,
-        type: ProxyMock.PorxyType.REQUEST_END,
+        type: ProxyMock.ProxyType.REQUEST_END,
         statusCode: status,
         responseHeaders: headers ?? null,
         responseData: this.formatRecordData(Buffer.concat(chunks as unknown as Uint8Array[]), headers, truncated, received),
@@ -336,7 +336,7 @@ export class ProxyService {
       const record: ProxyMock.ProxyRequestRecord = {
         id: sessionId,
         url: req.url,
-        type: ProxyMock.PorxyType.REQUEST_END,
+        type: ProxyMock.ProxyType.REQUEST_END,
         statusCode: -100,
         responseHeaders: headers ?? null,
         responseData: JSON.stringify({ error: state.clientGone ? 'client closed' : err.message }),

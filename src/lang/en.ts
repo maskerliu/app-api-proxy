@@ -437,7 +437,7 @@ export default {
       cancelUpdate: 'Cancel Update',
       noNewVersion: 'No New Version'
     },
-    boardcast: {
+    broadcast: {
       onlineClient: 'Online Client',
       placeholder: 'please enter message',
       btnSend: 'Send'

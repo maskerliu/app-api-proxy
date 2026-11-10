@@ -92,11 +92,11 @@ ipcMain.handle(MainApiCmd.WriteClipboard, (_, text: string) => {
   clipboard.writeText(String(text ?? ''))
 })
 
-ipcMain.handle(MainApiCmd.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, slient = false) => {
+ipcMain.handle(MainApiCmd.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, silent = false) => {
   let filePath = path.join(USER_DATA_DIR, fileName)
   await fse.ensureDir(path.dirname(filePath))
 
-  if (slient) {
+  if (silent) {
     await fse.writeFile(filePath, Buffer.from(data as any) as any)
     return
   }

@@ -1,8 +1,7 @@
 import { BrowserWindow } from "electron"
 import { Request } from "express"
-import { File, Files } from "formidable"
+import { File } from "formidable"
 import { readFileSync } from "fs"
-import { Address6 } from 'ip-address'
 import JSONBig from 'json-bigint'
 import { NetworkInterfaceInfo, networkInterfaces } from 'os'
 import { BizContext, LocalIP, UserDevice, UserNetwork } from '@shared/base.models'
@@ -17,10 +16,8 @@ export namespace BizNetwork {
   export const BIZ_HEADER_TOKEN = 'x-token'
   export const BIZ_HEADER_UA = 'x-ua'
   export const BIZ_HEADER_DEVICE = 'x-did'
-  export const BIZ_HEADER_AUTH = 'x-auth'
   export const BIZ_HEADER_NETWORK = 'x-network'
 
-  export const MIME_EVENT_STREAM = 'text/event-stream'
   export const MIME_MULTIPART = 'multipart/form-data'
   export const MIME_JSON = 'application/json'
   export const MIME_TEXT = 'text/plain'
@@ -54,54 +51,6 @@ export function getLocalIPs(): LocalIP[] {
   }
   return ips
 }
-/**
- * use webpack dev server implement
- * @param gatewayOrFamily 
- * @param isInternal 
- * @returns 
- */
-export function findIp(gatewayOrFamily: string, isInternal?: boolean) {
-  if (gatewayOrFamily === "v4" || gatewayOrFamily === "v6") {
-    let host: string
-
-    const networks = Object.values(networkInterfaces())
-      .flatMap((networks) => networks ?? [])
-      .filter((network) => {
-        if (!network || !network.address) {
-          return false
-        }
-
-        if (network.family !== `IP${gatewayOrFamily}`) {
-          return false
-        }
-
-        if (
-          typeof isInternal !== "undefined" &&
-          network.internal !== isInternal
-        ) {
-          return false
-        }
-
-        if (gatewayOrFamily === "v6") {
-          return Address6.isValid(network.address)
-        }
-
-        return network.address
-      })
-
-    for (const network of networks) {
-      host = network.address
-
-      if (host.includes(":")) {
-        host = `[${host}]`
-      }
-    }
-
-    return host
-  }
-}
-
-
 export function parseContext(req: Request): BizContext {
 
   const network = pickHeader(req.headers, BizNetwork.BIZ_HEADER_NETWORK)
@@ -168,36 +117,6 @@ export function parseJsonBody(req: Request) {
     return JSONBig.parse(req.body)
   } catch (error) {
     console.log('parse json body error', error)
-  }
-}
-
-export async function parseMultipartForm(files: Files<string>, req: Request) {
-
-  let formData = new FormData()
-  try {
-    for (const key in files) {
-      let file = files[key][0]
-      let data: any
-      switch (file.mimetype) {
-        case BizNetwork.MIME_JSON:
-          data = readFileSync(file.filepath, 'utf-8')
-          let blob = new Blob([data], { type: file.mimetype })
-          formData.set(key, data)
-          break
-        case BizNetwork.MIME_TEXT:
-          data = readFileSync(file.filepath, 'utf-8')
-          formData.set(key, data)
-          break
-        case BizNetwork.MIME_IMAGE:
-          data = readFileSync(file.filepath, 'utf-8')
-          formData.set(key, data)
-          break
-      }
-    }
-    return formData
-  } catch (error) {
-    console.log('parse multpart form data fail', error)
-    return null
   }
 }
 

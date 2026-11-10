@@ -186,7 +186,7 @@ describe('SocketProxyService 经 /_proxy 端到端', () => {
     const openRecord = pushed.find(it => it.wsPhase === 'open')
     assert.ok(openRecord != null)
     assert.equal(openRecord.url, `ws://127.0.0.1:${labPort}/ws?name=it-a&echo=1`)
-    assert.equal(openRecord.type, ProxyMock.PorxyType.SOCKET)
+    assert.equal(openRecord.type, ProxyMock.ProxyType.SOCKET)
     assert.equal(openRecord.wsId, openRecord.id)
 
     assert.ok(diagnostics.requests.some(it => it.method === 'WS' && it.uid === UID && it.uidKnown === true))

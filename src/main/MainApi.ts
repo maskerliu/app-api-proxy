@@ -21,8 +21,8 @@ const mainApi: IMainAPI = {
   openFolder(path: string) {
     ipcRenderer.invoke(MainApiCmd.OpenFolder, path)
   },
-  saveFile(title: string, fileName: string, file: string | ArrayBuffer, slient: boolean = false): void {
-    ipcRenderer.invoke(MainApiCmd.SaveFileAs, title, fileName, file, slient)
+  saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent: boolean = false): void {
+    ipcRenderer.invoke(MainApiCmd.SaveFileAs, title, fileName, file, silent)
   },
   openDevTools(...args: any) {
     ipcRenderer.invoke(MainApiCmd.OpenDevTools, args)
@@ -57,10 +57,6 @@ const mainApi: IMainAPI = {
     ipcRenderer.invoke(MainApiCmd.SetAppTheme, theme)
   },
 
-  getSysTheme(callback: any) {
-    ipcRenderer.once(MainApiCmd.GetSysTheme, (theme) => callback(theme))
-  },
-
   onOpenMockRuleMgr(callback: any) {
     ipcRenderer.once(MainApiCmd.OpenMockRuleMgr, (_event) => callback())
   },
@@ -71,10 +67,6 @@ const mainApi: IMainAPI = {
 
   onOpenOnboarding(callback: any) {
     ipcRenderer.once(MainApiCmd.OpenOnboarding, (_event) => callback())
-  },
-
-  onSysThemeChanged(callback: (theme: string) => void) {
-    ipcRenderer.once(MainApiCmd.SysThemeChanged, (_, theme: string) => callback(theme))
   },
 
   onDownloadUpdate(callback: (...args: any) => void) {

@@ -21,7 +21,7 @@ const MAX_RECORDS = 40
 type RecordItem = ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord
 
 function isSocket(record: RecordItem): record is ProxyMock.SocketRecord {
-  return record.type === ProxyMock.PorxyType.SOCKET
+  return record.type === ProxyMock.ProxyType.SOCKET
 }
 
 function isLiveSocket(record: RecordItem): boolean {
@@ -29,9 +29,9 @@ function isLiveSocket(record: RecordItem): boolean {
 }
 
 function isFiltered(record: RecordItem, types: string[], keyword: string): boolean {
-  if (record.type == ProxyMock.PorxyType.REQUEST_START ||
-    record.type == ProxyMock.PorxyType.REQUEST_END) {
-    return types.indexOf(String(ProxyMock.PorxyType.REQUEST)) == -1 ||
+  if (record.type == ProxyMock.ProxyType.REQUEST_START ||
+    record.type == ProxyMock.ProxyType.REQUEST_END) {
+    return types.indexOf(String(ProxyMock.ProxyType.REQUEST)) == -1 ||
       String((record as ProxyMock.ProxyRequestRecord).url ?? '').indexOf(keyword) == -1
   }
 
@@ -40,11 +40,11 @@ function isFiltered(record: RecordItem, types: string[], keyword: string): boole
       (keyword.length > 0 && String(record.url ?? '').indexOf(keyword) == -1)
   }
 
-  if (record.type == ProxyMock.PorxyType.STATISTICS) {
+  if (record.type == ProxyMock.ProxyType.STATISTICS) {
     return types.indexOf(String(record.type)) == -1
   }
 
-  if (record.type !== ProxyMock.PorxyType.STATISTICS && keyword.length > 0) {
+  if (record.type !== ProxyMock.ProxyType.STATISTICS && keyword.length > 0) {
     return String((record as ProxyMock.ProxyRequestRecord).url ?? '').indexOf(keyword) == -1
   }
 
@@ -54,7 +54,7 @@ function isFiltered(record: RecordItem, types: string[], keyword: string): boole
 export const ProxyRecordStore = defineStore('ProxyRecords', {
   state: () => {
     return {
-      proxyTypes: [String(ProxyMock.PorxyType.REQUEST), String(ProxyMock.PorxyType.SOCKET)],
+      proxyTypes: [String(ProxyMock.ProxyType.REQUEST), String(ProxyMock.ProxyType.SOCKET)],
       filterKeyword: '' as string | number,
       curRecordId: -1,
       records: new Map() as Map<number, RecordItem>,
@@ -106,15 +106,15 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
     },
     updateRecord(record: RecordItem) {
       switch (record.type) {
-        case ProxyMock.PorxyType.REQUEST_START:
-        case ProxyMock.PorxyType.STATISTICS:
+        case ProxyMock.ProxyType.REQUEST_START:
+        case ProxyMock.ProxyType.STATISTICS:
           record.timelineColor = COLORS[record.timestamp % COLORS.length]
 
           if (!this.records.has(record.id)) this.order.push(record.id)
           this.records.set(record.id, record)
           this.trimRecords()
           break
-        case ProxyMock.PorxyType.REQUEST_END:
+        case ProxyMock.ProxyType.REQUEST_END:
           if (!this.records.has(record.id)) { return }
           let proxyRecord = record as ProxyMock.ProxyRequestRecord
           let tmpRecord = this.records.get(record.id) as ProxyMock.ProxyRequestRecord
@@ -127,7 +127,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
           // 命中/未命中元数据随 REQUEST_END 合并，详情页据此渲染 Mock 区块
           tmpRecord.mock = proxyRecord.mock
           break
-        case ProxyMock.PorxyType.SOCKET:
+        case ProxyMock.ProxyType.SOCKET:
           this.updateSocketRecord(record as ProxyMock.SocketRecord)
           break
         default:

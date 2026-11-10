@@ -83,12 +83,12 @@ const missBadge = computed(() => {
   return Number.isFinite(score) && score >= 0.6 ? Math.round(score * 100) : 0
 })
 
-const isStat = computed(() => props.source.type == ProxyMock.PorxyType.STATISTICS)
-const isSocket = computed(() => props.source.type == ProxyMock.PorxyType.SOCKET)
+const isStat = computed(() => props.source.type == ProxyMock.ProxyType.STATISTICS)
+const isSocket = computed(() => props.source.type == ProxyMock.ProxyType.SOCKET)
 const socket = computed(() => props.source as ProxyMock.SocketRecord)
 const showLoading = computed(() => isSocket.value
   ? socket.value.wsPhase === 'open'
-  : props.source.type != ProxyMock.PorxyType.REQUEST_END && props.source.type != ProxyMock.PorxyType.STATISTICS)
+  : props.source.type != ProxyMock.ProxyType.REQUEST_END && props.source.type != ProxyMock.ProxyType.STATISTICS)
 
 const socketStatusText = computed(() => {
   const record = socket.value
