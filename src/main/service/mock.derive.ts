@@ -1,10 +1,10 @@
 import type { ProxyMock } from '@shared/proxy.models'
 import type {
-  MockDerivationSource, MockMatchDerivation, MockMatchLevel, MockMatchRule, MockMatchSuggestion,
+  MockDerivationSource, MockMatchDerivation, MockMatchRule, MockMatchSuggestion,
   MockQueryCondition,
 } from '@shared/mock.models'
 import {
-  MOCK_ANY_METHOD, MOCK_HIGH_RISK_KEYS, MOCK_SEMANTIC_KEYS, createDefaultMatch, levelOf,
+  MOCK_HIGH_RISK_KEYS, MOCK_SEMANTIC_KEYS, createDefaultMatch, levelOf,
 } from '@shared/mock.models'
 import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
 import { MOCK_HOST_HEADER } from '@shared/http-header'
@@ -372,105 +372,6 @@ export function analyzeMatchStability(records: ProxyMock.MockRecord[],
     .filter(it => it != null)
 }
 
-// ---------------- 档位预设 ----------------
-
-function levelConditionsFromSource(source?: ProxyMock.MockRecordSource): MockQueryCondition[] {
-  if (source?.url == null) return null
-  const built = createMatchFromUrl(source.url, { method: source.method, source: 'recording' })
-  return built?.query.conditions ?? null
-}
-
-function markLevel(match: MockMatchRule, level: MockMatchLevel): MockMatchRule {
-  const next = normalizeMatchRule({ ...match, level })
-  next.level = level
-  return next
-}
-
-/**
- * 档位切换只改条件，不改变响与变体。
- * strict 需要录制来源；缺失时返回 sourceMissing，不猜测条件。
- */
-export function applyLevel(level: MockMatchLevel, match: MockMatchRule,
-  source?: ProxyMock.MockRecordSource): LevelChange {
-  const current = normalizeMatchRule(match)
-
-  if (level === 'custom') {
-    return { match: markLevel(current, 'custom'), changed: current.level !== 'custom' }
-  }
-
-  if (level === 'loose') {
-    const next = normalizeMatchRule({
-      ...current,
-      query: { mode: 'ignore', ignoreKeys: [], conditions: [], allowExtra: true, multiValue: 'any' },
-      headers: { ignoreKeys: current.headers.ignoreKeys, conditions: [] },
-      derivation: current.derivation == null ? undefined : {
-        ...current.derivation,
-        autoIgnoredKeys: [],
-      },
-    })
-    next.level = 'loose'
-    return { match: next, changed: true }
-  }
-
-  if (level === 'standard') {
-    const ignored = new Set([
-      ...(current.query?.ignoreKeys ?? []),
-      ...(current.derivation?.autoIgnoredKeys ?? []),
-    ])
-    const fromSource = levelConditionsFromSource(source)
-    const conditions = fromSource == null
-      ? (current.query.conditions ?? []).filter(it => !ignored.has(it.key))
-      : fromSource.filter(it => !ignored.has(it.key))
-
-    const next = normalizeMatchRule({
-      ...current,
-      query: {
-        mode: conditions.length > 0 ? 'match' : 'ignore',
-        ignoreKeys: current.query?.ignoreKeys ?? [],
-        conditions,
-        allowExtra: true,
-        multiValue: current.query?.multiValue ?? 'any',
-      },
-      headers: { ignoreKeys: current.headers?.ignoreKeys ?? [], conditions: [] },
-    })
-    next.level = levelOf(next)
-    return { match: next, changed: true }
-  }
-
-  // strict
-  const fromSource = levelConditionsFromSource(source)
-  if (fromSource == null) {
-    return { match: markLevel(current, current.level), changed: false, reason: 'sourceMissing' }
-  }
-  const next = normalizeMatchRule({
-    ...current,
-    query: {
-      mode: 'match',
-      ignoreKeys: [],
-      conditions: fromSource,
-      allowExtra: false,
-      multiValue: current.query?.multiValue ?? 'any',
-    },
-    headers: {
-      ignoreKeys: current.headers?.ignoreKeys ?? [],
-      conditions: current.headers?.conditions ?? [],
-    },
-    derivation: {
-      source: 'manual',
-      autoIgnoredKeys: [],
-      suggestions: current.derivation?.suggestions ?? [],
-      pathParameterized: current.derivation?.pathParameterized ?? false,
-      analyzedAt: current.derivation?.analyzedAt ?? 0,
-    },
-  })
-  next.level = 'strict'
-  return { match: next, changed: true }
-}
-
-export function detectLevel(match: MockMatchRule): MockMatchLevel {
-  return levelOf(normalizeMatchRule(match))
-}
-
 /**
  * 恢复录制精确匹配：从 source.url 重建全 Query + allowExtra=false，
  * 保留响应、变体、Header 条件与手动优先级。来源缺失时返回失败原因。
@@ -508,22 +409,4 @@ export function restoreStrict(record: ProxyMock.MockRecord, analyzedAt: number =
   }
   built.level = 'strict'
   return { match: built, changed: true }
-}
-
-/** 供录制结果展示：把 match 压成一行摘要所需的结构化字段 */
-export function matchSummaryParts(match: MockMatchRule): {
-  method: string
-  host: string
-  path: string
-  level: MockMatchLevel
-  ignoredKeys: string[]
-} {
-  const normalized = normalizeMatchRule(match)
-  return {
-    method: normalized.method === MOCK_ANY_METHOD ? 'ANY' : normalized.method,
-    host: normalized.host,
-    path: normalized.path,
-    level: normalized.level,
-    ignoredKeys: normalized.query.ignoreKeys,
-  }
 }
