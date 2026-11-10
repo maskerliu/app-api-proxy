@@ -70,8 +70,8 @@
         </div>
         <div class="tag-list">
           <van-tag v-for="key in match.query.ignoreKeys" :key="key" closeable
-            :type="ignoreSourceOf(key) === 'suggestion' ? 'warning' : 'primary'" plain
-            :title="$t(`mock.match.ignoreSource.${ignoreSourceOf(key)}`)" @close="removeIgnoreKey(key)">
+            :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" plain
+            :title="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
             {{ key }}
           </van-tag>
           <span v-if="match.query.ignoreKeys.length === 0" class="empty-tip">
@@ -230,7 +230,8 @@ import MockMissPanel from './MockMissPanel.vue'
 import MockStabilityPanel from './MockStabilityPanel.vue'
 import {
   MATCH_LEVELS, MATCH_METHODS, PATH_TYPES, QUERY_OPERATORS, addHeaderCondition, addQueryCondition,
-  ensureRecordMatch, operatorNeedsValue, orderingLabelKey, previewLevel, testSeedOf,
+  diffLinesOf, ensureRecordMatch, ignoreSourceOf, operatorNeedsValue, orderingLabelKey, previewLevel,
+  testSeedOf,
 } from './mock/match.helper'
 import type { LevelPresetPreview } from './mock/match.helper'
 
@@ -328,13 +329,8 @@ function onMultiValueChange(value: MockMultiValueMode) {
   touch()
 }
 
-// 忽略键来源：自动分析写入 vs 建议待应用 vs 手动添加
-function ignoreSourceOf(key: string): 'auto' | 'suggestion' | 'manual' {
-  const derivation = match.value?.derivation
-  if (derivation?.autoIgnoredKeys?.indexOf(key) >= 0) return 'auto'
-  if (derivation?.suggestions?.some(it => it.key === key) === true) return 'suggestion'
-  return 'manual'
-}
+// 模板只关心当前匹配条件，来源判断本身在 match.helper 里
+const ignoreSource = (key: string) => ignoreSourceOf(match.value, key)
 
 function onLevelClick(level: MockMatchLevel) {
   if (match.value == null) return
@@ -347,24 +343,7 @@ function onLevelClick(level: MockMatchLevel) {
   pending.value = preview
 }
 
-const diffLines = computed<string[]>(() => {
-  const preview = pending.value
-  if (preview == null || preview.reason === 'sourceMissing') return []
-  const diff = preview.diff
-  const lines: string[] = []
-  if (diff.addedKeys.length > 0) lines.push(t('mock.match.diffAdd', { keys: diff.addedKeys.join(', ') }))
-  if (diff.removedKeys.length > 0) lines.push(t('mock.match.diffRemove', { keys: diff.removedKeys.join(', ') }))
-  if (diff.ignoredAdded.length > 0) lines.push(t('mock.match.diffIgnore', { keys: diff.ignoredAdded.join(', ') }))
-  if (diff.ignoredRemoved.length > 0) {
-    lines.push(t('mock.match.diffIgnoreRemove', { keys: diff.ignoredRemoved.join(', ') }))
-  }
-  if (diff.allowExtraFrom !== diff.allowExtraTo) {
-    lines.push(t('mock.match.diffAllowExtra', { value: diff.allowExtraTo ? 'ON' : 'OFF' }))
-  }
-  if (diff.headersCleared > 0) lines.push(t('mock.match.diffHeaders', { count: diff.headersCleared }))
-  if (diff.pathChanged) lines.push(t('mock.match.diffPath'))
-  return lines
-})
+const diffLines = computed(() => diffLinesOf(pending.value, t))
 
 function applyPending() {
   if (pending.value == null || pending.value.reason === 'sourceMissing') return

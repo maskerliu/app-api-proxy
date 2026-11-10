@@ -236,6 +236,35 @@ function diffOf(before: MockMatchRule, after: MockMatchRule): LevelPresetDiff {
   }
 }
 
+/** 档位预览的差异文案：一条改动一句，顺序固定为「加条件 → 删条件 → 忽略 → 恢复参与匹配 → 多值 → Header → Path」 */
+export function diffLinesOf(preview: LevelPresetPreview | null, t: (key: string, params?: any) => string): string[] {
+  if (preview == null || preview.reason === 'sourceMissing') return []
+  const diff = preview.diff
+  const lines: string[] = []
+  if (diff.addedKeys.length > 0) lines.push(t('mock.match.diffAdd', { keys: diff.addedKeys.join(', ') }))
+  if (diff.removedKeys.length > 0) lines.push(t('mock.match.diffRemove', { keys: diff.removedKeys.join(', ') }))
+  if (diff.ignoredAdded.length > 0) lines.push(t('mock.match.diffIgnore', { keys: diff.ignoredAdded.join(', ') }))
+  if (diff.ignoredRemoved.length > 0) {
+    lines.push(t('mock.match.diffIgnoreRemove', { keys: diff.ignoredRemoved.join(', ') }))
+  }
+  if (diff.allowExtraFrom !== diff.allowExtraTo) {
+    lines.push(t('mock.match.diffAllowExtra', { value: diff.allowExtraTo ? 'ON' : 'OFF' }))
+  }
+  if (diff.headersCleared > 0) lines.push(t('mock.match.diffHeaders', { count: diff.headersCleared }))
+  if (diff.pathChanged) lines.push(t('mock.match.diffPath'))
+  return lines
+}
+
+// 忽略键来源：自动分析写入 vs 建议待应用 vs 手动添加
+export type IgnoreSource = 'auto' | 'suggestion' | 'manual'
+
+export function ignoreSourceOf(match: MockMatchRule | null | undefined, key: string): IgnoreSource {
+  const derivation = match?.derivation
+  if (derivation?.autoIgnoredKeys?.indexOf(key) >= 0) return 'auto'
+  if (derivation?.suggestions?.some(it => it.key === key) === true) return 'suggestion'
+  return 'manual'
+}
+
 export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
   if (match.query == null) match.query = { mode: 'match', ignoreKeys: [], conditions: [], allowExtra: true, multiValue: 'any' }
   match.query.mode = 'match'
