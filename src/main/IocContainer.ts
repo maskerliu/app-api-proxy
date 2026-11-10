@@ -3,6 +3,7 @@ import { IocTypes } from './MainConst'
 import { MockRepo } from './repository/mock.repo'
 import { AppMockRouter, ProxyRouter } from './router'
 import { MockCache } from './service/mock.cache'
+import { MockMigrationRunner } from './service/mock.migration.runner'
 import {
   CommonService, DiagnosticService, MockService, ProxyService, PushService, SocketProxyService,
 } from './service'
@@ -18,5 +19,6 @@ bizContainer.bind<SocketProxyService>(IocTypes.SocketProxyService).to(SocketProx
 bizContainer.bind<DiagnosticService>(IocTypes.DiagnosticService).to(DiagnosticService)
 bizContainer.bind<MockRepo>(IocTypes.MockRepo).to(MockRepo)
 bizContainer.bind<MockCache>(IocTypes.MockCache).to(MockCache)
+bizContainer.bind<MockMigrationRunner>(IocTypes.MockMigration).to(MockMigrationRunner)
 
 export { bizContainer }
