@@ -211,7 +211,7 @@ function emptyDiff(): LevelPresetDiff {
   }
 }
 
-export function diffOf(before: MockMatchRule, after: MockMatchRule): LevelPresetDiff {
+function diffOf(before: MockMatchRule, after: MockMatchRule): LevelPresetDiff {
   const beforeKeys = conditionKeys(before)
   const afterKeys = conditionKeys(after)
   const beforeIgnored = new Set(before.query?.ignoreKeys ?? [])

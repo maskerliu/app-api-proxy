@@ -9,7 +9,7 @@ type AnyRecord = Record<string, any>
 function httpRecord(id: number, url: string = `/api/${id}`): AnyRecord {
   return {
     id,
-    type: ProxyMock.PorxyType.REQUEST_START,
+    type: ProxyMock.ProxyType.REQUEST_START,
     method: 'GET',
     url,
     headers: {},
@@ -21,7 +21,7 @@ function socketRecord(id: number, wsPhase: ProxyMock.SocketPhase, extra: AnyReco
   return {
     id,
     wsId: id,
-    type: ProxyMock.PorxyType.SOCKET,
+    type: ProxyMock.ProxyType.SOCKET,
     wsPhase,
     method: 'WS',
     url: `wss://api.example.com/ws/${id}`,
@@ -148,7 +148,7 @@ describe('5030 列表筛选', () => {
     store.insertRecord(socketRecord(11, 'open'))
     store.insertRecord(socketRecord(12, 'open'))
 
-    store.proxyTypes = [String(ProxyMock.PorxyType.SOCKET)]
+    store.proxyTypes = [String(ProxyMock.ProxyType.SOCKET)]
     assert.deepEqual(store.visibleRecords.map(it => it.id), [12, 11])
 
     store.filterKeyword = 'ws/11'
@@ -158,7 +158,7 @@ describe('5030 列表筛选', () => {
     assert.equal(store.visibleRecords.length, 0)
 
     store.filterKeyword = ''
-    store.proxyTypes = [String(ProxyMock.PorxyType.REQUEST)]
+    store.proxyTypes = [String(ProxyMock.ProxyType.REQUEST)]
     assert.deepEqual(store.visibleRecords.map(it => it.id), [10])
   })
 })

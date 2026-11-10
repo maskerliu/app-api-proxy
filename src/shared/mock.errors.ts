@@ -34,10 +34,6 @@ export interface MockErrorPayload {
   existingRecordId?: string
 }
 
-export function isMockErrorCode(value: unknown): value is MockErrorCode {
-  return typeof value === 'string' && (MOCK_ERROR_CODES as readonly string[]).includes(value)
-}
-
 /** 业务错误：由服务层抛出，BaseRouter 统一转为 { code: BizCode.ERROR, msg } */
 export class MockError extends Error {
   readonly code: MockErrorCode

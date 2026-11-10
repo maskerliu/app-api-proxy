@@ -13,8 +13,6 @@ export const MainApiCmd = {
   GetBizConfig: 'getBizConfig',
   UpdateBizConfig: 'updateBizConfig',
   SetAppTheme: 'setAppTheme',
-  GetSysTheme: 'getSysTheme',
-  SysThemeChanged: 'sysThemeChanged',
   DownloadUpdate: 'downloadUpdate',
   CancelUpdate: 'cancelUpdate',
   SendServerEvent: 'sendServerEvent',
@@ -31,7 +29,7 @@ export interface IMainAPI {
 
   openFolder(path: string): void
 
-  saveFile(title: string, fileName: string, file: string | ArrayBuffer, slient?: boolean): void
+  saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent?: boolean): void
 
   openDevTools(...args: any): void
 
@@ -54,10 +52,6 @@ export interface IMainAPI {
   getBizConfig(callback: (result: LocalServerConfig) => void): void
 
   setAppTheme(theme: ('system' | 'light' | 'dark')): void
-
-  getSysTheme(callback: any): void
-
-  onSysThemeChanged(callback: (theme: string) => void): void
 
   onDownloadUpdate(callback: any): void
 

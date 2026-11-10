@@ -1,9 +1,9 @@
 <template>
-  <van-cell-group inset :title="$t('settings.boardcast.onlineClient') + '[' + clients.length + ']'">
-    <van-field :placeholder="$t('settings.boardcast.placeholder')" v-model="broadcastMsg">
+  <van-cell-group inset :title="$t('settings.broadcast.onlineClient') + '[' + clients.length + ']'">
+    <van-field :placeholder="$t('settings.broadcast.placeholder')" v-model="broadcastMsg">
       <template #right-icon>
         <van-button plain size="small" type="primary" @click="sendBroadcastMsg">
-          {{ $t('settings.boardcast.btnSend') }}
+          {{ $t('settings.broadcast.btnSend') }}
         </van-button>
       </template>
     </van-field>

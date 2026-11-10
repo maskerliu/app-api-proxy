@@ -153,7 +153,7 @@ const targetLabel = computed(() => {
 })
 
 const socketEmptyQuery = computed(() => String(recordStore.filterKeyword ?? '').trim() !== '')
-const showSocketEmpty = computed(() => recordStore.proxyTypes.includes(String(ProxyMock.PorxyType.SOCKET))
+const showSocketEmpty = computed(() => recordStore.proxyTypes.includes(String(ProxyMock.ProxyType.SOCKET))
   && recordStore.visibleRecords.length === 0)
 
 provide('mockMgrTarget', mockMgrTarget)

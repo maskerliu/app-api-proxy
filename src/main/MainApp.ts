@@ -20,13 +20,13 @@ export default class MainApp {
   private tray: Tray = null
   private winURL: string = IS_DEV ? `${BUILD_CONFIG.protocol}://localhost:9080` : `file://${__dirname}/index.html`
   private staticDir: string
-  private dockerIconFile: string
+  private trayIconPath: string
   private mainServer: MainServer = new MainServer()
 
   constructor() {
     this.staticDir = path.join(__dirname, IS_DEV ? '../../icons' : './static')
     let ext = os.platform() == 'win32' ? 'ico' : 'png'
-    this.dockerIconFile = path.join(this.staticDir, `icon.${ext}`)
+    this.trayIconPath = path.join(this.staticDir, `icon.${ext}`)
     this.mainServer.bootstrap()
   }
 
@@ -122,7 +122,7 @@ export default class MainApp {
     }
 
     let winOpt: BrowserWindowConstructorOptions = {
-      icon: this.dockerIconFile,
+      icon: this.trayIconPath,
       title: AppName,
       width: 1100,
       height: 670,

@@ -140,7 +140,7 @@ export namespace ProxyMock {
   }
 
   export interface SocketRecord extends ProxyRequestRecord {
-    type: PorxyType.SOCKET
+    type: ProxyType.SOCKET
     wsPhase: SocketPhase
     wsId: number
     // 握手阶段
@@ -270,7 +270,7 @@ export namespace ProxyMock {
     content: T
   }
 
-  export enum PorxyType {
+  export enum ProxyType {
     REQUEST = 5010,
     REQUEST_START = 5011,
     REQUEST_END = 5012,

@@ -87,7 +87,7 @@ export class MockService {
 
     const pushed: ProxyMock.ProxyRequestRecord = {
       id: sessionId,
-      type: ProxyMock.PorxyType.REQUEST_END,
+      type: ProxyMock.ProxyType.REQUEST_END,
       url: request.url,
       statusCode: statusCode,
       responseHeaders: responseHeaders,

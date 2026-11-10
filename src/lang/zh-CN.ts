@@ -436,7 +436,7 @@ export default {
       cancelUpdate: '取消更新',
       noNewVersion: '当前已是最新版本'
     },
-    boardcast: {
+    broadcast: {
       onlineClient: '在线Client',
       placeholder: '请输入内容',
       btnSend: '发送'
