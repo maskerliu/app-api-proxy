@@ -1,5 +1,5 @@
 import type { ProxyMock } from './proxy.models'
-import type { MockErrorCode } from './mock.errors'
+import type { MockValidationCode } from './mock.errors'
 import { HOP_BY_HOP_HEADERS, isHeaderName } from './http-header'
 import { stripTrailingSlash } from './url'
 import type {
@@ -19,19 +19,6 @@ import {
 export const MOCK_MAX_BODY_BYTES = 2 * 1024 * 1024
 export const MOCK_MAX_VARIANTS = 20
 export const MOCK_MAX_DELAY_MS = 60000
-
-export type MockValidationCode =
-  | MockErrorCode
-  | 'statusRange'
-  | 'headerName'
-  | 'headerValue'
-  | 'bodyTooLarge'
-  | 'urlEmpty'
-  | 'variantLimit'
-  | 'variantIdMissing'
-  | 'delayRange'
-  | 'bodyType'
-  | 'bodyEncoding'
 
 export interface MockValidationIssue {
   code: MockValidationCode

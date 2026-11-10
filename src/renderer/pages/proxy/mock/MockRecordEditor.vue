@@ -110,7 +110,6 @@
 </template>
 
 <script lang="ts" setup>
-import type { MockValidationIssue } from '@shared'
 import { MOCK_MAX_VARIANTS, ProxyMock } from '@shared'
 import type { FieldInstance } from 'vant'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -263,7 +262,8 @@ function toggleActive(variant: ProxyMock.MockVariant) {
 }
 
 // 校验失败后定位：路径直接聚焦，响应/变体字段切到对应页签再聚焦
-function focusField(issue: MockValidationIssue) {
+// 入参刻意不绑 MockValidationIssue，新建记录也用它聚焦路径，那个码不属服务端校验
+function focusField(issue: { code: string; field?: string }) {
   const field = issue.field ?? ''
   if (field === 'url') {
     pathField.value?.focus()

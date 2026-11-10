@@ -1,3 +1,5 @@
+import { MOCK_SERVER_CODES, MOCK_VALIDATION_CODES } from '@shared/mock.errors'
+
 // 记录保存失败分型：服务端以 BizResponse.msg 返回原因，这里统一转成可操作的类型
 export type MockSaveErrorKind = 'conflict' | 'duplicateUrl' | 'validation' | 'unknown'
 
@@ -10,39 +12,9 @@ export interface MockSaveErrorInfo {
   existingRecordId?: string
 }
 
-const VALIDATION_CODES = new Set([
-  // 响应与变体
-  'statusRange',
-  'headerName',
-  'headerValue',
-  'bodyTooLarge',
-  'urlEmpty',
-  'variantLimit',
-  'variantIdMissing',
-  'delayRange',
-  'bodyType',
-  'bodyEncoding',
-  // 匹配条件（M0 校验码，文案在 mock.editor.validation 下）
-  'matchMissing',
-  'methodInvalid',
-  'hostInvalid',
-  'pathTypeInvalid',
-  'pathEmpty',
-  'pathRegexTooLong',
-  'pathRegexUnsafe',
-  'pathRegexInvalid',
-  'queryOperatorInvalid',
-  'queryValueMissing',
-  'headerNameInvalid',
-  'headerValueInvalid',
-  'bodyModeUnsupported',
-  'priorityInvalid',
-  // 服务端状态类拒绝：比笼统的“保存失败”更需要明确指引
-  'migrationFailed',
-  'recordMissing',
-  'ruleMissing',
-  'recordTooMany',
-])
+// 码表来自 @shared/mock.errors，这里只决定「哪些码算用户可在编辑器里修好的失败」；
+// matchDuplicate / notImplemented 由下面的分支单独分流，故不入表。
+const VALIDATION_CODES = new Set<string>([...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES])
 
 export function normalizeErrorText(err: unknown): string {
   if (err == null) return ''
