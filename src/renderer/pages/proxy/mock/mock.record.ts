@@ -1,4 +1,4 @@
-import { ProxyMock, inferBodyType, sanitizeResponseHeaders } from '@shared'
+import { ProxyMock, inferBodyType, levelOf, sanitizeResponseHeaders } from '@shared'
 import { pickHeader } from '@shared/http-header'
 import { prettifyJson } from '../../../common/format'
 
@@ -84,4 +84,14 @@ export function createVariant(base: ProxyMock.MockResponseDef, index: number): P
 
 export function toRawJson(record: ProxyMock.MockRecord): string {
   return JSON.stringify(record, null, 2)
+}
+
+/**
+ * 脏检查快照：档位会被交互临时标成 custom，比较前按结构重新识别，
+ * 否则「添加条件后又删除」这类回到原状的操作会一直算作未保存。
+ */
+export function recordSnapshot(record: ProxyMock.MockRecord): string {
+  const copy = cloneRecord(record)
+  if (copy?.match != null) copy.match.level = levelOf(copy.match)
+  return JSON.stringify(copy)
 }
