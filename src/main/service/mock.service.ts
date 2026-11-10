@@ -13,6 +13,7 @@ import { CacheMatchResult, MockCache } from './mock.cache'
 import { analyzeMatchStability } from './mock.derive'
 import { DiagnosticService } from './diagnostic.service'
 import { PushService } from './push.service'
+import { requestEnd } from './proxy.record'
 
 
 export interface MockAttemptRequest {
@@ -85,17 +86,16 @@ export class MockService {
     const effectiveDelay = response.delayMs > 0 ? response.delayMs : delay
     const meta = this.hitMeta(record, result)
 
-    const pushed: ProxyMock.ProxyRequestRecord = {
-      id: sessionId,
-      type: ProxyMock.ProxyType.REQUEST_END,
+    const pushed = requestEnd({
+      sessionId,
       url: request.url,
+      elapsed: new Date().getTime() - startTime,
       statusCode: statusCode,
       responseHeaders: responseHeaders,
       responseData: this.toDisplayBody(response),
-      time: new Date().getTime() - startTime,
       isMock: true,
       mock: meta,
-    }
+    })
     this.pushService.sendProxyMessage(uid, pushed)
     return { matched: true, response: { statusCode, headers: responseHeaders, data, delay: effectiveDelay }, meta }
   }
