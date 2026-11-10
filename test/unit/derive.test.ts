@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { matchRecords, normalizeRequest } from '@main/service/mock.matcher'
-import { analyzeMatchStability, createMatchFromUrl, restoreStrict } from '@main/service/mock.derive'
+import { analyzeMatchStability, createMatchFromUrl, deriveMatch, restoreStrict } from '@main/service/mock.derive'
 import { levelOf } from '@shared/mock.models'
+import { normalizeMatchRule } from '@shared/mock.validation'
 import { previewLevel, summaryOf } from '@renderer/pages/proxy/mock/match.helper'
 import { condition, legacyRecord, makeMatch, makeRecord } from './fixtures'
 
@@ -292,5 +293,24 @@ describe('restoreStrict 与档位判定', () => {
     assert.equal(summary.path, '/v1/users')
     assert.equal(summary.level, 'loose')
     assert.deepEqual(summary.ignoredKeys, ['ts'])
+  })
+})
+
+describe('deriveMatch · 只存 url 的记录写入前派生', () => {
+  it('派生结果已是规范形：仓库层再规范化不改变落库内容', () => {
+    for (const url of ['/v1/users', '/v1/users?role=admin&page=1', '/v1/orders/1234567a?ts=1']) {
+      const match = deriveMatch(legacyRecord(url), url)
+      assert.ok(match != null, url)
+      assert.deepEqual(normalizeMatchRule(match), match, url)
+    }
+  })
+
+  it('AC-R1-12 · 带 Query 的录制派生标准档，无 Query 派生宽松档', () => {
+    assert.equal(deriveMatch(legacyRecord('/v1/users?role=admin'), '/v1/users?role=admin').level, 'standard')
+    assert.equal(deriveMatch(legacyRecord('/v1/users'), '/v1/users').level, 'loose')
+  })
+
+  it('AC-R1-09 · 空 url 不派生，由仓库层按 matchMissing 拒绝', () => {
+    assert.equal(deriveMatch(makeRecord({ url: '' }), ''), null)
   })
 })

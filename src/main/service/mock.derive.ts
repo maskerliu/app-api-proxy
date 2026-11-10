@@ -159,6 +159,20 @@ export function createMatchFromUrl(url: string, options?: {
   })
 }
 
+/** 只存 url 的旧编辑器记录在写入前补齐匹配条件；单条自成一组，仅用于取默认档位 */
+export function deriveMatch(record: ProxyMock.MockRecord, url: string): MockMatchRule | null {
+  if (url === '') return null
+  const draft: ProxyMock.MockRecord = { ...record, url, id: record.id ?? 'draft' }
+  const analyzed = analyzeMatchStability([draft], {
+    source: record.source != null ? 'recording' : 'manual',
+    analyzedAt: Date.now(),
+  })
+  return analyzed[0]?.match ?? createMatchFromUrl(url, {
+    method: record.source?.method,
+    source: record.source != null ? 'recording' : 'manual',
+  })
+}
+
 function prepareRecord(record: ProxyMock.MockRecord): PreparedRecord | null {
   if (record == null) return null
   const normalized = normalizeMockRecord(record)

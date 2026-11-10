@@ -3,11 +3,9 @@ import { injectable } from 'inversify'
 import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
-import type { MockMatchRule } from '@shared/mock.models'
 import { MockError } from '@shared/mock.errors'
 import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
 import { USER_DATA_DIR } from '../MainConst'
-import { analyzeMatchStability, createMatchFromUrl } from '../service/mock.derive'
 import type {
   DocMeta, MockMetaDoc, MockRecordDoc, MockRecordSummary, MockRuleDoc,
 } from './mock.docs'
@@ -380,10 +378,8 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
     const normalized = normalizeMockRecord(record)
     const url = normalized.url || normalized.source?.url || ''
-    // 旧编辑器只保存 url：写入时就派生 match（含 E2 噪声键忽略），避免游离开匹配引擎
-    const match = normalized.match != null
-      ? normalizeMatchRule(normalized.match)
-      : this.deriveMatch(normalized, url)
+    // 只存 url 的记录由服务层写入前派生 match，仓库层只做规范化与指纹计算
+    const match = normalized.match == null ? null : normalizeMatchRule(normalized.match)
     if (match == null && url === '') throw new MockError('matchMissing')
     const fingerprint = match == null ? null : fingerprintOf(match)
     const name = normalized.name || url || match?.path || ''
@@ -480,19 +476,6 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     })
     if (removed) this.notifyRecordChanged({ type: 'remove', ruleId: doc.ruleId, recordId })
     return removed
-  }
-
-  private deriveMatch(record: ProxyMock.MockRecord, url: string): MockMatchRule | null {
-    if (url === '') return null
-    const draft: ProxyMock.MockRecord = { ...record, url, id: record.id ?? 'draft' }
-    const analyzed = analyzeMatchStability([draft], {
-      source: record.source != null ? 'recording' : 'manual',
-      analyzedAt: Date.now(),
-    })
-    return analyzed[0]?.match ?? createMatchFromUrl(url, {
-      method: record.source?.method,
-      source: record.source != null ? 'recording' : 'manual',
-    })
   }
 
   private async findByFingerprint(ruleId: string, fingerprint: string): Promise<MockRecordDoc> {
