@@ -118,9 +118,10 @@ export function summaryText(record: ProxyMock.MockRecord, t: (key: string, param
   return parts.join(' ')
 }
 
-function queryConditionsFrom(sourceUrl: string): MockQueryCondition[] {
+// 无录制来源或来源 URL 解析不了才返回 null；有来源但没 Query 时返回空数组，两者语义不同
+function queryConditionsFrom(sourceUrl: string): MockQueryCondition[] | null {
   const parsed = safeUrl(sourceUrl)
-  if (parsed == null) return []
+  if (parsed == null) return null
   const conditions: MockQueryCondition[] = []
   parsed.searchParams.forEach((value, key) => {
     conditions.push({ key, op: 'equals', value, source: 'recording' })
@@ -136,7 +137,7 @@ function diffKeys(before: Set<string>, after: Set<string>): string[] {
   return [...after].filter(it => !before.has(it)).sort()
 }
 
-/** 档位预设：与服务端 applyLevel 语义一致，切档预览与本地应用共用 */
+/** 档位预设的唯一实现：切档预览与本地应用共用，服务端只按保存后的条件匹配，不再另算一份 */
 export function previewLevel(level: MockMatchLevel, record: ProxyMock.MockRecord): LevelPresetPreview {
   const current = normalizeMatchRule(record?.match)
   const sourceUrl = record?.source?.url ?? record?.url ?? ''
@@ -159,11 +160,10 @@ export function previewLevel(level: MockMatchLevel, record: ProxyMock.MockRecord
   }
 
   if (level === 'strict') {
-    const parsed = safeUrl(sourceUrl)
-    if (parsed == null) {
+    const fromSource = queryConditionsFrom(sourceUrl)
+    if (fromSource == null) {
       return { level, match: current, diff: emptyDiff(), changed: false, reason: 'sourceMissing' }
     }
-    const fromSource = queryConditionsFrom(sourceUrl)
     const next = normalizeMatchRule({
       ...current,
       query: { mode: 'match', ignoreKeys: [], conditions: fromSource, allowExtra: false, multiValue: current.query.multiValue },
@@ -186,8 +186,7 @@ export function previewLevel(level: MockMatchLevel, record: ProxyMock.MockRecord
     ...(current.derivation?.autoIgnoredKeys ?? []),
   ])
   const fromSource = queryConditionsFrom(sourceUrl)
-  const base = fromSource.length > 0 ? fromSource : current.query.conditions
-  const conditions = base.filter(it => !ignored.has(it.key))
+  const conditions = (fromSource ?? current.query.conditions).filter(it => !ignored.has(it.key))
   const next = normalizeMatchRule({
     ...current,
     query: {
@@ -199,7 +198,8 @@ export function previewLevel(level: MockMatchLevel, record: ProxyMock.MockRecord
     },
     headers: { ignoreKeys: current.headers.ignoreKeys, conditions: [] },
   })
-  next.level = 'standard'
+  // 回填实际档位：来源里没有稳定参数时条件为空，写死 standard 会和摘要上的档位打架
+  next.level = levelOf(next)
   return { level, match: next, diff: diffOf(current, next), changed: true }
 }
 

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { matchRecords, normalizeRequest } from '@main/service/mock.matcher'
-import {
-  analyzeMatchStability, applyLevel, createMatchFromUrl, detectLevel, matchSummaryParts, restoreStrict,
-} from '@main/service/mock.derive'
+import { analyzeMatchStability, createMatchFromUrl, restoreStrict } from '@main/service/mock.derive'
+import { levelOf } from '@shared/mock.models'
+import { previewLevel, summaryOf } from '@renderer/pages/proxy/mock/match.helper'
 import { condition, legacyRecord, makeMatch, makeRecord } from './fixtures'
 
 function keysOf(match): string[] {
@@ -174,56 +174,71 @@ describe('档位切换', () => {
   })
   const source = { url: '/v1/users?role=admin&page=1&ts=1', method: 'GET' }
 
-  it('AC-R1-13 · loose 清空 Query 条件并保留 Header 忽略键', () => {
-    const match = base()
-    match.headers.ignoreKeys = ['x-trace']
-    const result = applyLevel('loose', match)
+  // previewLevel 以记录为入参：重建条件依赖录制来源，来源缺失时走 sourceMissing
+  const recordOf = (withSource: boolean) => {
+    const record = makeRecord({ match: base() })
+    if (withSource) record.source = source
+    return record
+  }
 
-    assert.equal(result.changed, true)
-    assert.equal(result.match.level, 'loose')
-    assert.equal(result.match.query.mode, 'ignore')
-    assert.deepEqual(result.match.query.conditions, [])
-    assert.deepEqual(result.match.query.ignoreKeys, [])
-    assert.deepEqual(result.match.headers.ignoreKeys, ['x-trace'])
-    assert.equal(hits(result.match, 'GET', '/v1/users?anything=1'), true)
+  it('AC-R1-13 · loose 清空 Query 条件并保留 Header 忽略键', () => {
+    const record = recordOf(false)
+    record.match.headers.ignoreKeys = ['x-trace']
+    const preview = previewLevel('loose', record)
+
+    assert.equal(preview.changed, true)
+    assert.equal(preview.match.level, 'loose')
+    assert.equal(preview.match.query.mode, 'ignore')
+    assert.deepEqual(preview.match.query.conditions, [])
+    assert.deepEqual(preview.match.query.ignoreKeys, [])
+    assert.deepEqual(preview.match.headers.ignoreKeys, ['x-trace'])
+    assert.equal(hits(preview.match, 'GET', '/v1/users?anything=1'), true)
   })
 
   it('AC-R1-13 · standard 从录制来源重建条件并保留忽略键', () => {
-    const result = applyLevel('standard', base(), source)
-    assert.equal(result.match.query.allowExtra, true)
-    assert.deepEqual(keysOf(result.match), ['role', 'page'])
-    assert.deepEqual(result.match.query.ignoreKeys, ['ts'])
-    assert.equal(result.match.level, 'standard')
+    const preview = previewLevel('standard', recordOf(true))
+    assert.equal(preview.match.query.allowExtra, true)
+    assert.deepEqual(keysOf(preview.match), ['role', 'page'])
+    assert.deepEqual(preview.match.query.ignoreKeys, ['ts'])
+    assert.equal(preview.match.level, 'standard')
   })
 
   it('AC-R1-13 · strict 需要录制来源，额外参数被拒绝', () => {
-    const result = applyLevel('strict', base(), source)
-    assert.equal(result.changed, true)
-    assert.equal(result.match.level, 'strict')
-    assert.equal(result.match.query.allowExtra, false)
-    assert.deepEqual(result.match.query.ignoreKeys, [])
-    assert.deepEqual(keysOf(result.match), ['role', 'page', 'ts'])
-    assert.deepEqual(result.match.derivation.autoIgnoredKeys, [])
-    assert.equal(hits(result.match, 'GET', '/v1/users?role=admin&page=1&ts=1'), true)
-    assert.equal(hits(result.match, 'GET', '/v1/users?role=admin&page=1&ts=1&x=1'), false)
+    const preview = previewLevel('strict', recordOf(true))
+    assert.equal(preview.changed, true)
+    assert.equal(preview.match.level, 'strict')
+    assert.equal(preview.match.query.allowExtra, false)
+    assert.deepEqual(preview.match.query.ignoreKeys, [])
+    assert.deepEqual(keysOf(preview.match), ['role', 'page', 'ts'])
+    assert.deepEqual(preview.match.derivation.autoIgnoredKeys, [])
+    assert.equal(hits(preview.match, 'GET', '/v1/users?role=admin&page=1&ts=1'), true)
+    assert.equal(hits(preview.match, 'GET', '/v1/users?role=admin&page=1&ts=1&x=1'), false)
   })
 
   it('AC-R1-13 · strict 缺少来源时返回 sourceMissing 且不改条件', () => {
-    const match = base()
-    const result = applyLevel('strict', match)
-    assert.equal(result.changed, false)
-    assert.equal(result.reason, 'sourceMissing')
-    assert.deepEqual(result.match.query.conditions, match.query.conditions)
+    const record = recordOf(false)
+    const preview = previewLevel('strict', record)
+    assert.equal(preview.changed, false)
+    assert.equal(preview.reason, 'sourceMissing')
+    assert.deepEqual(preview.match.query.conditions, record.match.query.conditions)
   })
 
   it('AC-R1-13 · custom 只标记档位', () => {
-    const result = applyLevel('custom', base())
-    assert.equal(result.match.level, 'custom')
-    assert.equal(result.changed, true)
+    const preview = previewLevel('custom', recordOf(false))
+    assert.equal(preview.match.level, 'custom')
+    assert.equal(preview.changed, true)
+  })
+
+  it('AC-R1-13 · 来源里没有 Query 时 standard 不保留旧条件', () => {
+    const preview = previewLevel('standard', makeRecord({ match: base(), url: '/v1/users' }))
+    assert.deepEqual(preview.match.query.conditions, [])
+    assert.equal(preview.match.query.mode, 'ignore')
+    // 条件为空时档位回填为 loose，避免单选框与实际摘要打架
+    assert.equal(preview.match.level, 'loose')
   })
 })
 
-describe('restoreStrict 与 detectLevel', () => {
+describe('restoreStrict 与档位判定', () => {
   it('AC-R1-13 · 撤销恢复全 Query、禁止额外参数并保留 Header 条件', () => {
     const record = makeRecord({
       url: '/v1/users?role=admin&ts=1',
@@ -254,29 +269,28 @@ describe('restoreStrict 与 detectLevel', () => {
     assert.equal(result.reason, 'sourceMissing')
   })
 
-  it('AC-R1-11 · detectLevel 按实际条件判定档位', () => {
-    assert.equal(detectLevel(makeMatch({ pathType: 'exact' })), 'loose')
-    assert.equal(detectLevel(makeMatch({ conditions: [condition('role', 'admin')] })), 'standard')
-    assert.equal(detectLevel(makeMatch({
+  it('AC-R1-11 · levelOf 按实际条件判定档位', () => {
+    assert.equal(levelOf(makeMatch({ pathType: 'exact' })), 'loose')
+    assert.equal(levelOf(makeMatch({ conditions: [condition('role', 'admin')] })), 'standard')
+    assert.equal(levelOf(makeMatch({
       pathType: 'glob', path: '/v1/*', conditions: [condition('role', 'admin')],
     })), 'standard')
-    assert.equal(detectLevel(makeMatch({
+    assert.equal(levelOf(makeMatch({
       conditions: [condition('role', 'admin')], allowExtra: false,
     })), 'strict')
-    assert.equal(detectLevel(makeMatch({
+    assert.equal(levelOf(makeMatch({
       conditions: [condition('role', 'admin')],
       headerConditions: [{ name: 'x-client', op: 'equals', value: 'mobile' }],
     })), 'custom')
   })
 
   it('AC-R1-16 · 摘要包含 Method 哨兵与忽略键', () => {
-    const match = makeMatch({ method: 'ANY', ignoreKeys: ['ts'] })
-    assert.deepEqual(matchSummaryParts(match), {
-      method: 'ANY',
-      host: '',
-      path: '/v1/users',
-      level: 'loose',
-      ignoredKeys: ['ts'],
-    })
+    const record = makeRecord({ match: makeMatch({ method: 'ANY', ignoreKeys: ['ts'] }) })
+    const summary = summaryOf(record)
+    assert.equal(summary.method, 'ANY')
+    assert.equal(summary.host, '')
+    assert.equal(summary.path, '/v1/users')
+    assert.equal(summary.level, 'loose')
+    assert.deepEqual(summary.ignoredKeys, ['ts'])
   })
 })
