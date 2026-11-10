@@ -12,6 +12,7 @@
   "scripts": {
     "setup": "yarn dlx @yarnpkg/sdks vscode",
     "test": "node --import tsx .build-scripts/test.ts --target=clean --pid=1000",
+    "check:strict": "node --import tsx .build-scripts/strict-check.ts",
     "dev": "node --experimental-json-modules --import tsx .build-scripts/runner.dev.ts",
     "build": "node --experimental-json-modules --max_old_space_size=3500 --import tsx .build-scripts/builder.ts",
     "build:clean": "yarn build --target=clean",

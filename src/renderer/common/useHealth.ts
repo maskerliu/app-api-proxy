@@ -9,10 +9,10 @@ const MIN_LOADING_MS = 500
  * 两条路径共用同一个 in-flight 标志，避免同一时刻发出两次请求。
  */
 export function useHealth(pollMs: number) {
-  const health = ref<Diagnostic.HealthInfo>(null)
+  const health = ref<Diagnostic.HealthInfo | null>(null)
   const healthLoading = ref(false)
   let inFlight = false
-  let pollTimer: ReturnType<typeof setInterval> = null
+  let pollTimer: ReturnType<typeof setInterval> | null = null
 
   // manual 为 false 时静默刷新（首次加载与轮询都走这里）
   async function refreshHealth(manual = false) {
@@ -21,7 +21,7 @@ export function useHealth(pollMs: number) {
     if (manual) healthLoading.value = true
     const startedAt = Date.now()
     try {
-      health.value = await getHealth()
+      health.value = (await getHealth()) ?? null
     } catch (err) {
       // 请求层已经提示过错误
     } finally {
