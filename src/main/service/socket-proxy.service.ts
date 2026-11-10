@@ -139,23 +139,7 @@ export class SocketProxyService {
     const result: ProxyMock.SocketRecord[] = []
     for (const ctx of this.connections.values()) {
       if (!ctx.ready || ctx.closed) continue
-      result.push({
-        id: ctx.id,
-        wsId: ctx.id,
-        type: ProxyMock.ProxyType.SOCKET,
-        wsPhase: 'open',
-        method: 'WS',
-        url: ctx.url,
-        timestamp: ctx.startedAt,
-        statusCode: 101,
-        subprotocol: ctx.subprotocol,
-        requestHeaders: ctx.requestHeaders,
-        responseHeaders: ctx.responseHeaders,
-        bytesSent: ctx.bytesSent,
-        bytesReceived: ctx.bytesReceived,
-        frameCount: ctx.frameCount,
-        droppedFrames: ctx.droppedFrames,
-      })
+      result.push(this.socketBase(ctx, 'open'))
     }
     return result
   }
@@ -606,24 +590,10 @@ export class SocketProxyService {
     this.connections.delete(ctx.id)
 
     const record: ProxyMock.SocketRecord = {
-      id: ctx.id,
-      wsId: ctx.id,
-      type: ProxyMock.ProxyType.SOCKET,
-      wsPhase: 'close',
-      method: 'WS',
-      url: ctx.url,
-      timestamp: ctx.startedAt,
-      statusCode: 101,
-      subprotocol: ctx.subprotocol,
-      requestHeaders: ctx.requestHeaders,
-      responseHeaders: ctx.responseHeaders,
+      ...this.socketBase(ctx, 'close'),
       closeCode: code,
       closeReason: reason,
       closeBy: by,
-      bytesSent: ctx.bytesSent,
-      bytesReceived: ctx.bytesReceived,
-      frameCount: ctx.frameCount,
-      droppedFrames: ctx.droppedFrames,
       time: Date.now() - ctx.startedAt,
       errorCode: errorCode ?? ctx.errorCode,
       errorMessage: errorMessage ?? ctx.errorMessage,
@@ -632,11 +602,24 @@ export class SocketProxyService {
   }
 
   private sendOpen(ctx: SocketContext) {
+    // open 帧刻意上报零计数，让 UI 先把行列出来再累加
     const record: ProxyMock.SocketRecord = {
+      ...this.socketBase(ctx, 'open'),
+      bytesSent: 0,
+      bytesReceived: 0,
+      frameCount: 0,
+      droppedFrames: 0,
+    }
+    this.sendSocket(ctx, record)
+  }
+
+  // open/close 共用握手字段；frames 批次不带上它们，避免每 100ms 重复推送请求头
+  private socketBase(ctx: SocketContext, wsPhase: ProxyMock.SocketPhase): ProxyMock.SocketRecord {
+    return {
       id: ctx.id,
       wsId: ctx.id,
       type: ProxyMock.ProxyType.SOCKET,
-      wsPhase: 'open',
+      wsPhase,
       method: 'WS',
       url: ctx.url,
       timestamp: ctx.startedAt,
@@ -644,12 +627,11 @@ export class SocketProxyService {
       subprotocol: ctx.subprotocol,
       requestHeaders: ctx.requestHeaders,
       responseHeaders: ctx.responseHeaders,
-      bytesSent: 0,
-      bytesReceived: 0,
-      frameCount: 0,
-      droppedFrames: 0,
+      bytesSent: ctx.bytesSent,
+      bytesReceived: ctx.bytesReceived,
+      frameCount: ctx.frameCount,
+      droppedFrames: ctx.droppedFrames,
     }
-    this.sendSocket(ctx, record)
   }
 
   private recordFrame(ctx: SocketContext, dir: ProxyMock.SocketDirection,

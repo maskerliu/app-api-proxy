@@ -17,6 +17,7 @@ import { BizNetwork } from '../misc/utils'
 import { DiagnosticService } from './diagnostic.service'
 import { MockService } from './mock.service'
 import { PushService } from './push.service'
+import { requestEnd, requestStart, statRecord } from './proxy.record'
 
 let MockKey = null
 
@@ -73,13 +74,8 @@ export class ProxyService {
   public async handleStatRequest(req: any, resp: Response) {
     zlib.unzip(Buffer.from(req.rawbody) as any, async (err: any, buffer: any) => {
       if (!err) {
-        let record: ProxyMock.ProxyStatRecord = {
-          id: new Date().getTime(),
-          type: ProxyMock.ProxyType.STATISTICS,
-          timestamp: new Date().getSeconds(),
-          statistics: JSON.parse(buffer.toString()),
-        }
-        this.pushService.sendProxyMessage(req.header(MOCK_UID_HEADER), record)
+        const at = new Date().getTime()
+        this.pushService.sendProxyMessage(req.header(MOCK_UID_HEADER), statRecord(at, JSON.parse(buffer.toString())))
 
         let originHost = req.header(MOCK_HOST_HEADER) != null ? req.header(MOCK_HOST_HEADER) : req.header('host')
         let headers = Object.assign({}, req.headers)
@@ -137,16 +133,15 @@ export class ProxyService {
       requestData = req.query
     }
 
-    const data: ProxyMock.ProxyRequestRecord = {
-      id: sessionId,
-      type: ProxyMock.ProxyType.REQUEST_START,
+    const data = requestStart({
+      sessionId,
+      at: startTime,
       url: req.url,
       method: req.method,
       headers: req.headers,
       requestData: requestData,
       data: this.parseBody(req, rawBody),
-      timestamp: new Date().getSeconds(),
-    }
+    })
 
     this.pushService.sendProxyMessage(uid, data)
 
@@ -214,17 +209,16 @@ export class ProxyService {
           host: pickHeader(req.headers, MOCK_HOST_HEADER) ?? '',
           error: err.message,
         })
-        const record: ProxyMock.ProxyRequestRecord = {
-          id: sessionId,
+        const record = requestEnd({
+          sessionId,
           url: req.url,
-          type: ProxyMock.ProxyType.REQUEST_END,
+          elapsed: new Date().getTime() - startTime,
           statusCode: -100,
           responseHeaders: null,
           responseData: JSON.stringify({ error: err.message }),
-          time: new Date().getTime() - startTime,
           isMock: false,
           mock: this.missMeta(miss),
-        }
+        })
         setTimeout(() => {
           this.pushService.sendProxyMessage(uid, record)
           if (!resp.headersSent) {
@@ -310,17 +304,16 @@ export class ProxyService {
     })
 
     upstreamResp.on('end', () => {
-      const record: ProxyMock.ProxyRequestRecord = {
-        id: sessionId,
+      const record = requestEnd({
+        sessionId,
         url: req.url,
-        type: ProxyMock.ProxyType.REQUEST_END,
+        elapsed: new Date().getTime() - startTime,
         statusCode: status,
         responseHeaders: headers ?? null,
         responseData: this.formatRecordData(Buffer.concat(chunks as unknown as Uint8Array[]), headers, truncated, received),
-        time: new Date().getTime() - startTime,
         isMock: false,
         mock: this.missMeta(miss),
-      }
+      })
       this.pushService.sendProxyMessage(uid, record)
       complete()
     })
@@ -333,17 +326,16 @@ export class ProxyService {
         host: pickHeader(req.headers, MOCK_HOST_HEADER) ?? '',
         error: state.clientGone ? 'client closed' : err.message,
       })
-      const record: ProxyMock.ProxyRequestRecord = {
-        id: sessionId,
+      const record = requestEnd({
+        sessionId,
         url: req.url,
-        type: ProxyMock.ProxyType.REQUEST_END,
+        elapsed: new Date().getTime() - startTime,
         statusCode: -100,
         responseHeaders: headers ?? null,
         responseData: JSON.stringify({ error: state.clientGone ? 'client closed' : err.message }),
-        time: new Date().getTime() - startTime,
         isMock: false,
         mock: this.missMeta(miss),
-      }
+      })
       this.pushService.sendProxyMessage(uid, record)
       if (state.clientGone) {
         complete()
