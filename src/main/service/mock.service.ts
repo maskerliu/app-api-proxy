@@ -6,12 +6,12 @@ import type {
 } from '@shared/mock.models'
 import { MOCK_RECORD_REJECT_LIMIT, levelOf } from '@shared/mock.models'
 import { MockError } from '@shared/mock.errors'
-import { sanitizeResponseHeaders, validateMockRecord } from '@shared/mock.validation'
+import { normalizeMockRecord, sanitizeResponseHeaders, validateMockRecord } from '@shared/mock.validation'
 import { IocTypes } from "../MainConst"
 import { MockRepo } from '../repository/mock.repo'
 import { CacheMatchResult, MockCache } from './mock.cache'
 import { MockMigrationRunner } from './mock.migration.runner'
-import { analyzeMatchStability } from './mock.derive'
+import { analyzeMatchStability, deriveMatch } from './mock.derive'
 import { DiagnosticService } from './diagnostic.service'
 import { PushService } from './push.service'
 import { requestEnd } from './proxy.record'
@@ -256,7 +256,13 @@ export class MockService {
     // Query 参数到这里还是字符串，直接比较会让每次保存都判定为冲突
     const expected = expectedUpdatedAt == null || expectedUpdatedAt === '' ? null : Number(expectedUpdatedAt)
     if (expected != null && !Number.isFinite(expected)) throw new MockError('matchMissing', 'expectedUpdatedAt')
-    return this.mockRepo.saveRecord(record, expected)
+
+    // 旧编辑器只保存 url：写入时就派生 match（含 E2 噪声键忽略），避免游离开匹配引擎
+    const normalized = normalizeMockRecord(record)
+    if (normalized.match == null) {
+      normalized.match = deriveMatch(normalized, normalized.url || normalized.source?.url || '')
+    }
+    return this.mockRepo.saveRecord(normalized, expected)
   }
 
   async deleteMockRecord(recordId: string) {
