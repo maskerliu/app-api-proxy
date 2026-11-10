@@ -1,36 +1,28 @@
-import { createHash, randomUUID } from 'crypto'
+import { randomUUID } from 'crypto'
 import { injectable } from 'inversify'
 import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
-import { pickHeader } from '@shared/http-header'
 import type {
   MigrationReport, MockMigrationReportItem, MockMatchRule, RevertMockRequest, RevertMockResponse,
 } from '@shared/mock.models'
 import { MockError } from '@shared/mock.errors'
-import {
-  inferBodyType, normalizeMatchRule, normalizeMockRecord, sanitizeResponseHeaders
-} from '@shared/mock.validation'
+import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
 import { USER_DATA_DIR } from '../MainConst'
 import { analyzeMatchStability, createMatchFromUrl, restoreStrict } from '../service/mock.derive'
 import {
-  MigrationPatch, applyMigrationPatch, fingerprintOf, planMigrationV4,
+  MigrationPatch, applyMigrationPatch, planMigrationV4,
 } from '../service/mock.migration'
+import type {
+  DocMeta, LegacyRuleDoc, MockMetaDoc, MockMigrationReportDoc, MockRecordDoc, MockRecordSummary, MockRuleDoc,
+} from './mock.docs'
+import {
+  CONFLICT_RETRY, DELETE_BATCH, LEGACY_SCHEMA_VERSION, MATCH_SCHEMA_VERSION, META_ID, MIGRATION_REPORT_ID,
+  MIGRATION_REPORT_TYPE, RECORD_PREFIX, RECORD_SCHEMA_VERSION, RECORD_SUMMARY_FIELDS, RECORD_TYPE, RULE_TYPE,
+  SCHEMA_VERSION, docToRecord, fingerprintOf, isMigratedV4, legacyRecordId, legacyRecordsOf, responseFromLegacy,
+  sourceFromLegacy, summaryToRecord, toCompatRecord,
+} from './mock.docs'
 import BaseRepo from './base.repo'
-
-const RULE_TYPE = 'rule'
-const RECORD_TYPE = 'record'
-// PouchDB 只允许 _design/ 与 _local/ 作为下划线开头的保留 ID
-const META_ID = 'mock_schema_meta'
-const MIGRATION_REPORT_ID = 'mock_migration_report'
-const MATCH_SCHEMA_VERSION = 1
-// 2: 规则元信息与请求记录拆分为独立文档
-// 3: 记录改为结构化响应模型，新记录使用 rec_<uuid>
-// 4: 记录携带 match 条件与匹配指纹（R1 匹配引擎）
-const LEGACY_SCHEMA_VERSION = 2
-const RECORD_SCHEMA_VERSION = 3
-const SCHEMA_VERSION = 4
-const RECORD_PREFIX = 'rec_'
 
 const RULE_SEARCH_LIMIT = 15
 const RULE_SCAN_LIMIT = 1000
@@ -38,86 +30,8 @@ const RECORD_PAGE_LIMIT = 100
 const MAX_RECORD_PAGE_LIMIT = 500
 const RECORD_COUNT_PAGE_LIMIT = 1000
 const RECORD_ID_COUNT_PAGE_LIMIT = 2000
-const DELETE_BATCH = 200
-const CONFLICT_RETRY = 2
 const MIGRATION_BATCH = 50
 const MIGRATION_SYNC_LIMIT = 2000
-
-interface DocMeta {
-  _id: string
-  _rev?: string
-  _deleted?: boolean
-}
-
-interface MockRuleDoc extends DocMeta {
-  type: typeof RULE_TYPE
-  name: string
-  desc: string
-  createdAt: number
-  updatedAt: number
-}
-
-interface MockRecordDoc extends DocMeta {
-  type: typeof RECORD_TYPE
-  ruleId: string
-  // 展示与旧版本兼容字段；唯一性由 matchFingerprint 决定
-  url?: string
-  name: string
-  match?: MockMatchRule
-  matchFingerprint?: string
-  matchInvalid?: string
-  response: ProxyMock.MockResponseDef
-  variants: ProxyMock.MockVariant[]
-  activeVariantId: string | null
-  source?: ProxyMock.MockRecordSource
-  createdAt: number
-  updatedAt: number
-  // 旧版本回滚兼容：仅从 v2 迁移来的记录保留并同步更新，新记录不写该字段
-  record?: ProxyMock.ProxyRequestRecord
-}
-
-// 迁移分析只需要匹配相关字段，避免把响应体整体读入内存
-export interface MockRecordSummary {
-  _id: string
-  ruleId: string
-  url?: string
-  name?: string
-  match?: MockMatchRule
-  matchFingerprint?: string
-  matchInvalid?: string
-  source?: ProxyMock.MockRecordSource
-  createdAt: number
-  updatedAt: number
-}
-
-interface LegacyRuleDoc extends DocMeta {
-  type?: string
-  name?: string
-  desc?: string
-  createdAt?: number
-  updatedAt?: number
-  jsonRequests?: any
-}
-
-interface MockMetaDoc extends DocMeta {
-  version: number
-  backupVersion?: number
-  mockSchemaVersion?: number
-  migratedAt?: number
-  migrationPending?: boolean
-  migrationStatus?: MigrationReport['status']
-  lastActiveRuleId?: string | null
-  updatedAt: number
-}
-
-const RECORD_SUMMARY_FIELDS = [
-  '_id', 'ruleId', 'url', 'name', 'match', 'matchFingerprint', 'matchInvalid',
-  'source', 'createdAt', 'updatedAt',
-]
-
-interface MockMigrationReportDoc extends DocMeta, MigrationReport {
-  type: 'migration-report'
-}
 
 export interface MockRecordChangeEvent {
   type: 'upsert' | 'remove' | 'reset'
@@ -184,7 +98,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   /** 大库标记 pending 后后台迁移，不阻塞启动 */
   private async scheduleMigrationV4() {
     const meta = await this.getMeta()
-    if (this.isMigratedV4(meta)) {
+    if (isMigratedV4(meta)) {
       this.migrationPending = false
       return
     }
@@ -209,11 +123,6 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       this.migrationPending = true
       console.error('mock v4 migration failed:', err)
     }
-  }
-
-  private isMigratedV4(meta: MockMetaDoc): boolean {
-    return (meta?.version ?? 0) >= SCHEMA_VERSION
-      && (meta?.mockSchemaVersion ?? 0) >= MATCH_SCHEMA_VERSION
   }
 
   public isMigrationPending(): boolean {
@@ -416,7 +325,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       }
       if (bookmark != null) request.bookmark = bookmark
       const page = await this.pouchdb.find(request)
-      for (const doc of page.docs as unknown as MockRecordDoc[]) await visitor(this.toRecord(doc))
+      for (const doc of page.docs as unknown as MockRecordDoc[]) await visitor(docToRecord(doc))
       if (page.docs.length < pageSize) return
       bookmark = (page as any).bookmark
       if (bookmark == null) return
@@ -445,7 +354,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     } as any) as unknown as MockRecordDoc[]
 
     return {
-      items: docs.slice(0, size).map(it => this.toRecord(it)),
+      items: docs.slice(0, size).map(it => docToRecord(it)),
       hasMore: docs.length > size
     }
   }
@@ -460,14 +369,14 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     } as any) as unknown as MockRecordDoc[]
     const doc = docs[0]
     if (doc == null || doc.ruleId !== ruleId || doc.url !== url) return null
-    return this.toRecord(doc)
+    return docToRecord(doc)
   }
 
   public async getRecordById(recordId: string): Promise<ProxyMock.MockRecord> {
     if (recordId == null) return null
     const doc = await this.getDoc<MockRecordDoc>(recordId)
     if (doc == null || doc.type !== RECORD_TYPE) return null
-    return this.toRecord(doc)
+    return docToRecord(doc)
   }
 
   /**
@@ -523,7 +432,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
           updatedAt: now
         }
         await this.pouchdb.put(doc)
-        this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: this.toRecord(doc) })
+        this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: docToRecord(doc) })
         return { id: doc._id, updatedAt: now }
       }
 
@@ -555,12 +464,12 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         }
         // 迁移记录保留旧结构，回滚旧版本时仍能读取
         if (current.record != null) {
-          doc.record = this.toCompatRecord(normalized)
+          doc.record = toCompatRecord(normalized)
         }
 
         try {
           await this.pouchdb.put(doc)
-          this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: this.toRecord(doc) })
+          this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: docToRecord(doc) })
           return { id: doc._id, updatedAt: now }
         } catch (err: any) {
           if (err?.status === 409 && attempt < CONFLICT_RETRY) continue
@@ -604,100 +513,6 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       limit: 1
     } as any) as unknown as MockRecordDoc[]
     return docs[0] ?? null
-  }
-
-  private toRecord(doc: MockRecordDoc): ProxyMock.MockRecord {
-    if (doc.response != null) {
-      return normalizeMockRecord({
-        id: doc._id,
-        ruleId: doc.ruleId,
-        name: doc.name,
-        url: doc.url ?? doc.source?.url ?? '',
-        match: doc.match,
-        matchFingerprint: doc.matchFingerprint,
-        matchInvalid: doc.matchInvalid,
-        response: doc.response,
-        variants: doc.variants,
-        activeVariantId: doc.activeVariantId,
-        source: doc.source,
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt
-      })
-    }
-
-    // 尚未完成 v3 迁移时按旧结构即时转换，避免读到空数据
-    const legacy = (doc.record ?? {}) as ProxyMock.ProxyRequestRecord
-    return normalizeMockRecord({
-      id: doc._id,
-      ruleId: doc.ruleId,
-      name: doc.name ?? legacy.url ?? doc.url,
-      url: doc.url,
-      match: doc.match,
-      matchFingerprint: doc.matchFingerprint,
-      matchInvalid: doc.matchInvalid,
-      response: this.responseFromLegacy(legacy),
-      variants: [],
-      activeVariantId: null,
-      source: this.sourceFromLegacy(legacy, doc),
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
-    })
-  }
-
-  private responseFromLegacy(legacy: ProxyMock.ProxyRequestRecord): ProxyMock.MockResponseDef {
-    const headers = sanitizeResponseHeaders(legacy?.responseHeaders ?? {})
-    const contentType = pickHeader(headers, 'content-type') ?? ''
-    const body = legacy?.responseData == null
-      ? ''
-      : typeof legacy.responseData === 'string'
-        ? legacy.responseData
-        : JSON.stringify(legacy.responseData)
-    const inferred = inferBodyType(contentType)
-    // 抓包记录里的二进制响应只有占位文本，按文本保存才能原样返回，不能当 base64 发送
-    const bodyType = legacy?.responseData != null && typeof legacy.responseData !== 'string'
-      ? 'json'
-      : inferred === 'binary' ? 'text' : inferred
-
-    return {
-      statusCode: Number.isInteger(Number(legacy?.statusCode)) && Number(legacy.statusCode) >= 100 && Number(legacy.statusCode) <= 599
-        ? Number(legacy.statusCode)
-        : 200,
-      headers,
-      body,
-      bodyType,
-      delayMs: 0
-    }
-  }
-
-  private sourceFromLegacy(legacy: ProxyMock.ProxyRequestRecord, doc: MockRecordDoc): ProxyMock.MockRecordSource {
-    return {
-      method: legacy?.method,
-      url: doc.url,
-      statusCode: legacy?.statusCode,
-      headers: legacy?.responseHeaders,
-      capturedAt: doc.createdAt
-    }
-  }
-
-  private toCompatRecord(record: ProxyMock.MockRecord): ProxyMock.ProxyRequestRecord {
-    const response = ProxyMock.effectiveResponse(record)
-    let responseData: any = response.body
-    if (response.bodyType === 'json') {
-      try {
-        responseData = JSON.parse(response.body)
-      } catch (err) {
-        responseData = response.body
-      }
-    }
-    return {
-      id: 0,
-      type: 0,
-      url: record.url,
-      method: record.source?.method,
-      statusCode: response.statusCode,
-      responseHeaders: response.headers,
-      responseData
-    }
   }
 
   private pickFields(doc: any, fields: Array<string>): any {
@@ -812,10 +627,10 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         const upgraded: MockRecordDoc = {
           ...doc,
           name: doc.name ?? legacy.url ?? doc.url,
-          response: this.responseFromLegacy(legacy),
+          response: responseFromLegacy(legacy),
           variants: [],
           activeVariantId: null,
-          source: doc.source ?? this.sourceFromLegacy(legacy, doc)
+          source: doc.source ?? sourceFromLegacy(legacy, doc)
         }
         await this.putWithRetry(upgraded)
       }
@@ -834,7 +649,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
    */
   private async migrateRecordsV4(total: number) {
     const meta = await this.getMeta()
-    if (this.isMigratedV4(meta)) return
+    if (isMigratedV4(meta)) return
 
     const startedAt = Date.now()
     const summaries = await this.listAllRecordSummaries()
@@ -866,7 +681,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       for (const [ruleId, list] of byRule) {
         const plan = planMigrationV4(
           list.map(summary => ({
-            record: this.summaryToRecord(summary),
+            record: summaryToRecord(summary),
             keepMatch: summary.match?.version === 1,
             name: summary.name,
           })),
@@ -910,21 +725,6 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       await this.saveMeta({ migrationStatus: 'failed' }).catch(() => { })
       throw err
     }
-  }
-
-  private summaryToRecord(summary: MockRecordSummary): ProxyMock.MockRecord {
-    return normalizeMockRecord({
-      id: summary._id,
-      ruleId: summary.ruleId,
-      name: summary.name ?? '',
-      url: summary.url ?? summary.source?.url ?? '',
-      match: summary.match,
-      matchFingerprint: summary.matchFingerprint,
-      matchInvalid: summary.matchInvalid,
-      source: summary.source,
-      createdAt: summary.createdAt,
-      updatedAt: summary.updatedAt,
-    })
   }
 
   private async applyMatchPatches(patches: MigrationPatch[], report?: MigrationReport) {
@@ -1060,7 +860,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       await this.pouchdb.put(current)
       this.notifyRecordChanged({
         type: 'upsert', ruleId: current.ruleId, recordId,
-        record: this.toRecord(current),
+        record: docToRecord(current),
       })
     })
   }
@@ -1068,7 +868,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   private async saveMigrationReport(report: MigrationReport) {
     for (let attempt = 0; ; attempt++) {
       const existing = await this.getDoc<MockMigrationReportDoc>(MIGRATION_REPORT_ID)
-      const doc: any = { _id: MIGRATION_REPORT_ID, type: 'migration-report', ...report }
+      const doc: any = { _id: MIGRATION_REPORT_ID, type: MIGRATION_REPORT_TYPE, ...report }
       if (existing != null) doc._rev = existing._rev
       try {
         await this.pouchdb.put(doc)
@@ -1091,7 +891,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   }
 
   private async migrateRule(doc: LegacyRuleDoc) {
-    const records = this.legacyRecords(doc)
+    const records = legacyRecordsOf(doc)
     const urls = Object.keys(records)
     const now = Date.now()
 
@@ -1100,15 +900,15 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       const record = value != null && typeof value === 'object' ? value : {}
       const legacyRecord = { ...record, url } as ProxyMock.ProxyRequestRecord
       return {
-        _id: this.legacyRecordId(doc._id, url),
+        _id: legacyRecordId(doc._id, url),
         type: RECORD_TYPE,
         ruleId: doc._id,
         url,
         name: url,
-        response: this.responseFromLegacy(legacyRecord),
+        response: responseFromLegacy(legacyRecord),
         variants: [],
         activeVariantId: null,
-        source: this.sourceFromLegacy(legacyRecord, { url, createdAt: now + idx } as MockRecordDoc),
+        source: sourceFromLegacy(legacyRecord, { url, createdAt: now + idx }),
         createdAt: now + idx,
         updatedAt: now + idx,
         record: legacyRecord
@@ -1132,23 +932,6 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     }
     await this.pouchdb.put(ruleDoc)
     console.log(`mock schema migrated: rule ${doc._id}, ${recordDocs.length} records`)
-  }
-
-  private legacyRecords(doc: LegacyRuleDoc): Record<string, ProxyMock.ProxyRequestRecord> {
-    let raw = doc.jsonRequests
-    if (typeof raw === 'string') {
-      try {
-        raw = JSON.parse(raw)
-      } catch (err) {
-        return {}
-      }
-    }
-    if (raw == null || typeof raw !== 'object') return {}
-    return raw
-  }
-
-  private legacyRecordId(ruleId: string, url: string): string {
-    return `rec_${createHash('sha1').update(`${ruleId}\n${url}`).digest('hex')}`
   }
 
   /** 迁移前备份一次；失败只记录日志，不阻塞启动 */
