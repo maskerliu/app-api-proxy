@@ -1,5 +1,6 @@
 import { ProxyMock, inferBodyType, sanitizeResponseHeaders } from '@shared'
 import { pickHeader } from '@shared/http-header'
+import { prettifyJson } from '../../../common/format'
 
 export function cloneRecord(record: ProxyMock.MockRecord): ProxyMock.MockRecord {
   return record == null ? null : JSON.parse(JSON.stringify(record))
@@ -68,11 +69,8 @@ export function prettifyRecordJson(record: ProxyMock.MockRecord): ProxyMock.Mock
 
 function prettifyDef(def: ProxyMock.MockResponseDef) {
   if (def?.bodyType !== 'json' || typeof def.body !== 'string') return
-  try {
-    def.body = JSON.stringify(JSON.parse(def.body), null, 2)
-  } catch (err) {
-    // 非法 JSON 保持原样，编辑器里已有提示
-  }
+  // 非法 JSON 保持原样，编辑器里已有提示
+  def.body = prettifyJson(def.body)
 }
 
 export function createVariant(base: ProxyMock.MockResponseDef, index: number): ProxyMock.MockVariant {

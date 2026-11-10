@@ -66,7 +66,7 @@ import type { PropType } from 'vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ProxyRecordStore } from '../../store'
-import { formatBytes, formatDuration } from './socket.helper'
+import { formatBytes, formatElapsed } from '../../common/format'
 
 const { t, te } = useI18n()
 
@@ -109,7 +109,7 @@ const socketTagType = computed(() => {
 const socketDuration = computed(() => {
   const record = socket.value
   if (record.wsPhase !== 'close') return t('proxy.socket.live')
-  return formatDuration(record.time ?? 0)
+  return formatElapsed(record.time ?? 0)
 })
 
 const socketErrorTitle = computed(() => {
