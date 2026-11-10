@@ -1,6 +1,6 @@
 <template>
-  <div class="onboarding-page">
-    <div class="onboarding-card">
+  <div class="page-container">
+    <div class="card-container">
       <div class="onboarding-head">
         <div class="onboarding-title">
           <i class="iconfont icon-link onboarding-logo" />
@@ -380,33 +380,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.onboarding-page {
-  width: 100%;
-  height: 100%;
-  padding: 24px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  overflow: hidden;
-  background-color: var(--van-gray-1);
-}
-
-.onboarding-card {
-  width: min(900px, 94vw);
-  min-width: min(360px, 100%);
-  box-sizing: border-box;
-  height: 100%;
-  max-height: 720px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 18px 22px 14px;
-  border-radius: 12px;
-  background-color: var(--van-background-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
 .onboarding-head {
   flex: none;
   margin-bottom: 12px;
@@ -416,7 +389,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: var(--van-font-size-lg);
   font-weight: 600;
 }
 
@@ -462,7 +435,7 @@ onBeforeUnmount(() => {
 }
 
 .notice-icon {
-  font-size: 16px;
+  font-size: var(--van-font-size-md);
 }
 
 .step-desc {
@@ -483,9 +456,9 @@ onBeforeUnmount(() => {
 .register-url {
   margin-top: 8px;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
-  font-family: Consolas, Monaco, monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
   cursor: pointer;
@@ -568,7 +541,7 @@ onBeforeUnmount(() => {
   height: 160px;
   padding: 6px 0 6px 6px;
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
 }
 
@@ -597,7 +570,7 @@ onBeforeUnmount(() => {
 .latest-request {
   margin: 10px 0;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--van-radius-md);
   background-color: var(--van-gray-2);
 }
 
@@ -608,7 +581,7 @@ onBeforeUnmount(() => {
 }
 
 .latest-url {
-  font-family: Consolas, Monaco, monospace;
+  font-family: var(--mono-font);
   word-break: break-all;
 }
 
@@ -639,11 +612,11 @@ onBeforeUnmount(() => {
   padding: 10px;
   box-sizing: border-box;
   border: 1px solid var(--van-gray-3);
-  border-radius: 6px;
+  border-radius: var(--app-radius-md);
   background-color: var(--van-gray-1);
   color: var(--van-text-color);
-  font-family: Consolas, Monaco, monospace;
-  font-size: 12px;
+  font-family: var(--mono-font);
+  font-size: var(--van-font-size-xs);
   line-height: 1.6;
   resize: vertical;
 }

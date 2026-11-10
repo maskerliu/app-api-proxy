@@ -19,11 +19,11 @@
 </template>
 
 <script lang="ts" setup>
-import { showLoadingToast } from 'vant'
+import { LocalServerConfig } from '@shared'
+import { showLoadingToast, type ToastWrapperInstance } from 'vant'
 import { defineAsyncComponent, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { LocalServerConfig } from '@shared'
 import { CommonStore } from './store'
 
 const DebugPanel = defineAsyncComponent(() => import('./pages/components/DebugPanel.vue'))
@@ -35,7 +35,7 @@ const router = useRouter()
 const canRender = ref(false)
 const enableDebug = __DEV__
 // 启动 200ms 内未完成配置则弹全局加载 toast；配置就绪后调用 closeLoading 关闭
-let closeLoading: (() => void) | null = null
+let closeLoading: ToastWrapperInstance | null = null
 const loadingTimer = setTimeout(() => {
   if (!canRender.value) {
     closeLoading = showLoadingToast({ message: i18n.t('common.loading'), forbidClick: true, duration: 0 })
@@ -52,7 +52,7 @@ async function onConfigReady(config?: LocalServerConfig) {
   window.mainApi?.setAppTheme(commonStore.theme)
   canRender.value = true
   clearTimeout(loadingTimer)
-  closeLoading?.()
+  closeLoading?.close()
   closeLoading = null
   router.replace(commonStore.onboarded ? '/proxy' : '/onboarding')
 }
@@ -175,40 +175,4 @@ function onOpenDebugPanel() {
   flex: 0 0 120px !important;
 }
 
-:root {
-  --mono-font: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
-}
-
-.header-collapse {
-  margin: var(--van-padding-md) var(--van-padding-md) 0;
-  overflow: hidden;
-  border-radius: var(--van-radius-lg);
-  background: var(--van-cell-group-background);
-}
-
-.header-list {
-  display: grid;
-  grid-template-columns: fit-content(40%) minmax(0, 1fr);
-  column-gap: 16px;
-  row-gap: 6px;
-  padding: 5px 15px;
-  font-family: var(--mono-font);
-  font-size: var(--van-font-size-md);
-  user-select: text;
-}
-
-.header-row {
-  display: contents;
-}
-
-.header-key {
-  color: var(--van-text-color-2);
-  word-break: break-all;
-}
-
-.header-value {
-  color: var(--van-text-color);
-  white-space: pre-line;
-  word-break: break-all;
-}
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <van-list style="padding: 5px;">
+  <van-list class="stat-detail">
     <van-cell v-for="(item, idx) in (record as ProxyMock.ProxyStatRecord).statistics.bps" :key="idx"
       :title="item.pageId" :label="item.elementId" :value="item.args" />
   </van-list>
@@ -13,3 +13,10 @@ defineProps({
   record: { type: Object as PropType<ProxyMock.ProxyStatRecord>, required: true },
 })
 </script>
+
+<style scoped>
+.stat-detail {
+  /* 与 HTTP / WebSocket 详情页顶部留白对齐 */
+  padding: var(--detail-top-gap) 5px 5px;
+}
+</style>

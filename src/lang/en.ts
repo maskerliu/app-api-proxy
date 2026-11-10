@@ -3,7 +3,6 @@ export default {
   common: {
     done: 'Done',
     cancel: 'Cancel',
-    delete: 'Delete',
     save: 'Save',
     upload: 'Upload',
     loading: 'Loading...',
@@ -13,7 +12,6 @@ export default {
     copyFailed: 'Copy failed, please copy manually'
   },
   proxy: {
-    filterPlaceholder: 'filter with keyword',
     waitingRegister: 'connecting push channel, please wait...',
     requestHeader: 'Request Headers',
     requestParams: 'Request Parameters',
@@ -30,23 +28,15 @@ export default {
       control: 'Control',
       searchPlaceholder: 'Search messages',
       follow: 'Follow latest',
-      backToLatest: 'Back to latest',
-      frames: 'Messages',
       noFrames: 'No messages yet',
       noMatch: 'No matching messages',
       connected: 'Connected',
       closed: 'Closed',
       failed: 'Failed',
-      status: 'Status',
       closeCode: 'Close code',
-      closeReason: 'Close reason',
-      closeByLabel: 'Closed by',
       duration: 'Duration',
       subprotocol: 'Subprotocol',
-      sent: 'Upstream',
-      received: 'Downstream',
       frameCount: 'Frames',
-      droppedCount: 'Dropped',
       requestHeaders: 'Handshake Request Headers',
       responseHeaders: 'Handshake Response Headers',
       messageDetail: 'Message Detail',
@@ -58,8 +48,6 @@ export default {
       emptyTitle: 'No WebSocket connections',
       emptyHint: 'Enable 5030 above; long connections opened via /_proxy will show up here in real time.',
       emptyQuery: 'No matching connections',
-      connectHeader: 'Header: x-mock-host / x-mock-uid',
-      connectQuery: 'Query: __mock_host / __mock_uid (browser fallback)',
       live: 'Live',
       bytesTitle: 'Upstream / downstream bytes',
       closeCodeShort: 'Close {code}',
@@ -75,7 +63,7 @@ export default {
         'WS-E09': 'Not a valid WebSocket upgrade: only GET with Upgrade: websocket is supported',
         'WS-E10': 'Too many concurrent connections (limit 128): close other long connections and retry',
         'WS-E11': 'A message exceeded the size limit (50MB)',
-        'WS-E12': 'Internal proxy error: expand the raw error message for details',
+        'WS-E12': 'Internal proxy error: expand the raw error message for details'
       },
       closeBy: {
         client: 'Closed by client',
@@ -108,7 +96,7 @@ export default {
       delete: {
         title: 'Warning',
         confirm: 'are you sure to delete rule[ {rule} ]?'
-      },
+      }
     },
     record: {
       delete: {
@@ -131,7 +119,6 @@ export default {
       entry: 'Record Mock',
       title: 'Record to Mock',
       activeRule: 'Active: {rule}',
-      targetRule: 'Target Rule',
       searchPlaceholder: 'Search or type a new rule name',
       loading: 'Loading…',
       noRules: 'No rules yet. Type a name to create one.',
@@ -151,7 +138,6 @@ export default {
       actionUpdated: 'updated record',
       enableFailed: 'Recorded, but enabling failed: {reason}',
       enableFailedUnknown: 'Unknown error',
-      loadFailed: 'Failed to load rules',
       recordFailed: 'Recording failed',
       duplicateMessage: 'This path already exists. Open the rule and update the existing record.',
       conflictMessage: 'The record was modified elsewhere. Try again later.',
@@ -185,7 +171,6 @@ export default {
       unsaved: 'Unsaved',
       unsavedTitle: 'Unsaved Changes',
       unsavedConfirm: 'The current record has unsaved changes. Discard them and continue?',
-      save: 'Save',
       saveSuccess: 'Record saved',
       saveFailed: 'Failed to save record',
       noRecord: 'Select a record on the left, or click + to create one',
@@ -198,11 +183,9 @@ export default {
         match: 'Matching',
         raw: 'Raw'
       },
-      addVariant: 'Add Variant',
       duplicateVariant: 'Duplicate',
       noVariants: 'No variants yet',
       variantName: 'Variant Name',
-      variantCount: '{count} variants',
       active: 'Active',
       activeHint: 'Active',
       deleteVariant: 'Delete Variant',
@@ -250,7 +233,7 @@ export default {
       'record-id': 'Record ID'
     },
     list: {
-      searchPlaceholder: 'Search name, Path, Host or keys',
+      searchPlaceholder: 'Name, Path, Host or keys',
       sortUpdated: 'By Updated',
       sortCreated: 'By Created',
       sortPriority: 'By Priority',
@@ -258,8 +241,6 @@ export default {
       limitReject: 'More than {limit} records; enabling is disabled',
       noMatch: 'No records match the filter',
       clearFilter: 'Clear Filter',
-      ignoredCount: 'Ignore {count}',
-      coveredBy: 'Covered by record {id}',
       warning: {
         duplicate: 'Duplicate',
         shadowed: 'Shadowed',
@@ -281,7 +262,6 @@ export default {
         strict: 'Matches every recorded Query parameter and rejects extra parameters.',
         custom: 'Conditions were edited manually; switching to a preset regenerates them.'
       },
-      diffTitle: 'Switching to "{level}" will apply:',
       diffEmpty: 'No condition changes',
       diffAdd: 'Add conditions: {keys}',
       diffRemove: 'Remove conditions: {keys}',
@@ -386,7 +366,6 @@ export default {
     miss: {
       title: 'Miss: closest is "{record}" (similarity {score}%)',
       noCandidate: 'Miss: no comparable records',
-      badge: 'Miss {score}%',
       dimension: 'Dimension',
       expected: 'Expected',
       actual: 'Actual',
@@ -428,7 +407,6 @@ export default {
       open: 'View',
       tighten: 'Tighten Match',
       ignored: '{count} dynamic parameters ignored',
-      ordering: 'Ordering',
       orderingValue: 'Ordering: {value}',
       elapsed: 'Took {ms}ms',
       degraded: 'This record has not been migrated for matching; the explanation may be incomplete'
@@ -465,15 +443,14 @@ export default {
       btnSend: 'Send'
     },
     resources: {
-      title: 'Manage Remote Static Resources',
-      upload: 'Upload File'
+      title: 'Manage Remote Static Resources'
     }
   },
   debug: {
     common: {
       title: 'Common',
       versionCheck: 'Check Version',
-      devTools: 'Developer Tools',
+      devTools: 'Developer Tools'
     }
   },
   onboarding: {
@@ -524,7 +501,6 @@ export default {
       unknownUid: 'Unknown UID detected',
       unknownUidTip: 'The request UID is not online. Make sure the x-mock-uid header matches the desktop UID.',
       currentUid: 'Desktop UID',
-      copyUid: 'Copy UID',
       uidCopied: 'UID copied',
       refresh: 'Refresh'
     },

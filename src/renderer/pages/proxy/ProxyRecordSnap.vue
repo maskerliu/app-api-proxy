@@ -1,87 +1,63 @@
 <template>
-  <van-cell center is-link style="padding: 10px 0;" :title-style="{ margin: '0 10px 0 15px' }"
+  <div class="record-snap" :class="{ 'is-selected': recordStore.curRecordId == source.id }"
     @click="recordStore.curRecordId = source.id">
-    <template #icon>
-      <div class="item-timeline">
-        <div class="item-timeline-dot"
-          :style="{ borderColor: source.timelineColor, backgroundColor: recordStore.curRecordId == source.id ? 'var(--van-text-color)' : 'transparent' }">
+    <div class="snap-timeline">
+      <div class="snap-timeline-dot"
+        :style="{ borderColor: source.timelineColor, backgroundColor: recordStore.curRecordId == source.id ? 'var(--van-text-color)' : 'transparent' }">
+      </div>
+    </div>
+    <div class="snap-content">
+      <div class="snap-url-row">
+        <div class="snap-url" :title="source.url">{{ source.url }}</div>
+        <div class="snap-arrow">
+          <van-loading size="18" color="var(--van-primary-color)" v-if="showLoading" />
+          <van-icon v-else name="arrow" size="18" color="var(--van-text-color-3)" />
         </div>
       </div>
-    </template>
-    <template #title>
-      <template v-if="isStat">
-        <div v-for="(item, idx) in ((source as ProxyMock.ProxyStatRecord).statistics?.bps?.slice(0, 2) ?? [])"
-          :key="idx">
-          <span class="stat-snap-pid"> {{ item.pageId }} </span>
-          <strong class="stat-snap-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
-          <span class="stat-snap-eid" v-if="item.event_id != 2001"><br />
-            {{ item.elementId == "" ? item.arg1 : item.elementId }}
+      <div class="snap-meta-row">
+        <template v-if="isSocket">
+          <van-tag :type="socketTagType">[WS] {{ socketStatusText }}</van-tag>
+          <span class="snap-io">↑{{ formatBytes(socket.bytesSent) }} ↓{{ formatBytes(socket.bytesReceived) }}</span>
+          <span class="snap-time">{{ socketDuration }}</span>
+          <van-tag v-if="socket.subprotocol" plain type="primary">{{ socket.subprotocol }}</van-tag>
+          <span v-if="socket.closeReason" class="snap-reason" :title="socket.closeReason">
+            {{ socket.closeReason }}
           </span>
-        </div>
-      </template>
-      <template v-else-if="isSocket">
-        <div class="request-snap-url socket-snap-url" :title="source.url">{{ source.url }}</div>
-      </template>
-      <van-row v-else justify="end">
-        <div class="request-snap-url">
-          {{ source.url }}
-        </div>
-      </van-row>
-    </template>
-    <template #label>
-      <div v-if="isSocket" class="socket-snap-meta">
-        <van-tag :type="socketTagType" style="font-size: var(--van-font-size-xs);">
-          [WS] {{ socketStatusText }}
-        </van-tag>
-        <span class="socket-snap-io" :title="$t('proxy.socket.bytesTitle')">
-          ↑{{ formatBytes(socket.bytesSent) }} ↓{{ formatBytes(socket.bytesReceived) }}
-        </span>
-        <span class="socket-snap-time">{{ socketDuration }}</span>
-        <van-tag v-if="socket.subprotocol" plain type="primary"
-          style="font-size: var(--van-font-size-xs);">{{ socket.subprotocol }}</van-tag>
-        <span v-if="socket.closeReason" class="socket-snap-reason" :title="socket.closeReason">
-          {{ socket.closeReason }}
-        </span>
-        <span v-if="(socket.droppedFrames ?? 0) > 0" class="socket-snap-dropped">
-          {{ $t('proxy.socket.dropped', { count: socket.droppedFrames }) }}
-        </span>
-        <span v-if="socket.errorCode" class="socket-snap-error" :title="socketErrorTitle">
-          {{ socket.errorCode }}
-        </span>
+          <span v-if="(socket.droppedFrames ?? 0) > 0" class="snap-dropped">
+            {{ $t('proxy.socket.dropped', { count: socket.droppedFrames }) }}
+          </span>
+          <span v-if="socket.errorCode" class="snap-error" :title="socketErrorTitle">{{ socket.errorCode }}</span>
+        </template>
+        <template v-else-if="isStat">
+          <template v-for="(item, idx) in ((source as ProxyMock.ProxyStatRecord).statistics?.bps?.slice(0, 2) ?? [])"
+            :key="idx">
+            <span class="stat-pid">{{ item.pageId }}</span>
+            <strong class="stat-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
+            <span class="stat-eid" v-if="item.event_id != 2001">{{ item.elementId == "" ? item.arg1 : item.elementId
+            }}</span>
+          </template>
+        </template>
+        <template v-else>
+          <van-tag :type="source.method == 'POST' ? 'success' : 'warning'" class="method-tag">
+            {{ source.method?.charAt(0) ?? '?' }}
+          </van-tag>
+          <van-tag plain :type="source.statusCode === 200 ? 'success' : 'danger'">
+            {{ source.statusCode }}
+          </van-tag>
+          <van-tag v-if="source.responseData != null" plain
+            :type="parseInt(source.responseData.code) === 2000 ? 'success' : 'warning'">
+            {{ source.responseData.code }}
+          </van-tag>
+          <van-tag v-if="source.type == 5020" type="primary">打点</van-tag>
+          <van-tag v-if="missBadge" plain type="default">{{ missBadge }}%</van-tag>
+          <van-icon v-if="source.isMock" class="iconfont icon-shuiguan mock-icon" />
+          <span class="snap-timecost" :class="{ 'is-slow': (source.time ?? 0) > 500 }">
+            {{ source.time != null ? source.time : '-----' }}ms
+          </span>
+        </template>
       </div>
-      <div v-else style="display: flex; align-items: center; direction: rtl; width: 100%; margin-top: 25px;">
-        <span class="request-snap-timecost" v-bind:style="{ color: (source.time ?? 0) > 500 ? 'var(--van-danger-color)' : 'var(--van-success-color)' }">
-          耗时: <span class="timecost-value">{{ source.time != null ? source.time : "-----" }}</span> ms
-        </span>
-        <van-tag plain :type="parseInt(source.responseData.code) === 2000 ? 'success' : 'warning'"
-          style="margin-left: 5px; font-size: var(--van-font-size-xs);" v-if="source.responseData != null">
-          {{ source.responseData.code }}<b>[BIZ]</b>
-        </van-tag>
-
-        <van-tag plain :type="source.statusCode === 200 ? 'success' : 'danger'"
-          style="margin-left: 5px; font-size: var(--van-font-size-xs);">
-          {{ source.statusCode }} <b>[HTTP]</b>
-        </van-tag>
-
-        <van-tag v-if="source.type == 5020" type="primary" style="margin-left: 5px;">[打点]</van-tag>
-        <van-tag v-else :type="source.method == 'POST' ? 'success' : 'warning'"
-          style="margin-left: 5px; font-size: var(--van-font-size-xs);">
-          {{ source.method }}
-        </van-tag>
-        <van-tag v-if="missBadge" plain type="default"
-          style="margin-left: 5px; font-size: var(--van-font-size-xs); color: var(--van-text-color-3);">
-          {{ $t('mock.miss.badge', { score: missBadge }) }}
-        </van-tag>
-        <van-icon v-if="source.isMock" class="iconfont icon-shuiguan"
-          style="font-size: 1.1rem; color: var(--van-warning-color); font-weight: bold;" />
-
-      </div>
-    </template>
-    <template #right-icon>
-      <van-loading size="20" color="var(--van-primary-color)" style="margin-right: 5px;" v-if="showLoading" />
-      <van-icon v-else name="arrow" size="20" color="var(--van-text-color-3)" style="margin-right: 5px;" />
-    </template>
-  </van-cell>
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -111,7 +87,7 @@ const isStat = computed(() => props.source.type == ProxyMock.PorxyType.STATISTIC
 const isSocket = computed(() => props.source.type == ProxyMock.PorxyType.SOCKET)
 const socket = computed(() => props.source as ProxyMock.SocketRecord)
 const showLoading = computed(() => isSocket.value
-  ? socket.value.wsPhase !== 'close'
+  ? socket.value.wsPhase === 'open'
   : props.source.type != ProxyMock.PorxyType.REQUEST_END && props.source.type != ProxyMock.PorxyType.STATISTICS)
 
 const socketStatusText = computed(() => {
@@ -150,110 +126,163 @@ const recordStore = ProxyRecordStore()
 </script>
 
 <style scoped>
-.item-timeline {
-  position: absolute;
-  width: 8px;
-  height: 100%;
-  left: 6px;
-  top: 0;
-  font-size: var(--van-font-size-xs);
-  font-weight: bold;
-  border-left: 2px dashed var(--van-gray-8);
-  /* color: white; */
+.record-snap {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 0;
+  cursor: pointer;
+  border-bottom: 1px solid var(--van-border-color);
+  transition: background-color 0.2s;
 }
 
-.item-timeline-dot {
-  border-radius: 7px;
-  border: 2px dashed;
-  border-color: var(--van-primary-color);
+.record-snap:hover {
+  background-color: var(--van-hover-color);
+}
+
+.record-snap.is-selected {
+  background-color: var(--van-active-color);
+}
+
+.snap-timeline {
+  position: relative;
+  width: 20px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.snap-timeline::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-left: 2px dashed var(--van-gray-6);
+}
+
+.snap-timeline-dot {
+  position: absolute;
+  left: 5px;
+  top: 12px;
   width: 10px;
   height: 10px;
-  margin-top: 15px;
-  margin-left: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--van-primary-color);
+  background-color: transparent;
+  z-index: 1;
 }
 
-.stat-snap-pid {
-  max-width: 100px;
-  font-size: var(--van-font-size-xs);
-  color: var(--van-primary-color);
+.snap-content {
+  flex: 1;
+  min-width: 0;
+  margin-left: 10px;
 }
 
-.stat-snap-eid {
-  max-width: 100px;
-  font-size: var(--van-font-size-xs);
-  color: var(--van-warning-color);
-  margin-top: 5px;
+.snap-url-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
-.stat-snap-type {
-  font-size: var(--van-font-size-xs);
-  color: var(--van-danger-color);
-}
-
-.request-snap-timecost {
-  margin-left: 5px;
-  font-size: var(--van-font-size-sm);
-}
-
-.timecost-value {
-  display: inline-block;
-  min-width: 3.2em;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.request-snap-url {
-  position: absolute;
-  top: 10px;
-  width: calc(100% - 55px);
+.snap-url {
+  flex: 1;
+  min-width: 0;
   font-size: var(--van-font-size-md);
   font-weight: 500;
-  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  direction: rtl;
-}
-
-/* WebSocket 目标按正向展示，域名和路径从左到右可读 */
-.socket-snap-url {
   direction: ltr;
   text-align: left;
 }
 
-.socket-snap-meta {
+.snap-arrow {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  width: 100%;
-  margin-top: 25px;
-  font-size: var(--van-font-size-xs);
-  color: var(--van-text-color-3);
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
-.socket-snap-io {
+.snap-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  font-size: var(--van-font-size-xs);
+  color: var(--van-text-color-3);
+  overflow: hidden;
+}
+
+.snap-meta-row>* {
+  flex-shrink: 0;
+}
+
+.snap-io {
   font-variant-numeric: tabular-nums;
   color: var(--van-text-color-2);
 }
 
-.socket-snap-time {
+.snap-time {
   font-variant-numeric: tabular-nums;
 }
 
-.socket-snap-reason {
-  max-width: 140px;
+.snap-timecost {
+  font-variant-numeric: tabular-nums;
+  color: var(--van-success-color);
+}
+
+.snap-timecost.is-slow {
+  color: var(--van-danger-color);
+}
+
+.snap-reason {
+  max-width: 120px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.socket-snap-dropped {
+.snap-dropped {
   color: var(--van-warning-color);
 }
 
-.socket-snap-error {
+.snap-error {
   color: var(--van-danger-color);
   font-weight: 500;
+}
+
+.method-tag {
+  font-weight: 700;
+  font-size: 11px;
+  min-width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.mock-icon {
+  font-size: 14px;
+  color: var(--van-warning-color);
+  font-weight: bold;
+}
+
+.stat-pid {
+  color: var(--van-primary-color);
+}
+
+.stat-type {
+  color: var(--van-danger-color);
+  margin: 0 2px;
+}
+
+.stat-eid {
+  color: var(--van-warning-color);
 }
 </style>

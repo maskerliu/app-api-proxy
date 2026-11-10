@@ -209,11 +209,6 @@ async function showConfirm(message: string) {
 
 <style scoped>
 .stability-panel {
-  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
-  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
-  --sp-md: calc(var(--van-font-size-md) * 0.4615);
-  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
-  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   padding: var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
@@ -275,8 +270,9 @@ async function showConfirm(message: string) {
 /* 行内「应用 / 撤销」被上层 .match-tab 的 mini 统一内边距压到 ~4px，这里按字号放宽留白 */
 .key-row :deep(.key-action.van-button--mini) {
   flex: none;
-  padding-left: calc(var(--van-font-size-md) * .8);
-  padding-right: calc(var(--van-font-size-md) * .8);
+  height: calc(var(--van-font-size-md) * 2.2);
+  padding: 0 calc(var(--van-font-size-md) * .8);
+  box-sizing: border-box;
 }
 
 .key-info {

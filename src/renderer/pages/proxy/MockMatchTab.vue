@@ -81,7 +81,7 @@
         <div class="add-row">
           <van-field v-model="newIgnoreKey" class="add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
             @keyup.enter="addIgnoreKey" />
-          <van-button size="mini" plain type="primary" icon="plus" :disabled="newIgnoreKey.trim() === ''"
+          <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" :disabled="newIgnoreKey.trim() === ''"
             @click="addIgnoreKey" />
         </div>
       </div>
@@ -93,7 +93,7 @@
               <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
             </template>
             <template #right-icon>
-              <van-button size="mini" plain type="primary" icon="plus" @click.stop="onAddCondition" />
+              <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" @click.stop="onAddCondition" />
             </template>
             <div v-if="match.query.conditions.length === 0" class="empty-tip">
               {{ $t('mock.match.conditionEmpty') }}
@@ -128,7 +128,7 @@
     <div ref="headerSection" class="section">
       <div class="section-title">
         <span>{{ $t('mock.match.headerConditions') }}</span>
-        <van-button size="mini" plain type="primary" icon="plus" @click="onAddHeader" />
+        <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" @click="onAddHeader" />
       </div>
       <div v-if="match.headers.conditions.length === 0" class="empty-tip">{{ $t('mock.match.headerEmpty') }}</div>
       <div v-for="(condition, idx) in match.headers.conditions" :key="idx" class="condition-row">
@@ -179,7 +179,7 @@
         <van-button size="mini" type="primary" :loading="testing" @click="runTest">
           {{ $t('mock.match.testRun') }}
         </van-button>
-        <van-button size="mini" plain icon="replay" :title="$t('mock.match.testSeed')" @click="seedTest" />
+        <van-button class="btn-icon-only" size="mini" plain icon="replay" :title="$t('mock.match.testSeed')" @click="seedTest" />
       </div>
       <div v-if="testError" class="test-error">{{ testError }}</div>
       <div v-if="testHit != null" class="test-hit">
@@ -534,16 +534,10 @@ defineExpose({ focusField })
 <style scoped>
 .match-tab {
   /* 控件尺寸统一由字号推导：md 13px 时 28px 高、24px 行高，与改动前的固定值一致 */
-  --match-control-height: calc(var(--van-font-size-md) * 2.1538);
-  --match-control-line-height: calc(var(--van-font-size-md) * 1.8462);
-  --match-control-padding-y: calc(var(--van-font-size-md) * .3077);
+  --match-control-height: calc(var(--van-font-size-md) * 2.2);
+  --match-control-line-height: calc(var(--van-font-size-md) * 1.8);
+  --match-control-padding-y: calc(var(--van-font-size-md) * 0.3);
   --mini-select-bar-height: var(--match-control-height);
-  /* 间距档位：全部由字号推导，切换字号时等比缩放 */
-  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
-  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
-  --sp-md: calc(var(--van-font-size-md) * 0.4615);
-  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
-  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   display: flex;
   flex-direction: column;
   gap: var(--sp-lg);
@@ -552,9 +546,10 @@ defineExpose({ focusField })
 
 /* mini 按钮默认继承 xs，表单里统一提到 sm，高度也随字号一起变化 */
 .match-tab :deep(.van-button--mini) {
-  height: var(--match-control-line-height);
+  height: var(--match-control-height);
   padding: 0 var(--match-control-padding-y);
   font-size: var(--van-font-size-sm);
+  box-sizing: border-box;
 }
 
 /* 键名/建议 Header 等标签是内容而非徽标，跟随 sm */
@@ -662,15 +657,15 @@ defineExpose({ focusField })
 
 .row-label {
   flex: none;
-  min-width: calc(var(--van-font-size-md) * 3.692);
+  min-width: calc(var(--van-font-size-md) * 3.7);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
 }
 
 /* 请求标识三行统一：标签固定列宽、置灰、右对齐，控件同宽描边 */
 .identity-row .row-label {
-  width: calc(var(--van-font-size-md) * 4.769);
-  min-width: calc(var(--van-font-size-md) * 4.769);
+  width: calc(var(--van-font-size-md) * 4.8);
+  min-width: calc(var(--van-font-size-md) * 4.8);
   text-align: right;
 }
 
@@ -683,6 +678,7 @@ defineExpose({ focusField })
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
+  box-sizing: border-box;
 }
 
 .match-field::after,
@@ -695,20 +691,30 @@ defineExpose({ focusField })
   height: 100%;
 }
 
+.match-field :deep(.van-field__value),
+.path-input :deep(.van-field__value) {
+  padding: 0;
+}
+
+.match-field :deep(.van-field__control),
+.path-input :deep(.van-field__control) {
+  height: var(--match-control-height);
+}
+
 .match-select {
   flex: none;
 }
 
 .method-select {
-  width: calc(var(--van-font-size-md) * 6.769);
+  width: calc(var(--van-font-size-md) * 6.8);
 }
 
 .path-type-select {
-  width: calc(var(--van-font-size-md) * 6.308);
+  width: calc(var(--van-font-size-md) * 6.3);
 }
 
 .path-input {
-  flex: 1 1 calc(var(--van-font-size-md) * 12.308);;
+  flex: 1 1 calc(var(--van-font-size-md) * 12.3);
 }
 
 .path-original {
@@ -728,7 +734,7 @@ defineExpose({ focusField })
 }
 
 .inline-radio :deep(.van-radio) {
-  margin-right: calc(var(--van-font-size-md) * 0.769);
+  margin-right: calc(var(--van-font-size-md) * 0.8);
 }
 
 .inline-radio :deep(.van-radio__label) {
@@ -771,7 +777,7 @@ defineExpose({ focusField })
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-md);
-  min-height: calc(var(--van-font-size-md) * 1.692);
+  min-height: calc(var(--van-font-size-md) * 1.7);
 }
 
 .tag-list :deep(.van-tag) {
@@ -814,6 +820,7 @@ defineExpose({ focusField })
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
+  box-sizing: border-box;
 }
 
 .condition-key::after {
@@ -824,8 +831,16 @@ defineExpose({ focusField })
   height: 100%;
 }
 
+.condition-key :deep(.van-field__value) {
+  padding: 0;
+}
+
+.condition-key :deep(.van-field__control) {
+  height: var(--match-control-height);
+}
+
 .op-select {
-  width: calc(var(--van-font-size-md) * 8.462);
+  width: calc(var(--van-font-size-md) * 8.5);
 }
 
 .condition-value {
@@ -836,6 +851,7 @@ defineExpose({ focusField })
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
+  box-sizing: border-box;
 }
 
 .condition-value::after {
@@ -844,6 +860,14 @@ defineExpose({ focusField })
 
 .condition-value :deep(.van-field__body) {
   height: 100%;
+}
+
+.condition-value :deep(.van-field__value) {
+  padding: 0;
+}
+
+.condition-value :deep(.van-field__control) {
+  height: var(--match-control-height);
 }
 
 .row-delete {
@@ -871,7 +895,7 @@ defineExpose({ focusField })
 }
 
 .priority-input {
-  width: calc(var(--van-font-size-md) * 7.385);
+  width: calc(var(--van-font-size-md) * 7.4);
   padding: 0 var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
@@ -911,13 +935,14 @@ defineExpose({ focusField })
 }
 
 .test-url {
-  flex: 1 1 calc(var(--van-font-size-md) * 15.385);
+  flex: 1 1 calc(var(--van-font-size-md) * 15.4);
   min-width: 0;
   height: var(--match-control-height);
   padding: 0 var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
+  box-sizing: border-box;
 }
 
 .test-url::after {
@@ -926,6 +951,14 @@ defineExpose({ focusField })
 
 .test-url :deep(.van-field__body) {
   height: 100%;
+}
+
+.test-url :deep(.van-field__value) {
+  padding: 0;
+}
+
+.test-url :deep(.van-field__control) {
+  height: var(--match-control-height);
 }
 
 .test-error {

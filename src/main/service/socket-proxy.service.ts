@@ -4,13 +4,14 @@ import { Duplex } from 'stream'
 import { inject, injectable } from 'inversify'
 import { RawData, WebSocket, WebSocketServer } from 'ws'
 import { ProxyMock } from '@shared/proxy.models'
+import { headerFirst, MOCK_UID_HEADER } from '@shared/http-header'
 import { IocTypes } from '../MainConst'
 import { DiagnosticService } from './diagnostic.service'
 import { ProxyService } from './proxy.service'
 import { PushService } from './push.service'
 import {
-  buildUpstreamHeaders, encodeFramePayload, headerValue, isProxyPath, isSendableCloseCode,
-  mapUpstreamError, MOCK_HOST_HEADER, MOCK_UID_HEADER, mockQueryValue, parseProxyRequest,
+  buildUpstreamHeaders, encodeFramePayload, isProxyPath, isSendableCloseCode,
+  mapUpstreamError, mockQueryValue, parseProxyRequest,
   resolveTargetUrl, sanitizeHeaders, truncateReason, type ParsedProxyRequest, type ResolvedTarget,
 } from './socket-proxy.contract'
 
@@ -740,8 +741,12 @@ export class SocketProxyService {
 
   private sendSocket(ctx: SocketContext, record: ProxyMock.SocketRecord) {
     if (ctx.uid == null || ctx.uid === '') return
-    if (!this.pushService.hasClient(ctx.uid)) return
-    this.pushService.sendProxyMessage(ctx.uid, record)
+    if (this.pushService.hasClient(ctx.uid)) {
+      this.pushService.sendProxyMessage(ctx.uid, record)
+    } else {
+      // UID 无对应 viewer 时广播给所有 viewer，保证记录实时可见
+      this.pushService.broadcastProxyMessage(record)
+    }
   }
 
   private failConnection(opts: {
@@ -790,7 +795,7 @@ export class SocketProxyService {
   // 缺少可推送 uid 时也要把握手失败原因写回原始 socket
   private rejectHandshake(req: IncomingMessage, socket: Duplex, status: number,
     code: string, message: string) {
-    const uid = headerValue(req.headers[MOCK_UID_HEADER])
+    const uid = headerFirst(req.headers[MOCK_UID_HEADER])
       ?? mockQueryValue(req.url, '__mock_uid')
     const startedAt = Date.now()
     this.failConnection({

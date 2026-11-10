@@ -1,0 +1,126 @@
+/* ==========================================================================
+   全局设计 Token 与复用工具类
+   - 间距 / 颜色 Token 均基于 Vant CSS 变量，随用户字号设置等比缩放
+   - 页面容器 / 卡片容器 / 键值网格 等模式在多个页面共享，统一在此定义
+
+   响应式断点约定：
+   - <= 900px  : 主页面 Proxy 左右分栏 → 上下堆叠
+   - <= 1100px : WebSocket 详情统计 3 列 → 2 列
+   - <= 720px  : MockRuleMgr / Onboarding 内部分栏 → 堆叠
+   ========================================================================== */
+
+:root {
+  --mono-font: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+
+  /* 间距档位：全部由正文字号推导，切换字号时等比缩放 */
+  --sp-xl: calc(var(--van-font-size-md) * 0.8);
+  --sp-lg: calc(var(--van-font-size-md) * 0.6);
+  --sp-md: calc(var(--van-font-size-md) * 0.5);
+  --sp-sm: calc(var(--van-font-size-md) * 0.3);
+  --sp-xs: calc(var(--van-font-size-md) * 0.2);
+
+  /* 弹层宽度档位 */
+  --popup-w-lg: min(80vw, 1200px);
+  --popup-w-md: min(70vw, 960px);
+
+  /* 统一圆角（覆盖 Vant 默认 4px，与 store 中 radiusMd 一致） */
+  --app-radius-sm: var(--van-radius-sm);
+  --app-radius-md: var(--van-radius-md);
+  --app-radius-lg: var(--van-radius-lg);
+
+  /* 空状态图标尺寸 */
+  --empty-sm: 64px;
+  --empty-md: 96px;
+  --empty-lg: 120px;
+
+  /* 详情页顶部间距：HTTP / WebSocket / Statistics 统一 */
+  --detail-top-gap: var(--van-padding-lg);
+}
+
+/* ---- 页面级容器：全屏居中卡片布局（Onboarding / Diagnostic 共用） ---- */
+
+.page-container {
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  background-color: var(--van-gray-1);
+}
+
+.card-container {
+  width: min(900px, 94vw);
+  min-width: min(360px, 100%);
+  box-sizing: border-box;
+  height: 100%;
+  max-height: 720px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 18px 22px 14px;
+  border-radius: var(--van-radius-lg);
+  background-color: var(--van-background-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- 折叠面板容器（ProxyRequestDetail / SocketDetail / MockResponseForm 共用） ---- */
+
+.header-collapse {
+  margin: var(--van-padding-md) 0;
+  overflow: hidden;
+  border-radius: var(--van-radius-lg);
+  background: var(--van-cell-group-background);
+}
+
+/* ---- 键值对网格：请求头 / 响应头 / 参数等 key-value 展示区共用 ---- */
+
+.header-list {
+  display: grid;
+  grid-template-columns: fit-content(40%) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 6px;
+  padding: 5px 15px;
+  font-family: var(--mono-font);
+  font-size: var(--van-font-size-md);
+  user-select: text;
+}
+
+.header-row {
+  display: contents;
+}
+
+.header-key {
+  color: var(--van-text-color-2);
+  word-break: break-all;
+}
+
+.header-value {
+  color: var(--van-text-color);
+  white-space: pre-line;
+  word-break: break-all;
+}
+
+/* ---- 纯图标按钮工具类：圆角正方形 ---- */
+
+.btn-icon-only {
+  width: calc(var(--van-font-size-md) * 2.2);
+  height: calc(var(--van-font-size-md) * 2.2);
+  padding: 0;
+  border-radius: var(--van-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* ---- 操作按钮区：弹窗/面板底部按钮行统一（结构；上下文间距由使用方覆盖） ---- */
+
+.actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-lg);
+}

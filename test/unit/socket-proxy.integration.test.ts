@@ -24,6 +24,8 @@ const { SocketProxyService } = await import('@main/service/socket-proxy.service'
 
 const UID = 'ws-it'
 const pushed: ProxyMock.SocketRecord[] = []
+// UID 无对应 viewer 时的兜底广播，与 PushService.broadcastProxyMessage 同名同参
+const broadcasted: ProxyMock.SocketRecord[] = []
 const diagnostics = {
   requests: [] as any[],
   errors: [] as any[],
@@ -33,6 +35,7 @@ const diagnostics = {
 const pushService = {
   hasClient: (uid: string) => uid === UID,
   sendProxyMessage: (_uid: string, record: ProxyMock.SocketRecord) => { pushed.push(record) },
+  broadcastProxyMessage: (record: ProxyMock.SocketRecord) => { broadcasted.push(record) },
 }
 const proxyService = {
   getProxyConfig: (_uid: string) => ({ status: false, delay: 0, dataServer: '' }),
@@ -251,15 +254,18 @@ describe('SocketProxyService 经 /_proxy 端到端', () => {
       && it.errorCode === ProxyMock.SocketErrorCode.CONNECT_FAILED), 'failed connection not pushed')
   })
 
-  it('未注册 uid 不推送记录但仍完成代理', async () => {
-    const before = pushed.length
+  it('未注册 uid 走兜底广播，代理链路仍完成', async () => {
+    const sentBefore = pushed.length
+    const broadcastBefore = broadcasted.length
     const query = `__mock_host=${encodeURIComponent(`127.0.0.1:${labPort}`)}&__mock_uid=offline-uid&name=it-f&echo=1`
     const { ws, inbox } = await openProxy(query)
     const welcome = await inbox.next(msg => msg.kind === 'welcome')
     assert.equal(welcome.query.name, 'it-f')
 
     ws.close(1000, 'done')
-    await delay(150)
-    assert.equal(pushed.length, before)
+    await waitFor(() => broadcasted.slice(broadcastBefore).some(it => it.wsPhase === 'close'),
+      'offline uid not broadcast')
+    // 未注册的 uid 不该再走定向推送，否则会写进别人会话的缓冲区
+    assert.equal(pushed.length, sentBefore)
   })
 })

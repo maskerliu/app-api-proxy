@@ -4,13 +4,13 @@
       <div class="head-fields">
         <van-field class="name-field" label-width="40px" center v-model="record.name" :label="$t('mock.editor.name')"
           :placeholder="$t('mock.editor.namePlaceholder')" />
-        <van-field ref="pathField" class="path-field" label-width="40px" v-model="record.url" :label="$t('mock.editor.path')"
-          :placeholder="$t('mock.editor.pathPlaceholder')" />
+        <van-field ref="pathField" class="path-field" label-width="40px" v-model="record.url"
+          :label="$t('mock.editor.path')" :placeholder="$t('mock.editor.pathPlaceholder')" />
       </div>
       <div class="head-actions">
         <van-tag v-if="dirty" type="warning" plain>{{ $t('mock.editor.unsaved') }}</van-tag>
-        <van-button plain size="mini" type="primary" icon="success" :loading="saving" :disabled="!canSave"
-          @click="emit('save')">
+        <van-button class="btn-icon-only" plain size="mini" type="primary" icon="success" :loading="saving"
+          :disabled="!canSave" @click="emit('save')">
         </van-button>
       </div>
     </div>
@@ -37,7 +37,7 @@
                 :plain="variant.id !== selectedVariantId" :title="variant.name" @click="selectVariant(variant)">
                 <span class="variant-chip-name">{{ variant.name || $t('mock.editor.variantName') }}</span>
                 <span class="variant-chip-status" :class="statusTone(variant.statusCode)">{{ variant.statusCode
-                  }}</span>
+                }}</span>
                 <van-icon v-if="record.activeVariantId === variant.id" name="success" class="variant-chip-check"
                   :title="$t('mock.editor.active')" />
               </van-button>
@@ -46,7 +46,8 @@
               {{ record.variants.length }}/{{ MOCK_MAX_VARIANTS }}
             </van-tag>
             <!-- 放在滚动区外，变体再多也始终可见 -->
-            <van-button size="mini" plain type="primary" icon="plus" :disabled="atVariantLimit" @click="addVariant">
+            <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" :disabled="atVariantLimit"
+              @click="addVariant">
             </van-button>
           </div>
 
@@ -71,21 +72,21 @@
                   @update:model-value="toggleActive(selectedVariant)" />
                 <span class="variant-active-label">{{ $t('mock.editor.activeHint') }}</span>
               </div>
-              <van-button size="mini" plain type="success" :disabled="atVariantLimit"
+              <van-button class="btn-icon-only" size="mini" plain type="success" :disabled="atVariantLimit"
                 :title="$t('mock.editor.duplicateVariant')" @click="duplicateVariant">
                 <template #icon>
-                  <van-icon class="iconfont icon-copy" />
+                  <van-icon class="iconfont icon-copy" style="padding: 0;" />
                 </template>
               </van-button>
-              <van-button size="mini" plain type="danger" :title="$t('mock.editor.deleteVariant')"
+              <van-button class="btn-icon-only" size="mini" plain type="danger" :title="$t('mock.editor.deleteVariant')"
                 @click="removeVariant(selectedVariant)">
                 <template #icon>
                   <van-icon class="iconfont icon-delete" />
                 </template>
               </van-button>
             </div>
-            <mock-response-form v-if="selectedVariant != null" ref="variantForm" v-model="selectedVariantModel" fill-body
-              :show-meta="false" />
+            <mock-response-form v-if="selectedVariant != null" ref="variantForm" v-model="selectedVariantModel"
+              fill-body :show-meta="false" />
             <div v-else class="variant-empty">{{ $t('mock.editor.selectVariant') }}</div>
           </div>
         </div>
@@ -97,8 +98,8 @@
             <span class="raw-hint">{{ $t('mock.editor.rawHint') }}</span>
             <van-button size="mini" plain type="primary" @click="applyRaw">{{ $t('mock.editor.rawApply') }}</van-button>
           </div>
-          <van-notice-bar v-if="rawError" :text="rawError" mode="closeable"
-            color="var(--van-danger-color)" background="color-mix(in srgb, var(--van-danger-color) 8%, transparent)" />
+          <van-notice-bar v-if="rawError" :text="rawError" mode="closeable" color="var(--van-danger-color)"
+            background="color-mix(in srgb, var(--van-danger-color) 8%, transparent)" />
           <div class="raw-editor">
             <vue-ace-editor v-model:data="rawText" lang="json" :fold="false" searchable />
           </div>
@@ -109,8 +110,8 @@
 </template>
 
 <script lang="ts" setup>
-import { MOCK_MAX_VARIANTS, ProxyMock } from '@shared'
 import type { MockValidationIssue } from '@shared'
+import { MOCK_MAX_VARIANTS, ProxyMock } from '@shared'
 import type { FieldInstance } from 'vant'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -308,11 +309,6 @@ function applyRaw() {
 
 <style scoped>
 .record-editor {
-  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
-  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
-  --sp-md: calc(var(--van-font-size-md) * 0.4615);
-  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
-  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -321,7 +317,7 @@ function applyRaw() {
 
 .editor-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--sp-lg);
   padding: 0 var(--sp-sm);
   flex: none;
@@ -410,8 +406,8 @@ function applyRaw() {
   flex: none;
   min-width: 0;
   /* 固定高度：出现横向滚动条时不改变编辑区位置 */
-  height: calc(var(--van-font-size-md) * 2.462);
-  margin-top: calc(var(--van-font-size-md) * 0.3846);
+  height: calc(var(--van-font-size-md) * 2.5);
+  margin-top: calc(var(--van-font-size-md) * 0.4);
 }
 
 .variant-strip {
@@ -446,7 +442,8 @@ function applyRaw() {
 /* 变体胶囊直接用 van-button（mini + round），选中态由 primary 实心样式提供 */
 .variant-chip {
   flex: none;
-  max-width: calc(var(--van-font-size-md) * 13.846);
+  max-width: calc(var(--van-font-size-md) * 13.8);
+  height: calc(var(--van-font-size-md) * 2.5);
   padding: 0 var(--sp-xl);
   font-size: var(--van-font-size-md);
 }
@@ -516,11 +513,11 @@ function applyRaw() {
   min-height: 0;
 }
 
-/* 名称编辑与变体级操作合并到一行，替代原来单独的“编辑变体：xxx”标题 */
+/* 名称编辑与变体级操作合并到一行，替代原来单独的”编辑变体：xxx”标题 */
 .variant-editor-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--sp-md);
   margin-bottom: var(--sp-lg);
   min-width: 0;
@@ -529,7 +526,7 @@ function applyRaw() {
 /* 基准宽度取 0，换行判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作 */
 .variant-name-field {
   flex: 1 1 0;
-  min-width: calc(var(--van-font-size-md) * 7.385);
+  min-width: calc(var(--van-font-size-md) * 7.4);
   padding: var(--sp-sm) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
@@ -561,11 +558,11 @@ function applyRaw() {
 
 /* 宽度按英文 “Status Code” + 数值预留，避免最大字号下标签挤掉输入值 */
 .variant-status-field {
-  width: calc(var(--van-font-size-md) * 10.462);
+  width: calc(var(--van-font-size-md) * 10.5);
 }
 
 .variant-delay-field {
-  width: calc(var(--van-font-size-md) * 9.538);
+  width: calc(var(--van-font-size-md) * 9.5);
 }
 
 .meta-unit {
@@ -627,7 +624,7 @@ function applyRaw() {
 .raw-editor {
   position: relative;
   flex: 1 1 auto;
-  min-height: calc(var(--van-font-size-md) * 12.308);
+  min-height: calc(var(--van-font-size-md) * 12.3);
 }
 
 /* 铺满剩余高度，编辑器底边与面板/左侧列表底边对齐 */

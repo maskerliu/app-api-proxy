@@ -6,51 +6,39 @@
           <div class="socket-url" :title="socket.url">{{ socket.url }}</div>
         </template>
         <template #right-icon>
-          <van-button plain size="small" type="primary" icon="description" @click="copyText(socket.url)" />
+          <van-button class="btn-icon-only" plain size="small" type="primary" icon="description"
+            @click="copyText(socket.url)" />
         </template>
       </van-cell>
       <div class="socket-stats">
+        <van-tag :type="statusTagType">{{ statusText }}</van-tag>
         <div class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.status') }}</span>
-          <van-tag :type="statusTagType">{{ statusText }}</van-tag>
+          <span class="stat-label">{{ $t('proxy.socket.duration') }}</span>
+          <span class="stat-value">{{ durationText }}</span>
+        </div>
+        <div class="socket-stat" :title="$t('proxy.socket.bytesTitle')">
+          <span class="stat-value"><i class="iconfont dir-icon icon-upstream"></i> {{
+            formatBytes(socket.bytesSent) }}</span>
+          <span class="stat-value"><i class="iconfont dir-icon icon-downlink"></i> {{
+            formatBytes(socket.bytesReceived) }}</span>
+        </div>
+        <div class="socket-stat">
+          <span class="stat-label">{{ $t('proxy.socket.frameCount') }}</span>
+          <span class="stat-value">{{ socket.frameCount ?? frames.length }}</span>
+          <span v-if="(socket.droppedFrames ?? 0) > 0" class="stat-value is-warn">{{
+            $t('proxy.socket.dropped', { count: socket.droppedFrames }) }}</span>
         </div>
         <div v-if="socket.subprotocol" class="socket-stat">
           <span class="stat-label">{{ $t('proxy.socket.subprotocol') }}</span>
           <span class="stat-value">{{ socket.subprotocol }}</span>
         </div>
-        <div class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.duration') }}</span>
-          <span class="stat-value">{{ durationText }}</span>
-        </div>
-        <div class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.sent') }}</span>
-          <span class="stat-value">{{ formatBytes(socket.bytesSent) }}</span>
-        </div>
-        <div class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.received') }}</span>
-          <span class="stat-value">{{ formatBytes(socket.bytesReceived) }}</span>
-        </div>
-        <div class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.frameCount') }}</span>
-          <span class="stat-value">{{ socket.frameCount ?? frames.length }}</span>
-        </div>
-        <div v-if="(socket.droppedFrames ?? 0) > 0" class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.droppedCount') }}</span>
-          <span class="stat-value is-warn">{{ socket.droppedFrames }}</span>
-        </div>
         <div v-if="socket.wsPhase === 'close'" class="socket-stat">
           <span class="stat-label">{{ $t('proxy.socket.closeCode') }}</span>
-          <span class="stat-value" :class="{ 'is-danger': socket.closeCode !== 1000 && socket.closeCode !== 1001 }">
-            {{ socket.closeCode ?? '-' }}
-          </span>
-        </div>
-        <div v-if="socket.closeReason" class="socket-stat is-wide">
-          <span class="stat-label">{{ $t('proxy.socket.closeReason') }}</span>
-          <span class="stat-value" :title="socket.closeReason">{{ socket.closeReason }}</span>
-        </div>
-        <div v-if="socket.closeBy" class="socket-stat">
-          <span class="stat-label">{{ $t('proxy.socket.closeByLabel') }}</span>
-          <span class="stat-value">{{ closeByText }}</span>
+          <span class="stat-value" :class="{ 'is-danger': socket.closeCode !== 1000 && socket.closeCode !== 1001 }">{{
+            socket.closeCode ?? '-' }}</span>
+          <span v-if="socket.closeBy" class="stat-value">{{ closeByText }}</span>
+          <span v-if="socket.closeReason" class="stat-value" :title="socket.closeReason">{{
+            socket.closeReason }}</span>
         </div>
       </div>
       <div v-if="socket.errorCode" class="socket-error" :title="socket.errorMessage">
@@ -97,46 +85,47 @@
         </div>
         <van-switch v-model="follow" size="16px" class="follow-switch" />
         <span class="follow-label" @click="follow = !follow">{{ $t('proxy.socket.follow') }}</span>
-        <van-button v-if="!follow" size="mini" plain type="primary" @click="scrollToLatest">
-          {{ $t('proxy.socket.backToLatest') }}
-        </van-button>
         <span class="msg-count">{{ filteredFrames.length }} / {{ frames.length }}</span>
       </div>
-      <van-search v-model="keyword" clearable :placeholder="$t('proxy.socket.searchPlaceholder')"
-        class="msg-search" />
+      <van-search v-model="keyword" clearable :placeholder="$t('proxy.socket.searchPlaceholder')" class="msg-search" />
 
-      <OverlayScrollbarsComponent ref="listRef" class="msg-list" :options="scrollOptions" defer>
-        <div v-for="frame in filteredFrames" :key="frame.seq" class="msg-row"
-          :class="{ 'is-selected': frame.seq === selectedSeq, 'is-c2s': frame.dir === 'c2s' }"
-          @click="selectedSeq = frame.seq">
-          <span class="msg-time">{{ frame.at }}ms</span>
-          <span class="msg-dir" :class="frame.dir">{{ frame.dir === 'c2s' ? '↑' : '↓' }}</span>
-          <span class="msg-opcode" :class="frameCategory(frame.opcode)">{{ frame.opcode }}</span>
-          <span class="msg-size">{{ formatBytes(frame.size) }}</span>
-          <span class="msg-preview" :title="framePreview(frame)">{{ framePreview(frame) }}</span>
-          <van-tag v-if="frame.truncated" plain type="warning" class="msg-tag">
-            {{ $t('proxy.socket.truncated') }}
-          </van-tag>
+      <div class="msg-body">
+        <div ref="listRef" class="msg-list">
+          <div v-for="frame in filteredFrames" :key="frame.seq" class="msg-row"
+            :class="{ 'is-selected': frame.seq === selectedSeq }" @click="selectedSeq = frame.seq">
+            <span class="msg-time" :title="`${frame.at} ms`">{{ formatFrameOffset(frame.at) }}</span>
+            <span class="msg-dir"><i class="iconfont dir-icon" :class="dirIcon(frame.dir)"></i></span>
+            <span class="msg-opcode">{{ frame.opcode }}</span>
+            <span class="msg-preview" :title="framePreview(frame)">{{ framePreview(frame) }}</span>
+            <van-tag v-if="frame.truncated" plain type="warning" class="msg-tag">
+              {{ $t('proxy.socket.truncated') }}
+            </van-tag>
+            <span class="msg-size">{{ formatBytes(frame.size) }}</span>
+          </div>
+          <div v-if="frames.length === 0" class="msg-empty">{{ $t('proxy.socket.noFrames') }}</div>
+          <div v-else-if="filteredFrames.length === 0" class="msg-empty">{{ $t('proxy.socket.noMatch') }}</div>
         </div>
-        <div v-if="frames.length === 0" class="msg-empty">{{ $t('proxy.socket.noFrames') }}</div>
-        <div v-else-if="filteredFrames.length === 0" class="msg-empty">{{ $t('proxy.socket.noMatch') }}</div>
-      </OverlayScrollbarsComponent>
 
-      <div class="msg-detail">
-        <div class="msg-detail-head">
-          <span class="msg-detail-title">{{ $t('proxy.socket.messageDetail') }}</span>
-          <template v-if="selectedFrame != null">
-            <span class="msg-detail-meta">
-              #{{ selectedFrame.seq }} · {{ selectedFrame.dir === 'c2s' ? '↑' : '↓' }} ·
-              {{ selectedFrame.opcode }} · {{ formatBytes(selectedFrame.size) }} · {{ selectedFrame.at }}ms
-            </span>
-            <van-button size="mini" plain type="primary" @click="copyText(frameText)">
-              {{ $t('proxy.socket.copy') }}
-            </van-button>
-          </template>
+        <div class="msg-detail">
+          <div class="msg-detail-head">
+            <span class="msg-detail-title">{{ $t('proxy.socket.messageDetail') }}</span>
+            <template v-if="selectedFrame != null">
+              <span class="msg-detail-meta">
+                <span class="meta-item">#{{ selectedFrame.seq }}</span>
+                <span class="meta-item"><i class="iconfont dir-icon" :class="dirIcon(selectedFrame.dir)"></i></span>
+                <span class="meta-item">{{ selectedFrame.opcode }}</span>
+                <span class="meta-item">{{ formatBytes(selectedFrame.size) }}</span>
+                <span class="meta-item" :title="`${selectedFrame.at} ms`">{{
+                  formatFrameOffset(selectedFrame.at) }}</span>
+              </span>
+              <van-button size="mini" plain type="primary" @click="copyText(frameText)">
+                {{ $t('proxy.socket.copy') }}
+              </van-button>
+            </template>
+          </div>
+          <div v-if="selectedFrame == null" class="msg-detail-empty">{{ $t('proxy.socket.selectFrame') }}</div>
+          <vue-ace-editor v-else :fold="false" :data="frameText" searchable />
         </div>
-        <div v-if="selectedFrame == null" class="msg-detail-empty">{{ $t('proxy.socket.selectFrame') }}</div>
-        <vue-ace-editor v-else :fold="false" :fill="true" :data="frameText" searchable />
       </div>
     </div>
   </div>
@@ -144,17 +133,15 @@
 
 <script lang="ts" setup>
 import { ProxyMock } from '@shared'
-import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showToast } from 'vant'
 import type { PropType } from 'vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { scrollOptions } from '../../common/scroll'
 import { copyToClipboard } from '../../common/clipboard'
-import { toKeyValueEntries, type HeaderEntry } from '../../common/headerUtil'
+import { toKeyValueEntries } from '../../common/headerUtil'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import {
-  formatBytes, formatDuration, frameCategory, frameContent, framePreview,
+  formatBytes, formatDuration, formatFrameOffset, frameCategory, frameContent, framePreview,
 } from './socket.helper'
 
 const props = defineProps({
@@ -192,6 +179,10 @@ const categoryOptions = computed<Array<{ value: Category, label: string }>>(() =
   { value: 'binary', label: t('proxy.socket.binary') },
   { value: 'control', label: t('proxy.socket.control') },
 ])
+
+function dirIcon(dir: ProxyMock.SocketDirection) {
+  return dir === 'c2s' ? 'icon-upstream' : 'icon-downlink'
+}
 
 const filteredFrames = computed(() => {
   const text = keyword.value.trim().toLowerCase()
@@ -253,7 +244,7 @@ const requestHeaders = computed(() => toKeyValueEntries(socket.value?.requestHea
 const responseHeaders = computed(() => toKeyValueEntries(socket.value?.responseHeaders))
 
 function bindViewport() {
-  viewportEl = listRef.value?.$el?.querySelector('.os-viewport') ?? null
+  viewportEl = listRef.value
   viewportEl?.addEventListener('scroll', onScroll, { passive: true })
 }
 
@@ -264,7 +255,7 @@ function onScroll() {
 
 function scrollToLatest() {
   void nextTick(() => {
-    const viewport = viewportEl ?? listRef.value?.$el?.querySelector('.os-viewport')
+    const viewport = viewportEl ?? listRef.value
     if (viewport == null) return
     viewport.scrollTop = viewport.scrollHeight
     follow.value = true
@@ -311,11 +302,15 @@ onUnmounted(() => {
 
 <style scoped>
 .socket-detail {
-  padding-bottom: 5px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .socket-summary {
-  margin-top: 5px;
+  /* 与 HTTP 详情页 stickyTop (25px)、统计详情页顶部间距保持同一视觉线；引用统一 Token */
+  margin: var(--detail-top-gap) var(--van-padding-md) 0;
 }
 
 .socket-url {
@@ -326,9 +321,11 @@ onUnmounted(() => {
 }
 
 .socket-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px 12px;
+  display: flex;
+  align-items: center;
+  /* 指标合并在一条信息带内，宽度不足才换行，避免详情区被统计块挤高 */
+  flex-wrap: wrap;
+  gap: 4px 14px;
   padding: 8px 16px 10px;
 }
 
@@ -338,10 +335,6 @@ onUnmounted(() => {
   gap: 6px;
   min-width: 0;
   font-size: var(--van-font-size-sm);
-}
-
-.socket-stat.is-wide {
-  grid-column: span 3;
 }
 
 .stat-label {
@@ -383,9 +376,15 @@ onUnmounted(() => {
   color: var(--van-text-color-3);
 }
 
+.header-collapse {
+  margin: var(--van-padding-md) var(--van-padding-md) 0;
+}
+
 .socket-messages {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   margin: var(--van-padding-md) var(--van-padding-md) 0;
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
@@ -396,29 +395,46 @@ onUnmounted(() => {
 .msg-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  /* radio 自身高度写死 20px，这里按字号兜底，保证整行高度跟随全局字号缩放 */
+  min-height: calc(var(--van-font-size-md) * 1.9);
   gap: 6px;
   padding: 8px 10px 0;
 }
 
 .msg-filter {
   display: flex;
+  flex: none;
   gap: 4px;
 }
 
+.filter-btn-group {
+  display: flex;
+  flex: none;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  /* Vant 的 label 默认还带 8px 左外边距，与下方 padding 叠加会让图标和文字之间空到 16px */
+  --van-radio-label-margin: 0px;
+}
+
 .filter-btn-group :deep(.van-radio) {
+  flex: none;
   margin: 0;
 }
 
 .filter-btn-group :deep(.van-radio__label) {
   padding: 0 8px;
+  white-space: nowrap;
 }
 
 .follow-switch {
+  flex: none;
   margin-left: auto;
 }
 
 .follow-label {
+  flex: none;
+  white-space: nowrap;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-xs);
   cursor: pointer;
@@ -426,34 +442,46 @@ onUnmounted(() => {
 }
 
 .msg-count {
+  flex: none;
+  white-space: nowrap;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
   font-variant-numeric: tabular-nums;
 }
 
 .msg-search {
-  margin-top: 6px;
+  margin: 6px 0;
   padding: 2px 12px;
   font-size: var(--van-font-size-sm);
+
   --van-cell-vertical-padding: 0;
 }
 
-.msg-list {
-  height: clamp(220px, 38vh, 460px);
+.msg-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
   border-top: 1px solid var(--van-border-color);
-  border-bottom: 1px solid var(--van-border-color);
+}
+
+.msg-list {
+  flex: 1;
+  min-width: 0;
+  min-height: 200px;
+  overflow-y: auto;
+  border-right: 1px solid var(--van-border-color);
   background: var(--van-background);
 }
 
 .msg-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 26px;
-  padding: 0 10px;
-  border-left: 2px solid transparent;
+  gap: 6px;
+  height: calc(var(--van-font-size-sm) * 2.2);
+  padding: 0 8px;
   font-family: var(--mono-font);
-  font-size: var(--van-font-size-xs);
+  font-size: var(--van-font-size-sm);
   color: var(--van-text-color-2);
   cursor: pointer;
   user-select: none;
@@ -470,70 +498,61 @@ onUnmounted(() => {
 
 .msg-row.is-selected .msg-preview,
 .msg-row.is-selected .msg-time,
+.msg-row.is-selected .msg-opcode,
 .msg-row.is-selected .msg-size {
   color: rgba(255, 255, 255, 0.86);
 }
 
-.msg-row.is-c2s {
-  border-left-color: var(--van-warning-color);
-}
-
-.msg-row:not(.is-c2s) {
-  border-left-color: var(--van-primary-color);
+/* 时间/类型/字节三列是次要信息，宽度按字号比例给足等宽字符数，既列对齐又跟随字号缩放 */
+.msg-time,
+.msg-opcode,
+.msg-size {
+  flex: none;
+  color: var(--van-text-color-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .msg-time {
-  flex: none;
-  width: 64px;
+  width: calc(var(--van-font-size-sm) * 4.6);
   text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.msg-dir {
-  flex: none;
-  width: 14px;
-  text-align: center;
-  font-weight: 700;
-}
-
-.msg-dir.c2s {
-  color: var(--van-warning-color);
-}
-
-.msg-dir.s2c {
-  color: var(--van-primary-color);
-}
-
-.msg-row.is-selected .msg-dir {
-  color: #fff;
 }
 
 .msg-opcode {
-  flex: none;
-  width: 46px;
-}
-
-.msg-opcode.text {
-  color: var(--van-success-color);
-}
-
-.msg-opcode.binary {
-  color: var(--van-primary-color);
-}
-
-.msg-opcode.control {
-  color: var(--van-text-color-3);
-}
-
-.msg-row.is-selected .msg-opcode {
-  color: #fff;
+  width: calc(var(--van-font-size-sm) * 4.2);
 }
 
 .msg-size {
+  width: calc(var(--van-font-size-sm) * 5);
+  text-align: right;
+}
+
+.dir-icon {
+  /* iconfont 基础样式写死 16px，改为跟随所在行字号，保证全局字号缩放时同步 */
+  font-size: inherit;
+  /* 行盒按 1em 收拢后以文字中线对齐：默认基线对齐会让箭头整体偏上 */
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* 方向配色单一来源：上行蓝、下行绿 */
+.dir-icon.icon-upstream {
+  color: var(--van-primary-color);
+}
+
+.dir-icon.icon-downlink {
+  color: var(--van-success-color);
+}
+
+.msg-dir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
-  width: 64px;
-  color: var(--van-text-color-3);
-  font-variant-numeric: tabular-nums;
+  width: calc(var(--van-font-size-sm) * 1.4);
+}
+
+.msg-row.is-selected .dir-icon {
+  color: #fff;
 }
 
 .msg-preview {
@@ -559,7 +578,9 @@ onUnmounted(() => {
 .msg-detail {
   display: flex;
   flex-direction: column;
-  height: 240px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .msg-detail-head {
@@ -569,6 +590,11 @@ onUnmounted(() => {
   padding: 6px 10px;
 }
 
+.msg-detail-head .van-button {
+  flex: none;
+  white-space: nowrap;
+}
+
 .msg-detail-title {
   flex: none;
   font-size: var(--van-font-size-sm);
@@ -576,14 +602,25 @@ onUnmounted(() => {
 }
 
 .msg-detail-meta {
+  display: flex;
+  align-items: center;
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--van-text-color-3);
   font-family: var(--mono-font);
   font-size: var(--van-font-size-xs);
+}
+
+.meta-item {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* 分隔符交给伪元素，比原先写在文案里的 " · " 少占近一半横向空间 */
+.meta-item + .meta-item::before {
+  content: '·';
+  margin: 0 5px;
 }
 
 .msg-detail-empty {
@@ -598,15 +635,6 @@ onUnmounted(() => {
 .msg-detail :deep(.ace-editor-wrapper) {
   flex: 1 1 auto;
   min-height: 0;
-}
-
-@media (max-width: 1100px) {
-  .socket-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .socket-stat.is-wide {
-    grid-column: span 2;
-  }
+  position: relative;
 }
 </style>

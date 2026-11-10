@@ -30,7 +30,7 @@
 
         <van-field placeholder="请输入内容" v-model="imMsg">
           <template #right-icon>
-            <van-button plain icon="guide-o" @click="sendMsg" size="small" />
+            <van-button class="btn-icon-only" plain icon="guide-o" @click="sendMsg" size="small" />
           </template>
         </van-field>
       </van-cell-group>
@@ -96,7 +96,8 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
 </script>
 <style scoped>
 .client-grid {
-  max-height: calc(100vh - 91px);
+  /* 客户端网格内滚动，避免大数量时把 Settings 页拉得过长；用视口比例替代魔法数字 */
+  max-height: 50vh;
 }
 
 .single-line {
