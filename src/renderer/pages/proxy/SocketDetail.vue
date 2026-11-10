@@ -140,9 +140,8 @@ import { useI18n } from 'vue-i18n'
 import { copyToClipboard } from '../../common/clipboard'
 import { toKeyValueEntries } from '../../common/headerUtil'
 import VueAceEditor from '../components/VueAceEditor.vue'
-import {
-  formatBytes, formatDuration, formatFrameOffset, frameCategory, frameContent, framePreview,
-} from './socket.helper'
+import { frameCategory, frameContent, framePreview } from './socket.helper'
+import { formatBytes, formatElapsed, formatFrameOffset } from '../../common/format'
 
 const props = defineProps({
   record: { type: Object as PropType<ProxyMock.SocketRecord> },
@@ -209,8 +208,8 @@ const frameText = computed(() => {
 const durationText = computed(() => {
   const record = socket.value
   if (record == null) return '-'
-  if (record.wsPhase === 'close') return formatDuration(record.time ?? 0)
-  return formatDuration(Math.max(0, now.value - (record.timestamp ?? now.value)))
+  if (record.wsPhase === 'close') return formatElapsed(record.time ?? 0)
+  return formatElapsed(Math.max(0, now.value - (record.timestamp ?? now.value)))
 })
 
 const statusText = computed(() => {

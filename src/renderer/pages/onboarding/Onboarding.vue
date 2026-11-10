@@ -29,7 +29,7 @@
             <van-cell :title="$t('onboarding.service.protocol')" :value="config.protocol || '--'" />
             <van-cell :title="$t('onboarding.service.ip')" :value="config.ip || '--'" />
             <van-cell :title="$t('onboarding.service.port')" :value="config.port == null ? '--' : `${config.port}`" />
-            <van-cell :title="$t('onboarding.service.uptime')" :value="formatDuration(health?.uptimeSec)" />
+            <van-cell :title="$t('onboarding.service.uptime')" :value="formatUptime(health?.uptimeSec)" />
           </van-cell-group>
           <van-notice-bar v-if="config.portValid === false" wrapable :scrollable="false"
             color="var(--van-warning-color)" background="color-mix(in srgb, var(--van-warning-color) 10%, transparent)" :text="$t('onboarding.service.portInvalid')">
@@ -221,7 +221,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
-import { formatDuration } from '../../common/format'
+import { formatUptime } from '../../common/format'
 import { copyToClipboard } from '../../common/clipboard'
 import { CommonStore } from '../../store'
 import SnippetAce from './SnippetAce.vue'

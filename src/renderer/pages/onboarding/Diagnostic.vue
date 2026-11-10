@@ -38,7 +38,7 @@
             :value="health == null ? '--' : `${health.clients.viewers} / ${health.clients.devices}`"
             :label="`${$t('diagnostic.viewers')} / ${$t('diagnostic.devices')}`" />
           <van-cell :title="$t('diagnostic.activeMocks')" :value="health?.activeMockRules ?? '--'" />
-          <van-cell :title="$t('diagnostic.uptime')" :value="formatDuration(health?.uptimeSec)" />
+          <van-cell :title="$t('diagnostic.uptime')" :value="formatUptime(health?.uptimeSec)" />
         </van-cell-group>
 
         <van-cell-group inset :title="$t('diagnostic.unknownUid')">
@@ -109,7 +109,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
-import { formatDuration } from '../../common/format'
+import { formatUptime } from '../../common/format'
 import { copyToClipboard } from '../../common/clipboard'
 import { CommonStore } from '../../store'
 

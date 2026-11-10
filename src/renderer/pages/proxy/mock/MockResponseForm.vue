@@ -74,6 +74,7 @@
 import { MOCK_MAX_BODY_BYTES, ProxyMock, base64ToText, textToBase64, utf8ByteLength } from '@shared'
 import type { FieldInstance } from 'vant'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { compactJson, formatBytes, prettifyJson } from '../../../common/format'
 import VueAceEditor from '../../components/VueAceEditor.vue'
 
 const response = defineModel<ProxyMock.MockResponseDef>({ required: true })
@@ -140,7 +141,7 @@ const aceLang = computed(() => {
   return 'text'
 })
 
-const bodySizeText = computed(() => formatSize(utf8ByteLength(bodyValue.value)))
+const bodySizeText = computed(() => formatBytes(utf8ByteLength(bodyValue.value), 2))
 const bodyTooLarge = computed(() => utf8ByteLength(bodyValue.value) > MOCK_MAX_BODY_BYTES)
 const jsonError = computed(() => {
   if (bodyTypeValue.value !== 'json') return false
@@ -172,12 +173,6 @@ watch(() => headerRows.value.length, () => nextTick(syncBodyFill))
 
 // 校验提示出现/消失会让编辑器位置变化
 watch(() => jsonError.value || bodyTooLarge.value, () => nextTick(syncBodyFill))
-
-function formatSize(size: number): string {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / 1024 / 1024).toFixed(2)} MB`
-}
 
 // 把编辑器上方内容的高度作为尺寸上限：长正文在 Ace 内部滚动，
 // 否则编辑器会把外层面板撑高，滚动时格式化那一行会被一起滚出可视区
@@ -288,19 +283,12 @@ function removeHeader(index: number) {
 }
 
 function formatBody() {
-  try {
-    response.value.body = JSON.stringify(JSON.parse(response.value.body), null, 2)
-  } catch (err) {
-    // 非法 JSON 保持原样，状态栏已提示
-  }
+  // 非法 JSON 保持原样，状态栏已提示
+  response.value.body = prettifyJson(response.value.body)
 }
 
 function compactBody() {
-  try {
-    response.value.body = JSON.stringify(JSON.parse(response.value.body))
-  } catch (err) {
-    // 非法 JSON 保持原样
-  }
+  response.value.body = compactJson(response.value.body)
 }
 
 // 校验失败时把用户带到对应控件：能聚焦的字段直接聚焦，其余滚动到可视区
