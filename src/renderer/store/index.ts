@@ -170,7 +170,7 @@ export const CommonStore = defineStore('Common', {
         this.registerUrl = ''
         return
       }
-      this.registerUrl = `${protocol}://${ip || '127.0.0.1'}:${port}${API_URL.AppMock}${API_URL.MockRegister}/${this.uid}`
+      this.registerUrl = `${protocol}://${ip || '127.0.0.1'}:${port}${API_URL.MockRegister}/${this.uid}`
     },
     updateClientInfos(clientInfos: Array<ProxyMock.ClientInfo>) {
       this.clientInfos = [...clientInfos]

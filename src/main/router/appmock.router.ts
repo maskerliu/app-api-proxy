@@ -39,7 +39,7 @@ export class AppMockRouter extends BaseRouter {
   constructor() {
     super()
 
-    this.router.get('/sse/broadcast/:uid', (req, resp) => {
+    this.router.get(`${API_URL.Broadcast}/:uid`, (req, resp) => {
       const from = req.params['uid']
       const chunk = `event: warning\nid: ${Date.now()}\ndata: hello[${Math.random()} from ${from}]\n\n`
 
@@ -60,7 +60,7 @@ export class AppMockRouter extends BaseRouter {
       resp.send(`broadcast success from ${from}`)
     })
 
-    this.router.get('/sse/:uid', (req, resp) => {
+    this.router.get(`${API_URL.Sse}/:uid`, (req, resp) => {
       const uid = emptyToNull(pickHeader(req.headers, MOCK_UID_HEADER)) ?? req.params['uid']
       if (!uid) {
         resp.status(400).end()
