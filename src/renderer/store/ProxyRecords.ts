@@ -56,7 +56,7 @@ function isFiltered(record: RecordItem, types: string[], keyword: string): boole
 export const ProxyRecordStore = defineStore('ProxyRecords', {
   state: () => {
     return {
-      proxyTypes: [String(ProxyMock.PorxyType.REQUEST)],
+      proxyTypes: [String(ProxyMock.PorxyType.REQUEST), String(ProxyMock.PorxyType.SOCKET)],
       filterKeyword: '' as string | number,
       curRecordId: -1,
       records: new Map() as Map<number, RecordItem>,
@@ -76,6 +76,12 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         if (record == null || isFiltered(record, types, keyword)) continue
         result.push(record)
       }
+      // Socket 连接始终排在最前
+      result.sort((a, b) => {
+        const aIsSocket = isSocket(a) ? 0 : 1
+        const bIsSocket = isSocket(b) ? 0 : 1
+        return aIsSocket - bIsSocket
+      })
       return result
     },
     // 5030 入口徽标：只统计仍在进行的连接，不受列表淘汰影响
@@ -151,6 +157,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         existing.droppedFrames = record.droppedFrames ?? existing.droppedFrames
         existing.bytesSent = record.bytesSent ?? existing.bytesSent
         existing.bytesReceived = record.bytesReceived ?? existing.bytesReceived
+        existing.wsPhase = 'frames'
         return
       }
 
@@ -163,11 +170,14 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         return
       }
 
-      // close：保留已累积的帧，只更新结束信息
-      const frames = existing.frames ?? []
-      Object.assign(existing, record)
-      existing.frames = frames
-      existing.wsPhase = 'close'
+      // close：断开后从列表中移除
+      this.removeRecord(record.id)
+    },
+    removeRecord(id: number) {
+      const idx = this.order.indexOf(id)
+      if (idx >= 0) this.order.splice(idx, 1)
+      this.records.delete(id)
+      if (this.curRecordId === id) this.curRecordId = -1
     },
     trimRecords() {
       while (this.order.length > MAX_RECORDS) {

@@ -19,7 +19,7 @@
           </div>
         </template>
         <template #button>
-          <van-button size="small" type="primary" icon="play" @click="onHlsClick" :loading="playerLoading">
+          <van-button class="btn-icon-only" size="small" type="primary" icon="play" @click="onHlsClick" :loading="playerLoading">
             <template #icon>
               <van-icon class="iconfont" :class="playerStatus ? 'icon-player-pause' : 'icon-player-play'"
                 style="color: var(--van-gray-8)" />
@@ -33,7 +33,7 @@
     <van-cell-group inset title="Camera" style="text-align: center;">
       <van-cell title="OpenCV">
         <template #right-icon>
-          <van-button plain size="small" type="primary" @click="openCamera">
+          <van-button class="btn-icon-only" plain size="small" type="primary" @click="openCamera">
             <template #icon>
               <van-icon class="iconfont icon-camera" style="color: var(--van-gray-8)" />
             </template>
@@ -53,6 +53,7 @@ import Hls from 'hls.js'
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { baseDomain, broadcast } from '@shared'
 import { API_URL } from '@shared/api.const'
+import { MOCK_UID_HEADER } from '@shared/http-header'
 import { CommonStore } from '../../store'
 
 const commonStore = CommonStore()
@@ -193,7 +194,7 @@ async function registerSSE() {
     await fetchEventSource(`${baseDomain()}${API_URL.AppMock}${API_URL.Sse}/${uid}`, {
       headers: {
         accept: EventStreamContentType,
-        'x-mock-uid': uid
+        [MOCK_UID_HEADER]: uid
       },
       signal: controller.signal,
       // 调试面板关闭时才需要断开，窗口隐藏/最小化时保持连接

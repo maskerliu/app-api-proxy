@@ -1,6 +1,6 @@
 <template>
-  <div class="diagnostic-page">
-    <div class="diagnostic-card">
+  <div class="page-container">
+    <div class="card-container">
       <div class="diagnostic-head">
         <div class="head-left">
           <i class="iconfont icon-arrow-left head-icon" @click="goBack" />
@@ -220,33 +220,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.diagnostic-page {
-  width: 100%;
-  height: 100%;
-  padding: 24px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  overflow: hidden;
-  background-color: var(--van-gray-1);
-}
-
-.diagnostic-card {
-  width: min(900px, 94vw);
-  min-width: min(360px, 100%);
-  box-sizing: border-box;
-  height: 100%;
-  max-height: 720px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 16px 18px 20px;
-  border-radius: 12px;
-  background-color: var(--van-background-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
 .diagnostic-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -270,13 +243,13 @@ onBeforeUnmount(() => {
 
 .head-icon {
   margin-top: 4px;
-  font-size: 18px;
+  font-size: var(--van-font-size-lg);
   cursor: pointer;
 }
 
 .status-icon {
   margin-right: 6px;
-  font-size: 16px;
+  font-size: var(--van-font-size-md);
 }
 
 .head-actions {
@@ -287,7 +260,7 @@ onBeforeUnmount(() => {
 }
 
 .head-title {
-  font-size: 18px;
+  font-size: var(--van-font-size-lg);
   font-weight: 600;
 }
 
@@ -300,7 +273,7 @@ onBeforeUnmount(() => {
 .diagnose-result {
   margin-top: 12px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--van-radius-md);
   background-color: var(--van-gray-2);
 }
 
@@ -312,7 +285,7 @@ onBeforeUnmount(() => {
 }
 
 .result-target {
-  font-family: Consolas, Monaco, monospace;
+  font-family: var(--mono-font);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
 }

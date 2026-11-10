@@ -2,7 +2,6 @@ export default {
   common: {
     done: '确定',
     cancel: '取消',
-    delete: '删除',
     save: '保存',
     upload: '上传',
     loading: '加载中...',
@@ -12,7 +11,6 @@ export default {
     copyFailed: '复制失败，请手动复制'
   },
   proxy: {
-    filterPlaceholder: '筛选关键字',
     waitingRegister: '推送连接注册中，请稍后…',
     requestHeader: '请求头',
     requestParams: '请求参数',
@@ -29,23 +27,15 @@ export default {
       control: '控制帧',
       searchPlaceholder: '搜索消息内容',
       follow: '跟随最新',
-      backToLatest: '回到最新',
-      frames: '消息',
       noFrames: '暂无消息',
       noMatch: '无匹配消息',
       connected: '已连接',
       closed: '已关闭',
       failed: '失败',
-      status: '状态',
       closeCode: '关闭码',
-      closeReason: '关闭原因',
-      closeByLabel: '关闭方',
       duration: '时长',
       subprotocol: '子协议',
-      sent: '上行',
-      received: '下行',
       frameCount: '帧数',
-      droppedCount: '丢弃',
       requestHeaders: '握手请求头',
       responseHeaders: '握手响应头',
       messageDetail: '消息详情',
@@ -57,8 +47,6 @@ export default {
       emptyTitle: '暂无 WebSocket 连接',
       emptyHint: '勾选上方 5030 后，通过 /_proxy 接入的长连接会实时出现在这里。',
       emptyQuery: '无匹配连接',
-      connectHeader: '请求头方式：x-mock-host / x-mock-uid',
-      connectQuery: '查询参数：__mock_host / __mock_uid（浏览器兜底）',
       live: '进行中',
       bytesTitle: '上行/下行字节',
       closeCodeShort: '关闭 {code}',
@@ -74,7 +62,7 @@ export default {
         'WS-E09': '不是合法的 WebSocket Upgrade 请求：仅支持 GET + Upgrade: websocket',
         'WS-E10': '并发连接数超过上限（128）：关闭其他长连接后重试',
         'WS-E11': '单条消息超过大小限制（50MB）',
-        'WS-E12': '代理内部错误：展开原始错误信息进一步排查',
+        'WS-E12': '代理内部错误：展开原始错误信息进一步排查'
       },
       closeBy: {
         client: '客户端关闭',
@@ -107,7 +95,7 @@ export default {
       delete: {
         title: '警告⚠️',
         confirm: '确定要删除规则[ {rule} ]吗?'
-      },
+      }
     },
     record: {
       delete: {
@@ -130,7 +118,6 @@ export default {
       entry: '录制 Mock',
       title: '录制到 Mock',
       activeRule: '当前启用：{rule}',
-      targetRule: '目标规则',
       searchPlaceholder: '搜索或输入新规则名',
       loading: '加载中…',
       noRules: '暂无规则，输入名称即可新建',
@@ -150,7 +137,6 @@ export default {
       actionUpdated: '更新记录',
       enableFailed: '已录制，但启用失败：{reason}',
       enableFailedUnknown: '未知错误',
-      loadFailed: '规则加载失败',
       recordFailed: '录制失败',
       duplicateMessage: '该路径已存在，请打开该规则更新已有记录',
       conflictMessage: '记录已被其他人修改，请稍后重试',
@@ -184,7 +170,6 @@ export default {
       unsaved: '未保存',
       unsavedTitle: '未保存的修改',
       unsavedConfirm: '当前记录有未保存的修改，确定放弃并继续吗？',
-      save: '保存',
       saveSuccess: '记录已保存',
       saveFailed: '记录保存失败',
       noRecord: '从左侧选择一条记录，或点击 + 新建',
@@ -197,11 +182,9 @@ export default {
         match: '匹配',
         raw: '原始'
       },
-      addVariant: '新增变体',
       duplicateVariant: '复制',
       noVariants: '暂无变体，新增后可一键切换',
       variantName: '变体名称',
-      variantCount: '{count} 个变体',
       active: '启用中',
       activeHint: '生效',
       deleteVariant: '删除变体',
@@ -249,16 +232,14 @@ export default {
       'record-id': '记录 ID'
     },
     list: {
-      searchPlaceholder: '搜索名称、Path、Host 或参数',
-      sortUpdated: '按更新时间',
-      sortCreated: '按创建时间',
-      sortPriority: '按优先级',
+      searchPlaceholder: '名称、Path、Host或参数',
+      sortUpdated: '更新时间',
+      sortCreated: '创建时间',
+      sortPriority: '优先级',
       limitWarn: '记录数已达 {count}，建议拆分场景',
       limitReject: '记录数超过 {limit}，启用操作已禁用',
       noMatch: '没有符合条件的记录',
       clearFilter: '清除筛选',
-      ignoredCount: '忽略 {count} 项',
-      coveredBy: '被记录 {id} 覆盖',
       warning: {
         duplicate: '重复匹配',
         shadowed: '被遮蔽',
@@ -280,7 +261,6 @@ export default {
         strict: '匹配录制时的全部 Query 参数，不接受额外参数。',
         custom: '当前为手动调整的条件；切换预设档位会重新生成条件。'
       },
-      diffTitle: '切换到「{level}」将调整：',
       diffEmpty: '条件无变化',
       diffAdd: '增加条件：{keys}',
       diffRemove: '移除条件：{keys}',
@@ -385,7 +365,6 @@ export default {
     miss: {
       title: '未命中：最接近「{record}」（相似度 {score}%）',
       noCandidate: '未命中：没有可比较的记录',
-      badge: '未命中 {score}%',
       dimension: '维度',
       expected: '期望',
       actual: '实际',
@@ -427,7 +406,6 @@ export default {
       open: '查看',
       tighten: '收紧匹配',
       ignored: '已忽略 {count} 个动态参数',
-      ordering: '排序依据',
       orderingValue: '排序依据：{value}',
       elapsed: '耗时 {ms}ms',
       degraded: '该记录尚未完成匹配迁移，解释可能不完整'
@@ -456,7 +434,7 @@ export default {
       version: '版本',
       restart: '重启',
       cancelUpdate: '取消更新',
-      noNewVersion: '当前已是最新版本',
+      noNewVersion: '当前已是最新版本'
     },
     boardcast: {
       onlineClient: '在线Client',
@@ -464,15 +442,14 @@ export default {
       btnSend: '发送'
     },
     resources: {
-      title: '静态资源管理',
-      upload: '上传文件'
+      title: '静态资源管理'
     }
   },
   debug: {
     common: {
       title: 'Common',
       versionCheck: 'Check Version',
-      devTools: 'Developer Tools',
+      devTools: 'Developer Tools'
     }
   },
   onboarding: {
@@ -523,7 +500,6 @@ export default {
       unknownUid: '检测到未注册的 UID',
       unknownUidTip: '请求使用的 UID 不在线，请确认请求头 x-mock-uid 与本机 UID 一致。',
       currentUid: '当前本机 UID',
-      copyUid: '复制 UID',
       uidCopied: 'UID 已复制',
       refresh: '刷新'
     },

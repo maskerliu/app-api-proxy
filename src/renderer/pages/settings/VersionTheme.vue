@@ -36,7 +36,7 @@
         <van-icon class="iconfont icon-info setting-cell-icon" />
       </template>
       <template #input>
-        <div style="height: 33px;display: flex; align-items: center; justify-content: center;" @click="onVersionCheck">
+        <div class="version-value" @click="onVersionCheck">
           <span>{{ commonStore.serverConfig.appVersion }}</span>
         </div>
 
@@ -194,8 +194,18 @@ function restart() {
   margin-left: 15px;
 }
 
+/* 版本号：跟随所在 van-field 行高，字号缩放时不再脱节 */
+.version-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(var(--van-font-size-md) * 2.2);
+  cursor: pointer;
+}
+
 .theme-icon {
-  font-size: 1.6rem;
+  font-size: 1.2rem;
 }
 
 .version-popup {

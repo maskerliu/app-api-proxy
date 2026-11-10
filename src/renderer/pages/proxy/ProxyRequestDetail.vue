@@ -7,8 +7,8 @@
             <div class="van-ellipsis">{{ record.url }}</div>
           </template>
           <template #right-icon>
-            <van-button style="margin: 0 10px;" plain size="small" type="success" icon="description"
-              @click="copyLink" />
+            <van-button class="btn-icon-only" style="margin: 0 10px;" plain size="small" type="success"
+              icon="description" @click="copyLink" />
             <van-popover v-model:show="showRecordPanel" placement="bottom-end" teleport="body" class="record-popover"
               :offset="[0, 6]">
               <div class="record-panel">
@@ -59,7 +59,7 @@
                   {{ $t('mock.recordPanel.replaceHint', { rule: activeRuleName || activeRuleId }) }}
                 </div>
 
-                <div class="record-panel-actions">
+                <div class="record-panel-actions actions-bar">
                   <van-button size="small" plain type="primary" :disabled="!canRecord" @click="onRecord(false)">
                     {{ duplicateRecord ? $t('mock.recordPanel.updateOnly') : $t('mock.recordPanel.recordOnly') }}
                   </van-button>
@@ -90,7 +90,8 @@
                 </div>
               </div>
               <template #reference>
-                <van-button plain size="small" type="primary" icon="bookmark-o" :title="$t('mock.recordPanel.entry')">
+                <van-button class="btn-icon-only" plain size="small" type="primary" icon="bookmark-o"
+                  :title="$t('mock.recordPanel.entry')">
                 </van-button>
               </template>
             </van-popover>
@@ -123,14 +124,17 @@
         <van-button size="mini" plain type="warning" @click="openHitRecord">{{ $t('mock.hit.tighten') }}</van-button>
       </div>
       <div class="hit-line hit-meta">
-        <span v-if="mockMeta.ordering">{{ $t('mock.hit.orderingValue', { value: $t(orderingLabelKey(mockMeta.ordering)) }) }}</span>
+        <span v-if="mockMeta.ordering">{{ $t('mock.hit.orderingValue', {
+          value: $t(orderingLabelKey(mockMeta.ordering))
+        })
+        }}</span>
         <span v-if="mockMeta.elapsedMs != null">{{ $t('mock.hit.elapsed', { ms: mockMeta.elapsedMs }) }}</span>
       </div>
       <div v-if="mockMeta.degraded" class="hit-degraded">{{ $t('mock.hit.degraded') }}</div>
     </section>
 
-    <mock-miss-panel v-else-if="mockMeta?.miss" :miss="mockMeta.miss" :degraded="mockMeta.degraded"
-      class="detail-miss" @ignore-key="onMissIgnore" @loosen="onMissLoosen" @edit="openMissRecord" />
+    <mock-miss-panel v-else-if="mockMeta?.miss" :miss="mockMeta.miss" :degraded="mockMeta.degraded" class="detail-miss"
+      @ignore-key="onMissIgnore" @loosen="onMissLoosen" @edit="openMissRecord" />
 
     <van-collapse v-model="expandedHeaders" :border="false" class="header-collapse" @transitionend="syncResponseFill">
       <van-collapse-item name="requestHeader" :title="$t('proxy.requestHeader')">
@@ -160,7 +164,7 @@
     </van-collapse>
 
     <van-cell-group class="detail-content body-group" inset :title="$t('proxy.requestBody')" v-if="record.data != null">
-      <van-cell class="detail-content">
+      <van-cell class="detail-content" style="padding: 0 var(--van-padding-md);">
         <proxy-request-body :data="record.data" :headers="record.headers" />
       </van-cell>
     </van-cell-group>
@@ -187,11 +191,10 @@ import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showConfirmDialog, showNotify, showToast } from 'vant'
 import { computed, inject, nextTick, onMounted, onUnmounted, PropType, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { scrollOptions } from '../../common/scroll'
 import { copyToClipboard } from '../../common/clipboard'
-import { toKeyValueEntries, type HeaderEntry } from '../../common/headerUtil'
+import { toKeyValueEntries } from '../../common/headerUtil'
+import { scrollOptions } from '../../common/scroll'
 import VueAceEditor from '../components/VueAceEditor.vue'
-import MockMissPanel from './MockMissPanel.vue'
 import { ensureRecordMatch, orderingLabelKey, previewLevel, summaryText } from './mock/match.helper'
 import { describeMockSaveError } from './mock/mock.errors'
 import { cloneRecord } from './mock/mock.record'
@@ -199,6 +202,7 @@ import type { MockRecordHistoryEntry } from './mock/record.history'
 import { listRecordHistory, pushRecordHistory, removeRecordHistory } from './mock/record.history'
 import { findRecordForRequest, MockMgrTarget, RecordRequestResult, recordRequestToRule } from './mock/recording'
 import { readRecentRuleId, rememberRule } from './mock/rule.recent'
+import MockMissPanel from './MockMissPanel.vue'
 import ProxyRequestBody from './ProxyRequestBody.vue'
 
 // 吸顶位置相对右侧滚动容器计算：electron 标题栏拖拽区 32px，容器顶部距窗口 5px，
@@ -621,15 +625,16 @@ function recordErrorMessage(err: unknown): string {
   min-width: 0;
 }
 
-/* 内容区块与折叠头部同宽：抵消 cell-group inset 的默认 5px 边距 */
+/* 内容区块与折叠头部同宽：抵消 cell-group inset 的默认边距，使标题与 van-collapse 标题对齐 */
 .body-group {
-  margin-left: var(--van-padding-md);
-  margin-right: var(--van-padding-md);
+  margin-left: 0;
+  margin-right: 0;
 }
 
-/* inset 模式下标题渲染为分组的上一个兄弟节点，与上方折叠区块的间距需加在标题上 */
+/* inset 模式下标题的左边距需与 van-collapse-item 标题对齐 */
 :deep(.van-cell-group__title--inset) {
   margin-top: calc(var(--van-padding-md));
+  padding-left: var(--van-padding-md);
 }
 
 /* 命中解释：命中记录、忽略键、排序依据与耗时同属一个区块 */
@@ -830,9 +835,6 @@ function recordErrorMessage(err: unknown): string {
 }
 
 .record-panel-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
   margin-top: 10px;
 }
 

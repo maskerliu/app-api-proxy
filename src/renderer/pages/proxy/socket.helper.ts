@@ -23,12 +23,24 @@ export function formatDuration(ms: number): string {
   return `${minutes}m ${Math.round(seconds % 60)}s`
 }
 
+// 帧相对连接开始的偏移。长连接跑几小时后原始毫秒有 8 位，会把时间列撑爆，
+// 所以秒级以内保留 ms，之后压成 mm:ss / h:mm:ss，原始值放在列的 title 里
+export function formatFrameOffset(ms: number): string {
+  const value = Math.max(0, Math.round(ms))
+  if (value < 1000) return `${value}ms`
+  const total = Math.floor(value / 1000)
+  const seconds = `${total % 60}`.padStart(2, '0')
+  const minutes = Math.floor(total / 60)
+  if (minutes < 60) return `${minutes}:${seconds}`
+  return `${Math.floor(minutes / 60)}:${`${minutes % 60}`.padStart(2, '0')}:${seconds}`
+}
+
 // 列表只做单行预览，完整内容交给详情编辑器，避免大 payload 拖慢列表
 export function framePreview(frame: ProxyMock.SocketFrame): string {
+  // 帧类型已由列表的 opcode 列展示，预览只给内容本身
   const data = frame.data ?? ''
   if (frame.opcode === 'text') return data.replace(/\s+/g, ' ').slice(0, 240)
-  const prefix = frame.opcode === 'binary' ? 'base64:' : `${frame.opcode}:`
-  return prefix + data.slice(0, 200)
+  return data.slice(0, 200)
 }
 
 // 文本帧能解析成 JSON 时美化展示，失败时保留原文

@@ -71,6 +71,20 @@ export class PushService {
     this.sendMessage(clientUid, pushMsg)
   }
 
+  // WebSocket 客户端 UID 无对应 viewer 时，广播给所有 viewer
+  public broadcastProxyMessage(
+    data: ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord) {
+
+    const pushMsg: ProxyMock.PushMsg<ProxyMock.ProxyRequestRecord | ProxyMock.ProxyStatRecord | ProxyMock.SocketRecord> = {
+      type: ProxyMock.PushMsgType.TXT,
+      payload: {
+        type: ProxyMock.BizType.Proxy,
+        content: data
+      }
+    }
+    this.pushClients.forEach((_, uid) => this.safeWrite(uid, pushMsg))
+  }
+
   // 设备 uid 的推送统一交给所属 viewer，保证请求记录展示在扫码的桌面端
   public resolveOwnerUid(uid: string): string {
     return this.devices.get(uid)?.ownerUid ?? uid

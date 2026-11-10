@@ -678,7 +678,7 @@ defineExpose({ syncFillHeight })
   background: var(--van-background-2);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   color: var(--van-text-color-2);
-  font-size: 14px;
+  font-size: var(--van-font-size-md);
   cursor: pointer;
 }
 

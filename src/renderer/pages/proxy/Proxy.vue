@@ -1,23 +1,20 @@
 <template>
   <van-row class="proxy-page">
     <van-col class="bg-border left-panel">
-      <van-row justify="space-between">
-        <van-checkbox-group size="mini" v-model="recordStore.proxyTypes" direction="horizontal"
-          style="z-index: 100; -webkit-app-region: no-drag; width: 235px;">
-          <van-checkbox shape="square" name="5010" style="padding: 5px 10px">
-            <i class="iconfont icon-api proxy-type-icon" style="font-weight: bold"></i>
+      <van-row class="left-toolbar" justify="space-between">
+        <van-checkbox-group class="proxy-type-group" v-model="recordStore.proxyTypes" direction="horizontal">
+          <van-checkbox shape="square" name="5010">
+            <i class="iconfont icon-api proxy-type-icon"></i>
           </van-checkbox>
-          <van-checkbox shape="square" name="5020" style="padding: 5px 10px">
-            <van-icon class="iconfont icon-statistics proxy-type-icon" style="font-weight: bold" />
+          <van-checkbox shape="square" name="5020">
+            <van-icon class="iconfont icon-statistics proxy-type-icon" />
           </van-checkbox>
-          <van-checkbox shape="square" name="5030" style="padding: 5px 10px">
-            <van-badge :content="recordStore.activeSocketCount" :show-zero="false" max="99">
-              <van-icon class="iconfont icon-websocket proxy-type-icon"
-                :class="{ 'is-live': recordStore.activeSocketCount > 0 }" style="font-weight: bold" />
-            </van-badge>
+          <van-checkbox shape="square" name="5030">
+            <van-icon class="iconfont icon-websocket proxy-type-icon"
+              :class="{ 'is-live': recordStore.activeSocketCount > 0 }" />
           </van-checkbox>
         </van-checkbox-group>
-        <div style="padding: 1px 0; z-index: 100; -webkit-app-region: no-drag;">
+        <div class="left-toolbar-actions">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
           <van-icon class="iconfont icon-setting left-panel-icon" @click="openSettings">
@@ -28,32 +25,31 @@
       <div class="mock-global-bar" :class="{ 'is-on': mockEnabled }" @click="toggleMock">
         <i class="iconfont icon-rule mock-global-icon"></i>
         <span class="mock-global-text">{{ mockLabel }}</span>
-        <van-switch :model-value="mockEnabled" :loading="mockToggling" class="mock-global-switch" @click.stop="toggleMock" />
+        <van-switch :model-value="mockEnabled" :loading="mockToggling" class="mock-global-switch"
+          @click.stop="toggleMock" />
       </div>
-      <van-field v-model="proxyDelay" type="number" placeholder="延迟(ms)" center class="proxy-delay-field">
-        <template #label>
-          <van-popover v-model:show="showClientPicker" placement="bottom-start" class="client-picker-popup">
-            <OverlayScrollbarsComponent class="client-picker-list" :options="scrollOptions" defer>
-              <van-cell v-for="item in clientInfos" :key="item.uid" clickable :title="clientLabel(item)"
-                :title-style="{ color: item.uid == targetUid ? 'var(--van-primary-color)' : '' }"
-                @click="selectClient(item)" />
-              <van-cell v-if="clientInfos.length == 0" title="暂无在线客户端" />
-            </OverlayScrollbarsComponent>
-            <template #reference>
-              <div class="client-picker">
-                <van-icon class="iconfont icon-network-data client-picker-icon" />
-                <span class="client-picker-name">{{ targetLabel }}</span>
-                <van-icon name="arrow-down" class="client-picker-arrow" />
-              </div>
-            </template>
-          </van-popover>
-        </template>
-        <template #button>
-          <van-button plain size="mini" type="primary" @click="saveProxyDelay">
-            <van-icon class="iconfont icon-cloud-sync action-icon" />
-          </van-button>
-        </template>
-      </van-field>
+      <div class="proxy-delay-bar">
+        <van-popover v-model:show="showClientPicker" placement="bottom-start" class="client-picker-popup">
+          <OverlayScrollbarsComponent class="client-picker-list" :options="scrollOptions" defer>
+            <van-cell v-for="item in clientInfos" :key="item.uid" clickable :title="clientLabel(item)"
+              :title-style="{ color: item.uid == targetUid ? 'var(--van-primary-color)' : '' }"
+              @click="selectClient(item)" />
+            <van-cell v-if="clientInfos.length == 0" title="暂无在线客户端" />
+          </OverlayScrollbarsComponent>
+          <template #reference>
+            <div class="client-picker">
+              <van-icon class="iconfont icon-device client-picker-icon" />
+              <span class="client-picker-name">{{ targetLabel }}</span>
+              <van-icon name="arrow-down" class="client-picker-arrow" />
+            </div>
+          </template>
+        </van-popover>
+        <van-field v-model="proxyDelay" type="number" placeholder="延迟(ms)" class="delay-input">
+          <template #right-icon>
+            <van-icon class="iconfont icon-cloud-sync action-icon" @click="saveProxyDelay" />
+          </template>
+        </van-field>
+      </div>
       <van-search v-model="recordStore.filterKeyword" show-action class="record-search"
         :placeholder="$t('common.searchPlaceholder')">
         <template #action>
@@ -63,12 +59,10 @@
 
       <OverlayScrollbarsComponent class="snap-panel border-bg" :options="scrollOptions" defer>
         <div v-if="showSocketEmpty" class="socket-empty-state">
-          <van-empty :image="socketEmptyQuery ? 'search' : 'network'"
+          <van-empty :image="socketEmptyQuery ? 'search' : 'network'" image-size="120"
             :description="socketEmptyQuery ? $t('proxy.socket.emptyQuery') : $t('proxy.socket.emptyTitle')">
             <div v-if="!socketEmptyQuery" class="socket-empty-hint">
               <div>{{ $t('proxy.socket.emptyHint') }}</div>
-              <code>{{ $t('proxy.socket.connectHeader') }}</code>
-              <code>{{ $t('proxy.socket.connectQuery') }}</code>
             </div>
           </van-empty>
         </div>
@@ -84,7 +78,8 @@
         v-else-if="recordStore.curRecord()?.type == 5020" />
       <socket-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.SocketRecord"
         v-else-if="recordStore.curRecord()?.type == 5030" />
-      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyRequestRecord" v-else />
+      <proxy-request-detail :record="recordStore.records.get(recordStore.curRecordId) as ProxyMock.ProxyRequestRecord"
+        v-else />
     </OverlayScrollbarsComponent>
 
     <van-popup v-model:show="showPopup" position="right" close-icon="close" @closed="onPopupClosed">
@@ -104,7 +99,10 @@
 
 <script lang="ts" setup>
 import {
-  ProxyMock, getAllPushClients, getActiveMockRule, getMockRuleDetail, getProxyConfig, getSocketConnections,
+  ProxyMock,
+  getActiveMockRule,
+  getAllPushClients,
+  getMockRuleDetail, getProxyConfig, getSocketConnections,
   saveMockRule, saveProxyConfig
 } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
@@ -113,8 +111,8 @@ import { List, showNotify } from 'vant'
 import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { scrollOptions } from '../../common/scroll'
 import { copyToClipboard } from '../../common/clipboard'
+import { scrollOptions } from '../../common/scroll'
 import { CommonStore, ProxyRecordStore } from '../../store'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
@@ -360,7 +358,7 @@ async function copyRegisterUrl() {
   position: absolute;
   display: block;
   border-radius: 50%;
-  font-size: 4px;
+  font-size: var(--van-font-size-xs);
   width: 8px;
   height: 8px;
   background-color: var(--van-danger-color);
@@ -375,16 +373,14 @@ async function copyRegisterUrl() {
 .left-panel {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  min-width: 340px;
+  width: 340px;
   height: calc(100% - 10px);
   min-height: 0;
   margin: 5px;
 }
 
 /* 列表内容过长时只压缩列表，避免头部工具行被挤扁后与相邻行重叠 */
-.left-panel>.van-row,
-.left-panel>.van-field {
+.left-panel>.van-row {
   flex: none;
 }
 
@@ -397,14 +393,42 @@ async function copyRegisterUrl() {
   margin: 5px 2px;
 }
 
+.right-panel [data-overlayscrollbars-content] {
+  height: 100%;
+}
+
 .left-panel-icon {
   font-size: 1.4rem;
   margin: 3px 6px;
   color: var(--van-gray-8)
 }
 
+/* 顶部工具行：左侧类型筛选 + 右侧功能图标，禁用拖拽区穿透 */
+.left-toolbar {
+  flex-wrap: nowrap;
+  z-index: 100;
+  -webkit-app-region: no-drag;
+}
+
+.left-toolbar-actions {
+  display: flex;
+  align-items: center;
+  padding: 1px 0;
+}
+
 .left-panel .van-checkbox__label .proxy-type-icon {
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* 类型筛选组：宽度按内容自适应，避免因图标字号变化后固定宽度不足 */
+.proxy-type-group {
+  padding-left: 7px;
+}
+
+.proxy-type-group :deep(.van-checkbox) {
+  padding: 5px 10px;
+  --van-checkbox-size: 16px;
 }
 
 /* 有活跃连接时图标变绿，配合徽标数字作为 WS 入口提示 */
@@ -426,27 +450,17 @@ async function copyRegisterUrl() {
   text-align: left;
 }
 
-.socket-empty-hint code {
-  display: block;
-  padding: 4px 8px;
-  border-radius: var(--van-radius-md);
-  background: var(--van-gray-1);
-  font-family: var(--mono-font);
-  word-break: break-all;
-}
-
 .client-picker {
   display: flex;
   align-items: center;
-  max-width: calc(var(--van-font-size-md) * 7.692);
   color: var(--van-text-color);
   cursor: pointer;
+  padding-left: 4px;
 }
 
 .client-picker-icon {
-  font-size: calc(var(--van-font-size-md) * 1.1538);
+  font-size: calc(var(--van-font-size-md) * 1.8);
   color: var(--van-gray-8);
-  margin-right: calc(var(--van-font-size-md) * 0.2308);
 }
 
 .client-picker-name {
@@ -454,32 +468,32 @@ async function copyRegisterUrl() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: calc(var(--van-font-size-md) * 0.2308);
+  margin-right: calc(var(--van-font-size-md) * 0.2);
 }
 
 .client-picker-arrow {
-  font-size: calc(var(--van-font-size-md) * 0.7692);
+  font-size: calc(var(--van-font-size-md) * 0.8);
 }
 
 .client-picker-popup {
-  min-width: calc(var(--van-font-size-md) * 16.923);
+  min-width: calc(var(--van-font-size-md) * 16.9);
 }
 
 .snap-panel {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  margin: calc(var(--van-font-size-md) * 0.3846) 0 0 0;
+  margin: calc(var(--van-font-size-md) * 0.4) 0 0 0;
 }
 
 /* 全局 Mock 开关：状态与场景名同处一行，点击整行即可切换 */
 .mock-global-bar {
   display: flex;
   align-items: center;
-  gap: calc(var(--van-font-size-md) * 0.4615);
+  gap: calc(var(--van-font-size-md) * 0.5);
   flex: none;
-  margin-top: calc(var(--van-font-size-md) * 0.3077);
-  padding: calc(var(--van-font-size-md) * 0.1538) calc(var(--van-font-size-md) * 0.6154);
+  margin-top: calc(var(--van-font-size-md) * 0.3);
+  padding: calc(var(--van-font-size-md) * 0.2) calc(var(--van-font-size-md) * 0.6);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
@@ -496,11 +510,11 @@ async function copyRegisterUrl() {
 
 .mock-global-icon {
   flex: none;
-  font-size: calc(var(--van-font-size-md) * 1.0769);
+  font-size: calc(var(--van-font-size-md) * 1.1);
 }
 
 .mock-global-switch {
-  --van-switch-size: calc(var(--van-font-size-md) * 1.2308);
+  --van-switch-size: calc(var(--van-font-size-md) * 1.2);
 }
 
 .mock-global-text {
@@ -514,20 +528,54 @@ async function copyRegisterUrl() {
   max-height: 45vh;
 }
 
-.proxy-delay-field {
-  --van-field-label-width: calc(var(--van-font-size-md) * 8);
+.proxy-delay-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 8px 4px;
+}
+
+.proxy-delay-bar .client-picker {
+  flex: 3;
+  min-width: 0;
+}
+
+.proxy-delay-bar .delay-input {
+  flex: 2;
+  min-width: 0;
+  --van-field-input-height: calc(var(--van-font-size-md) * 2.6);
+  --van-cell-vertical-padding: 0;
+  padding: 0 4px 0 5px;
+}
+
+.proxy-delay-bar .delay-input :deep(.van-field__right-icon) {
+  width: calc(var(--van-font-size-md) * 2.6);
+  margin-right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.proxy-delay-bar .delay-input :deep(.van-field__body) {
+  height: 100%;
+}
+
+.proxy-delay-bar .delay-input :deep(.van-field__control) {
+  height: 100%;
+  line-height: calc(var(--van-font-size-md) * 2.6);
 }
 
 .record-search {
-  margin-top: calc(var(--van-font-size-md) * 0.3846);
   --van-search-padding: 0;
-  --van-search-input-height: calc(var(--van-font-size-md) * 2.6154);
+  --van-search-input-height: calc(var(--van-font-size-md) * 2.6);
   --van-cell-vertical-padding: 0;
+  padding-right: 0;
 }
 
 .record-search :deep(.van-search__content) {
   display: flex;
   align-items: center;
+  padding-right: 0;
 }
 
 .record-search :deep(.van-cell) {
@@ -549,17 +597,18 @@ async function copyRegisterUrl() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--van-font-size-md) * 2.6154);
+  width: calc(var(--van-font-size-md) * 2.6);
   height: var(--van-search-input-height);
   padding: 0;
+  margin-right: calc(var(--van-padding-md) - 4px);
 }
 
 .record-search :deep(.van-search__action .action-icon) {
-  font-size: calc(var(--van-font-size-md) * 1.8462);
+  font-size: calc(var(--van-font-size-md) * 1.8);
 }
 
 .action-icon {
-  font-size: calc(var(--van-font-size-md) * 0.7692);
+  font-size: calc(var(--van-font-size-md));
 }
 
 /* 窄窗口下左右面板改为上下堆叠，列表占上方固定比例，详情占剩余空间 */
@@ -599,10 +648,5 @@ async function copyRegisterUrl() {
 
 .register-url:focus {
   font-weight: bold;
-}
-
-a {
-  color: rgb(31, 187, 166);
-  text-decoration: underline;
 }
 </style>

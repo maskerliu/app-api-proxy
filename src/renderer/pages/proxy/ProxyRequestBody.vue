@@ -9,9 +9,9 @@
     <OverlayScrollbarsComponent v-else-if="activeView?.kind == 'form'" class="form-body-scroll"
       :options="scrollOptions" defer>
       <div class="form-body">
-        <div v-for="(field, idx) in activeView.fields" :key="`${field.key}-${idx}`" class="form-row">
-          <span class="form-key">{{ field.key }}</span>
-          <span class="form-value">{{ field.value }}</span>
+        <div v-for="(field, idx) in activeView.fields" :key="`${field.key}-${idx}`" class="header-row">
+          <span class="header-key">{{ field.key }}</span>
+          <span class="header-value">{{ field.value }}</span>
         </div>
       </div>
     </OverlayScrollbarsComponent>
@@ -22,6 +22,7 @@
 <script lang="ts" setup>
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { computed, ref, watch } from 'vue'
+import { pickHeader } from '@shared/http-header'
 import { scrollOptions } from '../../common/scroll'
 import VueAceEditor from '../components/VueAceEditor.vue'
 
@@ -46,14 +47,7 @@ const props = defineProps<{
 
 const active = ref('')
 
-function headerValue(headers: Record<string, any> | undefined, name: string): string {
-  if (headers == null) return ''
-  const key = Object.keys(headers).find(it => it.toLowerCase() == name)
-  const value = key == null ? null : headers[key]
-  return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '')
-}
-
-const contentTypeRaw = computed(() => headerValue(props.headers, 'content-type'))
+const contentTypeRaw = computed(() => pickHeader(props.headers, 'content-type') ?? '')
 const contentType = computed(() => contentTypeRaw.value.toLowerCase())
 
 // 主进程记录时会把文本类 body 编码成 JSON 字符串字面量，二进制类 body 编码成 "[binary N bytes]"
@@ -157,32 +151,7 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
 }
 
 .form-body {
-  display: grid;
-  grid-template-columns: fit-content(40%) minmax(0, 1fr);
-  column-gap: 16px;
-  row-gap: 6px;
-  padding: 5px 15px;
-  /* 抵消外层 van-cell__value 的右对齐，与请求头键值样式保持一致 */
   text-align: left;
-  /* label 与 input 统一为 Ace 编辑器字体 */
-  font-family: var(--mono-font);
-  font-size: var(--van-font-size-md);
-  user-select: text;
-}
-
-.form-row {
-  display: contents;
-}
-
-.form-key {
-  color: var(--van-text-color-2);
-  word-break: break-all;
-}
-
-.form-value {
-  color: var(--van-text-color);
-  white-space: pre-line;
-  word-break: break-all;
 }
 
 .body-text {

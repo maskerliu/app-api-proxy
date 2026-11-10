@@ -14,14 +14,14 @@
     <van-collapse v-model="expandedSections" :border="false" class="header-collapse" @transitionend="syncBodyFill">
       <van-collapse-item name="headers" :title="$t('mock.editor.headers')">
         <template #right-icon>
-          <van-button class="header-add" size="mini" plain type="primary" icon="plus" @click.stop="addHeader">
+          <van-button class="header-add btn-icon-only" size="mini" plain type="primary" icon="plus" @click.stop="addHeader">
           </van-button>
         </template>
-        <div ref="headerList" class="header-list">
-          <div v-for="(row, idx) in headerRows" :key="idx" class="header-row">
-            <van-field class="header-key" v-model="row.key" :placeholder="$t('mock.editor.headerKey')"
+        <div ref="headerList" class="field-list">
+          <div v-for="(row, idx) in headerRows" :key="idx" class="field-row">
+            <van-field class="field-key" v-model="row.key" :placeholder="$t('mock.editor.headerKey')"
               @update:model-value="applyHeaders" />
-            <van-field class="header-value" v-model="row.value" :placeholder="$t('mock.editor.headerValue')"
+            <van-field class="field-value" v-model="row.value" :placeholder="$t('mock.editor.headerValue')"
               @update:model-value="applyHeaders" />
             <van-icon name="cross" class="row-delete" @click="removeHeader(idx)" />
           </div>
@@ -318,7 +318,7 @@ function focusField(code: string) {
       expandedSections.value = [...expandedSections.value, 'headers']
     }
     nextTick(() => {
-      const selector = code === 'headerName' ? '.header-key input' : '.header-value input'
+      const selector = code === 'headerName' ? '.field-key input' : '.field-value input'
       const input = headerList.value?.querySelector(selector) as HTMLInputElement
       input?.focus()
       input?.scrollIntoView({ block: 'nearest' })
@@ -333,11 +333,6 @@ defineExpose({ focusField })
 
 <style scoped>
 .response-form {
-  --sp-xl: calc(var(--van-font-size-md) * 0.7692);
-  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
-  --sp-md: calc(var(--van-font-size-md) * 0.4615);
-  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
-  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   padding: 0 var(--sp-sm) var(--sp-lg);
 }
 
@@ -351,12 +346,17 @@ defineExpose({ focusField })
   gap: var(--sp-xl);
 }
 
-.status-field {
+.status-field,
+.delay-field {
   flex: 1 1 0;
 }
 
-.delay-field {
-  flex: 1 1 0;
+.status-field :deep(.van-field__label),
+.delay-field :deep(.van-field__label) {
+  flex: none;
+  width: auto;
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-md);
 }
 
 .field-unit {
@@ -367,6 +367,8 @@ defineExpose({ focusField })
 .form-section {
   margin-top: var(--sp-xl);
   padding: var(--sp-lg);
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
@@ -414,25 +416,25 @@ defineExpose({ focusField })
   font-weight: 500;
 }
 
-.header-list {
+.field-list {
   display: flex;
   flex-direction: column;
   gap: var(--sp-sm);
 }
 
-.header-row {
+.field-row {
   display: flex;
   align-items: center;
   gap: var(--sp-sm);
 }
 
-.header-key {
+.field-key {
   flex: 0 0 38%;
   padding: var(--sp-md) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
 
-.header-value {
+.field-value {
   flex: 1 1 auto;
   min-width: 0;
   padding: var(--sp-md) var(--sp-lg);
@@ -496,11 +498,11 @@ defineExpose({ focusField })
 
 .tool-btn {
   flex: none;
-  width: calc(var(--van-font-size-md) * 1.846);
+  width: calc(var(--van-font-size-md) * 1.8);
 }
 
 .body-editor {
-  min-height: calc(var(--van-font-size-md) * 9.231);
+  min-height: calc(var(--van-font-size-md) * 9.2);
 }
 
 /* 填充模式下高度由 Ace 行数决定，最小高度会妨碍收缩 */

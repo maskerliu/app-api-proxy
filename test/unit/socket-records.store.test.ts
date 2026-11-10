@@ -83,7 +83,8 @@ describe('updateSocketRecord 合并语义', () => {
     assert.equal(record.bytesSent, 30)
     assert.equal(record.bytesReceived, 40)
     assert.equal(record.droppedFrames, 1)
-    assert.equal(record.wsPhase, 'open')
+    // 帧批次会把相位推进到 frames，列表据此区分「刚建连」与「已在通信」
+    assert.equal(record.wsPhase, 'frames')
   })
 
   it('单连接帧数上限 1000，保留最新帧', () => {
@@ -98,21 +99,19 @@ describe('updateSocketRecord 合并语义', () => {
     assert.equal(record.frames[999].seq, 1200)
   })
 
-  it('close 保留已累积的帧并写入结束信息', () => {
+  it('close 后连接从列表移除，选中项一并清空', () => {
     const store = newStore()
     store.insertRecord(socketRecord(7, 'open'))
     store.updateSocketRecord(socketRecord(7, 'frames', { frames: [frame(1), frame(2)], frameCount: 2 }))
+    store.curRecordId = 7
     store.updateSocketRecord(socketRecord(7, 'close', {
       closeCode: 1000, closeReason: 'bye', closeBy: 'client', time: 1200,
     }))
 
-    const record = store.records.get(7)
-    assert.equal(record.wsPhase, 'close')
-    assert.deepEqual(record.frames.map(it => it.seq), [1, 2])
-    assert.equal(record.closeCode, 1000)
-    assert.equal(record.closeReason, 'bye')
-    assert.equal(record.closeBy, 'client')
-    assert.equal(record.time, 1200)
+    assert.equal(store.records.has(7), false)
+    assert.equal(store.order.includes(7), false)
+    assert.equal(store.curRecordId, -1)
+    assert.equal(store.activeSocketCount, 0)
   })
 
   it('失败连接只收到 close 时按新行补入', () => {

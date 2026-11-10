@@ -44,7 +44,7 @@ function open(path: string) {
 </style>
 <style scoped>
 .settings {
-  width: min(60vw, 860px);
+  width: var(--popup-w-md);
   min-width: min(375px, 100vw);
   max-width: 100vw;
   height: 100vh;

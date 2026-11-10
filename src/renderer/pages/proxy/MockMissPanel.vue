@@ -8,7 +8,7 @@
         }) }}</span>
         <span v-else>{{ $t('mock.miss.noCandidate') }}</span>
       </div>
-      <van-button size="mini" plain icon="description" :title="$t('mock.miss.copy')" @click="copyDiagnosis" />
+      <van-button class="btn-icon-only" size="mini" plain icon="description" :title="$t('mock.miss.copy')" @click="copyDiagnosis" />
     </header>
 
     <div v-if="degraded" class="miss-degraded">{{ $t('mock.miss.degraded') }}</div>
@@ -106,10 +106,6 @@ function buildMarkdown(): string {
 
 <style scoped>
 .miss-panel {
-  --sp-lg: calc(var(--van-font-size-md) * 0.6154);
-  --sp-md: calc(var(--van-font-size-md) * 0.4615);
-  --sp-sm: calc(var(--van-font-size-md) * 0.3077);
-  --sp-xs: calc(var(--van-font-size-md) * 0.1538);
   padding: var(--sp-lg);
   border: 1px solid var(--van-warning-color);
   border-radius: var(--van-radius-lg);
@@ -154,7 +150,7 @@ function buildMarkdown(): string {
 
 .miss-row {
   display: grid;
-  grid-template-columns: calc(var(--van-font-size-md) * 4.923) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+  grid-template-columns: calc(var(--van-font-size-md) * 4.9) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
   align-items: center;
   gap: var(--sp-md);
   padding: var(--sp-sm) var(--sp-md);
