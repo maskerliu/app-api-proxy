@@ -191,7 +191,7 @@ async function registerSSE() {
   sseStatus.value = 'connecting'
 
   try {
-    await fetchEventSource(`${baseDomain()}${API_URL.AppMock}${API_URL.Sse}/${uid}`, {
+    await fetchEventSource(`${baseDomain()}${API_URL.Sse}/${uid}`, {
       headers: {
         accept: EventStreamContentType,
         [MOCK_UID_HEADER]: uid

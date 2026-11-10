@@ -175,7 +175,9 @@ export class MainServer {
     const textJsonParser = express.text({ type: 'application/json', limit: '50mb' })
     const jsonParser = express.json({ limit: '50mb' })
 
-    this.httpApp.use(API_URL.AppMock, formParser, textJsonParser, jsonParser, this.appmockRouter.router)
+    // parser 只作用于 /_appmock 子树；appmock 路由表已写完整路径，故挂在根上
+    this.httpApp.use(API_URL.AppMock, formParser, textJsonParser, jsonParser)
+    this.httpApp.use(this.appmockRouter.router)
     // 代理不能经过任何 body parser：需保留原始字节与 Content-Encoding，由 ProxyService 自行读取请求流
     this.httpApp.use(API_URL.Proxy, this.proxyRouter.router)
     this.httpApp.use(API_URL.CorsMediaProxy, this.proxyCorsMedia)

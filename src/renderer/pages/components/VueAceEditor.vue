@@ -24,6 +24,7 @@
 </template>
 <script lang="ts" setup>
 import { baseDomain } from '@shared'
+import { API_URL } from '@shared/api.const'
 import ace, { Ace, Range } from 'ace-builds'
 import 'ace-builds/src-min-noconflict/ext-language_tools'
 // 静态引入搜索扩展：core 的 find 命令默认按 basePath 动态加载，打包环境下会 404
@@ -285,7 +286,7 @@ function releasePreviewUrls() {
 }
 
 function proxyMediaUrl(url: string) {
-  return `${baseDomain()}/corsMediaProxy?target=${encodeURIComponent(url)}`
+  return `${baseDomain()}${API_URL.CorsMediaProxy}?target=${encodeURIComponent(url)}`
 }
 
 function isHlsUrl(url: string) {
