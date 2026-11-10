@@ -36,6 +36,8 @@ const RULE_SEARCH_LIMIT = 15
 const RULE_SCAN_LIMIT = 1000
 const RECORD_PAGE_LIMIT = 100
 const MAX_RECORD_PAGE_LIMIT = 500
+const RECORD_COUNT_PAGE_LIMIT = 1000
+const RECORD_ID_COUNT_PAGE_LIMIT = 2000
 const DELETE_BATCH = 200
 const CONFLICT_RETRY = 2
 const MIGRATION_BATCH = 50
@@ -330,12 +332,12 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
           selector: { type: RECORD_TYPE, ruleId },
           sort: ['type', 'ruleId', 'createdAt'],
           fields: ['_id'],
-          limit: 1000,
+          limit: RECORD_COUNT_PAGE_LIMIT,
         }
         if (bookmark != null) request.bookmark = bookmark
         const page = await this.pouchdb.find(request)
         count += page.docs.length
-        if (page.docs.length < 1000) return count
+        if (page.docs.length < RECORD_COUNT_PAGE_LIMIT) return count
         bookmark = (page as any).bookmark
         if (bookmark == null) return count
       }
@@ -344,11 +346,11 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     let count = 0
     let startkey = RECORD_PREFIX
     while (true) {
-      const options: any = { startkey, endkey: `${RECORD_PREFIX}\ufff0`, limit: 2000 }
+      const options: any = { startkey, endkey: `${RECORD_PREFIX}\ufff0`, limit: RECORD_ID_COUNT_PAGE_LIMIT }
       if (startkey !== RECORD_PREFIX) options.skip = 1
       const page = await this.pouchdb.allDocs(options)
       count += page.rows.length
-      if (page.rows.length < 2000) return count
+      if (page.rows.length < RECORD_ID_COUNT_PAGE_LIMIT) return count
       startkey = page.rows[page.rows.length - 1].id
     }
   }

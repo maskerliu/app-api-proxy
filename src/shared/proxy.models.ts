@@ -2,7 +2,7 @@ import type { Connection } from 'sockjs'
 import type { MockHitMeta, MockLimitState, MockMatchRule, MockMatchWarning } from './mock.models'
 
 /**
- * 纯模型层：只包含类型、枚举与无副作用的类，
+ * 纯模型层：只包含类型、枚举、无副作用的类与常量，
  * 可被主进程安全引入，不得依赖 axios / vant 等渲染层库。
  */
 export namespace ProxyMock {
@@ -123,6 +123,9 @@ export namespace ProxyMock {
   export type SocketDirection = 'c2s' | 's2c'
   export type SocketOpcode = 'text' | 'binary' | 'ping' | 'pong' | 'close'
   export type SocketCloseBy = 'client' | 'upstream' | 'proxy'
+
+  // 一条 WS 会话最多保留的消息帧数，主进程截断与渲染层兜底共用同一个值
+  export const SOCKET_MAX_FRAMES = 1000
 
   export interface SocketFrame {
     seq: number
