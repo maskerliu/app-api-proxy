@@ -245,3 +245,12 @@ export function legacyRecordsOf(doc: LegacyRuleDoc): Record<string, ProxyMock.Pr
 export function legacyRecordId(ruleId: string, url: string): string {
   return `${RECORD_PREFIX}${createHash('sha1').update(`${ruleId}\n${url}`).digest('hex')}`
 }
+
+/** bulkDocs 结果检查：409 冲突由调用方按重试处理，不当作失败 */
+export function assertBulkOk(results: any[], action: string): void {
+  for (const result of results) {
+    if (result?.error && result.status !== 409) {
+      throw new Error(`${action}失败: ${result.message ?? result.name ?? 'unknown'}`)
+    }
+  }
+}

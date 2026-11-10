@@ -10,6 +10,7 @@ import { sanitizeResponseHeaders, validateMockRecord } from '@shared/mock.valida
 import { IocTypes } from "../MainConst"
 import { MockRepo } from '../repository/mock.repo'
 import { CacheMatchResult, MockCache } from './mock.cache'
+import { MockMigrationRunner } from './mock.migration.runner'
 import { analyzeMatchStability } from './mock.derive'
 import { DiagnosticService } from './diagnostic.service'
 import { PushService } from './push.service'
@@ -44,6 +45,9 @@ export class MockService {
   @inject(IocTypes.MockCache)
   private mockCache: MockCache
 
+  @inject(IocTypes.MockMigration)
+  private migration: MockMigrationRunner
+
   @inject(IocTypes.DiagnosticService)
   private diagnosticService: DiagnosticService
 
@@ -53,6 +57,7 @@ export class MockService {
 
   public async init() {
     await this.mockRepo.init()
+    await this.migration.run()
     this.mockCache.init()
     this.lastActiveRuleId = await this.mockRepo.getLastActiveRuleId()
   }
@@ -325,12 +330,12 @@ export class MockService {
   }
 
   async getMockMigrationReport() {
-    return this.mockRepo.getMigrationReport()
+    return this.migration.getMigrationReport()
   }
 
   async revertMockMatch(request: RevertMockRequest) {
     if (request?.scope !== 'record' && request?.scope !== 'all') throw new MockError('recordMissing')
-    return this.mockRepo.revertMatch(request)
+    return this.migration.revertMatch(request)
   }
 
   isMigrationPending(): boolean {
@@ -345,6 +350,7 @@ export class MockService {
   async deleteMockRule(uid: string, ruleId: string) {
     const rule = await this.mockRepo.getRule(ruleId)
     let removeResult = await this.mockRepo.delete(ruleId)
+    if (removeResult) await this.migration.clearRuleFromReport(ruleId)
     await this.updateMockSettings(uid, ruleId, false, rule?.name)
     return removeResult ? '成功删除记录' : 'Mock规则删除失败'
   }

@@ -17,5 +17,6 @@ export const IocTypes = {
   SocketProxyService: Symbol.for('SocketProxyService'),
   DiagnosticService: Symbol.for('DiagnosticService'),
   MockRepo: Symbol.for('MockRepo'),
-  MockCache: Symbol.for('MockCache')
+  MockCache: Symbol.for('MockCache'),
+  MockMigration: Symbol.for('MockMigration')
 }
