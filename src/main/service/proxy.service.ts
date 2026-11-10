@@ -10,6 +10,7 @@ import {
   HOP_BY_HOP_HEADERS, isHeaderName, MOCK_HOST_HEADER, MOCK_UID_HEADER, pickHeader,
   splitConnectionTokens,
 } from '@shared/http-header'
+import { stripTrailingSlash, toAbsoluteTarget } from '@shared/url'
 import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
@@ -378,10 +379,8 @@ export class ProxyService {
     // 不能用代理自身的 host 兜底，否则会转发给自己，客户端只能拿到代理页面 404
     if (base == null || base.length === 0) throw new Error('missing x-mock-host header')
     // 裸 host（无协议）按原始逻辑走 http，不能沿用代理侧的 https
-    if (!/^[a-z][a-z\d+\-.]*:\/\//i.test(base)) base = `http://${base}`
-
-    const url = new URL(base)
-    const basePath = url.pathname.replace(/\/+$/, '')
+    const url = toAbsoluteTarget(base, ['http:', 'https:'])
+    const basePath = stripTrailingSlash(url.pathname)
     return {
       protocol: url.protocol,
       hostname: url.hostname.replace(/^\[(.*)\]$/, '$1'),

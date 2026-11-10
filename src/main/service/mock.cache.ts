@@ -5,6 +5,7 @@ import type {
 } from '@shared/mock.models'
 import { recordLimitState } from '@shared/mock.models'
 import { normalizeMockRecord } from '@shared/mock.validation'
+import { parseLooseUrl, stripTrailingSlash } from '@shared/url'
 import { IocTypes } from '../MainConst'
 import { MockRecordChangeEvent, MockRecordSummary, MockRepo } from '../repository/mock.repo'
 import { detectMatchWarnings } from './mock.conflict'
@@ -85,18 +86,10 @@ function now(): number {
   return Number(performance.now())
 }
 
-function stripTrailing(path: string): string {
-  if (path.length <= 1) return path
-  return path.replace(/\/+$/, '') || '/'
-}
-
 function urlKey(url: string): string {
-  try {
-    const parsed = new URL(String(url), 'http://placeholder.local')
-    return `${parsed.pathname}${parsed.search}`
-  } catch (err) {
-    return String(url ?? '')
-  }
+  const parsed = parseLooseUrl(url)
+  if (parsed == null) return String(url ?? '')
+  return `${parsed.pathname}${parsed.search}`
 }
 
 function estimateBytes(record: ProxyMock.MockRecord): number {
@@ -451,7 +444,7 @@ export class MockCache {
 
   private exactKeys(path: string, ignoreCase: boolean, ignoreTrailingSlash: boolean): string[] {
     const values = new Set<string>([path])
-    if (ignoreTrailingSlash) values.add(stripTrailing(path))
+    if (ignoreTrailingSlash) values.add(stripTrailingSlash(path, true))
     if (ignoreCase) {
       for (const value of [...values]) values.add(value.toLowerCase())
     }
@@ -459,7 +452,7 @@ export class MockCache {
   }
 
   private lookupKeys(path: string): string[] {
-    const values = new Set<string>([path, stripTrailing(path)])
+    const values = new Set<string>([path, stripTrailingSlash(path, true)])
     for (const value of [...values]) values.add(value.toLowerCase())
     return [...values]
   }

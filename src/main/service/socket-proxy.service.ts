@@ -5,13 +5,14 @@ import { inject, injectable } from 'inversify'
 import { RawData, WebSocket, WebSocketServer } from 'ws'
 import { ProxyMock } from '@shared/proxy.models'
 import { headerFirst, MOCK_UID_HEADER } from '@shared/http-header'
+import { queryTokenOf } from '@shared/url'
 import { IocTypes } from '../MainConst'
 import { DiagnosticService } from './diagnostic.service'
 import { ProxyService } from './proxy.service'
 import { PushService } from './push.service'
 import {
   buildUpstreamHeaders, encodeFramePayload, isProxyPath, isSendableCloseCode,
-  mapUpstreamError, mockQueryValue, parseProxyRequest,
+  mapUpstreamError, MOCK_UID_QUERY, parseProxyRequest,
   resolveTargetUrl, sanitizeHeaders, truncateReason, type ParsedProxyRequest, type ResolvedTarget,
 } from './socket-proxy.contract'
 
@@ -796,7 +797,7 @@ export class SocketProxyService {
   private rejectHandshake(req: IncomingMessage, socket: Duplex, status: number,
     code: string, message: string) {
     const uid = headerFirst(req.headers[MOCK_UID_HEADER])
-      ?? mockQueryValue(req.url, '__mock_uid')
+      ?? queryTokenOf(req.url, MOCK_UID_QUERY) ?? undefined
     const startedAt = Date.now()
     this.failConnection({
       id: ++this.sessionId,

@@ -220,6 +220,7 @@ import { matchMockRecord, ProxyMock } from '@shared'
 import type {
   MatchMockResponse, MockMatchLevel, MockMissDiagnostic, MockMissFailure, MockMultiValueMode,
 } from '@shared/mock.models'
+import { parseLooseUrl } from '@shared/url'
 import type { FieldInstance } from 'vant'
 import { showNotify } from 'vant'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
@@ -305,11 +306,7 @@ function ensureMatch() {
 }
 
 function pathFromUrl(url: string): string {
-  try {
-    return new URL(String(url ?? ''), 'http://placeholder.local').pathname
-  } catch (err) {
-    return ''
-  }
+  return parseLooseUrl(String(url ?? ''))?.pathname ?? ''
 }
 
 function touch() {

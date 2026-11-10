@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { BizCode, BizResponse, Version } from './base.models'
 import { MOCK_UID_HEADER } from './http-header'
+import { stripTrailingSlash } from './url'
 
 import { showNotify } from 'vant'
 
@@ -70,12 +71,12 @@ export async function formPost<T>(path: string, baseURL?: string, params?: {}, d
 }
 
 export function updateUpdateServer(url?: string) {
-  const trimmed = url?.trim().replace(/\/+$/, '')
+  const trimmed = stripTrailingSlash(url?.trim())
   UPDATE_SERVER = trimmed ? trimmed : null
 }
 
 export async function versionCheck(platform: string, arch: string, url?: string) {
-  const baseURL = url?.trim() ? url.trim().replace(/\/+$/, '') : UPDATE_SERVER
+  const baseURL = url?.trim() ? stripTrailingSlash(url.trim()) : UPDATE_SERVER
   return request<Version>('GET', `/version-${platform}-${arch}.json`, baseURL ?? 'http://127.0.0.1:4000')
 }
 
