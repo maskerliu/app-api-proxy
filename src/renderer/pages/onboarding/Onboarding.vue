@@ -212,14 +212,15 @@
 </template>
 
 <script lang="ts" setup>
-import { Diagnostic, ProxyMock, getHealth, saveMockRecord, saveMockRule } from '@shared'
+import { ProxyMock, saveMockRecord, saveMockRule } from '@shared'
 import { API_URL } from '@shared/api.const'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
 import { showNotify } from 'vant'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useHealth } from '../../common/useHealth'
 import { scrollOptions } from '../../common/scroll'
 import { formatUptime } from '../../common/format'
 import { copyToClipboard } from '../../common/clipboard'
@@ -232,8 +233,7 @@ const router = useRouter()
 const { t } = useI18n()
 
 const step = ref(0)
-const health = ref<Diagnostic.HealthInfo>(null)
-const healthLoading = ref(false)
+const { health, healthLoading, refreshHealth } = useHealth(2000)
 const targetHost = ref('https://api.example.com')
 const snippetIndex = ref(0)
 const ruleName = ref('接入向导示例')
@@ -241,8 +241,6 @@ const mockPath = ref('/api/demo')
 const responseBody = ref(JSON.stringify({ code: 0, message: 'hello from AppApiProxy', data: { uid: 'demo' } }, null, 2))
 const creating = ref(false)
 const mockCreated = ref(false)
-
-let pollTimer: ReturnType<typeof setInterval> = null
 
 const config = computed(() => commonStore.serverConfig ?? ({} as any))
 const proxyBaseUrl = computed(() => {
@@ -272,30 +270,6 @@ const mockCurl = computed(() => buildSnippets({
   uid: commonStore.uid,
   path: mockPath.value || '/',
 })[0].code)
-
-const REFRESH_MIN_MS = 500
-let healthInFlight = false
-
-// manual 为 false 时静默刷新（轮询），避免按钮 loading 每 2 秒闪一下
-async function refreshHealth(manual = false) {
-  if (healthInFlight) return
-  healthInFlight = true
-  if (manual) healthLoading.value = true
-  const startedAt = Date.now()
-  try {
-    health.value = await getHealth()
-  } catch (err) {
-    // 请求层已经提示过错误
-  } finally {
-    if (manual) {
-      // 本地请求通常几毫秒就返回，保证 loading 有最短可见时长，避免闪烁
-      const remain = REFRESH_MIN_MS - (Date.now() - startedAt)
-      if (remain > 0) await new Promise(resolve => setTimeout(resolve, remain))
-      healthLoading.value = false
-    }
-    healthInFlight = false
-  }
-}
 
 async function copyText(text: string, message: string) {
   if (!text) return
@@ -367,16 +341,6 @@ async function finish() {
   await commonStore.markOnboarded()
   router.replace('/proxy')
 }
-
-onMounted(async () => {
-  await refreshHealth()
-  pollTimer = setInterval(() => refreshHealth(), 2000)
-})
-
-onBeforeUnmount(() => {
-  if (pollTimer != null) clearInterval(pollTimer)
-  pollTimer = null
-})
 </script>
 
 <style scoped>

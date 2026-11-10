@@ -10,7 +10,7 @@
           </div>
         </div>
         <div class="head-actions">
-          <van-button plain size="small" :loading="healthLoading" @click="refreshHealth">
+          <van-button plain size="small" :loading="healthLoading" @click="refreshHealth(true)">
             <template #icon>
               <van-icon class="iconfont icon-refresh" />
             </template>
@@ -102,12 +102,13 @@
 </template>
 
 <script lang="ts" setup>
-import { Diagnostic, diagnose, getHealth } from '@shared'
+import { Diagnostic, diagnose } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showNotify } from 'vant'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useHealth } from '../../common/useHealth'
 import { scrollOptions } from '../../common/scroll'
 import { formatUptime } from '../../common/format'
 import { copyToClipboard } from '../../common/clipboard'
@@ -117,13 +118,10 @@ const commonStore = CommonStore()
 const router = useRouter()
 const { t } = useI18n()
 
-const health = ref<Diagnostic.HealthInfo>(null)
-const healthLoading = ref(false)
+const { health, healthLoading, refreshHealth } = useHealth(3000)
 const target = ref('')
 const diagnosing = ref(false)
 const result = ref<Diagnostic.DiagnoseResult>(null)
-
-let pollTimer: ReturnType<typeof setInterval> = null
 
 const address = computed(() => {
   const { protocol, ip, port } = commonStore.serverConfig ?? ({} as any)
@@ -133,18 +131,6 @@ const address = computed(() => {
 const unknownRequests = computed(() => health.value?.unknownUidRequests ?? [])
 const recentErrors = computed(() => health.value?.errors ?? [])
 const recentRequests = computed(() => health.value?.recentRequests ?? [])
-
-async function refreshHealth() {
-  if (healthLoading.value) return
-  healthLoading.value = true
-  try {
-    health.value = await getHealth()
-  } catch (err) {
-    // 请求层已经提示过错误
-  } finally {
-    healthLoading.value = false
-  }
-}
 
 async function runDiagnose() {
   const value = target.value.trim()
@@ -207,16 +193,6 @@ async function copyReport() {
 function goBack() {
   router.replace('/proxy')
 }
-
-onMounted(async () => {
-  await refreshHealth()
-  pollTimer = setInterval(refreshHealth, 3000)
-})
-
-onBeforeUnmount(() => {
-  if (pollTimer != null) clearInterval(pollTimer)
-  pollTimer = null
-})
 </script>
 
 <style scoped>
