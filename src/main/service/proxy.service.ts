@@ -6,6 +6,10 @@ import { inject, injectable } from 'inversify'
 import JSONBig from 'json-bigint'
 import zlib from 'zlib'
 import type { MockHitMeta, MockMissDiagnostic } from '@shared/mock.models'
+import {
+  HOP_BY_HOP_HEADERS, isHeaderName, MOCK_HOST_HEADER, MOCK_UID_HEADER, pickHeader,
+  splitConnectionTokens,
+} from '@shared/http-header'
 import { ProxyMock } from '@shared/proxy.models'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
@@ -21,11 +25,6 @@ export class ProxyService {
   private static PROXY_DEF_TIMEOUT: number = 1000 * 15 // 15s
   private static MAX_REQUEST_BODY: number = 50 * 1024 * 1024
   private static MAX_RECORD_BODY: number = 1024 * 1024
-  private static HOP_BY_HOP_HEADERS: string[] = [
-    'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
-    'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade',
-  ]
-  private static HEADER_NAME_REG = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
   private _sessionId: number
   private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
@@ -79,13 +78,13 @@ export class ProxyService {
           timestamp: new Date().getSeconds(),
           statistics: JSON.parse(buffer.toString()),
         }
-        this.pushService.sendProxyMessage(req.header(BizNetwork.BIZ_HEADER_MOCK_UID), record)
+        this.pushService.sendProxyMessage(req.header(MOCK_UID_HEADER), record)
 
-        let originHost = req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) != null ? req.header(BizNetwork.BIZ_HEADER_MOCK_HOST) : req.header('host')
+        let originHost = req.header(MOCK_HOST_HEADER) != null ? req.header(MOCK_HOST_HEADER) : req.header('host')
         let headers = Object.assign({}, req.headers)
         delete headers['host']
-        delete headers[BizNetwork.BIZ_HEADER_MOCK_HOST]
-        delete headers[BizNetwork.BIZ_HEADER_MOCK_UID]
+        delete headers[MOCK_HOST_HEADER]
+        delete headers[MOCK_UID_HEADER]
 
         let options = {
           url: originHost + req.path,
@@ -102,14 +101,14 @@ export class ProxyService {
   }
 
   public async handleRequest(req: Request, resp: Response) {
-    const uid = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_UID)
+    const uid = pickHeader(req.headers, MOCK_UID_HEADER)
     // 清理无效配置（viewer 与通过注册地址接入的设备都算有效客户端）
     if (!this.pushService.hasClient(uid)) this.proxyConfigs.delete(uid)
 
     const startTime = new Date().getTime()
     const sessionId = ++this._sessionId
     const delay = this.proxyConfigs.get(uid)?.delay ?? 0
-    const host = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST) ?? ''
+    const host = pickHeader(req.headers, MOCK_HOST_HEADER) ?? ''
     // 接入向导依赖这里判断请求是否来自已注册的设备
     this.diagnosticService.recordRequest({
       sessionId,
@@ -177,8 +176,8 @@ export class ProxyService {
       const headers = mockResp.headers ?? {}
       for (const name of Object.keys(headers)) {
         const key = name.toLowerCase()
-        if (!ProxyService.HEADER_NAME_REG.test(key)) continue
-        if (ProxyService.HOP_BY_HOP_HEADERS.includes(key)) continue
+        if (!isHeaderName(key)) continue
+        if (HOP_BY_HOP_HEADERS.includes(key)) continue
         // mock 数据已解码，不能再透传压缩/长度相关头
         if (key === 'content-length' || key === 'content-encoding') continue
         const value = headers[name]
@@ -192,7 +191,7 @@ export class ProxyService {
 
   private proxy(sessionId: number, req: Request, resp: Response, startTime: number, delay: number,
     rawBody?: Buffer, miss?: MockMissDiagnostic) {
-    const uid = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_UID)
+    const uid = pickHeader(req.headers, MOCK_UID_HEADER)
     const state = { responded: false, finished: false, clientGone: false }
 
     return new Promise<void>((resolve) => {
@@ -211,7 +210,7 @@ export class ProxyService {
         this.diagnosticService.recordError({
           uid: uid ?? '',
           url: req.url,
-          host: this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST) ?? '',
+          host: pickHeader(req.headers, MOCK_HOST_HEADER) ?? '',
           error: err.message,
         })
         const record: ProxyMock.ProxyRequestRecord = {
@@ -330,7 +329,7 @@ export class ProxyService {
       this.diagnosticService.recordError({
         uid,
         url: req.url,
-        host: this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST) ?? '',
+        host: pickHeader(req.headers, MOCK_HOST_HEADER) ?? '',
         error: state.clientGone ? 'client closed' : err.message,
       })
       const record: ProxyMock.ProxyRequestRecord = {
@@ -374,7 +373,7 @@ export class ProxyService {
 
   private resolveTarget(req: Request, uid: string) {
     const proxyConfig = this.proxyConfigs.get(uid)
-    let base = this.headerValue(req, BizNetwork.BIZ_HEADER_MOCK_HOST)
+    let base = pickHeader(req.headers, MOCK_HOST_HEADER)
     if (proxyConfig?.status && proxyConfig.dataServer != null) base = proxyConfig.dataServer
     // 不能用代理自身的 host 兜底，否则会转发给自己，客户端只能拿到代理页面 404
     if (base == null || base.length === 0) throw new Error('missing x-mock-host header')
@@ -393,11 +392,9 @@ export class ProxyService {
   }
 
   private buildUpstreamHeaders(req: Request, rawBody: Buffer, host: string): http.OutgoingHttpHeaders {
-    const connectionTokens = String(req.headers['connection'] ?? '')
-      .split(',').map(it => it.trim().toLowerCase()).filter(Boolean)
     const skip = new Set([
-      ...ProxyService.HOP_BY_HOP_HEADERS, ...connectionTokens,
-      'host', 'content-length', BizNetwork.BIZ_HEADER_MOCK_HOST, BizNetwork.BIZ_HEADER_MOCK_UID,
+      ...HOP_BY_HOP_HEADERS, ...splitConnectionTokens(req.headers['connection']),
+      'host', 'content-length', MOCK_HOST_HEADER, MOCK_UID_HEADER,
     ])
 
     const headers: http.OutgoingHttpHeaders = {}
@@ -405,7 +402,7 @@ export class ProxyService {
       const name = req.rawHeaders[i]
       const key = name.toLowerCase()
       // http2 伪头（:method/:path/:scheme/:authority）不是合法 HTTP/1.1 头，必须丢弃
-      if (key.startsWith(':') || !ProxyService.HEADER_NAME_REG.test(key)) continue
+      if (key.startsWith(':') || !isHeaderName(key)) continue
       if (skip.has(key)) continue
       const value = req.rawHeaders[i + 1]
       const existing = headers[key]
@@ -428,9 +425,7 @@ export class ProxyService {
   }
 
   private skipResponseHeaders(headers: http.IncomingHttpHeaders): Set<string> {
-    const connectionTokens = String(headers['connection'] ?? '')
-      .split(',').map(it => it.trim().toLowerCase()).filter(Boolean)
-    return new Set([...ProxyService.HOP_BY_HOP_HEADERS, ...connectionTokens])
+    return new Set([...HOP_BY_HOP_HEADERS, ...splitConnectionTokens(headers['connection'])])
   }
 
   private formatRecordData(data: any, headers: any, truncated = false, totalBytes?: number): string {
@@ -559,10 +554,5 @@ export class ProxyService {
   /** 未命中时只带诊断，避免 UI 把普通转发误判为命中 */
   private missMeta(miss?: MockMissDiagnostic): MockHitMeta {
     return miss != null ? { hit: false, miss } : undefined
-  }
-
-  private headerValue(req: Request, name: string): string {
-    const value = req.headers[name]
-    return Array.isArray(value) ? value[0] : value as string
   }
 }

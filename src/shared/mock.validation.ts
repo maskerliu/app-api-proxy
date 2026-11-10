@@ -1,5 +1,6 @@
 import type { ProxyMock } from './proxy.models'
 import type { MockErrorCode } from './mock.errors'
+import { HOP_BY_HOP_HEADERS, isHeaderName } from './http-header'
 import type {
   MockHeaderCondition,
   MockMatchDerivation,
@@ -37,11 +38,7 @@ export interface MockValidationIssue {
   detail?: string
 }
 
-const HEADER_NAME_REG = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
-const HOP_BY_HOP_HEADERS = new Set([
-  'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
-  'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade',
-])
+const HOP_BY_HOP_SET = new Set(HOP_BY_HOP_HEADERS)
 const BODY_TYPES: ProxyMock.MockBodyType[] = ['json', 'xml', 'text', 'binary']
 
 const HOST_REG = /^(?:\*\.)?(?:\[[0-9a-f:.]+\]|[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)(?::\d{1,5})?$/
@@ -91,8 +88,8 @@ export function sanitizeResponseHeaders(headers: ProxyMock.MockResponseHeaders):
   for (const name of Object.keys(headers ?? {})) {
     const key = String(name)
     const lower = key.toLowerCase()
-    if (!HEADER_NAME_REG.test(key)) continue
-    if (HOP_BY_HOP_HEADERS.has(lower)) continue
+    if (!isHeaderName(key)) continue
+    if (HOP_BY_HOP_SET.has(lower)) continue
     if (lower === 'content-length' || lower === 'content-encoding') continue
 
     const raw = headers[key]
@@ -137,7 +134,7 @@ export function validateResponseDef(
   }
 
   for (const name of Object.keys(def.headers ?? {})) {
-    if (!HEADER_NAME_REG.test(name)) {
+    if (!isHeaderName(name)) {
       issues.push({ code: 'headerName', field: `${fieldPrefix}.headers`, detail: name })
       continue
     }
@@ -282,7 +279,7 @@ export function validateMatchRule(match: MockMatchRule, fieldPrefix: string = 'm
     for (let i = 0; i < conditions.length; i++) {
       const condition = conditions[i]
       const field = `${fieldPrefix}.headers.conditions[${i}]`
-      if (condition == null || typeof condition.name !== 'string' || !HEADER_NAME_REG.test(condition.name)) {
+      if (condition == null || typeof condition.name !== 'string' || !isHeaderName(condition.name)) {
         issues.push({ code: 'headerNameInvalid', field: `${field}.name` })
         continue
       }

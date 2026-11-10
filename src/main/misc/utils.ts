@@ -6,6 +6,7 @@ import { Address6 } from 'ip-address'
 import JSONBig from 'json-bigint'
 import { NetworkInterfaceInfo, networkInterfaces } from 'os'
 import { BizContext, LocalIP, UserDevice, UserNetwork } from '@shared/base.models'
+import { pickHeader } from '@shared/http-header'
 import { AppName } from "../MainConst"
 
 const ipRegex = /(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/
@@ -18,8 +19,6 @@ export namespace BizNetwork {
   export const BIZ_HEADER_DEVICE = 'x-did'
   export const BIZ_HEADER_AUTH = 'x-auth'
   export const BIZ_HEADER_NETWORK = 'x-network'
-  export const BIZ_HEADER_MOCK_HOST = 'x-mock-host'
-  export const BIZ_HEADER_MOCK_UID = 'x-mock-uid'
 
   export const MIME_EVENT_STREAM = 'text/event-stream'
   export const MIME_MULTIPART = 'multipart/form-data'
@@ -103,14 +102,9 @@ export function findIp(gatewayOrFamily: string, isInternal?: boolean) {
 }
 
 
-function headerValue(req: Request, name: string): string {
-  const value = req.headers[name]
-  return Array.isArray(value) ? value[0] : value as string
-}
-
 export function parseContext(req: Request): BizContext {
 
-  const network = headerValue(req, BizNetwork.BIZ_HEADER_NETWORK)
+  const network = pickHeader(req.headers, BizNetwork.BIZ_HEADER_NETWORK)
   let netType = UserNetwork.UNKNOWN
   switch (network?.toLowerCase()) {
     case '2g':
@@ -137,7 +131,7 @@ export function parseContext(req: Request): BizContext {
 
   let scheme = '', appId = '', appVersion = '', channel = ''
   let deviceInfo: UserDevice = { os: '', version: '', brand: '', model: '' }
-  const ua = headerValue(req, BizNetwork.BIZ_HEADER_UA)
+  const ua = pickHeader(req.headers, BizNetwork.BIZ_HEADER_UA)
   if (ua != null) {
     const regArr = ua.match(/[0-9A-Za-z\/\.\s:-]+/g) ?? []
     scheme = regArr[0] ?? ''
@@ -149,7 +143,7 @@ export function parseContext(req: Request): BizContext {
     channel = regArr[4] ?? ''
     deviceInfo = { os, version, brand, model }
   } else {
-    const regArr = headerValue(req, 'user-agent')?.match(/[\(]*[0-9A-Za-z;,_.\s\/]+[\)]*/g) ?? []
+    const regArr = pickHeader(req.headers, 'user-agent')?.match(/[\(]*[0-9A-Za-z;,_.\s\/]+[\)]*/g) ?? []
     scheme = regArr[0]?.trim() ?? ''
     const os = (regArr[1] ?? '').trim().replace(/^\(|\)$/g, '').split(';')[0].trim()
     const [brand = ''] = (regArr[4] ?? '').trim().split(' ')
@@ -158,8 +152,8 @@ export function parseContext(req: Request): BizContext {
 
   let context: BizContext = {
     scheme,
-    token: headerValue(req, BizNetwork.BIZ_HEADER_TOKEN),
-    did: headerValue(req, BizNetwork.BIZ_HEADER_DEVICE),
+    token: pickHeader(req.headers, BizNetwork.BIZ_HEADER_TOKEN),
+    did: pickHeader(req.headers, BizNetwork.BIZ_HEADER_DEVICE),
     network: netType,
     deviceInfo,
     appId,
