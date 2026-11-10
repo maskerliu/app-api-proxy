@@ -1,11 +1,12 @@
-import { createHash } from 'crypto'
 import type { ProxyMock } from '@shared/proxy.models'
 import type { MockMigrationDuplicate, MockMigrationReportItem, MockMatchRule } from '@shared/mock.models'
-import { canonicalMatch, normalizeMatchRule } from '@shared/mock.validation'
+import { normalizeMatchRule } from '@shared/mock.validation'
+import { fingerprintOf } from '../repository/mock.docs'
 import { analyzeMatchStability } from './mock.derive'
 
 // v3 -> v4 迁移的计划步骤：纯计算、无 IO，便于在旧库副本上做回归。
-// 仓库层负责把计划写回 PouchDB 并维护 meta / 报告落库顺序。
+// 仓库层负责把计划写回 PouchDB 并维护 meta / 报告落库顺序；指纹定义在 mock.docs，
+// 因为它同时是 saveRecord 的落库唯一性键。
 
 export interface MigrationSourceRecord {
   record: ProxyMock.MockRecord
@@ -30,10 +31,6 @@ export interface MigrationPlan {
   autoIgnoredKeyCount: number
   parameterizedPathCount: number
   invalidRecords: number
-}
-
-export function fingerprintOf(match: MockMatchRule): string {
-  return createHash('sha1').update(canonicalMatch(match)).digest('hex')
 }
 
 function displayName(source: MigrationSourceRecord): string {

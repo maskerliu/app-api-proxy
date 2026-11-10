@@ -6,9 +6,10 @@ import { fileURLToPath } from 'node:url'
 import type { ProxyMock } from '@shared/proxy.models'
 import { normalizeMockRecord } from '@shared/mock.validation'
 import {
-  applyMigrationPatch, fingerprintOf, planMigrationV4,
+  applyMigrationPatch, planMigrationV4,
 } from '@main/service/mock.migration'
 import type { MigrationPatch, MigrationPlan, MigrationSourceRecord } from '@main/service/mock.migration'
+import { fingerprintOf } from '@main/repository/mock.docs'
 import { matchRecords, normalizeRequest } from '@main/service/mock.matcher'
 import { restoreStrict } from '@main/service/mock.derive'
 
