@@ -367,14 +367,11 @@ defineExpose({ focusField })
   margin-top: 0;
 }
 
+/* 卡片外观（描边/圆角/底色/裁切）统一由 global.css 的 .header-collapse 提供，
+   这里只留本面板的间距与撑满需求 */
 .header-collapse {
   margin-top: var(--sp-xl);
   width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--van-border-color) !important;
-  border-radius: var(--van-radius-lg);
-  background: var(--van-background-2);
-  overflow: hidden;
 }
 
 /* 只调整折叠标题行，内容区的字段不要一起改 */
