@@ -141,171 +141,196 @@ export class AppMockRouter extends BaseRouter {
   }
 
   override initApiInfos(): void {
+    // handler 的入参顺序与 params 表一一对应；末尾的 BizContext 只交给真正需要它的方法
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: `${API_URL.MockRegister}/:uid`, func: 'registerDevice', target: 'commonService',
-      params: [{ key: 'uid', type: ParamType.Path }]
+      path: `${API_URL.MockRegister}/:uid`,
+      params: [{ key: 'uid', type: ParamType.Path }],
+      handler: (ownerUid) => this.commonService.registerDevice(ownerUid)
     })
     // 兼容历史二维码地址 .../register?uid=xxx
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.MockRegister, func: 'registerDevice', target: 'commonService',
-      params: [{ key: 'uid', type: ParamType.Query }]
+      path: API_URL.MockRegister,
+      params: [{ key: 'uid', type: ParamType.Query }],
+      handler: (ownerUid) => this.commonService.registerDevice(ownerUid)
     })
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetAllPushClients, func: 'getAllPushClients', target: 'pushService'
+      path: API_URL.GetAllPushClients,
+      handler: () => this.pushService.getAllPushClients()
     })
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetServerConfig, func: 'getServerConfig', target: 'commonService'
+      path: API_URL.GetServerConfig,
+      handler: () => this.commonService.getServerConfig()
     })
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.Health, func: 'getHealth', target: 'commonService'
+      path: API_URL.Health,
+      handler: () => this.commonService.getHealth()
     })
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.Diagnose, func: 'diagnose', target: 'diagnosticService',
-      params: [{ key: 'target', type: ParamType.Query }]
+      path: API_URL.Diagnose,
+      params: [{ key: 'target', type: ParamType.Query }],
+      handler: (target) => this.diagnosticService.diagnose(target)
     })
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.SaveProxyConfig, func: 'saveProxyConfig', target: 'proxyService',
+      path: API_URL.SaveProxyConfig,
       params: [
         // 目标客户端由查询参数指定，请求头 x-mock-uid 始终是当前界面自身的 uid
         { key: 'uid', type: ParamType.Query },
         { key: 'config', type: ParamType.FormBody }
-      ]
+      ],
+      handler: (uid, config) => this.proxyService.saveProxyConfig(uid, config)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetProxyConfig, func: 'getProxyConfig', target: 'proxyService',
-      params: [{ key: 'uid', type: ParamType.Query }]
+      path: API_URL.GetProxyConfig,
+      params: [{ key: 'uid', type: ParamType.Query }],
+      handler: (uid) => this.proxyService.getProxyConfig(uid)
     })
 
     // 新窗口/刷新后恢复仍在进行的 WS 连接，5030 徽标与列表共用
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetSocketConnections, func: 'getActiveConnections', target: 'socketProxyService'
+      path: API_URL.GetSocketConnections,
+      handler: () => this.socketProxyService.getActiveConnections()
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.SearchMockRules, func: 'searchMockRules', target: 'mockService',
+      path: API_URL.SearchMockRules,
       params: [
         { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'keyword', type: ParamType.Query }
-      ]
+      ],
+      handler: (uid, keyword) => this.mockService.searchMockRules(uid, keyword)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetMockRuleDetail, func: 'getMockRuleDetail', target: 'mockService',
+      path: API_URL.GetMockRuleDetail,
       params: [
         { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'ruleId', type: ParamType.Query }
-      ]
+      ],
+      handler: (uid, ruleId) => this.mockService.getMockRuleDetail(uid, ruleId)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetActiveMockRule, func: 'getActiveMockRule', target: 'mockService',
-      params: [{ key: MOCK_UID_HEADER, type: ParamType.Header }]
+      path: API_URL.GetActiveMockRule,
+      params: [{ key: MOCK_UID_HEADER, type: ParamType.Header }],
+      handler: (uid) => this.mockService.getActiveMockRule(uid)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetMockRecords, func: 'getMockRecords', target: 'mockService',
+      path: API_URL.GetMockRecords,
       params: [
         { key: 'ruleId', type: ParamType.Query },
         { key: 'offset', type: ParamType.Query },
         { key: 'limit', type: ParamType.Query }
-      ]
+      ],
+      handler: (ruleId, offset, limit) => this.mockService.getMockRecords(ruleId, offset, limit)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetMockRecord, func: 'getMockRecord', target: 'mockService',
-      params: [{ key: 'recordId', type: ParamType.Query }]
+      path: API_URL.GetMockRecord,
+      params: [{ key: 'recordId', type: ParamType.Query }],
+      handler: (recordId) => this.mockService.getMockRecord(recordId)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GetMockRecordByUrl, func: 'getMockRecordByUrl', target: 'mockService',
+      path: API_URL.GetMockRecordByUrl,
       params: [
         { key: 'ruleId', type: ParamType.Query },
         { key: 'url', type: ParamType.Query }
-      ]
+      ],
+      handler: (ruleId, url) => this.mockService.getMockRecordByUrl(ruleId, url)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.SaveMockRule, func: 'saveMockRule', target: 'mockService',
+      path: API_URL.SaveMockRule,
       params: [
         { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'rule', type: ParamType.FormBody }
-      ]
+      ],
+      handler: (uid, rule) => this.mockService.saveMockRule(uid, rule)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.SaveMockRecord, func: 'saveMockRecord', target: 'mockService',
+      path: API_URL.SaveMockRecord,
       params: [
         { key: 'record', type: ParamType.FormBody },
         { key: 'expectedUpdatedAt', type: ParamType.Query }
-      ]
+      ],
+      handler: (record, expectedUpdatedAt) => this.mockService.saveMockRecord(record, expectedUpdatedAt)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.DeleteMockRecord, func: 'deleteMockRecord', target: 'mockService',
+      path: API_URL.DeleteMockRecord,
       params: [
         { key: 'recordId', type: ParamType.Query }
-      ]
+      ],
+      handler: (recordId) => this.mockService.deleteMockRecord(recordId)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.DeleteMockRule, func: 'deleteMockRule', target: 'mockService',
+      path: API_URL.DeleteMockRule,
       params: [
         { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'ruleId', type: ParamType.Query }
-      ]
+      ],
+      handler: (uid, ruleId) => this.mockService.deleteMockRule(uid, ruleId)
     })
 
     // R1 匹配引擎接口：框架统一返回 HTTP 200，桩以 { code: 'notImplemented' } 表达
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.MATCH_MOCK_RECORD, func: 'matchMockRecord', target: 'mockService',
-      params: [{ key: 'request', type: ParamType.FormBody }]
+      path: API_URL.MATCH_MOCK_RECORD,
+      params: [{ key: 'request', type: ParamType.FormBody }],
+      handler: (request) => this.mockService.matchMockRecord(request)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.ANALYZE_MOCK_MATCH, func: 'analyzeMockMatch', target: 'mockService',
+      path: API_URL.ANALYZE_MOCK_MATCH,
       params: [
         { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'request', type: ParamType.FormBody }
-      ]
+      ],
+      handler: (uid, request) => this.mockService.analyzeMockMatch(uid, request)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GET_MOCK_MIGRATION_REPORT, func: 'getMockMigrationReport', target: 'mockService'
+      path: API_URL.GET_MOCK_MIGRATION_REPORT,
+      handler: () => this.mockService.getMockMigrationReport()
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Post,
-      path: API_URL.REVERT_MOCK_MATCH, func: 'revertMockMatch', target: 'mockService',
-      params: [{ key: 'request', type: ParamType.FormBody }]
+      path: API_URL.REVERT_MOCK_MATCH,
+      params: [{ key: 'request', type: ParamType.FormBody }],
+      handler: (request) => this.mockService.revertMockMatch(request)
     })
 
     this.addApiInfo({
       method: BizNetwork.Method_Get,
-      path: API_URL.GET_MOCK_MATCH_WARNINGS, func: 'getMockMatchWarnings', target: 'mockService',
-      params: [{ key: 'ruleId', type: ParamType.Query }]
+      path: API_URL.GET_MOCK_MATCH_WARNINGS,
+      params: [{ key: 'ruleId', type: ParamType.Query }],
+      handler: (ruleId) => this.mockService.getMockMatchWarnings(ruleId)
     })
 
   }

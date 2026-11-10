@@ -17,12 +17,11 @@ export interface ParamInfo {
 }
 
 export interface ApiInfo {
-  func: string,
   method: string,
-  target: string,
-  path: string
-  desc?: string
+  path: string,
   params?: Array<ParamInfo>
+  // 目标服务方法由子类用闭包给出：方法名写错编译期就报错，不再按字符串反射查找
+  handler: (...args: Array<any>) => any
 }
 
 export abstract class BaseRouter {
@@ -37,7 +36,7 @@ export abstract class BaseRouter {
 
     for (const item of this._apiInfos) {
       this.router[item.method](item.path, (req: Request, resp: Response) => {
-        this.route(req, resp, item.func, item.target, item.params, true)
+        this.route(req, resp, item.handler, item.params)
       })
     }
   }
@@ -50,8 +49,8 @@ export abstract class BaseRouter {
     this._apiInfos.push(apiInfo)
   }
 
-  protected async route(req: Request, resp: Response, func: string, target: any,
-    paramInfos?: Array<ParamInfo>, hasContext: boolean = false) {
+  protected async route(req: Request, resp: Response, handler: (...args: Array<any>) => any,
+    paramInfos?: Array<ParamInfo>) {
 
     let bizResp: BizResponse<any>
     try {
@@ -90,9 +89,8 @@ export abstract class BaseRouter {
         }
       }
 
-      if (hasContext) { params.push(parseContext(req)) }
-      let instance = await Reflect.get(this, target)
-      let result = await Reflect.apply(Reflect.get(instance, func), instance, params)
+      params.push(parseContext(req))
+      let result = await handler(...params)
       if (result == null) {
         bizResp = { code: BizCode.FAIL, msg: 'biz inner error, no result found' }
       } else {

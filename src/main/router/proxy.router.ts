@@ -13,8 +13,7 @@ export class ProxyRouter extends BaseRouter {
     super()
 
     this.router.all(/.*/, async (req, resp) => {
-      let instance = Reflect.get(this, 'proxyService')
-      await Reflect.apply(Reflect.get(instance, 'handleRequest'), instance, [req, resp])
+      await this.proxyService.handleRequest(req, resp)
     })
   }
 
