@@ -77,7 +77,7 @@ export function planMigrationV4(sources: MigrationSourceRecord[], analyzedAt: nu
         if (record.matchFingerprint == null) {
           patches.push({
             recordId: record.id,
-            fingerprint: fingerprintOf(normalizeMatchRule(record.match)),
+            fingerprint: fingerprintOf(normalizeMatchRule(record.match ?? {})),
           })
         }
         continue
@@ -180,7 +180,8 @@ export function applyMigrationPatch<T extends MigrationPatchTarget>(target: T, p
   } else if (patch.match != null && target.matchInvalid != null) {
     // 只有重新算出有效条件时才解除历史禁用，补指纹不能解锁
     delete target.matchInvalid
-    target.match.enabled = true
+    // 上面已把 patch.match 挂到 target，这里的判空只为收窄类型
+    if (target.match != null) target.match.enabled = true
   }
   return target
 }
