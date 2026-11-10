@@ -1,20 +1,15 @@
 import type { IncomingMessage, OutgoingHttpHeaders } from 'http'
 import { API_URL } from '@shared/api.const'
+import {
+  emptyToNull, headerFirst, HOP_BY_HOP_HEADERS, isHeaderName, MOCK_HOST_HEADER, MOCK_UID_HEADER,
+  splitConnectionTokens,
+} from '@shared/http-header'
 import { ProxyMock } from '@shared/proxy.models'
 
-export const MOCK_HOST_HEADER = 'x-mock-host'
-export const MOCK_UID_HEADER = 'x-mock-uid'
 export const RESERVED_QUERY = ['__mock_host', '__mock_uid']
 export const MAX_CLOSE_REASON = 123
 export const MAX_TEXT_FRAME = 256 * 1024
 export const MAX_BINARY_FRAME = 128 * 1024
-
-const HEADER_NAME_REG = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
-
-export const HOP_BY_HOP_HEADERS = [
-  'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
-  'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade',
-]
 
 const DROP_UPSTREAM_HEADERS = [
   ...HOP_BY_HOP_HEADERS,
@@ -66,8 +61,8 @@ export function parseProxyRequest(req: RequestLike): ParsedProxyRequest {
   const rawPath = queryIndex >= 0 ? rawUrl.slice(0, queryIndex) : rawUrl
   const rawQuery = queryIndex >= 0 ? rawUrl.slice(queryIndex + 1) : ''
 
-  let uid = emptyToNull(headerValue(req.headers[MOCK_UID_HEADER]))
-  let mockHost = emptyToNull(headerValue(req.headers[MOCK_HOST_HEADER]))
+  let uid = emptyToNull(headerFirst(req.headers[MOCK_UID_HEADER]))
+  let mockHost = emptyToNull(headerFirst(req.headers[MOCK_HOST_HEADER]))
   const parts: string[] = []
 
   for (const part of rawQuery.split('&')) {
@@ -107,15 +102,13 @@ export function parseProtocols(value: string | string[] | undefined): string[] {
 }
 
 export function buildUpstreamHeaders(req: RawHeaderLike): OutgoingHttpHeaders {
-  const connectionTokens = String(req.headers['connection'] ?? '')
-    .split(',').map(it => it.trim().toLowerCase()).filter(Boolean)
-  const skip = new Set([...DROP_UPSTREAM_HEADERS, ...connectionTokens])
+  const skip = new Set([...DROP_UPSTREAM_HEADERS, ...splitConnectionTokens(req.headers['connection'])])
   const headers: OutgoingHttpHeaders = Object.create(null)
 
   for (let i = 0; i < req.rawHeaders.length; i += 2) {
     const name = req.rawHeaders[i]
     const key = name.toLowerCase()
-    if (key.startsWith(':') || !HEADER_NAME_REG.test(key)) continue
+    if (key.startsWith(':') || !isHeaderName(key)) continue
     if (skip.has(key)) continue
     const value = req.rawHeaders[i + 1]
     if (value == null || /[\r\n]/.test(value)) continue
@@ -196,16 +189,6 @@ export function sanitizeHeaders(headers: NodeJS.Dict<string | string[]>): Record
     if (value != null) result[key] = value
   }
   return result
-}
-
-export function headerValue(value: string | string[] | undefined): string | null {
-  if (value == null) return null
-  const first = Array.isArray(value) ? value[0] : value
-  return first == null ? null : String(first)
-}
-
-export function emptyToNull(value: string | null | undefined): string | null {
-  return value == null || value.trim() === '' ? null : value
 }
 
 export function safeDecode(value: string): string {

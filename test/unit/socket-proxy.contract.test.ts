@@ -2,9 +2,10 @@ import assert from 'node:assert/strict'
 import type { IncomingMessage } from 'node:http'
 import { describe, it } from 'node:test'
 import { ProxyMock } from '@shared/proxy.models'
+import { MOCK_HOST_HEADER, MOCK_UID_HEADER } from '@shared/http-header'
 import {
   buildUpstreamHeaders, encodeFramePayload, isProxyPath, isSendableCloseCode, mapUpstreamError,
-  MAX_CLOSE_REASON, MOCK_HOST_HEADER, MOCK_UID_HEADER, parseProtocols, parseProxyRequest,
+  MAX_CLOSE_REASON, parseProtocols, parseProxyRequest,
   resolveTargetUrl, truncateReason,
 } from '@main/service/socket-proxy.contract'
 

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { BizCode, BizResponse, Version } from './base.models'
+import { MOCK_UID_HEADER } from './http-header'
 
 import { showNotify } from 'vant'
 
@@ -25,7 +26,7 @@ async function request<T>(method: string, path: string, baseURL?: string, header
     method, params, data,
     // 注册完成前还没有 uid，避免带上空值被服务端当成有效客户端
     headers: Object.assign(
-      clientUID ? { 'x-mock-uid': clientUID } : {},
+      clientUID ? { [MOCK_UID_HEADER]: clientUID } : {},
       headers
     )
   })

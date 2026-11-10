@@ -7,6 +7,7 @@ import {
   MOCK_ANY_METHOD, MOCK_HIGH_RISK_KEYS, MOCK_SEMANTIC_KEYS, createDefaultMatch, levelOf,
 } from '@shared/mock.models'
 import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
+import { MOCK_HOST_HEADER } from '@shared/http-header'
 import { normalizeRequest } from './mock.matcher'
 
 // 录制派生：纯函数、无 IO。同一输入多次运行输出完全一致（时间由调用方注入）。
@@ -147,7 +148,7 @@ export function createMatchFromUrl(url: string, options?: {
   })
 
   const host = options?.host
-    ?? normalized.headers.get('x-mock-host')?.[0]
+    ?? normalized.headers.get(MOCK_HOST_HEADER)?.[0]
     ?? normalized.headers.get('host')?.[0]
     ?? ''
 

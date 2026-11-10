@@ -3,6 +3,7 @@ import { injectable } from 'inversify'
 import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
+import { pickHeader } from '@shared/http-header'
 import type {
   MigrationReport, MockMigrationReportItem, MockMatchRule, RevertMockRequest, RevertMockResponse,
 } from '@shared/mock.models'
@@ -643,7 +644,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
   private responseFromLegacy(legacy: ProxyMock.ProxyRequestRecord): ProxyMock.MockResponseDef {
     const headers = sanitizeResponseHeaders(legacy?.responseHeaders ?? {})
-    const contentType = this.headerValue(headers, 'content-type')
+    const contentType = pickHeader(headers, 'content-type') ?? ''
     const body = legacy?.responseData == null
       ? ''
       : typeof legacy.responseData === 'string'
@@ -695,15 +696,6 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       responseHeaders: response.headers,
       responseData
     }
-  }
-
-  private headerValue(headers: ProxyMock.MockResponseHeaders, name: string): string {
-    for (const key of Object.keys(headers ?? {})) {
-      if (key.toLowerCase() !== name) continue
-      const value = headers[key]
-      return Array.isArray(value) ? value[0] : value
-    }
-    return ''
   }
 
   private pickFields(doc: any, fields: Array<string>): any {

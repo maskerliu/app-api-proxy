@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
+import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
 import { IocTypes } from '../MainConst'
 import { BizNetwork } from '../misc/utils'
 import {
@@ -60,7 +61,7 @@ export class AppMockRouter extends BaseRouter {
     })
 
     this.router.get('/sse/:uid', (req, resp) => {
-      const uid = (req.headers['x-mock-uid'] as string) || req.params['uid']
+      const uid = emptyToNull(pickHeader(req.headers, MOCK_UID_HEADER)) ?? req.params['uid']
       if (!uid) {
         resp.status(400).end()
         return
@@ -194,7 +195,7 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Get,
       path: API_URL.SearchMockRules, func: 'searchMockRules', target: 'mockService',
       params: [
-        { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
+        { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'keyword', type: ParamType.Query }
       ]
     })
@@ -203,7 +204,7 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Get,
       path: API_URL.GetMockRuleDetail, func: 'getMockRuleDetail', target: 'mockService',
       params: [
-        { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
+        { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'ruleId', type: ParamType.Query }
       ]
     })
@@ -211,7 +212,7 @@ export class AppMockRouter extends BaseRouter {
     this.addApiInfo({
       method: BizNetwork.Method_Get,
       path: API_URL.GetActiveMockRule, func: 'getActiveMockRule', target: 'mockService',
-      params: [{ key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header }]
+      params: [{ key: MOCK_UID_HEADER, type: ParamType.Header }]
     })
 
     this.addApiInfo({
@@ -243,7 +244,7 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Post,
       path: API_URL.SaveMockRule, func: 'saveMockRule', target: 'mockService',
       params: [
-        { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
+        { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'rule', type: ParamType.FormBody }
       ]
     })
@@ -269,7 +270,7 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Post,
       path: API_URL.DeleteMockRule, func: 'deleteMockRule', target: 'mockService',
       params: [
-        { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
+        { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'ruleId', type: ParamType.Query }
       ]
     })
@@ -285,7 +286,7 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Post,
       path: API_URL.ANALYZE_MOCK_MATCH, func: 'analyzeMockMatch', target: 'mockService',
       params: [
-        { key: BizNetwork.BIZ_HEADER_MOCK_UID, type: ParamType.Header },
+        { key: MOCK_UID_HEADER, type: ParamType.Header },
         { key: 'request', type: ParamType.FormBody }
       ]
     })

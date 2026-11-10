@@ -1,4 +1,5 @@
 import { ProxyMock, inferBodyType, sanitizeResponseHeaders } from '@shared'
+import { pickHeader } from '@shared/http-header'
 
 export function cloneRecord(record: ProxyMock.MockRecord): ProxyMock.MockRecord {
   return record == null ? null : JSON.parse(JSON.stringify(record))
@@ -25,7 +26,7 @@ export function recordFromRequest(ruleId: string, request: ProxyMock.ProxyReques
 
   const headers = sanitizeResponseHeaders(request.responseHeaders ?? {})
   let body = ''
-  let bodyType = inferBodyType(headerValue(headers, 'content-type'))
+  let bodyType = inferBodyType(pickHeader(headers, 'content-type') ?? '')
   // 抓包只保留二进制占位文本，按文本回填，避免保存后被当作 base64 解码
   if (bodyType === 'binary') bodyType = 'text'
   if (request.responseData != null) {
@@ -85,13 +86,4 @@ export function createVariant(base: ProxyMock.MockResponseDef, index: number): P
 
 export function toRawJson(record: ProxyMock.MockRecord): string {
   return JSON.stringify(record, null, 2)
-}
-
-function headerValue(headers: ProxyMock.MockResponseHeaders, name: string): string {
-  for (const key of Object.keys(headers ?? {})) {
-    if (key.toLowerCase() !== name) continue
-    const value = headers[key]
-    return Array.isArray(value) ? value[0] : value
-  }
-  return ''
 }

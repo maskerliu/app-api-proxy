@@ -8,6 +8,7 @@ import {
   MOCK_ANY_METHOD, MOCK_MAX_PATH_LENGTH, MOCK_SENSITIVE_KEYS, normalizeHost,
 } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
+import { headerValuesOf, MOCK_HOST_HEADER } from '@shared/http-header'
 
 // Matcher：只做 CPU 计算，不读库、不写库、不抛业务异常。
 // 热路径（testMatch / compare）不构造字符串；只有最终命中与 top-1 诊断才物化文案。
@@ -164,13 +165,6 @@ function splitHostPort(value: string): { host: string; port: number | null } {
   return { host, port: null }
 }
 
-function headerValues(headers: Record<string, string | string[] | undefined>, name: string): string[] {
-  const raw = headers?.[name]
-  if (raw == null) return null
-  const list = Array.isArray(raw) ? raw : [raw]
-  return list.filter(it => it != null).map(it => String(it).trim())
-}
-
 export function normalizeRequest(input: MatcherRequestInput): NormalizedRequest {
   const rawUrl = String(input?.url ?? '')
   const method = String(input?.method ?? '').trim().toUpperCase()
@@ -189,11 +183,11 @@ export function normalizeRequest(input: MatcherRequestInput): NormalizedRequest 
   const headers = new Map<string, string[]>()
   const sourceHeaders = input?.headers ?? {}
   for (const name of Object.keys(sourceHeaders)) {
-    const values = headerValues(sourceHeaders, name)
+    const values = headerValuesOf(sourceHeaders[name])
     if (values != null) headers.set(name.toLowerCase(), values)
   }
 
-  const rawHost = (headers.get('x-mock-host')?.[0] ?? headers.get('host')?.[0] ?? '').trim()
+  const rawHost = (headers.get(MOCK_HOST_HEADER)?.[0] ?? headers.get('host')?.[0] ?? '').trim()
   const parsedHost = splitHostPort(normalizeHost(rawHost))
 
   return {
