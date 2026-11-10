@@ -244,7 +244,7 @@ import MiniSelect from '../../common/MiniSelect.vue'
 import { scrollOptions } from '../../common/scroll'
 import MockRecordEditor from './mock/MockRecordEditor.vue'
 import { matchesKeyword, sortRecords, summaryOf, warningLabelKey } from './mock/match.helper'
-import { describeMockSaveError, normalizeErrorText } from './mock/mock.errors'
+import { describeMockSaveError, normalizeErrorText } from './mock/mock.save-error'
 import { cloneRecord, emptyRecord, prettifyRecordJson } from './mock/mock.record'
 import { findRecordByUrl, MockMgrTarget } from './mock/recording'
 
