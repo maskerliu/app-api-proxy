@@ -68,9 +68,13 @@
 
 /* ---- 折叠面板容器（ProxyRequestDetail / SocketDetail / MockResponseForm 共用） ---- */
 
+/* 卡片外观唯一来源：一圈描边 + cell-group 底色，与各面板里的消息区、字段区同款；
+   站点只允许改 margin，加边框或换底色都会在这里改掉。 */
 .header-collapse {
   margin: var(--van-padding-md) 0;
+  box-sizing: border-box;
   overflow: hidden;
+  border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-cell-group-background);
 }
