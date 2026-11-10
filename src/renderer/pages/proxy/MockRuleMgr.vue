@@ -233,7 +233,7 @@
 <script lang="ts" setup>
 import {
   canonicalMatch, deleteMockRecord, deleteMockRule, getActiveMockRule, getMockRecord,
-  getMockRecords, getMockRuleDetail, levelOf, MOCK_ANY_METHOD, MOCK_RECORD_REJECT_LIMIT, ProxyMock, saveMockRecord,
+  getMockRecords, getMockRuleDetail, MOCK_RECORD_REJECT_LIMIT, ProxyMock, saveMockRecord,
   saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
@@ -243,9 +243,10 @@ import { useI18n } from 'vue-i18n'
 import MiniSelect from '../../common/MiniSelect.vue'
 import { scrollOptions } from '../../common/scroll'
 import MockRecordEditor from './mock/MockRecordEditor.vue'
-import { matchesKeyword, sortRecords, summaryOf, warningLabelKey } from './mock/match.helper'
+import { matchesKeyword, sortRecords, warningLabelKey } from './mock/match.helper'
+import { levelTagType, methodTagType, recordRowOf, warningTagType } from './mock/record.row'
 import { describeMockSaveError, normalizeErrorText } from './mock/mock.save-error'
-import { cloneRecord, emptyRecord, prettifyRecordJson } from './mock/mock.record'
+import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './mock/mock.record'
 import { findRecordByUrl, MockMgrTarget } from './mock/recording'
 
 const { t } = useI18n()
@@ -280,14 +281,6 @@ const recordSort = ref<RecordSort>('updated')
 // 新建草稿的初始快照同样参与比较，填入内容后才会进入未保存状态
 const dirty = computed(() => draft.value != null && recordSnapshot(draft.value) !== savedSnapshot.value)
 
-// 档位会被交互临时标记成 custom；比较前按结构重新识别，
-// 否则“添加条件后又删除”这类回到原状的操作会一直算作未保存
-function recordSnapshot(record: ProxyMock.MockRecord): string {
-  const copy = cloneRecord(record)
-  if (copy?.match != null) copy.match.level = levelOf(copy.match)
-  return JSON.stringify(copy)
-}
-const effectiveResponse = ProxyMock.effectiveResponse
 const recordCount = computed(() => curRule.value?.requests?.size ?? 0)
 const recordTotal = computed(() => curRule.value?.limitState?.count ?? recordCount.value)
 // 列表筛选与排序都在已加载页内完成，翻页后同样生效
@@ -296,59 +289,7 @@ const recordList = computed(() => sortRecords(
   recordSort.value))
 
 // 行内容一次性算好：标题取名称/Path，副标题只在能补充信息时展示，避免与标题重复
-const recordRows = computed(() => recordList.value.map(record => {
-  const summary = summaryOf(record)
-  const response = effectiveResponse(record)
-  const warnings = record.matchWarnings ?? []
-  const path = summary?.path ?? ''
-  const name = record.name ?? ''
-  // 录制自动生成的名称就是「方法 + URL」，展示时改用干净的 path，避免和方法色块重复
-  const autoName = summary != null && name.startsWith(`${summary.method} `)
-  const title = autoName || name === '' ? (path || record.url || name) : name
-  // 标题已经是 path 时，第二行只补 host，避免同一路径出现两次
-  const subPath = summary == null ? '' : title === path ? summary.host : `${summary.host}${summary.path}`
-  const ignoreKeys = summary?.ignoredKeys ?? []
-  const variantCount = record.variants?.length ?? 0
-  const active = record.activeVariantId != null
-  const warning = warnings[0] ?? null
-  return {
-    record,
-    summary,
-    subPath,
-    ignoreKeys,
-    variantCount,
-    active,
-    warning,
-    title,
-    titleHint: record.url || name || path,
-    statusCode: response.statusCode,
-    statusOk: response.statusCode == 200,
-    warningExtra: Math.max(0, warnings.length - 1),
-  }
-}))
-
-function levelTagType(level: string): 'primary' | 'success' | 'warning' | 'danger' {
-  if (level === 'strict') return 'danger'
-  if (level === 'standard') return 'primary'
-  if (level === 'loose') return 'success'
-  return 'warning'
-}
-
-// 方法用小色块区分，便于在列表中按请求类型快速扫读
-function methodTagType(method: string): 'primary' | 'success' | 'warning' | 'danger' | 'default' {
-  const value = String(method ?? '').toUpperCase()
-  if (value === 'GET') return 'primary'
-  if (value === 'POST') return 'success'
-  if (value === 'DELETE') return 'danger'
-  if (MOCK_ANY_METHOD === value) return 'warning'
-  return 'default'
-}
-
-function warningTagType(type: string): 'danger' | 'warning' | 'default' {
-  if (type === 'duplicate') return 'danger'
-  if (type === 'shadowed' || type === 'unreachable') return 'warning'
-  return 'default'
-}
+const recordRows = computed(() => recordList.value.map(recordRowOf))
 
 const sortOptions = computed(() => [
   { value: 'updated', label: t('mock.list.sortUpdated') },
