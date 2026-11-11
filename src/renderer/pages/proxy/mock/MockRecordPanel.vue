@@ -100,9 +100,10 @@ import { useI18n } from 'vue-i18n'
 import { scrollOptions } from '../../../common/scroll'
 import { describeMockSaveError } from './save-error'
 import { cloneRecord } from './record'
-import type { MockRecordHistoryEntry } from './record.history'
-import { listRecordHistory, pushRecordHistory, removeRecordHistory } from './record.history'
-import { findRecordForRequest, MockMgrTarget, RecordRequestResult, recordRequestToRule } from './recording'
+import {
+  findRecordForRequest, listRecordHistory, MockMgrTarget, MockRecordHistoryEntry, pushRecordHistory,
+  RecordRequestResult, recordRequestToRule, removeRecordHistory,
+} from './recording'
 import { readRecentRuleId, rememberRule } from './rule.recent'
 
 const props = defineProps({
