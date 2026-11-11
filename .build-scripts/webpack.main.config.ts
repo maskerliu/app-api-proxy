@@ -21,7 +21,7 @@ class MainConfig extends BaseConfig {
   target: Configuration['target'] = 'electron-main'
   entry: Configuration['entry'] = {
     main: path.join(dirname, '../src/main/index.ts'),
-    preload: path.join(dirname, '../src/main/Preload.ts')
+    preload: path.join(dirname, '../src/main/preload.ts')
   }
   externals: Configuration['externals'] = [...Object.keys(pkg.dependencies).filter(d => !whiteListedModules.includes(d))]
 
