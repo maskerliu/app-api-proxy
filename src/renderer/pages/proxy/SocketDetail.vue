@@ -108,7 +108,7 @@ import { copyToClipboard } from '../../common/clipboard'
 import { toKeyValueEntries } from '../../common/headerUtil'
 import MiniSelect from '../components/MiniSelect.vue'
 import VueAceEditor from '../components/VueAceEditor.vue'
-import { dirIcon, frameCategory, frameContent, framePreview, socketStatsOf, socketStatusOf } from './socket.helper'
+import { dirIcon, frameCategory, frameContent, framePreview, socketStatsOf, socketStatusOf } from './socket'
 import { formatBytes, formatElapsed, formatFrameOffset } from '../../common/format'
 
 const props = defineProps({

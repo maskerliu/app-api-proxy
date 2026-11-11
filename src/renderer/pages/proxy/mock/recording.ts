@@ -1,6 +1,6 @@
 import { getMockRecordByUrl, matchMockRecord, ProxyMock, saveMockRecord, saveMockRule } from '@shared'
-import { normalizeErrorText } from './mock.save-error'
-import { cloneRecord, recordFromRequest } from './mock.record'
+import { normalizeErrorText } from './save-error'
+import { cloneRecord, recordFromRequest } from './record'
 
 /** 打开规则管理器时的定位上下文；record 用于录制成功后的「查看」深链 */
 export interface MockMgrTarget {

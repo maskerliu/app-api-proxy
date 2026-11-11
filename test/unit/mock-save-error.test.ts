@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import {
   MOCK_CONFLICT_CODES, MOCK_ERROR_CODES, MOCK_SERVER_CODES, MOCK_VALIDATION_CODES, MockError,
 } from '@shared/mock.errors'
-import { describeMockSaveError, normalizeErrorText } from '@renderer/pages/proxy/mock/mock.save-error'
+import { describeMockSaveError, normalizeErrorText } from '@renderer/pages/proxy/mock/save-error'
 
 describe('mock 保存失败分型', () => {
   it('码表三分组互不重叠并等于全表', () => {

@@ -4,7 +4,7 @@ import { ProxyMock } from '@shared/proxy.models'
 import {
   levelTagType, methodTagType, recordRowOf, warningTagType,
 } from '@renderer/pages/proxy/mock/record.row'
-import { recordSnapshot } from '@renderer/pages/proxy/mock/mock.record'
+import { recordSnapshot } from '@renderer/pages/proxy/mock/record'
 import { condition, makeMatch, makeRecord } from './fixtures'
 
 function matched(input = {}, recordInput = {}) {

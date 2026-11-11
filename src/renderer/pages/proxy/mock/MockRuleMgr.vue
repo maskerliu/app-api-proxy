@@ -245,10 +245,10 @@ import { useI18n } from 'vue-i18n'
 import MiniSelect from '../../components/MiniSelect.vue'
 import { scrollOptions } from '../../../common/scroll'
 import MockRecordEditor from './MockRecordEditor.vue'
-import { matchesKeyword, sortRecords, warningLabelKey } from './match.helper'
+import { matchesKeyword, sortRecords, warningLabelKey } from './match'
 import { levelTagType, methodTagType, recordRowOf, warningTagType } from './record.row'
-import { describeMockSaveError, normalizeErrorText } from './mock.save-error'
-import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './mock.record'
+import { describeMockSaveError, normalizeErrorText } from './save-error'
+import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import { findRecordByUrl, MockMgrTarget } from './recording'
 
 const { t } = useI18n()

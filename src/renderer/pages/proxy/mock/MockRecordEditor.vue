@@ -117,7 +117,7 @@ import { useI18n } from 'vue-i18n'
 import VueAceEditor from '../../components/VueAceEditor.vue'
 import MockMatchTab from './MockMatchTab.vue'
 import MockResponseForm from './MockResponseForm.vue'
-import { createVariant, toRawJson } from './mock.record'
+import { createVariant, toRawJson } from './record'
 
 const record = defineModel<ProxyMock.MockRecord>('record', { required: true })
 const props = defineProps<{

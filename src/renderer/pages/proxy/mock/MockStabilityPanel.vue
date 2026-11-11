@@ -86,7 +86,7 @@ import type { MockMatchSuggestion } from '@shared/mock.models'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RISK_KEYS, SEMANTIC_KEYS } from './match.helper'
+import { RISK_KEYS, SEMANTIC_KEYS } from './match'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { MockMatchSuggestion } from '@shared/mock.models'
-import { diffLinesOf, ignoreSourceOf, previewLevel } from '@renderer/pages/proxy/mock/match.helper'
-import type { LevelPresetDiff, LevelPresetPreview } from '@renderer/pages/proxy/mock/match.helper'
+import { diffLinesOf, ignoreSourceOf, previewLevel } from '@renderer/pages/proxy/mock/match'
+import type { LevelPresetDiff, LevelPresetPreview } from '@renderer/pages/proxy/mock/match'
 import { condition, headerCondition, makeMatch, makeRecord } from './fixtures'
 
 // 只关心「哪个 key 落到哪句文案」，所以把 t 换成 key + 参数的可读形式
