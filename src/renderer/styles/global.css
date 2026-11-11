@@ -10,49 +10,49 @@
    ========================================================================== */
 
 :root {
-  --mono-font: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+  --app-mono-font: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
 
   /* 间距档位：全部由正文字号推导，切换字号时等比缩放。乘数 K 与字号 9（md=13px）下的像素值：
      xs .2=2.6 / sm .3=3.9 / tight .4=5.2 / md .5=6.5 / lg .6=7.8 / xl .8=10.4
      / 2xl .9=11.7 / 3xl 1.2=15.6 / 4xl 1.5=19.5
      tight~xl 是控件与行内的密排档，2xl~4xl 是区块级留白；取值由既有字面量反推，
      新写间距时就近取档，不要再手抄 calc(var(--van-font-size-md) * N)。 */
-  --sp-xl: calc(var(--van-font-size-md) * 0.8);
-  --sp-2xl: calc(var(--van-font-size-md) * 0.9);
-  --sp-3xl: calc(var(--van-font-size-md) * 1.2);
-  --sp-4xl: calc(var(--van-font-size-md) * 1.5);
-  --sp-lg: calc(var(--van-font-size-md) * 0.6);
-  --sp-md: calc(var(--van-font-size-md) * 0.5);
-  --sp-tight: calc(var(--van-font-size-md) * 0.4);
-  --sp-sm: calc(var(--van-font-size-md) * 0.3);
-  --sp-xs: calc(var(--van-font-size-md) * 0.2);
+  --app-sp-xl: calc(var(--van-font-size-md) * 0.8);
+  --app-sp-2xl: calc(var(--van-font-size-md) * 0.9);
+  --app-sp-3xl: calc(var(--van-font-size-md) * 1.2);
+  --app-sp-4xl: calc(var(--van-font-size-md) * 1.5);
+  --app-sp-lg: calc(var(--van-font-size-md) * 0.6);
+  --app-sp-md: calc(var(--van-font-size-md) * 0.5);
+  --app-sp-tight: calc(var(--van-font-size-md) * 0.4);
+  --app-sp-sm: calc(var(--van-font-size-md) * 0.3);
+  --app-sp-xs: calc(var(--van-font-size-md) * 0.2);
 
   /* 面板沟道：与 Vant inset 分组的外边距同源（store 里 cellGroupInsetPadding 读的就是它），
      刻意保持恒定不随字号缩放——卡片外缘要和 cell-group 卡片外缘严格对齐，
-     高度上的 calc(100% - var(--card-gutter) * 2) 也与这个值成对。 */
-  --card-gutter: 5px;
+     高度上的 calc(100% - var(--app-card-gutter) * 2) 也与这个值成对。 */
+  --app-card-gutter: 5px;
 
   /* 方法色块（HTTP 方法首字母方块）：ProxyRecordSnap 的记录行与 MockRuleMgr 的记录条目共用这一对取值，
      原先两处各写死 22px/11px 并靠注释互相提醒同步。地板取原来的写死值：字号 7 由地板接管（仍是 22/11），
      字号 9 为 22.1/11.05（与写死值差 0.1px，不可辨），字号 10 放大到 23.8/11.9，让小方块与 14px 标题行盒重新拉开距离。
      乘数写 2 位小数是刻意的：1 位小数的邻值里 0.8 在字号 10 只有 11.2（几乎不放大），0.9 在字号 9 就到 11.7（超出 0.6px 容差）。 */
-  --method-square: max(22px, calc(var(--van-font-size-md) * 1.7));
-  --method-square-font: max(11px, calc(var(--van-font-size-md) * 0.85));
+  --app-method-square: max(22px, calc(var(--van-font-size-md) * 1.7));
+  --app-method-square-font: max(11px, calc(var(--van-font-size-md) * 0.85));
 
   /* 弹层宽度档位 */
-  --popup-w-lg: min(80vw, 1200px);
-  --popup-w-md: min(70vw, 960px);
+  --app-popup-w-lg: min(80vw, 1200px);
+  --app-popup-w-md: min(70vw, 960px);
 
   /* key 列宽口径：只读键值网格与响应头编辑行的 key 输入框共用同一个右缘；
      随字号缩放，约容 21 个等宽字符，最窄也留给值列一半 */
-  --header-key-width: min(calc(var(--van-font-size-md) * 12), 50%);
+  --app-header-key-width: min(calc(var(--van-font-size-md) * 12), 50%);
 
   /* Mock 规则管理器记录列宽口径：头部搜索列与主体记录列共用同一条表达式（原先两处各写 min(300px,34%)）。
      地板 300px 就是原值，字号 9 仍是 300，字号 10 放宽到 md*23=322。
      封顶百分比从 34% 提到 38%：34% 在包含块窄于约 950px 时会先于地板生效，把字号 10 的放宽又按回去；
      代价是包含块窄于约 880px 时（字号 9 也会触发）这一列比原先宽若干像素，属于窄窗口的次要路径。
      百分比按各自包含块解析，两个使用点的包含块宽度接近但不相等，这一点与改写前一致。 */
-  --record-pane-width: min(max(300px, calc(var(--van-font-size-md) * 23)), 38%);
+  --app-record-pane-width: min(max(300px, calc(var(--van-font-size-md) * 23)), 38%);
 
   /* 统一圆角（覆盖 Vant 默认 4px，与 store 中 radiusMd 一致） */
   --app-radius-sm: var(--van-radius-sm);
@@ -60,12 +60,12 @@
   --app-radius-lg: var(--van-radius-lg);
 
   /* 空状态图标尺寸 */
-  --empty-sm: 64px;
-  --empty-md: 96px;
-  --empty-lg: 120px;
+  --app-empty-sm: 64px;
+  --app-empty-md: 96px;
+  --app-empty-lg: 120px;
 
   /* 详情页顶部间距：HTTP / WebSocket / Statistics 统一 */
-  --detail-top-gap: var(--van-padding-lg);
+  --app-detail-top-gap: var(--van-padding-lg);
 }
 
 /* ---- 页面级容器：全屏居中卡片布局（Onboarding / Diagnostic 共用） ---- */
@@ -114,11 +114,11 @@
 
 .header-list {
   display: grid;
-  grid-template-columns: var(--header-key-width) minmax(0, 1fr);
-  column-gap: var(--sp-3xl);
-  row-gap: var(--sp-md);
-  padding: var(--sp-tight) var(--sp-3xl);
-  font-family: var(--mono-font);
+  grid-template-columns: var(--app-header-key-width) minmax(0, 1fr);
+  column-gap: var(--app-sp-3xl);
+  row-gap: var(--app-sp-md);
+  padding: var(--app-sp-tight) var(--app-sp-3xl);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
   user-select: text;
 }
@@ -166,5 +166,5 @@
 /* ---- 操作按钮区：弹窗/面板底部按钮行统一（结构；上下文间距由使用方覆盖） ---- */
 
 .actions-bar {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
 }

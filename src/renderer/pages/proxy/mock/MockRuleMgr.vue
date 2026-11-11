@@ -1,6 +1,6 @@
 <template>
   <van-row class="mgr-content">
-    <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - var(--card-gutter) * 2);"
+    <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - var(--app-card-gutter) * 2);"
       :style="{ paddingTop: isWeb ? '0' : 'calc(var(--van-font-size-md) * 0.8)' }">
       <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
@@ -848,7 +848,7 @@ async function onRecordDeleteConfirm() {
   /* van-row 默认 wrap，列方向下高度超出弹层时会把主体换到右侧列并移出可视区 */
   flex-wrap: nowrap;
   position: relative;
-  width: var(--popup-w-lg);
+  width: var(--app-popup-w-lg);
   min-width: min(375px, 100vw);
   max-width: 100vw;
   height: 100vh;
@@ -865,7 +865,7 @@ async function onRecordDeleteConfirm() {
 .rule-search-col {
   /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表宽度减去左右外边距 */
   flex: none;
-  width: calc(var(--record-pane-width) - var(--sp-xl));
+  width: calc(var(--app-record-pane-width) - var(--app-sp-xl));
   /* 与右侧两行高度的规则信息居中对齐 */
   display: flex;
   align-items: center;
@@ -889,7 +889,7 @@ async function onRecordDeleteConfirm() {
 .record-pane {
   display: flex;
   flex-direction: column;
-  width: var(--record-pane-width);
+  width: var(--app-record-pane-width);
   /* 列表自带 5px 外边距，撑满主体高度后底边才能与右侧编辑器对齐 */
   height: 100%;
   min-height: 0;
@@ -897,7 +897,7 @@ async function onRecordDeleteConfirm() {
 
 .record-pane-head {
   flex: none;
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   /* 左侧与筛选行搜索图标对齐：筛选 10px + 输入框 8px；右侧与单元格内边距对齐 */
   padding: calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 1.5) calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 1.4);
 }
@@ -911,7 +911,7 @@ async function onRecordDeleteConfirm() {
 /* 列表头的小按钮高度与内边距随全局字号缩放，图标继承按钮字号 */
 .record-pane-head :deep(.van-button--mini) {
   height: calc(var(--van-font-size-md) * 1.9);
-  padding: 0 var(--sp-sm);
+  padding: 0 var(--app-sp-sm);
   border-radius: calc(var(--van-font-size-md) * 0.3);
 }
 
@@ -920,8 +920,8 @@ async function onRecordDeleteConfirm() {
 }
 
 .record-filter {
-  gap: var(--sp-md);
-  padding: 0 var(--sp-xl) var(--sp-sm);
+  gap: var(--app-sp-md);
+  padding: 0 var(--app-sp-xl) var(--app-sp-sm);
   /* 搜索框与筛选下拉共享同一行高，字号切换时始终对齐 */
   --record-row-h: calc(var(--van-font-size-md) * 2.3);
 }
@@ -943,7 +943,7 @@ async function onRecordDeleteConfirm() {
 }
 
 .record-field :deep(.van-field__left-icon) {
-  margin-right: var(--sp-tight);
+  margin-right: var(--app-sp-tight);
   color: var(--van-text-color-3);
 }
 
@@ -958,8 +958,8 @@ async function onRecordDeleteConfirm() {
 
 .record-limit {
   flex: none;
-  margin: 0 var(--sp-tight) var(--sp-sm);
-  padding: var(--sp-sm) var(--sp-lg);
+  margin: 0 var(--app-sp-tight) var(--app-sp-sm);
+  padding: var(--app-sp-sm) var(--app-sp-lg);
   /* 限额提示是告警文案，不应落在最小号 */
   font-size: var(--van-font-size-sm);
 }
@@ -1027,17 +1027,17 @@ async function onRecordDeleteConfirm() {
   min-width: 0;
 }
 
-/* 方法色块：边长与字号取自全局 --method-square*，与 ProxyRecordSnap 的 .method-tag 同一来源，
+/* 方法色块：边长与字号取自全局 --app-method-square*，与 ProxyRecordSnap 的 .method-tag 同一来源，
    不再需要「改一边记得改另一边」；圆角仍是 Vant van-tag 的默认 2px。 */
 .record-method {
   flex: none;
-  min-width: var(--method-square);
-  height: var(--method-square);
+  min-width: var(--app-method-square);
+  height: var(--app-method-square);
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--method-square-font);
+  font-size: var(--app-method-square-font);
   font-weight: 700;
   line-height: 1;
 }
@@ -1057,7 +1057,7 @@ async function onRecordDeleteConfirm() {
 
 .record-status {
   flex: none;
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   font-weight: 600;
 }
 
@@ -1116,7 +1116,7 @@ async function onRecordDeleteConfirm() {
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--van-text-color-3);
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
 }
 
 .record-meta {
@@ -1182,7 +1182,7 @@ async function onRecordDeleteConfirm() {
   min-width: 0;
   height: calc(100% - calc(var(--van-font-size-md) * 0.8));
   /* 左侧列表有外边距，这里同步下移，两侧底边才能对齐 */
-  padding: 0 var(--sp-tight);
+  padding: 0 var(--app-sp-tight);
   position: relative;
 }
 
@@ -1193,7 +1193,7 @@ async function onRecordDeleteConfirm() {
 
 /* 规则状态收拢在头部：名称后的标签是唯一状态说明，避免与开关重复 */
 .rule-head-title {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   min-width: 0;
 }
 
@@ -1209,8 +1209,8 @@ async function onRecordDeleteConfirm() {
 }
 
 .rule-mock-switch {
-  gap: var(--sp-md);
-  margin-left: var(--sp-xl);
+  gap: var(--app-sp-md);
+  margin-left: var(--app-sp-xl);
 }
 
 .rule-mock-switch-label {
@@ -1238,14 +1238,14 @@ async function onRecordDeleteConfirm() {
 }
 
 .conflict-message {
-  padding: var(--sp-2xl) var(--sp-3xl) 0;
+  padding: var(--app-sp-2xl) var(--app-sp-3xl) 0;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
   line-height: 1.5;
 }
 
 .conflict-actions {
-  padding: var(--sp-3xl);
+  padding: var(--app-sp-3xl);
 }
 
 .mgr-content :deep(.van-popover__wrapper) {
@@ -1260,11 +1260,11 @@ async function onRecordDeleteConfirm() {
 
 .rule-cancel-icon {
   font-size: calc(var(--van-font-size-md) * 1.5);
-  margin-right: var(--sp-xl);
+  margin-right: var(--app-sp-xl);
 }
 
 .rule-head-cell :deep(.van-cell) {
-  padding: var(--sp-tight) var(--sp-xl);
+  padding: var(--app-sp-tight) var(--app-sp-xl);
   flex-wrap: nowrap;
 }
 
@@ -1284,7 +1284,7 @@ async function onRecordDeleteConfirm() {
 
 .result-action-icon {
   font-size: calc(var(--van-font-size-md) * 1.2);
-  padding: var(--sp-tight);
+  padding: var(--app-sp-tight);
   border-radius: calc(var(--van-font-size-md) * 0.4);
   cursor: pointer;
   transition: background-color 0.15s;
@@ -1325,7 +1325,7 @@ async function onRecordDeleteConfirm() {
 .rule-head-actions {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-tight);
+  gap: var(--app-sp-tight);
 }
 
 .rule-head-col :deep(.van-cell__title) {
@@ -1353,7 +1353,7 @@ async function onRecordDeleteConfirm() {
   align-items: stretch;
   align-self: stretch;
   height: var(--van-search-input-height);
-  padding: 0 var(--sp-sm);
+  padding: 0 var(--app-sp-sm);
   cursor: default;
 }
 

@@ -378,11 +378,11 @@ onUnmounted(() => {
 .record-panel {
   box-sizing: border-box;
   width: min(340px, calc(100vw - 32px));
-  padding: var(--sp-xl) var(--sp-2xl);
+  padding: var(--app-sp-xl) var(--app-sp-2xl);
 }
 
 .record-panel-head {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
 }
 
 .record-panel-title {
@@ -401,12 +401,12 @@ onUnmounted(() => {
 }
 
 .record-panel-url {
-  margin-top: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-lg);
+  margin-top: var(--app-sp-md);
+  padding: var(--app-sp-sm) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
   color: var(--van-text-color-2);
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-xs);
   white-space: nowrap;
   overflow: hidden;
@@ -414,21 +414,21 @@ onUnmounted(() => {
 }
 
 .record-rule-search {
-  margin-top: var(--sp-lg);
-  padding: var(--sp-xs) 0;
+  margin-top: var(--app-sp-lg);
+  padding: var(--app-sp-xs) 0;
   font-size: var(--van-font-size-sm);
   --van-cell-vertical-padding: 0;
 }
 
 .record-rule-list {
   max-height: 160px;
-  margin-top: var(--sp-sm);
+  margin-top: var(--app-sp-sm);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
 }
 
 .record-rule-list :deep(.van-cell) {
-  padding: var(--sp-md) var(--sp-xl);
+  padding: var(--app-sp-md) var(--app-sp-xl);
 }
 
 .record-rule-list :deep(.van-cell__title) {
@@ -442,7 +442,7 @@ onUnmounted(() => {
 .record-rule-title {
   display: flex;
   align-items: baseline;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   min-width: 0;
 }
 
@@ -470,21 +470,21 @@ onUnmounted(() => {
 }
 
 .record-rule-empty {
-  padding: var(--sp-2xl) var(--sp-lg);
+  padding: var(--app-sp-2xl) var(--app-sp-lg);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   text-align: center;
 }
 
 .record-target {
-  margin-top: var(--sp-lg);
+  margin-top: var(--app-sp-lg);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
 .record-hint {
-  margin-top: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-lg);
+  margin-top: var(--app-sp-md);
+  padding: var(--app-sp-sm) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
   font-size: var(--van-font-size-xs);
   line-height: 1.4;
@@ -501,12 +501,12 @@ onUnmounted(() => {
 }
 
 .record-panel-actions {
-  margin-top: var(--sp-xl);
+  margin-top: var(--app-sp-xl);
 }
 
 .record-history {
-  margin-top: var(--sp-xl);
-  padding-top: var(--sp-lg);
+  margin-top: var(--app-sp-xl);
+  padding-top: var(--app-sp-lg);
   border-top: 1px solid var(--van-border-color);
 }
 
@@ -516,14 +516,14 @@ onUnmounted(() => {
 }
 
 .record-history-row {
-  gap: var(--sp-lg);
-  margin-top: var(--sp-md);
+  gap: var(--app-sp-lg);
+  margin-top: var(--app-sp-md);
 }
 
 .record-history-info {
   display: flex;
   align-items: baseline;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex: 1 1 auto;
   min-width: 0;
 }

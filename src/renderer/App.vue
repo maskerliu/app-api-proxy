@@ -135,7 +135,7 @@ function onOpenDebugPanel() {
 }
 
 .border-bg {
-  margin: var(--card-gutter);
+  margin: var(--app-card-gutter);
   padding: 0;
   box-shadow: 0px 12px 8px -12px #000;
 }

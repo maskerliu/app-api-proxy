@@ -347,11 +347,11 @@ async function finish() {
 <style scoped>
 .onboarding-head {
   flex: none;
-  margin-bottom: var(--sp-2xl);
+  margin-bottom: var(--app-sp-2xl);
 }
 
 .onboarding-title {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   font-size: var(--van-font-size-lg);
   font-weight: 600;
 }
@@ -362,7 +362,7 @@ async function finish() {
 }
 
 .onboarding-subtitle {
-  margin: var(--sp-md) 0 var(--sp-xl);
+  margin: var(--app-sp-md) 0 var(--app-sp-xl);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -370,7 +370,7 @@ async function finish() {
 .onboarding-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding-right: var(--sp-sm);
+  padding-right: var(--app-sp-sm);
 }
 
 /* 视口默认按内容撑高，保持步骤面板按滚动区高度铺满的原有布局 */
@@ -380,12 +380,12 @@ async function finish() {
 }
 
 .step-panel {
-  padding-top: var(--sp-sm);
+  padding-top: var(--app-sp-sm);
 }
 
 .step-head {
-  gap: var(--sp-md);
-  margin-bottom: var(--sp-sm);
+  gap: var(--app-sp-md);
+  margin-bottom: var(--app-sp-sm);
   font-size: var(--van-font-size-lg);
   font-weight: 600;
 }
@@ -400,38 +400,38 @@ async function finish() {
 }
 
 .step-desc {
-  margin-bottom: var(--sp-2xl);
+  margin-bottom: var(--app-sp-2xl);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
   line-height: 1.6;
 }
 
 .step-actions {
-  gap: var(--sp-xl);
-  margin-top: var(--sp-2xl);
+  gap: var(--app-sp-xl);
+  margin-top: var(--app-sp-2xl);
 }
 
 .proxy-address,
 .register-url {
-  margin-top: var(--sp-lg);
-  padding: var(--sp-lg) var(--sp-xl);
+  margin-top: var(--app-sp-lg);
+  padding: var(--app-sp-lg) var(--app-sp-xl);
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
   cursor: pointer;
 }
 
 .register-url {
-  margin-top: var(--sp-xl);
+  margin-top: var(--app-sp-xl);
   width: 100%;
   box-sizing: border-box;
   text-align: center;
 }
 
 .client-grid {
-  gap: var(--sp-3xl);
+  gap: var(--app-sp-3xl);
 }
 
 .client-col {
@@ -447,7 +447,7 @@ async function finish() {
 }
 
 .col-title {
-  margin: var(--sp-md) 0;
+  margin: var(--app-sp-md) 0;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -483,20 +483,20 @@ async function finish() {
 
   .client-step > .van-notice-bar {
     flex: none;
-    margin-top: var(--sp-lg);
+    margin-top: var(--app-sp-lg);
   }
 }
 
 .snippet-tabs {
-  margin-bottom: var(--sp-sm);
+  margin-bottom: var(--app-sp-sm);
 }
 
 .snippet {
   position: relative;
   box-sizing: border-box;
-  margin: 0 0 var(--sp-lg);
+  margin: 0 0 var(--app-sp-lg);
   height: 160px;
-  padding: var(--sp-md) 0 var(--sp-md) var(--sp-md);
+  padding: var(--app-sp-md) 0 var(--app-sp-md) var(--app-sp-md);
   overflow: hidden;
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
@@ -507,7 +507,7 @@ async function finish() {
 pre.snippet {
   height: auto;
   max-height: calc(var(--van-font-size-md) * 11.5);
-  padding-right: var(--sp-md);
+  padding-right: var(--app-sp-md);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
@@ -532,28 +532,28 @@ pre.snippet {
 }
 
 .copy-btn {
-  margin-bottom: var(--sp-lg);
+  margin-bottom: var(--app-sp-lg);
 }
 
 .latest-request {
-  margin: var(--sp-xl) 0;
-  padding: var(--sp-xl) var(--sp-2xl);
+  margin: var(--app-sp-xl) 0;
+  padding: var(--app-sp-xl) var(--app-sp-2xl);
   border-radius: var(--van-radius-md);
   background-color: var(--van-gray-2);
 }
 
 .latest-line {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
 }
 
 .latest-url {
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   word-break: break-all;
 }
 
 .latest-meta {
-  gap: var(--sp-2xl);
-  margin-top: var(--sp-md);
+  gap: var(--app-sp-2xl);
+  margin-top: var(--app-sp-md);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -564,7 +564,7 @@ pre.snippet {
 }
 
 .body-label {
-  margin: var(--sp-xl) 0 var(--sp-md);
+  margin: var(--app-sp-xl) 0 var(--app-sp-md);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -573,13 +573,13 @@ pre.snippet {
   width: 100%;
   /* 高度与字号挂钩：原来的 150px 在字号 10 下只能看到两行 JSON */
   height: calc(var(--van-font-size-md) * 11.5);
-  padding: var(--sp-md);
+  padding: var(--app-sp-md);
   box-sizing: border-box;
   border: 1px solid var(--van-gray-3);
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-1);
   color: var(--van-text-color);
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   /* 与所在页其他正文同级，不再用全站最小的 xs */
   font-size: var(--van-font-size-sm);
   line-height: 1.6;
@@ -588,8 +588,8 @@ pre.snippet {
 
 .onboarding-foot {
   flex: none;
-  margin-top: var(--sp-3xl);
-  padding-top: var(--sp-2xl);
+  margin-top: var(--app-sp-3xl);
+  padding-top: var(--app-sp-2xl);
   border-top: 1px solid var(--van-gray-2);
 }
 </style>

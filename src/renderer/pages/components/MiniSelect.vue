@@ -243,12 +243,12 @@ function stackingZ(el: HTMLElement) {
 }
 
 .mini-select :deep(.van-dropdown-menu__item) {
-  padding: 0 var(--sp-sm);
+  padding: 0 var(--app-sp-sm);
 }
 
 .mini-select :deep(.van-dropdown-menu__title) {
   max-width: 100%;
-  padding: 0 var(--sp-3xl) 0 var(--sp-sm);
+  padding: 0 var(--app-sp-3xl) 0 var(--app-sp-sm);
   /* 选中值跟随所在行的字号，不再单独定格 */
   font-size: inherit;
   line-height: calc(var(--van-font-size-md) * 1.5);
@@ -263,7 +263,7 @@ function stackingZ(el: HTMLElement) {
 .mini-select--tagged :deep(.van-dropdown-menu__title .van-ellipsis) {
   display: flex;
   align-items: center;
-  gap: var(--sp-sm);
+  gap: var(--app-sp-sm);
 }
 
 .mini-select--tagged :deep(.mini-select-text) {
@@ -337,7 +337,7 @@ function stackingZ(el: HTMLElement) {
 :global(.mini-select-popup--tagged .van-dropdown-item__option .van-cell__title) {
   display: flex;
   align-items: center;
-  gap: var(--sp-sm);
+  gap: var(--app-sp-sm);
 }
 
 :global(.mini-select-popup--tagged .mini-select-text) {

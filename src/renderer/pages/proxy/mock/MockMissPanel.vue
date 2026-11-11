@@ -106,18 +106,18 @@ function buildMarkdown(): string {
 
 <style scoped>
 .miss-panel {
-  padding: var(--sp-lg);
+  padding: var(--app-sp-lg);
   border: 1px solid var(--van-warning-color);
   border-radius: var(--van-radius-lg);
   background: color-mix(in srgb, var(--van-warning-color) 8%, transparent);
 }
 
 .miss-head {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
 }
 
 .miss-title {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex: 1 1 auto;
   min-width: 0;
   color: var(--van-warning-color);
@@ -129,8 +129,8 @@ function buildMarkdown(): string {
 }
 
 .miss-degraded {
-  margin-top: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-lg);
+  margin-top: var(--app-sp-md);
+  padding: var(--app-sp-sm) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
   background: color-mix(in srgb, var(--van-warning-color) 16%, transparent);
   color: var(--van-warning-color);
@@ -138,18 +138,18 @@ function buildMarkdown(): string {
 }
 
 .miss-table {
-  margin-top: var(--sp-lg);
+  margin-top: var(--app-sp-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-xs);
+  gap: var(--app-sp-xs);
 }
 
 .miss-row {
   display: grid;
   grid-template-columns: calc(var(--van-font-size-md) * 4.9) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr);
   align-items: center;
-  gap: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-md);
+  gap: var(--app-sp-md);
+  padding: var(--app-sp-sm) var(--app-sp-md);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
   font-size: var(--van-font-size-sm);
@@ -169,7 +169,7 @@ function buildMarkdown(): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   word-break: break-all;
 }
 
@@ -186,7 +186,7 @@ function buildMarkdown(): string {
 }
 
 .miss-actions {
-  gap: var(--sp-md);
-  margin-top: var(--sp-lg);
+  gap: var(--app-sp-md);
+  margin-top: var(--app-sp-lg);
 }
 </style>

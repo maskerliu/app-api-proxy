@@ -437,9 +437,9 @@ async function copyRegisterUrl() {
      新增的 40% 封顶只在包含块窄于 850px 时才接管，而窗口 ≤900px 已切到上下堆叠（width:auto），
      所以字号 9 的观感与改写前一致，封顶只在中等窄窗口（约 900–950px）按回 364 以下。 */
   width: min(max(340px, calc(var(--van-font-size-md) * 26)), 40%);
-  height: calc(100% - var(--card-gutter) * 2);
+  height: calc(100% - var(--app-card-gutter) * 2);
   min-height: 0;
-  margin: var(--card-gutter);
+  margin: var(--app-card-gutter);
   /* 设备 chip、档位下拉、自定义数值框共用同一行高 */
   --delay-control-height: calc(var(--van-font-size-md) * 2.2);
 }
@@ -453,9 +453,9 @@ async function copyRegisterUrl() {
   flex-grow: 19;
   flex-basis: 50%;
   min-width: 375px;
-  height: calc(100% - var(--card-gutter) * 2);
+  height: calc(100% - var(--app-card-gutter) * 2);
   min-height: 0;
-  margin: var(--card-gutter) var(--sp-xs);
+  margin: var(--app-card-gutter) var(--app-sp-xs);
 }
 
 .right-panel [data-overlayscrollbars-content] {
@@ -464,7 +464,7 @@ async function copyRegisterUrl() {
 
 .left-panel-icon {
   font-size: 1.4rem;
-  margin: var(--sp-xs) var(--sp-md);
+  margin: var(--app-sp-xs) var(--app-sp-md);
   color: var(--van-gray-8)
 }
 
@@ -505,8 +505,8 @@ async function copyRegisterUrl() {
 .socket-empty-hint {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-md);
-  margin-top: var(--sp-sm);
+  gap: var(--app-sp-md);
+  margin-top: var(--app-sp-sm);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
   text-align: left;
@@ -522,15 +522,15 @@ async function copyRegisterUrl() {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  margin: var(--sp-tight) 0 0 0;
+  margin: var(--app-sp-tight) 0 0 0;
 }
 
 /* 全局 Mock 开关：状态与场景名同处一行，点击整行即可切换 */
 .mock-global-bar {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex: none;
-  margin-top: var(--sp-sm);
-  padding: var(--sp-xs) var(--sp-lg);
+  margin-top: var(--app-sp-sm);
+  padding: var(--app-sp-xs) var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
@@ -563,8 +563,8 @@ async function copyRegisterUrl() {
 
 /* 档位行：设备 chip 吃掉剩余宽度，档位下拉定宽；两个下拉共用同一行高 */
 .proxy-delay-bar {
-  gap: var(--sp-lg);
-  padding: var(--sp-lg) 0 var(--sp-sm) var(--sp-sm);
+  gap: var(--app-sp-lg);
+  padding: var(--app-sp-lg) 0 var(--app-sp-sm) var(--app-sp-sm);
   --mini-select-bar-height: var(--delay-control-height);
 }
 
@@ -576,8 +576,8 @@ async function copyRegisterUrl() {
 
 /* 自定义档位才展开的数值行：单位常驻，未应用点与应用按钮成对 */
 .proxy-delay-custom {
-  gap: var(--sp-lg);
-  padding: 0 0 var(--sp-lg) var(--sp-sm);
+  gap: var(--app-sp-lg);
+  padding: 0 0 var(--app-sp-lg) var(--app-sp-sm);
 }
 
 .proxy-delay-custom .delay-label {
@@ -593,7 +593,7 @@ async function copyRegisterUrl() {
   align-items: center;
   height: var(--delay-control-height);
   box-sizing: border-box;
-  padding: 0 var(--sp-tight);
+  padding: 0 var(--app-sp-tight);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
@@ -624,7 +624,7 @@ async function copyRegisterUrl() {
   flex: none;
   height: var(--delay-control-height);
   box-sizing: border-box;
-  padding: 0 var(--sp-xl);
+  padding: 0 var(--app-sp-xl);
   font-size: var(--van-font-size-sm);
 }
 
@@ -691,7 +691,7 @@ async function copyRegisterUrl() {
     width: auto;
     min-width: 0;
     height: 42%;
-    margin: var(--card-gutter);
+    margin: var(--app-card-gutter);
   }
 
   .right-panel {
@@ -700,7 +700,7 @@ async function copyRegisterUrl() {
     min-width: 0;
     height: auto;
     min-height: 0;
-    margin: var(--card-gutter);
+    margin: var(--app-card-gutter);
   }
 }
 
@@ -708,7 +708,7 @@ async function copyRegisterUrl() {
   text-decoration: underline;
   width: 300px;
   color: var(--van-text-color);
-  padding: var(--sp-tight);
+  padding: var(--app-sp-tight);
   font-size: var(--van-font-size-md);
   user-select: text;
   word-break: break-all;

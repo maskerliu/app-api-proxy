@@ -521,8 +521,8 @@ defineExpose({ focusField })
   --mini-select-bar-height: var(--match-control-height);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-lg);
-  padding-bottom: var(--sp-lg);
+  gap: var(--app-sp-lg);
+  padding-bottom: var(--app-sp-lg);
 }
 
 /* mini 按钮默认继承 xs，表单里统一提到 sm，高度也随字号一起变化 */
@@ -539,8 +539,8 @@ defineExpose({ focusField })
 }
 
 .level-bar {
-  gap: var(--sp-lg);
-  margin-top: var(--sp-lg);
+  gap: var(--app-sp-lg);
+  margin-top: var(--app-sp-lg);
 }
 
 .bar-label {
@@ -550,19 +550,19 @@ defineExpose({ focusField })
 
 .level-chips {
   display: flex;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex-wrap: wrap;
 }
 
 .level-hint {
-  margin: calc(var(--sp-xs) * -1) 0 0;
+  margin: calc(var(--app-sp-xs) * -1) 0 0;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
 
 .level-preview {
-  gap: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-md);
+  gap: var(--app-sp-md);
+  padding: var(--app-sp-sm) var(--app-sp-md);
   border: 1px solid var(--van-primary-color);
   border-radius: var(--van-radius-lg);
   background: color-mix(in srgb, var(--van-primary-color) 6%, transparent);
@@ -582,11 +582,11 @@ defineExpose({ focusField })
 
 .preview-tags {
   flex: 1;
-  gap: var(--sp-xs);
+  gap: var(--app-sp-xs);
 }
 
 .preview-tag {
-  padding: var(--sp-xs) var(--sp-lg);
+  padding: var(--app-sp-xs) var(--app-sp-lg);
   border-radius: var(--van-radius-sm);
   background: color-mix(in srgb, var(--van-primary-color) 12%, transparent);
   color: var(--van-text-color-2);
@@ -595,28 +595,28 @@ defineExpose({ focusField })
 }
 
 .preview-actions {
-  gap: var(--sp-xs);
+  gap: var(--app-sp-xs);
   flex-shrink: 0;
 }
 
 .section {
-  padding: var(--sp-lg);
+  padding: var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
 }
 
 .section-title {
-  gap: var(--sp-lg);
-  margin-bottom: var(--sp-md);
+  gap: var(--app-sp-lg);
+  margin-bottom: var(--app-sp-md);
   color: var(--van-text-color);
   font-size: var(--van-font-size-md);
   font-weight: 500;
 }
 
 .field-row {
-  gap: var(--sp-lg);
-  padding: var(--sp-xs) 0;
+  gap: var(--app-sp-lg);
+  padding: var(--app-sp-xs) 0;
 }
 
 .row-label {
@@ -638,7 +638,7 @@ defineExpose({ focusField })
   flex: 1 1 auto;
   min-width: 0;
   height: var(--match-control-height);
-  padding: 0 var(--sp-lg);
+  padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
@@ -682,8 +682,8 @@ defineExpose({ focusField })
 }
 
 .path-original {
-  gap: var(--sp-lg);
-  margin-top: var(--sp-sm);
+  gap: var(--app-sp-lg);
+  margin-top: var(--app-sp-sm);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
@@ -696,7 +696,7 @@ defineExpose({ focusField })
 }
 
 .inline-radio :deep(.van-radio) {
-  margin-right: var(--sp-xl);
+  margin-right: var(--app-sp-xl);
 }
 
 .inline-radio :deep(.van-radio__label) {
@@ -704,14 +704,14 @@ defineExpose({ focusField })
 }
 
 .sub-block {
-  margin-top: var(--sp-lg);
-  padding-top: var(--sp-lg);
+  margin-top: var(--app-sp-lg);
+  padding-top: var(--app-sp-lg);
   border-top: 1px dashed var(--van-border-color);
 }
 
 .sub-head {
-  gap: var(--sp-lg);
-  margin-bottom: var(--sp-sm);
+  gap: var(--app-sp-lg);
+  margin-bottom: var(--app-sp-sm);
 }
 
 .sub-title {
@@ -721,11 +721,11 @@ defineExpose({ focusField })
 
 /* 匹配条件用折叠面板，标题行贴合区块样式，内容区不额外缩进 */
 .condition-collapse :deep(.van-collapse-item > .van-cell) {
-  padding: var(--sp-xs) 0;
+  padding: var(--app-sp-xs) 0;
 }
 
 .condition-collapse :deep(.van-collapse-item__content) {
-  padding: var(--sp-sm) 0 0;
+  padding: var(--app-sp-sm) 0 0;
 }
 
 .condition-collapse :deep(.van-collapse-item__title) {
@@ -733,43 +733,43 @@ defineExpose({ focusField })
 }
 
 .tag-list {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   min-height: calc(var(--van-font-size-md) * 1.7);
 }
 
 .tag-list :deep(.van-tag) {
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
 }
 
 .add-row {
-  gap: var(--sp-md);
-  margin-top: var(--sp-md);
+  gap: var(--app-sp-md);
+  margin-top: var(--app-sp-md);
 }
 
 .add-input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--match-control-padding-y) var(--sp-lg);
+  padding: var(--match-control-padding-y) var(--app-sp-lg);
   line-height: var(--match-control-line-height);
   border-radius: var(--van-radius-md);
 }
 
 .empty-tip {
-  padding: var(--sp-xs) 0;
+  padding: var(--app-sp-xs) 0;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
 
 .condition-row {
-  gap: var(--sp-sm);
-  margin-bottom: var(--sp-sm);
+  gap: var(--app-sp-sm);
+  margin-bottom: var(--app-sp-sm);
 }
 
 .condition-key {
   flex: 0 0 32%;
   min-width: 0;
   height: var(--match-control-height);
-  padding: 0 var(--sp-lg);
+  padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
@@ -800,7 +800,7 @@ defineExpose({ focusField })
   flex: 1 1 auto;
   min-width: 0;
   height: var(--match-control-height);
-  padding: 0 var(--sp-lg);
+  padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
@@ -825,7 +825,7 @@ defineExpose({ focusField })
 
 .row-delete {
   flex: none;
-  padding: var(--sp-md);
+  padding: var(--app-sp-md);
   color: var(--van-danger-color);
   cursor: pointer;
 }
@@ -836,8 +836,8 @@ defineExpose({ focusField })
 }
 
 .switch-row {
-  gap: var(--sp-lg);
-  padding: var(--sp-xs) 0;
+  gap: var(--app-sp-lg);
+  padding: var(--app-sp-xs) 0;
 }
 
 /* 开关与输入框切换时保持行高不变，避免整行跳动 */
@@ -847,7 +847,7 @@ defineExpose({ focusField })
 
 .priority-input {
   width: calc(var(--van-font-size-md) * 7.4);
-  padding: 0 var(--sp-lg);
+  padding: 0 var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
@@ -867,8 +867,8 @@ defineExpose({ focusField })
 }
 
 .suggest-row {
-  gap: var(--sp-md);
-  margin-top: var(--sp-md);
+  gap: var(--app-sp-md);
+  margin-top: var(--app-sp-md);
 }
 
 .suggest-tag {
@@ -876,14 +876,14 @@ defineExpose({ focusField })
 }
 
 .test-row {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
 }
 
 .test-url {
   flex: 1 1 calc(var(--van-font-size-md) * 15.4);
   min-width: 0;
   height: var(--match-control-height);
-  padding: 0 var(--sp-lg);
+  padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
@@ -907,14 +907,14 @@ defineExpose({ focusField })
 }
 
 .test-error {
-  margin-top: var(--sp-md);
+  margin-top: var(--app-sp-md);
   color: var(--van-danger-color);
   font-size: var(--van-font-size-sm);
 }
 
 .test-hit {
-  margin-top: var(--sp-lg);
-  padding: var(--sp-lg);
+  margin-top: var(--app-sp-lg);
+  padding: var(--app-sp-lg);
   border: 1px solid var(--van-success-color);
   border-radius: var(--van-radius-lg);
   background: color-mix(in srgb, var(--van-success-color) 6%, transparent);
@@ -927,20 +927,20 @@ defineExpose({ focusField })
 }
 
 .test-hit-meta {
-  margin-top: var(--sp-xs);
+  margin-top: var(--app-sp-xs);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
 .explain-list {
-  margin-top: var(--sp-md);
+  margin-top: var(--app-sp-md);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-xs);
+  gap: var(--app-sp-xs);
 }
 
 .explain-row {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   font-size: var(--van-font-size-sm);
 }
 
@@ -950,7 +950,7 @@ defineExpose({ focusField })
 
 .explain-key {
   flex: none;
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
 }
 
 .explain-value {

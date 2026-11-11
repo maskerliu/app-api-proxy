@@ -39,12 +39,12 @@ function open(path: string) {
 
 <style scoped>
 .setting-cell-icon {
-  margin-left: var(--sp-3xl);
+  margin-left: var(--app-sp-3xl);
 }
 </style>
 <style scoped>
 .settings {
-  width: var(--popup-w-md);
+  width: var(--app-popup-w-md);
   min-width: min(375px, 100vw);
   max-width: 100vw;
   height: 100vh;

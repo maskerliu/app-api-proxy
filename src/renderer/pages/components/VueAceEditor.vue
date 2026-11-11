@@ -677,7 +677,7 @@ defineExpose({ syncFillHeight })
   box-sizing: border-box;
   width: 24px;
   height: 24px;
-  padding: var(--sp-sm);
+  padding: var(--app-sp-sm);
   border: 1px solid var(--van-border-color);
   border-radius: 4px;
   background: var(--van-background-2);
