@@ -135,7 +135,7 @@ function onOpenDebugPanel() {
 }
 
 .border-bg {
-  margin: 5px;
+  margin: var(--card-gutter);
   padding: 0;
   box-shadow: 0px 12px 8px -12px #000;
 }
@@ -172,7 +172,9 @@ function onOpenDebugPanel() {
 }
 
 .rule-mgr-cell-value {
-  flex: 0 0 120px !important;
+  /* 地板 120px 是原先写死的值：字号 9 不变，字号 10 放宽到 md*9.2=128.8，
+     不再把 Mock 规则头部的规则名挤成省略号 */
+  flex: 0 0 max(120px, calc(var(--van-font-size-md) * 9.2)) !important;
 }
 
 </style>

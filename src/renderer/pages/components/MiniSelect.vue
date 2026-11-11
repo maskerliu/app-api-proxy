@@ -1,37 +1,63 @@
 <template>
   <div ref="rootRef" class="mini-select"
-    :class="[`mini-select--font-${fontSize}`, { 'is-disabled': disabled, 'mini-select--up': opensUp }]"
+    :class="[`mini-select--font-${fontSize}`, { 'is-disabled': disabled, 'mini-select--up': opensUp, 'mini-select--tagged': hasTag }]"
     @pointerdown="prepareDirection">
     <van-dropdown-menu :overlay="false" :duration="0.15" :direction="opensUp ? 'up' : 'down'">
-      <van-dropdown-item :model-value="modelValue" :options="columns" :disabled="disabled"
+      <van-dropdown-item ref="itemRef" :model-value="modelValue" :options="hasTag ? [] : columns" :disabled="disabled"
         :title="selectedText == null ? placeholder : undefined" class="mini-select-popup"
-        :class="`mini-select-popup--font-${fontSize}`" teleport="body" :data-mini-select="popupId" @change="onChange"
-        @open="alignPopup" @opened="onOpened" @close="onClosing" />
+        :class="[`mini-select-popup--font-${fontSize}`, { 'mini-select-popup--tagged': hasTag }]" teleport="body"
+        :data-mini-select="popupId" @change="onChange" @open="onOpen" @opened="onOpened" @close="onClosing">
+        <!-- 带 tag 时触发条与选项行都由本组件排版：正文段交给省略号收缩，末尾标签固定不参与截断 -->
+        <template v-if="hasTag" #title>
+          <span class="mini-select-text">{{ selectedText ?? placeholder }}</span>
+          <span v-if="selectedTag" class="mini-select-tag">{{ selectedTag }}</span>
+        </template>
+        <template v-if="hasTag">
+          <van-cell v-for="it in options" :key="it.value"
+            class="van-dropdown-item__option van-haptics-feedback"
+            :class="{ 'van-dropdown-item__option--active': it.value === modelValue }" role="menuitem" clickable
+            :tabindex="it.value === modelValue ? 0 : -1" @click="pick(it.value)">
+            <template #title>
+              <span class="mini-select-text">{{ it.label }}</span>
+              <span v-if="it.tag" class="mini-select-tag">{{ it.tag }}</span>
+            </template>
+            <template #value>
+              <van-icon v-if="it.value === modelValue" class="van-dropdown-item__icon" name="success" />
+            </template>
+          </van-cell>
+        </template>
+      </van-dropdown-item>
     </van-dropdown-menu>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId } from 'vue'
 
 const props = withDefaults(defineProps<{
   modelValue?: string
-  options?: Array<{ label: string; value: string }>
+  // tag 是钉在文案末尾、不参与截断的一段（如「(本机)」），没有它时整条文案一起收缩
+  options?: Array<{ label: string; value: string; tag?: string }>
   placeholder?: string
   disabled?: boolean
   // 弹层选项的间距档位；选中值字号始终跟随所在行
   fontSize?: 'sm' | 'md'
+  // 弹层横向贴触发条哪一侧：行末的选择器用 end，才不会往右伸出窗口
+  align?: 'start' | 'end'
 }>(), {
   modelValue: '',
   options: () => [],
   placeholder: '',
   disabled: false,
   fontSize: 'sm',
+  align: 'start',
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'change', value: string): void
+  // 每次展开都通知使用方，供「打开时刷新选项」这类需求挂接
+  (e: 'open'): void
 }>()
 
 const rootRef = ref<HTMLElement>()
@@ -40,7 +66,22 @@ const popupId = useId()
 const opensUp = ref(false)
 const measuredHeight = ref(0)
 const columns = computed(() => (props.options ?? []).map(it => ({ text: it.label, value: it.value })))
+// 带 tag 时改由本组件渲染选项行：Vant 的 Cell title prop 只接受 string|number，
+// 把 VNode 塞进 option.text 虽然能渲染，但每次都会打一条 Invalid prop 警告
+const hasTag = computed(() => (props.options ?? []).some(it => !!it.tag))
 const selectedText = computed(() => props.options.find(it => it.value === props.modelValue)?.label ?? null)
+const selected = computed(() => props.options.find(it => it.value === props.modelValue))
+const selectedTag = computed(() => selected.value?.tag ?? '')
+
+// Vant 的 DropdownItem 把 toggle 暴露出来，自制选项行要点开后才收起面板
+const itemRef = ref<{ toggle: (show?: boolean) => void }>()
+
+function pick(value: string) {
+  itemRef.value?.toggle(false)
+  if (value === props.modelValue) return
+  emit('update:modelValue', value)
+  emit('change', value)
+}
 
 function baseFontSize(): number {
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--van-font-size-md')) || 13
@@ -63,6 +104,22 @@ function prepareDirection() {
   const spaceAbove = rect.top - 8
   const estimated = measuredHeight.value || columns.value.length * baseFontSize() * 2.8
   opensUp.value = estimated > spaceBelow && spaceAbove > spaceBelow
+}
+
+function onOpen() {
+  emit('open')
+  alignPopup()
+  // overlay=false 时 Vant 不再用遮罩层捕获外部点击，弹层会一直挂在屏幕上，这里自己补上
+  document.addEventListener('pointerdown', onDocPointerDown, true)
+}
+
+// 触发条与 teleport 到 body 的弹层都不算「外部」，其余任何位置按下都收起
+function onDocPointerDown(e: PointerEvent) {
+  const target = e.target as Node | null
+  if (target == null) return
+  if (rootRef.value?.contains(target)) return
+  if (popupEl()?.contains(target)) return
+  itemRef.value?.toggle(false)
 }
 
 function onChange(value: string) {
@@ -102,7 +159,9 @@ async function alignPopup() {
 
   const minWidth = baseFontSize() * 9.2
   const width = Math.min(Math.max(rect.width, naturalWidth, minWidth), window.innerWidth - 8)
-  popup.style.left = `${Math.max(4, Math.min(rect.left, window.innerWidth - width - 4))}px`
+  // end 档把弹层右缘贴住触发条右缘，再按视口收敛
+  const offset = props.align === 'end' ? rect.right - width : rect.left
+  popup.style.left = `${Math.max(4, Math.min(offset, window.innerWidth - width - 4))}px`
   popup.style.right = 'auto'
   popup.style.width = `${width}px`
   // 开合动画期间保持裁剪，滑入/滑出才不会飘到触发条外侧
@@ -142,9 +201,12 @@ function onOpened() {
 }
 
 function onClosing() {
+  document.removeEventListener('pointerdown', onDocPointerDown, true)
   const popup = popupEl()
   if (popup != null) popup.style.overflow = 'hidden'
 }
+
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDown, true))
 
 // teleport 后脱离原弹窗的层叠上下文，需要接着弹窗的 z-index 往上叠
 function stackingZ(el: HTMLElement) {
@@ -181,12 +243,12 @@ function stackingZ(el: HTMLElement) {
 }
 
 .mini-select :deep(.van-dropdown-menu__item) {
-  padding: 0 calc(var(--van-font-size-md) * 0.3);
+  padding: 0 var(--sp-sm);
 }
 
 .mini-select :deep(.van-dropdown-menu__title) {
   max-width: 100%;
-  padding: 0 calc(var(--van-font-size-md) * 1.2) 0 calc(var(--van-font-size-md) * 0.3);
+  padding: 0 var(--sp-3xl) 0 var(--sp-sm);
   /* 选中值跟随所在行的字号，不再单独定格 */
   font-size: inherit;
   line-height: calc(var(--van-font-size-md) * 1.5);
@@ -194,6 +256,26 @@ function stackingZ(el: HTMLElement) {
 
 .mini-select :deep(.van-dropdown-menu__title::after) {
   right: calc(var(--van-font-size-md) * 0.3);
+}
+
+/* 带 tag 的选项：Vant 把标题文字包在 .van-ellipsis 里，改成 flex 后只有正文段参与收缩，
+   末尾标签固定不动，不会被省略号吃掉 */
+.mini-select--tagged :deep(.van-dropdown-menu__title .van-ellipsis) {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+.mini-select--tagged :deep(.mini-select-text) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mini-select--tagged :deep(.mini-select-tag) {
+  flex: none;
+  white-space: nowrap;
 }
 
 /* md 档用于表单内，行高随字号缩放，避免大字号下文字被 20px 行高卡住 */
@@ -216,7 +298,12 @@ function stackingZ(el: HTMLElement) {
   opacity: 0.55;
 }
 
-/* 弹层被 teleport 到 body，字号通过自定义属性从 item 根节点继承 */
+/* 弹层被 teleport 到 body，字号通过自定义属性从 item 根节点继承：
+   档位类只负责未展开时的兜底值，展开时 alignPopup 会把触发条的实际字号写成内联变量覆盖它 */
+:global(.mini-select-popup) {
+  --mini-select-font-size: var(--van-font-size-sm);
+}
+
 :global(.mini-select-popup--font-md) {
   --mini-select-font-size: var(--van-font-size-md);
 }
@@ -229,18 +316,39 @@ function stackingZ(el: HTMLElement) {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
 }
 
+/* 选项的内边距与行高都按弹层自身的字号计算。原先只有 --font-md 有行高规则，
+   sm 档（默认档）一直落回 Vant 恒定的 24px cell 行高，字号调到 10 也不会放宽 */
 :global(.mini-select-popup .van-dropdown-item__option) {
-  padding: calc(var(--van-font-size-md) * 0.5) calc(var(--van-font-size-md) * 0.8);
-}
-
-/* md 档弹层的选项行高与内边距随字号缩放：md 13px 时仍是 36px 行高 */
-:global(.mini-select-popup--font-md .van-dropdown-item__option) {
-  padding: calc(var(--van-font-size-md) * 0.5) calc(var(--van-font-size-md) * 0.8);
-  line-height: calc(var(--van-font-size-md) * 1.8);
+  padding: calc(var(--mini-select-font-size) * 0.5) calc(var(--mini-select-font-size) * 0.8);
+  line-height: calc(var(--mini-select-font-size) * 1.8);
 }
 
 :global(.mini-select-popup .van-dropdown-item__option .van-cell__title) {
   flex: 1 1 auto;
+  /* 弹层宽度受窗口限制，超长文案打点收尾而不是折行撑高面板 */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--mini-select-font-size, var(--van-font-size-sm));
+}
+
+/* 带 tag 的选项行：Cell 的 title 插槽直接落在 .van-cell__title 上，这里同样只收缩正文段 */
+:global(.mini-select-popup--tagged .van-dropdown-item__option .van-cell__title) {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+:global(.mini-select-popup--tagged .mini-select-text) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+:global(.mini-select-popup--tagged .mini-select-tag) {
+  flex: none;
+  white-space: nowrap;
 }
 </style>

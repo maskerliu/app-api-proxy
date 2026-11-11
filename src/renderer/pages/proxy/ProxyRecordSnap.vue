@@ -129,7 +129,7 @@ const recordStore = ProxyRecordStore()
 .record-snap {
   display: flex;
   align-items: flex-start;
-  padding: 10px 0;
+  padding: var(--sp-xl) 0;
   cursor: pointer;
   border-bottom: 1px solid var(--van-border-color);
   transition: background-color 0.2s;
@@ -175,15 +175,15 @@ const recordStore = ProxyRecordStore()
 .snap-content {
   flex: 1;
   min-width: 0;
-  margin-left: 10px;
+  margin-left: var(--sp-xl);
 }
 
 .snap-url-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-md);
 }
 
 .snap-url {
@@ -211,7 +211,7 @@ const recordStore = ProxyRecordStore()
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: var(--sp-md);
   font-size: var(--van-font-size-xs);
   color: var(--van-text-color-3);
   overflow: hidden;
@@ -257,9 +257,9 @@ const recordStore = ProxyRecordStore()
 
 .method-tag {
   font-weight: 700;
-  font-size: 11px;
-  min-width: 22px;
-  height: 22px;
+  font-size: var(--method-square-font);
+  min-width: var(--method-square);
+  height: var(--method-square);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -279,7 +279,7 @@ const recordStore = ProxyRecordStore()
 
 .stat-type {
   color: var(--van-danger-color);
-  margin: 0 2px;
+  margin: 0 var(--sp-xs);
 }
 
 .stat-eid {

@@ -1,6 +1,6 @@
 <template>
   <van-row class="mgr-content">
-    <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - 10px);"
+    <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - var(--card-gutter) * 2);"
       :style="{ paddingTop: isWeb ? '0' : 'calc(var(--van-font-size-md) * 0.8)' }">
       <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
@@ -47,13 +47,13 @@
               @click="onRuleSelect(null)" />
           </template>
           <template #title>
-            <div class="rule-head-title">
+            <van-row class="rule-head-title" align="center" :wrap="false">
               <span class="rule-head-name">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
               <van-tag v-if="curRule._id != null" class="rule-state-tag" plain
                 :type="curRule.isMock ? 'success' : 'warning'" :title="mockStateTip">
                 {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
               </van-tag>
-            </div>
+            </van-row>
           </template>
           <template #label>
             <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -77,32 +77,32 @@
             </div>
           </template>
           <template #right-icon>
-            <div class="rule-mock-switch" :title="mockStateTip">
+            <van-row class="rule-mock-switch" :title="mockStateTip" align="center" :wrap="false">
               <span class="rule-mock-switch-label">{{ $t('mock.rule.mockLabel') }}</span>
               <van-switch v-model="curRule.isMock" @change="onMockSwitchChanged(curRule)"
                 :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
-            </div>
+            </van-row>
           </template>
         </van-cell>
       </van-col>
     </van-row>
     <van-row class="mgr-body">
       <van-col class="record-pane">
-        <div class="record-pane-head">
+        <van-row class="record-pane-head" align="center" justify="space-between" :wrap="false">
           <span class="record-pane-title">{{ $t('mock.records') }}</span>
           <van-button class="record-new-btn btn-icon-only" plain type="primary" size="mini" icon="plus"
             :disabled="curRule._id == null" @click="addRecord"></van-button>
-        </div>
-        <div class="record-filter">
+        </van-row>
+        <van-row class="record-filter" align="center" :wrap="false">
           <van-field v-model="recordKeyword" class="record-field" clearable
             :placeholder="$t('mock.list.searchPlaceholder')">
             <template #left-icon>
               <van-icon name="search" size="var(--van-font-size-md)" />
             </template>
           </van-field>
-          <mini-select :model-value="recordSort" class="record-sort" :options="sortOptions"
+          <mini-select :model-value="recordSort" class="record-sort" :options="sortOptions" align="end"
             @update:model-value="onSortChange" />
-        </div>
+        </van-row>
         <van-notice-bar v-if="curRule.limitState?.warn" class="record-limit" wrapable :scrollable="false"
           :class="{ 'is-reject': curRule.limitState.reject }" :text="curRule.limitState.reject
             ? $t('mock.list.limitReject', { count: curRule.limitState.count, limit: MOCK_RECORD_REJECT_LIMIT })
@@ -125,13 +125,15 @@
                   <van-tag plain type="warning" class="record-draft-tag">{{ $t('mock.editor.unsaved') }}</van-tag>
                 </div>
               </template>
-              <template #label>
-                <div v-if="draft.url" class="record-line record-line--meta">
+              <!-- v-if 必须挂在插槽本身：挂在里面的 div 上时 Vant 仍会渲染空的 label 节点，
+                   那 5.6px 上边距会把 title 列撑高，居中后文字与右侧 × 就错开了 -->
+              <template v-if="draft.url" #label>
+                <div class="record-line record-line--meta">
                   <span class="record-path">{{ draft.url }}</span>
                 </div>
               </template>
               <template #right-icon>
-                <van-icon name="cross" class="record-action record-action--muted" @click.stop="discardDraft" />
+                <van-icon name="cross" class="record-action record-action--muted" @click.stop="clearEditorState" />
               </template>
             </van-cell>
             <van-cell center clickable v-for="row in recordRows" :key="row.record.id"
@@ -204,7 +206,7 @@
     <van-dialog :title="$t('mock.rule.title')" v-model:show="showRuleEdit" show-cancel-button
       :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
       :before-close="onRuleEditClose">
-      <van-form ref="form" label-width="90px" v-if="curRule != null">
+      <van-form ref="form" label-width="6.9em" v-if="curRule != null">
         <van-field :label="$t('mock.rule.name')" v-model="curRule.name" :placeholder="$t('mock.rule.name')" />
         <van-field rows="4" type="textarea" v-model="curRule.desc" :placeholder="$t('mock.rule.desc')" />
       </van-form>
@@ -216,7 +218,7 @@
 
     <van-dialog v-model:show="showConflict" :title="$t('mock.record.conflictTitle')" :show-confirm-button="false">
       <div class="conflict-message">{{ $t('mock.record.conflictMessage') }}</div>
-      <div class="conflict-actions actions-bar">
+      <van-row class="conflict-actions actions-bar" align="center" justify="end" :wrap="false">
         <van-button size="small" plain @click="showConflict = false">{{ $t('common.cancel') }}</van-button>
         <van-button size="small" plain type="primary" @click="onConflictReload">
           {{ $t('mock.record.reload') }}
@@ -224,7 +226,7 @@
         <van-button size="small" type="primary" :loading="saving" @click="onConflictOverwrite">
           {{ $t('mock.record.overwrite') }}
         </van-button>
-      </div>
+      </van-row>
     </van-dialog>
 
   </van-row>
@@ -240,14 +242,14 @@ import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MiniSelect from '../../common/MiniSelect.vue'
-import { scrollOptions } from '../../common/scroll'
-import MockRecordEditor from './mock/MockRecordEditor.vue'
-import { matchesKeyword, sortRecords, warningLabelKey } from './mock/match.helper'
-import { levelTagType, methodTagType, recordRowOf, warningTagType } from './mock/record.row'
-import { describeMockSaveError, normalizeErrorText } from './mock/mock.save-error'
-import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './mock/mock.record'
-import { findRecordByUrl, MockMgrTarget } from './mock/recording'
+import MiniSelect from '../../components/MiniSelect.vue'
+import { scrollOptions } from '../../../common/scroll'
+import MockRecordEditor from './MockRecordEditor.vue'
+import { matchesKeyword, sortRecords, warningLabelKey } from './match.helper'
+import { levelTagType, methodTagType, recordRowOf, warningTagType } from './record.row'
+import { describeMockSaveError, normalizeErrorText } from './mock.save-error'
+import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './mock.record'
+import { findRecordByUrl, MockMgrTarget } from './recording'
 
 const { t } = useI18n()
 const searchBox = ref<HTMLElement>()
@@ -419,11 +421,22 @@ function openRecord(record: ProxyMock.MockRecord) {
   isNew.value = false
 }
 
-function discardDraft() {
+// 草稿、快照、脏标记与列表选中项必须一起归零，漏一行就会出现「编辑器空了但列表仍高亮」
+function clearEditorState() {
   draft.value = null
   savedSnapshot.value = ''
   isNew.value = false
   curRecordId.value = null
+}
+
+// 保存成功后的回显：本地草稿换成服务端生成的 id 与最新 updatedAt，再落到列表并闪一下
+function applySavedRecord(result: ProxyMock.MockRecordSaveResult) {
+  const saved = cloneRecord(draft.value)
+  saved.id = result.id
+  saved.updatedAt = result.updatedAt
+  openRecord(saved)
+  locateRecord(saved.id, true)
+  showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 1000 })
 }
 
 function locateRecord(id: string, flash: boolean = false) {
@@ -494,12 +507,7 @@ async function onRecordSave() {
 
     const expectedUpdatedAt = isNew.value ? undefined : draft.value.updatedAt
     const result = await saveMockRecord(draft.value, expectedUpdatedAt, { silentError: true })
-    const saved = cloneRecord(draft.value)
-    saved.id = result.id
-    saved.updatedAt = result.updatedAt
-    openRecord(saved)
-    locateRecord(saved.id, true)
-    showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 1000 })
+    applySavedRecord(result)
   } catch (err) {
     const info = describeMockSaveError(err)
     if (info.kind === 'conflict') {
@@ -566,12 +574,7 @@ async function onConflictOverwrite() {
       return
     }
     const result = await saveMockRecord(draft.value, latest.updatedAt, { silentError: true })
-    const saved = cloneRecord(draft.value)
-    saved.id = result.id
-    saved.updatedAt = result.updatedAt
-    openRecord(saved)
-    locateRecord(saved.id, true)
-    showNotify({ message: t('mock.editor.saveSuccess'), type: 'success', duration: 1000 })
+    applySavedRecord(result)
   } catch (err) {
     const info = describeMockSaveError(err)
     if (info.kind === 'conflict') {
@@ -632,10 +635,7 @@ async function onRuleSelect(rule: ProxyMock.MockRule) {
     curRule.value = new ProxyMock.MockRule()
     detailTask = null
   }
-  curRecordId.value = null
-  draft.value = null
-  savedSnapshot.value = ''
-  isNew.value = false
+  clearEditorState()
   recordOffset.value = 0
   recordHasMore.value = false
   keyword.value = ''
@@ -662,10 +662,7 @@ async function fetchMockRuleDetail() {
     if (curRule.value?._id !== ruleId) return
     curRule.value = detail
     curRule.value.requests = new Map()
-    curRecordId.value = null
-    draft.value = null
-    savedSnapshot.value = ''
-    isNew.value = false
+    clearEditorState()
     await loadRecords(true)
   } catch (err) {
     if (curRule.value?._id !== ruleId) return
@@ -734,10 +731,7 @@ async function onRuleDeleteConfirm() {
     await deleteMockRule(curRule.value._id)
     curRule.value = new ProxyMock.MockRule()
     detailTask = null
-    curRecordId.value = null
-    draft.value = null
-    savedSnapshot.value = ''
-    isNew.value = false
+    clearEditorState()
     recordOffset.value = 0
     recordHasMore.value = false
     showRuleDelete.value = false
@@ -840,10 +834,7 @@ async function onRecordDeleteConfirm() {
     // 删除的是已加载区间内的记录，游标同步回退一位，避免下次翻页漏读
     recordOffset.value = Math.max(0, recordOffset.value - 1)
     if (curRecordId.value === id) {
-      curRecordId.value = null
-      draft.value = null
-      savedSnapshot.value = ''
-      isNew.value = false
+      clearEditorState()
     }
   } catch (err) {
     showNotify({ message: t('mock.deleteFailed'), type: 'warning', duration: 1000 })
@@ -853,7 +844,6 @@ async function onRecordDeleteConfirm() {
 
 <style scoped>
 .mgr-content {
-  display: flex;
   flex-direction: column;
   /* van-row 默认 wrap，列方向下高度超出弹层时会把主体换到右侧列并移出可视区 */
   flex-wrap: nowrap;
@@ -875,7 +865,7 @@ async function onRecordDeleteConfirm() {
 .rule-search-col {
   /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表宽度减去左右外边距 */
   flex: none;
-  width: calc(min(300px, 34%) - calc(var(--van-font-size-md) * 0.8));
+  width: calc(var(--record-pane-width) - var(--sp-xl));
   /* 与右侧两行高度的规则信息居中对齐 */
   display: flex;
   align-items: center;
@@ -899,18 +889,15 @@ async function onRecordDeleteConfirm() {
 .record-pane {
   display: flex;
   flex-direction: column;
-  width: min(300px, 34%);
+  width: var(--record-pane-width);
   /* 列表自带 5px 外边距，撑满主体高度后底边才能与右侧编辑器对齐 */
   height: 100%;
   min-height: 0;
 }
 
 .record-pane-head {
-  display: flex;
   flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(var(--van-font-size-md) * 0.6);
+  gap: var(--sp-lg);
   /* 左侧与筛选行搜索图标对齐：筛选 10px + 输入框 8px；右侧与单元格内边距对齐 */
   padding: calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 1.5) calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 1.4);
 }
@@ -924,7 +911,7 @@ async function onRecordDeleteConfirm() {
 /* 列表头的小按钮高度与内边距随全局字号缩放，图标继承按钮字号 */
 .record-pane-head :deep(.van-button--mini) {
   height: calc(var(--van-font-size-md) * 1.9);
-  padding: 0 calc(var(--van-font-size-md) * 0.3);
+  padding: 0 var(--sp-sm);
   border-radius: calc(var(--van-font-size-md) * 0.3);
 }
 
@@ -933,10 +920,8 @@ async function onRecordDeleteConfirm() {
 }
 
 .record-filter {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--van-font-size-md) * 0.5);
-  padding: 0 calc(var(--van-font-size-md) * 0.8) calc(var(--van-font-size-md) * 0.3);
+  gap: var(--sp-md);
+  padding: 0 var(--sp-xl) var(--sp-sm);
   /* 搜索框与筛选下拉共享同一行高，字号切换时始终对齐 */
   --record-row-h: calc(var(--van-font-size-md) * 2.3);
 }
@@ -958,7 +943,7 @@ async function onRecordDeleteConfirm() {
 }
 
 .record-field :deep(.van-field__left-icon) {
-  margin-right: calc(var(--van-font-size-md) * 0.4);
+  margin-right: var(--sp-tight);
   color: var(--van-text-color-3);
 }
 
@@ -973,8 +958,8 @@ async function onRecordDeleteConfirm() {
 
 .record-limit {
   flex: none;
-  margin: 0 calc(var(--van-font-size-md) * 0.4) calc(var(--van-font-size-md) * 0.3);
-  padding: calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 0.6);
+  margin: 0 var(--sp-tight) var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-lg);
   /* 限额提示是告警文案，不应落在最小号 */
   font-size: var(--van-font-size-sm);
 }
@@ -1042,18 +1027,19 @@ async function onRecordDeleteConfirm() {
   min-width: 0;
 }
 
-/* 方法色块：正方形圆角，跟随系统字号 */
+/* 方法色块：边长与字号取自全局 --method-square*，与 ProxyRecordSnap 的 .method-tag 同一来源，
+   不再需要「改一边记得改另一边」；圆角仍是 Vant van-tag 的默认 2px。 */
 .record-method {
   flex: none;
-  width: calc(var(--record-line-font) * 1.6);
-  height: calc(var(--record-line-font) * 1.6);
-  border-radius: calc(var(--record-line-font) * 0.4);
+  min-width: var(--method-square);
+  height: var(--method-square);
   padding: 0;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--mono-font);
+  font-size: var(--method-square-font);
   font-weight: 700;
+  line-height: 1;
 }
 
 .record-status-group {
@@ -1138,10 +1124,6 @@ async function onRecordDeleteConfirm() {
   white-space: nowrap;
 }
 
-.record-meta--variant {
-  color: var(--van-primary-color);
-}
-
 .record-meta--active {
   color: var(--van-success-color);
 }
@@ -1200,7 +1182,7 @@ async function onRecordDeleteConfirm() {
   min-width: 0;
   height: calc(100% - calc(var(--van-font-size-md) * 0.8));
   /* 左侧列表有外边距，这里同步下移，两侧底边才能对齐 */
-  padding: 0 calc(var(--van-font-size-md) * 0.4);
+  padding: 0 var(--sp-tight);
   position: relative;
 }
 
@@ -1211,9 +1193,7 @@ async function onRecordDeleteConfirm() {
 
 /* 规则状态收拢在头部：名称后的标签是唯一状态说明，避免与开关重复 */
 .rule-head-title {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--van-font-size-md) * 0.5);
+  gap: var(--sp-md);
   min-width: 0;
 }
 
@@ -1229,10 +1209,8 @@ async function onRecordDeleteConfirm() {
 }
 
 .rule-mock-switch {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--van-font-size-md) * 0.5);
-  margin-left: calc(var(--van-font-size-md) * 0.8);
+  gap: var(--sp-md);
+  margin-left: var(--sp-xl);
 }
 
 .rule-mock-switch-label {
@@ -1260,14 +1238,14 @@ async function onRecordDeleteConfirm() {
 }
 
 .conflict-message {
-  padding: calc(var(--van-font-size-md) * 0.9) calc(var(--van-font-size-md) * 1.2) 0;
+  padding: var(--sp-2xl) var(--sp-3xl) 0;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
   line-height: 1.5;
 }
 
 .conflict-actions {
-  padding: calc(var(--van-font-size-md) * 1.2);
+  padding: var(--sp-3xl);
 }
 
 .mgr-content :deep(.van-popover__wrapper) {
@@ -1282,11 +1260,11 @@ async function onRecordDeleteConfirm() {
 
 .rule-cancel-icon {
   font-size: calc(var(--van-font-size-md) * 1.5);
-  margin-right: calc(var(--van-font-size-md) * 0.8);
+  margin-right: var(--sp-xl);
 }
 
 .rule-head-cell :deep(.van-cell) {
-  padding: calc(var(--van-font-size-md) * 0.4) calc(var(--van-font-size-md) * 0.8);
+  padding: var(--sp-tight) var(--sp-xl);
   flex-wrap: nowrap;
 }
 
@@ -1306,16 +1284,26 @@ async function onRecordDeleteConfirm() {
 
 .result-action-icon {
   font-size: calc(var(--van-font-size-md) * 1.2);
-  padding: calc(var(--van-font-size-md) * 0.4);
+  padding: var(--sp-tight);
+  border-radius: calc(var(--van-font-size-md) * 0.4);
   cursor: pointer;
+  transition: background-color 0.15s;
 }
 
 .result-action-icon--primary {
   color: var(--van-primary-color);
 }
 
+.result-action-icon--primary:hover {
+  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
+}
+
 .result-action-icon--danger {
   color: var(--van-danger-color);
+}
+
+.result-action-icon--danger:hover {
+  background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
 }
 
 .btn-action-icon {
@@ -1324,10 +1312,6 @@ async function onRecordDeleteConfirm() {
 
 .btn-action-icon--danger {
   color: var(--van-danger-color);
-}
-
-.btn-action-gap {
-  margin-left: calc(var(--van-font-size-md) * 0.8);
 }
 
 .rule-mgr-cell-value {
@@ -1341,7 +1325,7 @@ async function onRecordDeleteConfirm() {
 .rule-head-actions {
   display: inline-flex;
   align-items: center;
-  gap: calc(var(--van-font-size-md) * 0.4);
+  gap: var(--sp-tight);
 }
 
 .rule-head-col :deep(.van-cell__title) {
@@ -1369,7 +1353,7 @@ async function onRecordDeleteConfirm() {
   align-items: stretch;
   align-self: stretch;
   height: var(--van-search-input-height);
-  padding: 0 calc(var(--van-font-size-md) * 0.3);
+  padding: 0 var(--sp-sm);
   cursor: default;
 }
 

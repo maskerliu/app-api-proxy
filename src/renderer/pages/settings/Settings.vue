@@ -39,7 +39,7 @@ function open(path: string) {
 
 <style scoped>
 .setting-cell-icon {
-  margin-left: 15px;
+  margin-left: var(--sp-3xl);
 }
 </style>
 <style scoped>

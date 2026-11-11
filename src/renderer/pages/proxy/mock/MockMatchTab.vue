@@ -1,74 +1,77 @@
 <template>
   <div class="match-tab">
-    <div class="level-bar">
+    <van-row class="level-bar" align="center">
       <span class="bar-label">{{ $t('mock.match.levelLabel') }}</span>
       <van-radio-group :model-value="currentLevel" direction="horizontal" class="level-chips"
         @update:model-value="onLevelClick">
         <van-radio v-for="level in MATCH_LEVELS" :key="level" :name="level">{{ $t(`mock.match.level.${level}`) }}</van-radio>
       </van-radio-group>
-    </div>
+    </van-row>
     <p class="level-hint">{{ $t(`mock.match.levelHint.${currentLevel}`) }}</p>
 
-    <div v-if="pending != null" class="level-preview">
+    <van-row v-if="pending != null" class="level-preview" align="center" :wrap="false">
       <div v-if="pending.reason === 'sourceMissing'" class="preview-warn">
         {{ $t('mock.match.sourceMissing') }}
       </div>
       <div v-else-if="diffLines.length === 0" class="preview-empty">{{ $t('mock.match.diffEmpty') }}</div>
-      <div v-else class="preview-tags">
+      <van-row v-else class="preview-tags">
         <span v-for="(line, idx) in diffLines" :key="idx" class="preview-tag">{{ line }}</span>
-      </div>
-      <div class="preview-actions">
+      </van-row>
+      <van-row class="preview-actions" :wrap="false">
         <van-button size="mini" plain @click="pending = null">{{ $t('common.cancel') }}</van-button>
         <van-button size="mini" type="primary" :disabled="pending.reason === 'sourceMissing'"
           @click="applyPending">
           {{ $t('mock.match.apply') }}
         </van-button>
-      </div>
-    </div>
+      </van-row>
+    </van-row>
 
     <div class="section">
-      <div class="section-title">{{ $t('mock.match.identity') }}</div>
-      <div class="field-row identity-row">
+      <van-row class="section-title" align="center" justify="space-between" :wrap="false">
+        {{ $t('mock.match.identity') }}
+      </van-row>
+      <van-row class="field-row identity-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.method') }}</span>
         <mini-select v-model="match.method" class="match-select method-select" :options="methodOptions"
           font-size="md" @change="touch" />
-      </div>
-      <div class="field-row identity-row">
+      </van-row>
+      <van-row class="field-row identity-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.host') }}</span>
         <van-field ref="hostField" class="match-field" v-model="match.host"
           :placeholder="$t('mock.match.hostPlaceholder')" @update:model-value="touch" />
-      </div>
-      <div class="field-row identity-row path-row">
+      </van-row>
+      <van-row class="field-row identity-row path-row" align="center">
         <span class="row-label">{{ $t('mock.match.path') }}</span>
         <mini-select v-model="match.pathType" class="match-select path-type-select" :options="pathTypeOptions"
           font-size="md" @change="touch" />
         <van-field ref="pathField" class="path-input" v-model="match.path"
           :placeholder="$t('mock.match.pathPlaceholder')" @update:model-value="touch" />
-      </div>
-      <div v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original">
+      </van-row>
+      <van-row v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original" align="center"
+        :wrap="false">
         <span>{{ $t('mock.match.pathParameterized', { original: match.pathOriginal, path: match.path }) }}</span>
         <van-button size="mini" plain type="primary" class="restore-path" @click="restorePath">
           {{ $t('mock.match.restorePath') }}
         </van-button>
-      </div>
+      </van-row>
     </div>
 
     <div ref="querySection" class="section">
-      <div class="section-title">
+      <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         <span>{{ $t('mock.match.queryMode') }}</span>
         <van-radio-group :model-value="match.query.mode" direction="horizontal" class="inline-radio"
           @update:model-value="onQueryModeChange">
           <van-radio name="ignore">{{ $t('mock.match.queryIgnore') }}</van-radio>
           <van-radio name="match">{{ $t('mock.match.queryMatch') }}</van-radio>
         </van-radio-group>
-      </div>
+      </van-row>
 
       <div class="sub-block">
-        <div class="sub-head">
+        <van-row class="sub-head" align="center" justify="space-between" :wrap="false">
           <span class="sub-title">{{ $t('mock.match.queryIgnoreKeys') }}</span>
           <van-tag plain type="primary">{{ match.query.ignoreKeys.length }}</van-tag>
-        </div>
-        <div class="tag-list">
+        </van-row>
+        <van-row class="tag-list">
           <van-tag v-for="key in match.query.ignoreKeys" :key="key" closeable
             :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" plain
             :title="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
@@ -77,13 +80,13 @@
           <span v-if="match.query.ignoreKeys.length === 0" class="empty-tip">
             {{ $t('mock.match.queryIgnoreEmpty') }}
           </span>
-        </div>
-        <div class="add-row">
+        </van-row>
+        <van-row class="add-row" align="center" :wrap="false">
           <van-field v-model="newIgnoreKey" class="add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
             @keyup.enter="addIgnoreKey" />
           <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" :disabled="newIgnoreKey.trim() === ''"
             @click="addIgnoreKey" />
-        </div>
+        </van-row>
       </div>
 
       <div v-if="match.query.mode === 'match'" class="sub-block">
@@ -98,7 +101,8 @@
             <div v-if="match.query.conditions.length === 0" class="empty-tip">
               {{ $t('mock.match.conditionEmpty') }}
             </div>
-            <div v-for="(condition, idx) in match.query.conditions" :key="idx" class="condition-row">
+            <van-row v-for="(condition, idx) in match.query.conditions" :key="idx" class="condition-row" align="center"
+              :wrap="false">
               <van-field v-model="condition.key" class="condition-key" :placeholder="$t('mock.match.conditionKey')"
                 @update:model-value="touch" />
               <mini-select v-model="condition.op" class="match-select op-select" :options="operatorOptions"
@@ -106,32 +110,33 @@
               <van-field v-if="operatorNeedsValue(condition.op)" v-model="condition.value" class="condition-value"
                 :placeholder="$t('mock.match.conditionValue')" @update:model-value="touch" />
               <van-icon name="cross" class="row-delete" @click="removeCondition(idx)" />
-            </div>
+            </van-row>
           </van-collapse-item>
         </van-collapse>
-        <div class="switch-row">
+        <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryAllowExtra') }}</span>
           <van-switch v-model="match.query.allowExtra" size="18px" @change="touch" />
-        </div>
+        </van-row>
         <p class="row-hint">{{ $t('mock.match.queryAllowExtraHint') }}</p>
-        <div class="switch-row">
+        <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryMultiValue') }}</span>
           <van-radio-group :model-value="match.query.multiValue" direction="horizontal" class="inline-radio"
             @update:model-value="onMultiValueChange">
             <van-radio name="any">{{ $t('mock.match.multiAny') }}</van-radio>
             <van-radio name="all">{{ $t('mock.match.multiAll') }}</van-radio>
           </van-radio-group>
-        </div>
+        </van-row>
       </div>
     </div>
 
     <div ref="headerSection" class="section">
-      <div class="section-title">
+      <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         <span>{{ $t('mock.match.headerConditions') }}</span>
         <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" @click="onAddHeader" />
-      </div>
+      </van-row>
       <div v-if="match.headers.conditions.length === 0" class="empty-tip">{{ $t('mock.match.headerEmpty') }}</div>
-      <div v-for="(condition, idx) in match.headers.conditions" :key="idx" class="condition-row">
+      <van-row v-for="(condition, idx) in match.headers.conditions" :key="idx" class="condition-row" align="center"
+        :wrap="false">
         <van-field v-model="condition.name" class="condition-key" :placeholder="$t('mock.match.headerName')"
           @update:model-value="touch" />
         <mini-select v-model="condition.op" class="match-select op-select" :options="operatorOptions"
@@ -139,40 +144,40 @@
         <van-field v-if="operatorNeedsValue(condition.op)" v-model="condition.value" class="condition-value"
           :placeholder="$t('mock.match.conditionValue')" @update:model-value="touch" />
         <van-icon name="cross" class="row-delete" @click="removeHeader(idx)" />
-      </div>
-      <div class="suggest-row">
+      </van-row>
+      <van-row class="suggest-row" align="center">
         <span class="row-hint">{{ $t('mock.match.headerSuggest') }}</span>
         <van-tag v-for="name in HEADER_SUGGESTIONS" :key="name" plain type="primary" class="suggest-tag"
           @click="addHeaderSuggestion(name)">
           {{ name }}
         </van-tag>
-      </div>
+      </van-row>
     </div>
 
     <div class="section">
-      <div class="switch-row priority-row">
+      <van-row class="switch-row priority-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.priority') }}</span>
         <van-switch :model-value="match.priority != null" size="18px" @update:model-value="togglePriority" />
         <van-field v-if="match.priority != null" ref="priorityField" v-model="priorityText" type="digit"
           class="priority-input" :placeholder="$t('mock.match.priorityHint')" />
         <span v-else class="row-hint priority-hint">{{ $t('mock.match.priorityAuto') }}</span>
-      </div>
+      </van-row>
     </div>
 
     <div class="section">
-      <div class="switch-row">
+      <van-row class="switch-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.bodyLabel') }}</span>
         <span class="row-hint">{{ $t('mock.match.bodyHint') }}</span>
-      </div>
+      </van-row>
     </div>
 
     <mock-stability-panel :record="record" />
 
     <div class="section test-section">
-      <div class="section-title">
+      <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         <span>{{ $t('mock.match.test') }}</span>
-      </div>
-      <div class="test-row">
+      </van-row>
+      <van-row class="test-row" align="center">
         <mini-select v-model="testMethod" class="match-select method-select" :options="methodOptions"
           font-size="md" :title="$t('mock.match.method')" />
         <van-field v-model="testUrl" class="test-url" :placeholder="$t('mock.match.testUrlPlaceholder')" />
@@ -180,7 +185,7 @@
           {{ $t('mock.match.testRun') }}
         </van-button>
         <van-button class="btn-icon-only" size="mini" plain icon="replay" :title="$t('mock.match.testSeed')" @click="seedTest" />
-      </div>
+      </van-row>
       <div v-if="testError" class="test-error">{{ testError }}</div>
       <div v-if="testHit != null" class="test-hit">
         <div class="test-hit-title">
@@ -198,15 +203,15 @@
           }) }}
         </div>
         <div v-if="testHit.explain?.conditions?.length" class="explain-list">
-          <div v-for="(condition, idx) in testHit.explain.conditions" :key="idx" class="explain-row"
-            :class="{ 'is-failed': !condition.passed, 'is-ignored': condition.ignored }">
+          <van-row v-for="(condition, idx) in testHit.explain.conditions" :key="idx" class="explain-row"
+            :class="{ 'is-failed': !condition.passed, 'is-ignored': condition.ignored }" align="center" :wrap="false">
             <van-tag plain :type="condition.passed ? 'success' : 'danger'" class="explain-tag">
               {{ testHit.explain ? $t(`mock.miss.dim.${condition.dimension}`) : '' }}
             </van-tag>
             <span class="explain-key">{{ condition.key }}</span>
             <span class="explain-value">{{ condition.expected }}</span>
             <span v-if="condition.ignored" class="explain-ignored">{{ $t('mock.match.ignored') }}</span>
-          </div>
+          </van-row>
         </div>
       </div>
       <mock-miss-panel v-if="testMiss != null" :miss="testMiss" @ignore-key="onIgnoreMissKey"
@@ -225,15 +230,15 @@ import type { FieldInstance } from 'vant'
 import { showNotify } from 'vant'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MiniSelect from '../../common/MiniSelect.vue'
+import MiniSelect from '../../components/MiniSelect.vue'
 import MockMissPanel from './MockMissPanel.vue'
 import MockStabilityPanel from './MockStabilityPanel.vue'
 import {
   MATCH_LEVELS, MATCH_METHODS, PATH_TYPES, QUERY_OPERATORS, addHeaderCondition, addQueryCondition,
   diffLinesOf, ensureRecordMatch, ignoreSourceOf, operatorNeedsValue, orderingLabelKey, previewLevel,
   testSeedOf,
-} from './mock/match.helper'
-import type { LevelPresetPreview } from './mock/match.helper'
+} from './match.helper'
+import type { LevelPresetPreview } from './match.helper'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
@@ -534,10 +539,7 @@ defineExpose({ focusField })
 }
 
 .level-bar {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
-  flex-wrap: wrap;
   margin-top: var(--sp-lg);
 }
 
@@ -559,8 +561,6 @@ defineExpose({ focusField })
 }
 
 .level-preview {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
   padding: var(--sp-sm) var(--sp-md);
   border: 1px solid var(--van-primary-color);
@@ -582,13 +582,11 @@ defineExpose({ focusField })
 
 .preview-tags {
   flex: 1;
-  display: flex;
-  flex-wrap: wrap;
   gap: var(--sp-xs);
 }
 
 .preview-tag {
-  padding: 2px 8px;
+  padding: var(--sp-xs) var(--sp-lg);
   border-radius: var(--van-radius-sm);
   background: color-mix(in srgb, var(--van-primary-color) 12%, transparent);
   color: var(--van-text-color-2);
@@ -597,7 +595,6 @@ defineExpose({ focusField })
 }
 
 .preview-actions {
-  display: flex;
   gap: var(--sp-xs);
   flex-shrink: 0;
 }
@@ -610,9 +607,6 @@ defineExpose({ focusField })
 }
 
 .section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--sp-lg);
   margin-bottom: var(--sp-md);
   color: var(--van-text-color);
@@ -621,14 +615,8 @@ defineExpose({ focusField })
 }
 
 .field-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
   padding: var(--sp-xs) 0;
-}
-
-.path-row {
-  flex-wrap: wrap;
 }
 
 .row-label {
@@ -694,8 +682,6 @@ defineExpose({ focusField })
 }
 
 .path-original {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
   margin-top: var(--sp-sm);
   color: var(--van-text-color-3);
@@ -710,7 +696,7 @@ defineExpose({ focusField })
 }
 
 .inline-radio :deep(.van-radio) {
-  margin-right: calc(var(--van-font-size-md) * 0.8);
+  margin-right: var(--sp-xl);
 }
 
 .inline-radio :deep(.van-radio__label) {
@@ -724,9 +710,6 @@ defineExpose({ focusField })
 }
 
 .sub-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--sp-lg);
   margin-bottom: var(--sp-sm);
 }
@@ -750,8 +733,6 @@ defineExpose({ focusField })
 }
 
 .tag-list {
-  display: flex;
-  flex-wrap: wrap;
   gap: var(--sp-md);
   min-height: calc(var(--van-font-size-md) * 1.7);
 }
@@ -761,8 +742,6 @@ defineExpose({ focusField })
 }
 
 .add-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
   margin-top: var(--sp-md);
 }
@@ -782,8 +761,6 @@ defineExpose({ focusField })
 }
 
 .condition-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-sm);
   margin-bottom: var(--sp-sm);
 }
@@ -859,8 +836,6 @@ defineExpose({ focusField })
 }
 
 .switch-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
   padding: var(--sp-xs) 0;
 }
@@ -892,9 +867,6 @@ defineExpose({ focusField })
 }
 
 .suggest-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
   gap: var(--sp-md);
   margin-top: var(--sp-md);
 }
@@ -904,10 +876,7 @@ defineExpose({ focusField })
 }
 
 .test-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
-  flex-wrap: wrap;
 }
 
 .test-url {
@@ -971,8 +940,6 @@ defineExpose({ focusField })
 }
 
 .explain-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
   font-size: var(--van-font-size-sm);
 }

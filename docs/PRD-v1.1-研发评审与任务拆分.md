@@ -86,7 +86,7 @@ PRD 第 10 节假设“1 名 Electron/前端 + 1 名 Node/后端 + PM/QA 兼职�
 | 延迟 | 设备级 delay 通过 `setTimeout` 应用 | `src/main/service/proxy.service.ts:147` |
 | 请求记录推送 | `REQUEST_START` 带 method/headers；`REQUEST_END` **不带 method** | `src/main/service/proxy.service.ts:123`、`:185`、`:279` |
 | 渲染层合并 | `REQUEST_END` 只合并 isMock/status/headers/responseData/time；method 沿用 START | `src/renderer/store/ProxyRecords.ts:79` |
-| 规则管理 UI | 记录列表以 `record.url` 为 key；编辑器是整段 JSON | `src/renderer/pages/proxy/MockRuleMgr.vue:229`、`:348` |
+| 规则管理 UI | 记录列表以 `record.url` 为 key；编辑器是整段 JSON | `src/renderer/pages/proxy/mock/MockRuleMgr.vue`<mark>`:229`、`:348` 行号已失效：2026-11-10 该文件由 `proxy/` 移入 `proxy/mock/`，编辑器部分也已拆到 `mock/MockRecordEditor.vue`</mark> |
 | 请求详情 | 已有 headers/query/body/response 展示，无 Mock 匹配区块 | `src/renderer/pages/proxy/ProxyRequestDetail.vue` |
 | 启用状态 | `Map<viewerUid, ruleId>`，仅在内存；断开即清 | `src/main/service/mock.service.ts:17` |
 | 路由挂载 | `/_proxy` 通过 `app.use` 挂载，router 内 `req.url` 已剥离前缀 | `src/main/MainServer.ts`、`src/main/router/proxy.router.ts:15` |
@@ -697,14 +697,14 @@ T60-7 依赖全部
 | `src/renderer/pages/proxy/MockRecordEditor.vue` | 编辑器壳 + Tab |
 | `src/renderer/pages/proxy/MockResponseTab.vue` | 响应编辑 |
 | `src/renderer/pages/proxy/MockVariantTab.vue` | 变体 |
-| `src/renderer/pages/proxy/MockMatchTab.vue` | 匹配条件 |
-| `src/renderer/pages/proxy/MockStabilityPanel.vue` | 稳定性建议与来源标记 |
+| `src/renderer/pages/proxy/mock/MockMatchTab.vue` | 匹配条件 |
+| `src/renderer/pages/proxy/mock/MockStabilityPanel.vue` | 稳定性建议与来源标记 |
 | `src/renderer/pages/proxy/MockMigrationReview.vue` | 迁移复核与撤销 |
 | `test/unit/*.test.ts` | 归一化、Matcher、派生、指纹表驱动用例 |
 | `test/bench/matcher.bench.ts` | 1k/5k 匹配基准 |
 | `src/renderer/pages/onboarding/Onboarding.vue` | 接入向导 |
 | `src/renderer/pages/diagnostic/Diagnostic.vue` | 诊断中心 |
-| `src/renderer/pages/proxy/MockMissPanel.vue` | 未命中诊断面板 |
+| `src/renderer/pages/proxy/mock/MockMissPanel.vue` | 未命中诊断面板 |
 
 **建议改造的现有文件：**
 
@@ -713,7 +713,7 @@ T60-7 依赖全部
 - `src/main/service/proxy.service.ts`：归一化请求、有效延迟、错误采集。
 - `src/main/router/appmock.router.ts`：新接口注册；删除死路由 `/upload`。
 - `src/main/IPCServices.ts`：如需文件路径读取再改；优先不改。
-- `src/renderer/pages/proxy/MockRuleMgr.vue`：拆分为列表 + 编辑器。
+- `src/renderer/pages/proxy/mock/MockRuleMgr.vue`：拆分为列表 + 编辑器。
 - `src/renderer/pages/proxy/ProxyRequestDetail.vue`：增加 Mock 匹配区块。
 - `src/renderer/store/ProxyRecords.ts`：合并 `mock` 元数据。
 - `src/shared/proxy.models.ts`：请求记录扩展。

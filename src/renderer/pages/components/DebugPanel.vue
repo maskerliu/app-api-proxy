@@ -10,7 +10,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="HLS">
-      <van-field center placeholder="HLS URL" label-width="3rem" v-model="streamUrl">
+      <van-field center placeholder="HLS URL" label-width="3.7em" v-model="streamUrl">
         <template #left-icon>
           <div style="display: flex; justify-content: center;">
             <van-icon class="iconfont icon-link" style="color: var(--van-gray-8)" />
@@ -350,7 +350,7 @@ async function onSSE() {
   width: 100%;
   min-width: min(375px, 100vw);
   height: 100%;
-  padding: 10px 0;
+  padding: var(--sp-xl) 0;
   background-color: var(--van-gray-1);
 }
 

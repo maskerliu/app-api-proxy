@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="card-container">
-      <div class="diagnostic-head">
+      <van-row class="diagnostic-head" justify="space-between" :wrap="false">
         <div class="head-left">
           <i class="iconfont icon-arrow-left head-icon" @click="goBack" />
           <div>
@@ -9,7 +9,7 @@
             <div class="head-desc">{{ $t('diagnostic.desc') }}</div>
           </div>
         </div>
-        <div class="head-actions">
+        <van-row class="head-actions" align="center" :wrap="false">
           <van-button plain size="small" :loading="healthLoading" @click="refreshHealth(true)">
             <template #icon>
               <van-icon class="iconfont icon-refresh" />
@@ -22,8 +22,8 @@
             </template>
             {{ $t('diagnostic.report') }}
           </van-button>
-        </div>
-      </div>
+        </van-row>
+      </van-row>
 
       <OverlayScrollbarsComponent class="diagnostic-body" :options="scrollOptions" defer>
         <van-cell-group inset>
@@ -84,12 +84,12 @@
         </van-cell-group>
 
         <div v-if="result" class="diagnose-result">
-          <div class="result-head">
+          <van-row class="result-head" align="center" :wrap="false">
             <van-tag :type="result.ok ? 'success' : 'danger'">
               {{ result.ok ? $t('diagnostic.reachable') : $t('diagnostic.unreachable') }}
             </van-tag>
             <span class="result-target">{{ result.target }}</span>
-          </div>
+          </van-row>
           <div v-for="step in result.steps" :key="step.step" class="result-step">
             <van-tag :type="step.ok ? 'success' : 'danger'" plain>{{ $t(`diagnostic.step.${step.step}`) }}</van-tag>
             <span class="step-ms">{{ step.ms }}ms</span>
@@ -199,40 +199,36 @@ function goBack() {
 .diagnostic-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding-right: 4px;
+  padding-right: var(--sp-sm);
 }
 
 .diagnostic-head {
   flex: none;
-  display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--sp-xl);
+  margin-bottom: var(--sp-lg);
 }
 
 .head-left {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--sp-lg);
 }
 
 .head-icon {
-  margin-top: 4px;
+  margin-top: var(--sp-sm);
   font-size: var(--van-font-size-lg);
   cursor: pointer;
 }
 
 .status-icon {
-  margin-right: 6px;
+  margin-right: var(--sp-md);
   font-size: var(--van-font-size-md);
 }
 
 .head-actions {
   flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
 }
 
 .head-title {
@@ -241,23 +237,21 @@ function goBack() {
 }
 
 .head-desc {
-  margin-top: 4px;
+  margin-top: var(--sp-sm);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
 .diagnose-result {
-  margin-top: 12px;
-  padding: 10px 12px;
+  margin-top: var(--sp-2xl);
+  padding: var(--sp-xl) var(--sp-2xl);
   border-radius: var(--van-radius-md);
   background-color: var(--van-gray-2);
 }
 
 .result-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--sp-lg);
+  margin-bottom: var(--sp-lg);
 }
 
 .result-target {
@@ -269,14 +263,14 @@ function goBack() {
 .result-step {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 3px 0;
+  gap: var(--sp-lg);
+  padding: var(--sp-xs) 0;
   font-size: var(--van-font-size-sm);
 }
 
 .step-ms {
   color: var(--van-text-color-3);
-  min-width: 52px;
+  min-width: calc(var(--van-font-size-sm) * 4.7);
 }
 
 .step-detail {

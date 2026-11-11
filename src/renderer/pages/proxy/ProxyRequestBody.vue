@@ -8,7 +8,7 @@
       :lang="activeView.lang" :data="activeView.content" />
     <OverlayScrollbarsComponent v-else-if="activeView?.kind == 'form'" class="form-body-scroll"
       :options="scrollOptions" defer>
-      <div class="form-body">
+      <div class="form-body header-list">
         <div v-for="(field, idx) in activeView.fields" :key="`${field.key}-${idx}`" class="header-row">
           <span class="header-key">{{ field.key }}</span>
           <span class="header-value">{{ field.value }}</span>
@@ -141,17 +141,20 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
 .body-types {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 16px;
-  row-gap: 4px;
-  padding: 10px 0;
+  column-gap: var(--sp-3xl);
+  row-gap: var(--sp-sm);
+  padding: var(--sp-xl) 0;
 }
 
 .form-body-scroll {
-  max-height: 8rem;
+  /* 8rem 是恒定 128px，字号 10 时每行更高、可见行数反而更少，改成随正文缩放 */
+  max-height: calc(var(--van-font-size-md) * 9.8);
 }
 
 .form-body {
   text-align: left;
+  /* 左侧与代码视图（Ace 内容起点 / .body-text 的 20px）对齐，栅格本身由全局 .header-list 单源提供 */
+  padding: var(--sp-tight) var(--sp-3xl) var(--sp-tight) var(--sp-4xl);
 }
 
 .body-text {
@@ -160,7 +163,7 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
   word-break: break-all;
   text-align: left;
   /* 代码区已隐藏行号槽，文本内边距与 Ace 内容起始位置对齐 */
-  padding: 4px 15px 4px 20px;
+  padding: var(--sp-sm) var(--sp-3xl) var(--sp-sm) var(--sp-4xl);
   user-select: text;
 }
 </style>
