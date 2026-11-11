@@ -7,7 +7,7 @@ import fs from 'original-fs'
 import os from 'os'
 import path from 'path'
 import { MainApiCmd } from '@shared/ipc.api'
-import './IPCServices'
+import './ipc-handlers'
 import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
 import { MainServer } from './MainServer'
 

@@ -5,7 +5,7 @@ import os from 'os'
 import path from 'path'
 import type { Version } from '@shared/base.models'
 import { MainApiCmd } from '@shared/ipc.api'
-import { cancelUpdate, runUpdate } from './AppUpdater'
+import { cancelUpdate, runUpdate } from './update.runner'
 import { USER_DATA_DIR } from './MainConst'
 import { getAppWindow } from './misc/utils'
 
