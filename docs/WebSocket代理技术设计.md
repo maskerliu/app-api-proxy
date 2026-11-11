@@ -475,7 +475,7 @@ interface SocketMockReplyRule {
 | `package.json` / `yarn.lock` | 增加 `ws` 直接依赖与 `@types/ws`（当前仅为传递依赖） |
 | `src/main/service/socket-proxy.service.ts` | 新增：upgrade 路由、目标解析、上游握手、中继、记录、限流、关闭 |
 | `src/main/MainServer.ts` | 注入服务；`startHttpServer` 挂载 upgrade；`stop` 关闭全部 WS 连接 |
-| `src/main/MainConst.ts` / `IocContainer.ts` | 注册 `SocketProxyService` |
+| `src/main/constants.ts` / `IocContainer.ts` | 注册 `SocketProxyService` |
 | `src/shared/proxy.models.ts` | `SocketRecord`、`SocketFrame`、`wsPhase`、推送联合类型 |
 | `src/main/service/push.service.ts` | `sendProxyMessage` 接受 WS 记录；批量推送 |
 | `src/renderer/store/ProxyRecords.ts` | 处理 open/frames/close 三个阶段与嵌套帧淘汰 |

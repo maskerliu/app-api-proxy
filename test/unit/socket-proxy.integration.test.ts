@@ -7,7 +7,7 @@ import { WebSocket } from 'ws'
 import { ProxyMock } from '@shared/proxy.models'
 import { startLabServer } from '../../tools/ws-lab/server.mjs'
 
-// 服务模块会经 MainConst 引用 electron，单测环境用最小 app 替身
+// 服务模块会经 constants.ts 引用 electron，单测环境用最小 app 替身
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === 'electron') {

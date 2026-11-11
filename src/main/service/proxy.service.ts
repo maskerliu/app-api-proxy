@@ -12,7 +12,7 @@ import {
 } from '@shared/http-header'
 import { stripTrailingSlash, toAbsoluteTarget } from '@shared/url'
 import { ProxyMock } from '@shared/proxy.models'
-import { IocTypes } from '../MainConst'
+import { IOC_TYPES } from '../constants'
 import { BizNetwork } from '../misc/utils'
 import { DiagnosticService } from './diagnostic.service'
 import { MockService } from './mock.service'
@@ -30,13 +30,13 @@ export class ProxyService {
   private _sessionId: number
   private proxyConfigs: Map<string, ProxyMock.ProxyConfig>
 
-  @inject(IocTypes.MocksService)
+  @inject(IOC_TYPES.MocksService)
   private mockService: MockService
 
-  @inject(IocTypes.PushService)
+  @inject(IOC_TYPES.PushService)
   private pushService: PushService
 
-  @inject(IocTypes.DiagnosticService)
+  @inject(IOC_TYPES.DiagnosticService)
   private diagnosticService: DiagnosticService
 
   constructor() {

@@ -9,8 +9,8 @@ import process from 'process'
 import { pipeline } from 'stream/promises'
 import { createGunzip } from 'zlib'
 import type { Version } from '@shared/base.models'
-import { MainApiCmd } from '@shared/ipc.api'
-import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
+import { MAIN_API_CMD } from '@shared/ipc.api'
+import { APP_NAME, IS_DEV, USER_DATA_DIR } from './constants'
 
 export interface InstallOptions {
   readonly installerPath: string
@@ -220,9 +220,9 @@ function notifyDownloadFailed(error: string) {
 }
 
 function notifyDownloadEvent(event: { progress: number, error?: string }) {
-  const win = BrowserWindow.getAllWindows().find(it => it.title == AppName)
+  const win = BrowserWindow.getAllWindows().find(it => it.title == APP_NAME)
   if (win == null || win.isDestroyed()) return
-  win.webContents.send(MainApiCmd.DownloadUpdate, event)
+  win.webContents.send(MAIN_API_CMD.DownloadUpdate, event)
 }
 
 function sha512File(file: string): Promise<string> {

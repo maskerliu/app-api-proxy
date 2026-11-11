@@ -6,7 +6,7 @@ import { RawData, WebSocket, WebSocketServer } from 'ws'
 import { ProxyMock } from '@shared/proxy.models'
 import { headerFirst, MOCK_UID_HEADER } from '@shared/http-header'
 import { queryTokenOf } from '@shared/url'
-import { IocTypes } from '../MainConst'
+import { IOC_TYPES } from '../constants'
 import { DiagnosticService } from './diagnostic.service'
 import { ProxyService } from './proxy.service'
 import { PushService } from './push.service'
@@ -71,13 +71,13 @@ export class SocketProxyService {
   private upgradeListener: any
   private readonly wss: WebSocketServer
 
-  @inject(IocTypes.PushService)
+  @inject(IOC_TYPES.PushService)
   private pushService: PushService
 
-  @inject(IocTypes.DiagnosticService)
+  @inject(IOC_TYPES.DiagnosticService)
   private diagnosticService: DiagnosticService
 
-  @inject(IocTypes.ProxyService)
+  @inject(IOC_TYPES.ProxyService)
   private proxyService: ProxyService
 
   constructor() {

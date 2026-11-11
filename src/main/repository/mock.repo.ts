@@ -5,7 +5,7 @@ import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
 import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
-import { USER_DATA_DIR } from '../MainConst'
+import { USER_DATA_DIR } from '../constants'
 import type {
   DocMeta, MockMetaDoc, MockRecordDoc, MockRecordSummary, MockRuleDoc,
 } from './mock.docs'

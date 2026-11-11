@@ -10,7 +10,7 @@ import tcpPortUsed from 'tcp-port-used'
 import { API_URL } from '@shared/api.const'
 import type { LocalServerConfig } from '@shared/base.models'
 import { bizContainer } from './IocContainer'
-import { IocTypes, IS_DEV, USER_DATA_DIR } from './MainConst'
+import { IOC_TYPES, IS_DEV, USER_DATA_DIR } from './constants'
 import { AppMockRouter, ProxyRouter } from './router'
 import { CommonService, MockService, ProxyService, PushService, SocketProxyService } from './service'
 
@@ -28,13 +28,13 @@ export class MainServer {
   private socketProxyService: SocketProxyService
 
   bootstrap() {
-    this.appmockRouter = bizContainer.get(IocTypes.AppMockRouter)
-    this.proxyRouter = bizContainer.get(IocTypes.ProxyRouter)
-    this.commonService = bizContainer.get(IocTypes.CommonService)
-    this.pushService = bizContainer.get(IocTypes.PushService)
-    this.proxyService = bizContainer.get(IocTypes.ProxyService)
-    this.socketProxyService = bizContainer.get(IocTypes.SocketProxyService)
-    this.mockService = bizContainer.get(IocTypes.MocksService)
+    this.appmockRouter = bizContainer.get(IOC_TYPES.AppMockRouter)
+    this.proxyRouter = bizContainer.get(IOC_TYPES.ProxyRouter)
+    this.commonService = bizContainer.get(IOC_TYPES.CommonService)
+    this.pushService = bizContainer.get(IOC_TYPES.PushService)
+    this.proxyService = bizContainer.get(IOC_TYPES.ProxyService)
+    this.socketProxyService = bizContainer.get(IOC_TYPES.SocketProxyService)
+    this.mockService = bizContainer.get(IOC_TYPES.MocksService)
 
     // uid 生命周期结束（断开/重新注册）时清掉该 uid 的代理与 Mock 状态，避免残留串到下一个客户端
     this.pushService.onClientClosed = (uid: string) => {

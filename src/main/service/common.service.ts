@@ -5,7 +5,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { inject, injectable } from 'inversify'
 import path from 'path'
 import 'reflect-metadata'
-import { IocTypes, USER_DATA_DIR } from '../MainConst'
+import { IOC_TYPES, USER_DATA_DIR } from '../constants'
 import { getLocalIPs } from '../misc/utils'
 import { DiagnosticService } from './diagnostic.service'
 import { MockService } from './mock.service'
@@ -28,13 +28,13 @@ export class CommonService {
     this._serverConfig = config
   }
 
-  @inject(IocTypes.ProxyService)
+  @inject(IOC_TYPES.ProxyService)
   private proxyService: ProxyService
-  @inject(IocTypes.PushService)
+  @inject(IOC_TYPES.PushService)
   private pushService: PushService
-  @inject(IocTypes.MocksService)
+  @inject(IOC_TYPES.MocksService)
   private mockService: MockService
-  @inject(IocTypes.DiagnosticService)
+  @inject(IOC_TYPES.DiagnosticService)
   private diagnosticService: DiagnosticService
 
   constructor() {
