@@ -4,7 +4,7 @@ import { matchRecords, normalizeRequest } from '@main/service/mock.matcher'
 import { analyzeMatchStability, createMatchFromUrl, deriveMatch, restoreStrict } from '@main/service/mock.derive'
 import { levelOf } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
-import { previewLevel, summaryOf } from '@renderer/pages/proxy/mock/match.helper'
+import { previewLevel, summaryOf } from '@renderer/pages/proxy/mock/match'
 import { condition, legacyRecord, makeMatch, makeRecord } from './fixtures'
 
 function keysOf(match): string[] {

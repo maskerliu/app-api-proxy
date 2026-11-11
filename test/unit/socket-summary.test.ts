@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ProxyMock } from '@shared/proxy.models'
-import { dirIcon, socketStatsOf, socketStatusOf } from '@renderer/pages/proxy/socket.helper'
+import { dirIcon, socketStatsOf, socketStatusOf } from '@renderer/pages/proxy/socket'
 
 type AnyRecord = Record<string, any>
 

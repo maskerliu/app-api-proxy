@@ -237,8 +237,8 @@ import {
   MATCH_LEVELS, MATCH_METHODS, PATH_TYPES, QUERY_OPERATORS, addHeaderCondition, addQueryCondition,
   diffLinesOf, ensureRecordMatch, ignoreSourceOf, operatorNeedsValue, orderingLabelKey, previewLevel,
   testSeedOf,
-} from './match.helper'
-import type { LevelPresetPreview } from './match.helper'
+} from './match'
+import type { LevelPresetPreview } from './match'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
@@ -334,7 +334,7 @@ function onMultiValueChange(value: MockMultiValueMode) {
   touch()
 }
 
-// 模板只关心当前匹配条件，来源判断本身在 match.helper 里
+// 模板只关心当前匹配条件，来源判断本身在 match.ts 里
 const ignoreSource = (key: string) => ignoreSourceOf(match.value, key)
 
 function onLevelClick(level: MockMatchLevel) {

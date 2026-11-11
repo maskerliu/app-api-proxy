@@ -1,7 +1,7 @@
 import { MOCK_ANY_METHOD, ProxyMock } from '@shared'
 import type { MockMatchWarning } from '@shared/mock.models'
-import type { MatchSummary } from './match.helper'
-import { summaryOf } from './match.helper'
+import type { MatchSummary } from './match'
+import { summaryOf } from './match'
 
 // 记录列表的行视图模型：一次算好标题、副标题与标签配色，模板里不做条件拼装。
 
