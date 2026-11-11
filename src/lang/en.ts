@@ -70,6 +70,9 @@ export default {
       live: 'Live',
       bytesTitle: 'Upstream / downstream bytes',
       closeCodeShort: 'Close {code}',
+      // 另一组数据字面量键：这里的键就是 SocketErrorCode 的取值（见 src/shared/mock.models.ts），
+      // 由 `proxy.socket.errors.${code}` 拼出来查表。两个消费点都用 te() 兜底回落到 errorMessage/原始码，
+      // 所以改错一边不会报错，只会静默丢掉这条已翻译的说明。
       errors: {
         'WS-E01': 'Missing or invalid target: check the x-mock-host header or __mock_host param, and the client dataServer',
         'WS-E02': 'Unknown or offline UID: make sure x-mock-uid matches a connected client',
@@ -244,6 +247,9 @@ export default {
         recordTooMany: 'Record count exceeds the limit, cannot enable'
       }
     },
+    // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
+    // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成
+    // `mock.ordering.${ordering}` 直接交给 $t，没有 te() 兜底——两边任改一处，界面就显示原始键名。
     ordering: {
       'manual-priority': 'Manual Priority',
       'path-specificity': 'Path Specificity',
