@@ -6,9 +6,9 @@ import {
 import fs from 'original-fs'
 import os from 'os'
 import path from 'path'
-import { MainApiCmd } from '@shared/ipc.api'
+import { MAIN_API_CMD } from '@shared/ipc.api'
 import './ipc-handlers'
-import { AppName, IS_DEV, USER_DATA_DIR } from './MainConst'
+import { APP_NAME, IS_DEV, USER_DATA_DIR } from './constants'
 import { MainServer } from './MainServer'
 
 const BUILD_CONFIG = JSON.parse(process.env.BUILD_CONFIG)
@@ -36,7 +36,7 @@ export default class MainApp {
       return
     }
 
-    app.setName(AppName)
+    app.setName(APP_NAME)
     app.setPath('crashDumps', path.join(USER_DATA_DIR, 'crashDumps'))
     // app.disableHardwareAcceleration()
     app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
@@ -123,7 +123,7 @@ export default class MainApp {
 
     let winOpt: BrowserWindowConstructorOptions = {
       icon: this.trayIconPath,
-      title: AppName,
+      title: APP_NAME,
       width: 1100,
       height: 670,
       minHeight: 640,
@@ -190,7 +190,7 @@ export default class MainApp {
         label: '用例管理',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainApiCmd.OpenMockRuleMgr)
+          this.mainWindow?.webContents.send(MAIN_API_CMD.OpenMockRuleMgr)
         }
       },
       {
@@ -198,7 +198,7 @@ export default class MainApp {
         label: '设置',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainApiCmd.OpenSettings)
+          this.mainWindow?.webContents.send(MAIN_API_CMD.OpenSettings)
         }
       },
       {
@@ -206,7 +206,7 @@ export default class MainApp {
         label: '接入向导',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainApiCmd.OpenOnboarding)
+          this.mainWindow?.webContents.send(MAIN_API_CMD.OpenOnboarding)
         }
       },
       {
@@ -214,7 +214,7 @@ export default class MainApp {
         label: '开发者面板',
         click: () => {
           this.mainWindow?.show()
-          this.mainWindow?.webContents.send(MainApiCmd.OpenDevTools)
+          this.mainWindow?.webContents.send(MAIN_API_CMD.OpenDevTools)
         }
       },
       {
@@ -235,7 +235,7 @@ export default class MainApp {
       }
     })
 
-    this.tray.setToolTip(AppName)
+    this.tray.setToolTip(APP_NAME)
     this.tray.setContextMenu(contextMenu)
   }
 
@@ -293,15 +293,15 @@ export default class MainApp {
   }
 
   private async initIPCService() {
-    ipcMain.handle(MainApiCmd.GetBizConfig, () => this.mainServer.getBizConfig())
+    ipcMain.handle(MAIN_API_CMD.GetBizConfig, () => this.mainServer.getBizConfig())
 
-    ipcMain.handle(MainApiCmd.UpdateBizConfig, async (_, configJson: string) => {
+    ipcMain.handle(MAIN_API_CMD.UpdateBizConfig, async (_, configJson: string) => {
       const config = JSON.parse(configJson)
       await this.mainServer.updateBizConfig(config)
       return this.mainServer.getBizConfig()
     })
 
-    ipcMain.handle(MainApiCmd.SendServerEvent, () => {
+    ipcMain.handle(MAIN_API_CMD.SendServerEvent, () => {
       // console.log('send sse')
     })
   }
@@ -310,7 +310,7 @@ export default class MainApp {
     if (os.platform() !== 'win32') return
 
     const appPath = process.execPath
-    const ruleName = IS_DEV ? 'Electron' : AppName
+    const ruleName = IS_DEV ? 'Electron' : APP_NAME
     const checkCommand = `netsh advfirewall firewall show rule name="${ruleName}"`
 
     exec(checkCommand, (error, stdout) => {

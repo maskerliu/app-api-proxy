@@ -6,7 +6,7 @@ import type {
 import { recordLimitState } from '@shared/mock.models'
 import { normalizeMockRecord } from '@shared/mock.validation'
 import { parseLooseUrl, stripTrailingSlash } from '@shared/url'
-import { IocTypes } from '../MainConst'
+import { IOC_TYPES } from '../constants'
 import { MockRecordChangeEvent, MockRepo } from '../repository/mock.repo'
 import type { MockRecordSummary } from '../repository/mock.docs'
 import { detectMatchWarnings } from './mock.conflict'
@@ -105,7 +105,7 @@ function estimateBytes(record: ProxyMock.MockRecord): number {
 @injectable()
 export class MockCache {
 
-  @inject(IocTypes.MockRepo)
+  @inject(IOC_TYPES.MockRepo)
   private mockRepo: MockRepo
 
   private snapshots = new Map<string, RuleSnapshot>()

@@ -15,7 +15,7 @@ const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'mock-migration-'))
 mkdirSync(path.join(DATA_DIR, 'biz_storage'), { recursive: true })
 process.env.MOCK_MIGRATION_USER_DATA = DATA_DIR
 
-// 服务模块会经 MainConst 引用 electron，测试环境用最小 app 替身把 userData 指到临时目录
+// 服务模块会经 constants.ts 引用 electron，测试环境用最小 app 替身把 userData 指到临时目录
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === 'electron') {
@@ -28,7 +28,7 @@ registerHooks({
   },
 })
 
-const { IocTypes } = await import('@main/MainConst')
+const { IOC_TYPES } = await import('@main/constants')
 const { MockRepo } = await import('@main/repository/mock.repo')
 const { MockMigrationRunner } = await import('@main/service/mock.migration.runner')
 const { MIGRATION_REPORT_ID, RECORD_TYPE, SCHEMA_VERSION } = await import('@main/repository/mock.docs')
@@ -44,10 +44,10 @@ const SEEDED = fixtureDocs().map(({ _rev, ...doc }: any) => doc)
 /** 一次应用启动：容器装配 + repo.init()（建索引）+ runner.run()（备份并迁移） */
 async function startApp() {
   const container = new Container({ defaultScope: 'Singleton' })
-  container.bind(IocTypes.MockRepo).to(MockRepo)
-  container.bind(IocTypes.MockMigration).to(MockMigrationRunner)
-  const repo = container.get(IocTypes.MockRepo) as any
-  const runner = container.get(IocTypes.MockMigration) as any
+  container.bind(IOC_TYPES.MockRepo).to(MockRepo)
+  container.bind(IOC_TYPES.MockMigration).to(MockMigrationRunner)
+  const repo = container.get(IOC_TYPES.MockRepo) as any
+  const runner = container.get(IOC_TYPES.MockMigration) as any
   await repo.init()
   await runner.run()
   return { repo, runner }

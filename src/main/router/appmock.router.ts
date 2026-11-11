@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
-import { IocTypes } from '../MainConst'
+import { IOC_TYPES } from '../constants'
 import { BizNetwork } from '../misc/utils'
 import {
   CommonService, DiagnosticService, MockService, ProxyService, PushService, SocketProxyService,
@@ -17,17 +17,17 @@ interface ReqResp {
 @injectable()
 export class AppMockRouter extends BaseRouter {
 
-  @inject(IocTypes.CommonService)
+  @inject(IOC_TYPES.CommonService)
   private commonService: CommonService
-  @inject(IocTypes.PushService)
+  @inject(IOC_TYPES.PushService)
   private pushService: PushService
-  @inject(IocTypes.MocksService)
+  @inject(IOC_TYPES.MocksService)
   private mockService: MockService
-  @inject(IocTypes.ProxyService)
+  @inject(IOC_TYPES.ProxyService)
   private proxyService: ProxyService
-  @inject(IocTypes.SocketProxyService)
+  @inject(IOC_TYPES.SocketProxyService)
   private socketProxyService: SocketProxyService
-  @inject(IocTypes.DiagnosticService)
+  @inject(IOC_TYPES.DiagnosticService)
   private diagnosticService: DiagnosticService
 
   private _clients: Map<string, ReqResp> = new Map()

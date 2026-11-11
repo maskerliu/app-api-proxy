@@ -1,6 +1,6 @@
 import type { LocalServerConfig } from "./base.models"
 
-export const MainApiCmd = {
+export const MAIN_API_CMD = {
   Relaunch: 'relaunch',
   SelectFile: 'selectFile',
   SelectFolder: 'selectFolder',

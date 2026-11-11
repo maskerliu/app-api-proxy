@@ -3,9 +3,9 @@ import { app } from 'electron'
 export const IS_DEV = process.env.NODE_ENV === 'development'
 export const USER_DATA_DIR = app.getPath('userData')
 
-export const AppName = 'AppApiProxy'
+export const APP_NAME = 'AppApiProxy'
 
-export const IocTypes = {
+export const IOC_TYPES = {
   AppMockRouter: Symbol.for('AppMockRouter'),
   ProxyRouter: Symbol.for('ProxyRouter'),
   CommonService: Symbol.for('CommonService'),

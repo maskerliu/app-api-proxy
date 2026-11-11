@@ -98,7 +98,7 @@
 |---|---|---|---|---|---|---|
 | WS0C-01 | 契约冻结：`SocketFrame` / `SocketRecord` / 推送联合类型 / 协议维度 | Dev A | 1.0 | — | `src/shared/proxy.models.ts`、`src/shared/api.const.ts` | 字段与设计文档 7.1 一致；`type` 固定 5030；`wsPhase` 三态；HTTP 现有类型零改动 |
 | WS0C-02 | 依赖与打包验证：`ws` 在 Electron 主进程可用、asar 内可加载 | Dev A | 0.5 | — | `package.json`、`electron-builder.yml`、webpack main 配置 | `yarn dev` 下能 `new WebSocketServer`；`yarn pkg` 后安装包内可正常建连（至少完成一次本地产物验证） |
-| WS0C-03 | 主进程骨架与路由桩：服务注册、`bindServer`、`closeAll` 空实现 | Dev A | 0.5 | WS0C-01 | `src/main/service/socket-proxy.service.ts`、`MainConst.ts`、`IocContainer.ts`、`MainServer.ts` | 不改变现有端口与启动顺序；`stop()` 能调用 `closeAll()` |
+| WS0C-03 | 主进程骨架与路由桩：服务注册、`bindServer`、`closeAll` 空实现 | Dev A | 0.5 | WS0C-01 | `src/main/service/socket-proxy.service.ts`、`constants.ts`、`IocContainer.ts`、`MainServer.ts` | 不改变现有端口与启动顺序；`stop()` 能调用 `closeAll()` |
 | WS0C-04 | 文案、错误码与诊断映射占位 | Dev B | 0.5 | WS0C-01 | `src/lang/zh-CN.ts`、`src/lang/en.ts`、`docs/使用说明.md` | WS-E01~WS-E12 有中英文案；文档标注 WS 支持状态 |
 
 ### 5.2 W1 代理核心（12.5 人日）

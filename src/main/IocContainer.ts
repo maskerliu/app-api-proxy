@@ -1,5 +1,5 @@
 import { Container } from 'inversify'
-import { IocTypes } from './MainConst'
+import { IOC_TYPES } from './constants'
 import { MockRepo } from './repository/mock.repo'
 import { AppMockRouter, ProxyRouter } from './router'
 import { MockCache } from './service/mock.cache'
@@ -9,16 +9,16 @@ import {
 } from './service'
 
 const bizContainer = new Container({ defaultScope: 'Singleton' })
-bizContainer.bind<AppMockRouter>(IocTypes.AppMockRouter).to(AppMockRouter)
-bizContainer.bind<ProxyRouter>(IocTypes.ProxyRouter).to(ProxyRouter)
-bizContainer.bind<CommonService>(IocTypes.CommonService).to(CommonService)
-bizContainer.bind<MockService>(IocTypes.MocksService).to(MockService)
-bizContainer.bind<PushService>(IocTypes.PushService).to(PushService)
-bizContainer.bind<ProxyService>(IocTypes.ProxyService).to(ProxyService)
-bizContainer.bind<SocketProxyService>(IocTypes.SocketProxyService).to(SocketProxyService)
-bizContainer.bind<DiagnosticService>(IocTypes.DiagnosticService).to(DiagnosticService)
-bizContainer.bind<MockRepo>(IocTypes.MockRepo).to(MockRepo)
-bizContainer.bind<MockCache>(IocTypes.MockCache).to(MockCache)
-bizContainer.bind<MockMigrationRunner>(IocTypes.MockMigration).to(MockMigrationRunner)
+bizContainer.bind<AppMockRouter>(IOC_TYPES.AppMockRouter).to(AppMockRouter)
+bizContainer.bind<ProxyRouter>(IOC_TYPES.ProxyRouter).to(ProxyRouter)
+bizContainer.bind<CommonService>(IOC_TYPES.CommonService).to(CommonService)
+bizContainer.bind<MockService>(IOC_TYPES.MocksService).to(MockService)
+bizContainer.bind<PushService>(IOC_TYPES.PushService).to(PushService)
+bizContainer.bind<ProxyService>(IOC_TYPES.ProxyService).to(ProxyService)
+bizContainer.bind<SocketProxyService>(IOC_TYPES.SocketProxyService).to(SocketProxyService)
+bizContainer.bind<DiagnosticService>(IOC_TYPES.DiagnosticService).to(DiagnosticService)
+bizContainer.bind<MockRepo>(IOC_TYPES.MockRepo).to(MockRepo)
+bizContainer.bind<MockCache>(IOC_TYPES.MockCache).to(MockCache)
+bizContainer.bind<MockMigrationRunner>(IOC_TYPES.MockMigration).to(MockMigrationRunner)
 
 export { bizContainer }

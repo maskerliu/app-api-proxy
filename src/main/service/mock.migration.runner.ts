@@ -4,7 +4,7 @@ import type {
   MigrationReport, MockMigrationReportItem, RevertMockRequest, RevertMockResponse,
 } from '@shared/mock.models'
 import { MockError } from '@shared/mock.errors'
-import { IocTypes } from '../MainConst'
+import { IOC_TYPES } from '../constants'
 import { MockRepo } from '../repository/mock.repo'
 import type {
   LegacyRuleDoc, MockMigrationReportDoc, MockRecordDoc, MockRecordSummary, MockRuleDoc,
@@ -28,7 +28,7 @@ const MIGRATION_SYNC_LIMIT = 2000
 @injectable()
 export class MockMigrationRunner {
 
-  @inject(IocTypes.MockRepo)
+  @inject(IOC_TYPES.MockRepo)
   private repo: MockRepo
 
   private runTask: Promise<void> = null

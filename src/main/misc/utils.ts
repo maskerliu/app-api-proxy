@@ -6,7 +6,7 @@ import JSONBig from 'json-bigint'
 import { NetworkInterfaceInfo, networkInterfaces } from 'os'
 import { BizContext, LocalIP, UserDevice, UserNetwork } from '@shared/base.models'
 import { pickHeader } from '@shared/http-header'
-import { AppName } from "../MainConst"
+import { APP_NAME } from "../constants"
 
 const ipRegex = /(192|169)\.(172|168|254)\.(99|59|164)\.[1-9]\d{0,2}/
 
@@ -136,5 +136,5 @@ export function fetchFormFile(file: File) {
 
 export function getAppWindow(): BrowserWindow | undefined {
   return BrowserWindow.getAllWindows()
-    .find((it, idx, _) => { return it.title == AppName })
+    .find((it, idx, _) => { return it.title == APP_NAME })
 }

@@ -7,7 +7,7 @@ import type {
 import { MOCK_RECORD_REJECT_LIMIT, levelOf } from '@shared/mock.models'
 import { MockError } from '@shared/mock.errors'
 import { normalizeMockRecord, sanitizeResponseHeaders, validateMockRecord } from '@shared/mock.validation'
-import { IocTypes } from "../MainConst"
+import { IOC_TYPES } from "../constants"
 import { MockRepo } from '../repository/mock.repo'
 import { CacheMatchResult, MockCache } from './mock.cache'
 import { MockMigrationRunner } from './mock.migration.runner'
@@ -36,19 +36,19 @@ const NO_MATCH_META: MockHitMeta = { hit: false }
 @injectable()
 export class MockService {
 
-  @inject(IocTypes.PushService)
+  @inject(IOC_TYPES.PushService)
   private pushService: PushService
 
-  @inject(IocTypes.MockRepo)
+  @inject(IOC_TYPES.MockRepo)
   private mockRepo: MockRepo
 
-  @inject(IocTypes.MockCache)
+  @inject(IOC_TYPES.MockCache)
   private mockCache: MockCache
 
-  @inject(IocTypes.MockMigration)
+  @inject(IOC_TYPES.MockMigration)
   private migration: MockMigrationRunner
 
-  @inject(IocTypes.DiagnosticService)
+  @inject(IOC_TYPES.DiagnosticService)
   private diagnosticService: DiagnosticService
 
   private clientMockStatus: Map<string, string> = new Map()

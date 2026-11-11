@@ -4,12 +4,12 @@ import fse from 'fs-extra'
 import os from 'os'
 import path from 'path'
 import type { Version } from '@shared/base.models'
-import { MainApiCmd } from '@shared/ipc.api'
+import { MAIN_API_CMD } from '@shared/ipc.api'
 import { cancelUpdate, runUpdate } from './update.runner'
-import { USER_DATA_DIR } from './MainConst'
+import { USER_DATA_DIR } from './constants'
 import { getAppWindow } from './misc/utils'
 
-ipcMain.handle(MainApiCmd.Relaunch, (_) => {
+ipcMain.handle(MAIN_API_CMD.Relaunch, (_) => {
   const resourcesUpdate = path.join(process.resourcesPath, 'update.asar')
   const stagedUpdate = path.join(USER_DATA_DIR, 'update', 'update.asar')
   const pending = fse.pathExistsSync(resourcesUpdate) || fse.pathExistsSync(stagedUpdate)
@@ -59,7 +59,7 @@ ipcMain.handle(MainApiCmd.Relaunch, (_) => {
   app.quit()
 })
 
-ipcMain.handle(MainApiCmd.SelectFile, async (): Promise<string | undefined> => {
+ipcMain.handle(MAIN_API_CMD.SelectFile, async (): Promise<string | undefined> => {
   let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     properties: ['openFile',],
     filters: [
@@ -74,7 +74,7 @@ ipcMain.handle(MainApiCmd.SelectFile, async (): Promise<string | undefined> => {
   return os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0]
 })
 
-ipcMain.handle(MainApiCmd.SelectFolder, async (): Promise<string | undefined> => {
+ipcMain.handle(MAIN_API_CMD.SelectFolder, async (): Promise<string | undefined> => {
   let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
     properties: ['openDirectory',],
   })
@@ -83,16 +83,16 @@ ipcMain.handle(MainApiCmd.SelectFolder, async (): Promise<string | undefined> =>
   return os.platform() == 'darwin' ? `file://${result.filePaths[0]}` : result.filePaths[0]
 })
 
-ipcMain.handle(MainApiCmd.OpenFolder, async (_, target: string) => {
+ipcMain.handle(MAIN_API_CMD.OpenFolder, async (_, target: string) => {
   if (!target) return
   await shell.openPath(target)
 })
 
-ipcMain.handle(MainApiCmd.WriteClipboard, (_, text: string) => {
+ipcMain.handle(MAIN_API_CMD.WriteClipboard, (_, text: string) => {
   clipboard.writeText(String(text ?? ''))
 })
 
-ipcMain.handle(MainApiCmd.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, silent = false) => {
+ipcMain.handle(MAIN_API_CMD.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, silent = false) => {
   let filePath = path.join(USER_DATA_DIR, fileName)
   await fse.ensureDir(path.dirname(filePath))
 
@@ -123,11 +123,11 @@ ipcMain.handle(MainApiCmd.SaveFileAs, async (_, title: string, fileName: string,
   }
 })
 
-ipcMain.handle(MainApiCmd.OpenDevTools, (_, args?: any) => {
+ipcMain.handle(MAIN_API_CMD.OpenDevTools, (_, args?: any) => {
   getAppWindow()?.webContents.openDevTools({ mode: 'detach', activate: false })
 })
 
-ipcMain.handle(MainApiCmd.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
+ipcMain.handle(MAIN_API_CMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
   nativeTheme.themeSource = theme
   if (os.platform() == 'darwin') {
     // console.log(this.mainWindow.setTitleBarOverlay)
@@ -139,10 +139,10 @@ ipcMain.handle(MainApiCmd.SetAppTheme, (_, theme: ('system' | 'light' | 'dark'))
   }
 })
 
-ipcMain.handle(MainApiCmd.DownloadUpdate, async (_, newVersion: Version) => {
+ipcMain.handle(MAIN_API_CMD.DownloadUpdate, async (_, newVersion: Version) => {
   await runUpdate(newVersion)
 })
 
-ipcMain.handle(MainApiCmd.CancelUpdate, () => {
+ipcMain.handle(MAIN_API_CMD.CancelUpdate, () => {
   cancelUpdate()
 })
