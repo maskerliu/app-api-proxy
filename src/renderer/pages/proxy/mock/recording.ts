@@ -119,3 +119,41 @@ export async function recordRequestToRule(options: RecordRequestOptions): Promis
 
   return { rule, record, created: existing == null, enabled, enableError, previous, degraded }
 }
+
+/** 单次录制结果；previous 为覆盖前快照，支持撤销 */
+export interface MockRecordHistoryEntry {
+  id: string
+  ruleId: string
+  recordId: string
+  ruleName: string
+  recordName: string
+  url: string
+  created: boolean
+  enabled: boolean
+  previous: ProxyMock.MockRecord | null
+  at: number
+}
+
+const HISTORY_LIMIT = 10
+// 只保留本次运行的历史：记录快照可能含 2MB 响应体，不写入 localStorage
+const historyEntries: MockRecordHistoryEntry[] = []
+
+export function listRecordHistory(): MockRecordHistoryEntry[] {
+  return historyEntries.slice()
+}
+
+export function pushRecordHistory(entry: Omit<MockRecordHistoryEntry, 'id' | 'at'>): MockRecordHistoryEntry[] {
+  historyEntries.unshift({
+    ...entry,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    at: Date.now(),
+  })
+  historyEntries.splice(HISTORY_LIMIT)
+  return listRecordHistory()
+}
+
+export function removeRecordHistory(id: string): MockRecordHistoryEntry[] {
+  const index = historyEntries.findIndex(it => it.id === id)
+  if (index >= 0) historyEntries.splice(index, 1)
+  return listRecordHistory()
+}
