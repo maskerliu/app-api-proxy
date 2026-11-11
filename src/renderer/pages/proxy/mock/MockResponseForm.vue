@@ -1,6 +1,6 @@
 <template>
   <div class="response-form" :class="{ 'fill-body': fillBody, 'no-meta': !showMeta }">
-    <div v-if="showMeta" class="form-row">
+    <van-row v-if="showMeta" class="form-row" :wrap="false">
       <van-field ref="statusField" class="status-field" type="digit" :label="$t('mock.editor.statusCode')"
         :placeholder="$t('mock.editor.statusCode')" v-model="statusText" />
       <van-field ref="delayField" class="delay-field" type="digit" :label="$t('mock.editor.delay')"
@@ -9,7 +9,7 @@
           <span class="field-unit">ms</span>
         </template>
       </van-field>
-    </div>
+    </van-row>
 
     <van-collapse v-model="expandedSections" :border="false" class="header-collapse" @transitionend="syncBodyFill">
       <van-collapse-item name="headers" :title="$t('mock.editor.headers')">
@@ -18,13 +18,13 @@
           </van-button>
         </template>
         <div ref="headerList" class="field-list">
-          <div v-for="(row, idx) in headerRows" :key="idx" class="field-row">
+          <van-row v-for="(row, idx) in headerRows" :key="idx" class="field-row" align="center" :wrap="false">
             <van-field class="field-key" v-model="row.key" :placeholder="$t('mock.editor.headerKey')"
               @update:model-value="applyHeaders" />
             <van-field class="field-value" v-model="row.value" :placeholder="$t('mock.editor.headerValue')"
               @update:model-value="applyHeaders" />
             <van-icon name="cross" class="row-delete" @click="removeHeader(idx)" />
-          </div>
+          </van-row>
           <div v-if="headerRows.length === 0" class="empty-tip">{{ $t('mock.editor.noHeaders') }}</div>
         </div>
       </van-collapse-item>
@@ -32,14 +32,14 @@
 
     <div ref="bodySection" class="form-section body-section"
       :style="fillBody ? { paddingBottom: `${sectionPadBottom}px` } : null">
-      <div class="section-head body-head">
+      <van-row class="section-head body-head" align="center">
         <span class="section-title">{{ $t('mock.editor.body') }}</span>
         <van-radio-group v-model="bodyTypeValue" direction="horizontal" class="body-type">
           <van-radio v-for="type in bodyTypes" :key="type" :name="type">{{ type.toUpperCase() }}</van-radio>
         </van-radio-group>
-        <div class="body-tools">
+        <van-row class="body-tools" align="center" :wrap="false">
           <span class="body-size">{{ $t('mock.editor.bodySize', { size: bodySizeText }) }}</span>
-          <div class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }">
+          <van-row class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }" :wrap="false">
             <van-button size="mini" plain class="tool-btn" @click="formatBody">
               <template #icon>
                 <van-icon class="iconfont icon-format" />
@@ -50,14 +50,14 @@
                 <van-icon class="iconfont icon-compress" />
               </template>
             </van-button>
-          </div>
-        </div>
-      </div>
+          </van-row>
+        </van-row>
+      </van-row>
 
-      <div v-if="jsonError || bodyTooLarge" class="body-warning">
+      <van-row v-if="jsonError || bodyTooLarge" class="body-warning" justify="end" :wrap="false">
         <span v-if="jsonError" class="json-warning">{{ $t('mock.editor.invalidJson') }}</span>
         <span v-else class="json-warning">{{ $t('mock.editor.bodyTooLarge') }}</span>
-      </div>
+      </van-row>
 
       <div v-if="isBinary" class="binary-tip">
         {{ $t('mock.editor.binaryTip', { size: bodySizeText }) }}
@@ -330,7 +330,6 @@ defineExpose({ focusField })
 }
 
 .form-row {
-  display: flex;
   gap: var(--sp-xl);
 }
 
@@ -388,8 +387,6 @@ defineExpose({ focusField })
 }
 
 .section-head {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
   margin-bottom: var(--sp-md);
 }
@@ -408,13 +405,13 @@ defineExpose({ focusField })
 }
 
 .field-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-sm);
 }
 
 .field-key {
-  flex: 0 0 38%;
+  /* 与只读键值网格同一条 key 列宽口径，见 global.css 的 --header-key-width */
+  flex: 0 0 var(--header-key-width);
+  min-width: 0;
   padding: var(--sp-md) var(--sp-lg);
   border-radius: var(--van-radius-md);
 }
@@ -456,14 +453,11 @@ defineExpose({ focusField })
 }
 
 .body-tools {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
   margin-left: auto;
 }
 
 .body-actions {
-  display: flex;
   gap: var(--sp-md);
 }
 
@@ -509,8 +503,6 @@ defineExpose({ focusField })
 
 /* 状态行移到编辑器上方，让编辑器成为区块末尾元素，便于贴合底部 */
 .body-warning {
-  display: flex;
-  justify-content: flex-end;
   margin: 0 0 var(--sp-sm);
   font-size: var(--van-font-size-sm);
 }

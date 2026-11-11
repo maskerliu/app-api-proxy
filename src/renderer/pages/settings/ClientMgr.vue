@@ -10,12 +10,12 @@
 
     <OverlayScrollbarsComponent class="client-grid" :options="scrollOptions" defer>
       <van-grid :column-num="3" clickable>
-        <van-grid-item v-for="item in clients" :key="item.uid" @click="showOpMenu(item)" style="max-height: 80px">
+        <van-grid-item v-for="item in clients" :key="item.uid" class="client-item" @click="showOpMenu(item)">
           <template #text>
             <span class="single-line">{{ item.uid }}</span>
           </template>
           <template #icon>
-            <van-icon class="iconfont icon-network-data" size="30"
+            <van-icon class="iconfont icon-network-data"
               :style="{ color: commonStore.uid == item.uid ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
           </template>
         </van-grid-item>
@@ -100,11 +100,21 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
   max-height: 50vh;
 }
 
+/* 卡片高度与图标尺寸改为随字号缩放：原先 80px + 30px 图标 + 120px 文本轨三重冻结，
+   字号 10 时一张卡片里只剩几十像素留给 UID */
+.client-item {
+  max-height: calc(var(--van-font-size-md) * 6.2);
+}
+
+.client-item :deep(.van-icon) {
+  font-size: calc(var(--van-font-size-md) * 2.3);
+}
+
 .single-line {
-  max-width: 120px;
+  max-width: calc(var(--van-font-size-md) * 9.2);
   font-size: var(--van-font-size-sm);
   color: var(--van-text-color);
-  padding: 5px;
+  padding: var(--sp-tight);
   display: block;
   white-space: nowrap;
   overflow: hidden;

@@ -1,6 +1,6 @@
 <template>
   <van-cell-group inset :title="$t('settings.sys.title')" :style="{ paddingTop: isWeb ? '0' : '10px' }">
-    <van-field center :label="$t('settings.sys.protocol')" label-width="10rem" readonly>
+    <van-field center :label="$t('settings.sys.protocol')" label-width="12.3em" readonly>
       <template #input>
         <van-radio-group v-model="protocol" direction="horizontal">
           <van-radio :name="0">https</van-radio>
@@ -9,7 +9,7 @@
       </template>
     </van-field>
 
-    <van-field :label="$t('settings.sys.server')" label-width="10rem" readonly>
+    <van-field :label="$t('settings.sys.server')" label-width="12.3em" readonly>
       <template #input>
         <MiniSelect
           :model-value="curServerIp?.address"
@@ -19,7 +19,7 @@
       </template>
     </van-field>
 
-    <van-field center :label="$t(item.tooltip)" label-width="10rem" v-for="item in perferences"
+    <van-field center :label="$t(item.tooltip)" label-width="12.3em" v-for="item in perferences"
       v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly"
       :error-message="!commonStore.serverConfig['portValid'] && item.tooltip == 'settings.sys.port' ? $t('settings.sys.porterror') : null">
       <template #right-icon>
@@ -42,7 +42,7 @@ import { LocalIP } from '@shared'
 import { showNotify } from 'vant'
 import { computed, inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MiniSelect from '../../common/MiniSelect.vue'
+import MiniSelect from '../components/MiniSelect.vue'
 import { CommonStore } from '../../store'
 
 type SettingPreference = {

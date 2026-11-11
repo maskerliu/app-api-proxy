@@ -179,10 +179,15 @@ function openSearch() {
   else (ace as any).require('ace/ext/searchbox').Search(_editor)
 }
 
+// Ace 主题名由全局主题推导：light 走 cloud_editor，其余走 cloud_editor_<theme>
+function aceTheme(): string {
+  return `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
+}
+
 onMounted(() => {
   _defOpts.readOnly = props.readOnly ? props.readOnly : false
   _defOpts.fontSize = commonStore.fontSize + FONT_SIZE_MD_OFFSET
-  _defOpts.theme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
+  _defOpts.theme = aceTheme()
   _defOpts.showGutter = props.gutter
   if (props.maxLines) {
     _defOpts.maxLines = props.maxLines
@@ -239,8 +244,7 @@ onUnmounted(() => {
 })
 
 watch(() => commonStore.theme, () => {
-  let newTheme = `ace/theme/cloud_editor${commonStore.theme == 'light' ? '' : '_' + commonStore.theme}`
-  _editor.setOption('theme', newTheme)
+  _editor.setOption('theme', aceTheme())
 })
 
 watch(() => commonStore.fontSize, () => {
@@ -673,7 +677,7 @@ defineExpose({ syncFillHeight })
   box-sizing: border-box;
   width: 24px;
   height: 24px;
-  padding: 4px;
+  padding: var(--sp-sm);
   border: 1px solid var(--van-border-color);
   border-radius: 4px;
   background: var(--van-background-2);

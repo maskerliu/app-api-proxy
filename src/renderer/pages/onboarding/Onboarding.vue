@@ -2,10 +2,10 @@
   <div class="page-container">
     <div class="card-container">
       <div class="onboarding-head">
-        <div class="onboarding-title">
+        <van-row class="onboarding-title" align="center" :wrap="false">
           <i class="iconfont icon-link onboarding-logo" />
           <span>{{ $t('onboarding.title') }}</span>
-        </div>
+        </van-row>
         <div class="onboarding-subtitle">{{ $t('onboarding.subtitle') }}</div>
         <van-steps :active="step" active-color="var(--van-success-color)" inactive-color="var(--van-gray-5)">
           <van-step>{{ $t('onboarding.step.service') }}</van-step>
@@ -18,10 +18,10 @@
       <OverlayScrollbarsComponent class="onboarding-body" :options="scrollOptions" defer>
         <!-- 1. 服务就绪 -->
         <div v-if="step === 0" class="step-panel">
-          <div class="step-head">
+          <van-row class="step-head" align="center" :wrap="false">
             <i class="iconfont icon-check step-icon" :style="{ color: health?.ok ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
             <span>{{ $t('onboarding.service.title') }}</span>
-          </div>
+          </van-row>
           <div class="step-desc">{{ $t('onboarding.service.desc') }}</div>
           <van-cell-group inset>
             <van-cell :title="$t('onboarding.service.status')"
@@ -37,7 +37,7 @@
               <i class="iconfont icon-warning notice-icon" />
             </template>
           </van-notice-bar>
-          <div class="step-actions">
+          <van-row class="step-actions" align="center" :wrap="false">
             <van-button plain type="primary" size="small" :loading="healthLoading" @click="refreshHealth(true)">
               {{ $t('onboarding.service.refresh') }}
             </van-button>
@@ -45,19 +45,19 @@
               @click="copyText(proxyBaseUrl, $t('onboarding.service.copied'))">
               {{ $t('onboarding.service.copy') }}
             </van-button>
-          </div>
+          </van-row>
           <div class="proxy-address">{{ proxyBaseUrl || '--' }}</div>
         </div>
 
         <!-- 2. 接入客户端 -->
         <div v-else-if="step === 1" class="step-panel client-step">
-          <div class="step-head">
+          <van-row class="step-head" align="center" :wrap="false">
             <i class="iconfont icon-qrcode step-icon" style="color: var(--van-primary-color)" />
             <span>{{ $t('onboarding.client.title') }}</span>
-          </div>
+          </van-row>
           <div class="step-desc">{{ $t('onboarding.client.desc') }}</div>
 
-          <div class="client-grid">
+          <van-row class="client-grid">
             <div class="client-col qr-col">
               <div class="col-title">{{ $t('onboarding.client.qrcode') }}</div>
               <qrcode-vue v-if="commonStore.registerUrl" :value="commonStore.registerUrl" :size="180" :margin="1"
@@ -69,7 +69,7 @@
             </div>
 
             <div class="client-col">
-              <van-field v-model="targetHost" :label="$t('onboarding.client.targetHost')" label-width="110"
+              <van-field v-model="targetHost" :label="$t('onboarding.client.targetHost')" label-width="8.5em"
                 :placeholder="$t('onboarding.client.targetHostPlaceholder')" clearable />
               <div class="col-title">{{ $t('onboarding.client.snippet') }}</div>
               <van-radio-group v-model="snippetIndex" direction="horizontal" class="snippet-tabs">
@@ -83,7 +83,7 @@
                 {{ $t('onboarding.client.copySnippet') }}
               </van-button>
             </div>
-          </div>
+          </van-row>
 
           <van-notice-bar wrapable :scrollable="false" :text="$t('onboarding.client.note')">
             <template #left-icon>
@@ -94,12 +94,12 @@
 
         <!-- 3. 连接验证 -->
         <div v-else-if="step === 2" class="step-panel">
-          <div class="step-head">
+          <van-row class="step-head" align="center" :wrap="false">
             <i class="iconfont step-icon" :class="received ? 'icon-check' : 'icon-refresh'"
               :style="{ color: received ? 'var(--van-success-color)' : 'var(--van-gray-5)' }" />
             <span>{{ $t('onboarding.verify.title') }}</span>
             <van-loading v-if="!received" size="14" style="margin-left: 6px;" />
-          </div>
+          </van-row>
           <div class="step-desc">{{ $t('onboarding.verify.desc') }}</div>
 
           <van-notice-bar v-if="latestRequest" wrapable :scrollable="false"
@@ -109,17 +109,17 @@
             </template>
           </van-notice-bar>
           <div v-if="latestRequest" class="latest-request">
-            <div class="latest-line">
+            <van-row class="latest-line" align="center" :wrap="false">
               <van-tag type="success">{{ latestRequest.method }}</van-tag>
               <span class="latest-url">{{ latestRequest.url }}</span>
-            </div>
-            <div class="latest-meta">
+            </van-row>
+            <van-row class="latest-meta" align="center">
               <span>{{ latestRequest.host || '--' }}</span>
               <span>UID: {{ latestRequest.uid || '(empty)' }}</span>
               <van-tag :type="latestRequest.uidKnown ? 'primary' : 'danger'">
                 {{ latestRequest.uidKnown ? $t('diagnostic.uidKnown') : $t('diagnostic.uidUnknown') }}
               </van-tag>
-            </div>
+            </van-row>
           </div>
           <van-empty v-else image="search" :description="$t('onboarding.verify.empty')" />
 
@@ -135,32 +135,32 @@
               is-link @click="copyText(commonStore.uid, $t('onboarding.verify.uidCopied'))" />
           </van-cell-group>
 
-          <div class="step-actions">
+          <van-row class="step-actions" align="center" :wrap="false">
             <van-button plain type="primary" size="small" :loading="healthLoading" @click="refreshHealth(true)">
               {{ $t('onboarding.verify.refresh') }}
             </van-button>
             <span v-if="!received" class="poll-tip">{{ $t('onboarding.verify.waiting') }}</span>
-          </div>
+          </van-row>
         </div>
 
         <!-- 4. 第一条 Mock -->
         <div v-else class="step-panel">
-          <div class="step-head">
+          <van-row class="step-head" align="center" :wrap="false">
             <i class="iconfont step-icon" :class="mockHit ? 'icon-check' : 'icon-mock'"
               :style="{ color: mockHit ? 'var(--van-success-color)' : 'var(--van-primary-color)' }" />
             <span>{{ $t('onboarding.mock.title') }}</span>
-          </div>
+          </van-row>
           <div class="step-desc">{{ $t('onboarding.mock.desc') }}</div>
 
           <van-cell-group inset>
-            <van-field v-model="ruleName" :label="$t('onboarding.mock.ruleName')" label-width="90" :disabled="mockCreated" />
-            <van-field v-model="mockPath" :label="$t('onboarding.mock.path')" label-width="90"
+            <van-field v-model="ruleName" :label="$t('onboarding.mock.ruleName')" label-width="6.9em" :disabled="mockCreated" />
+            <van-field v-model="mockPath" :label="$t('onboarding.mock.path')" label-width="6.9em"
               placeholder="/api/demo" :disabled="mockCreated" />
           </van-cell-group>
           <div class="body-label">{{ $t('onboarding.mock.body') }}</div>
           <textarea v-model="responseBody" class="json-editor" spellcheck="false" :disabled="mockCreated"></textarea>
 
-          <div class="step-actions">
+          <van-row class="step-actions" align="center" :wrap="false">
             <van-button type="primary" size="small" :loading="creating" :disabled="mockCreated" @click="createMock">
               {{ creating ? $t('onboarding.mock.creating') : $t('onboarding.mock.create') }}
             </van-button>
@@ -168,7 +168,7 @@
               {{ $t('onboarding.mock.useLatest') }}
             </van-button>
             <van-tag v-if="mockCreated" type="success">{{ $t('onboarding.mock.created') }}</van-tag>
-          </div>
+          </van-row>
 
           <template v-if="mockCreated">
             <van-notice-bar v-if="mockHit" wrapable :scrollable="false"
@@ -193,7 +193,7 @@
         </div>
       </OverlayScrollbarsComponent>
 
-      <div class="onboarding-foot">
+      <van-row class="onboarding-foot" justify="space-between" align="center" :wrap="false">
         <van-button plain size="small" @click="finish">{{ $t('onboarding.skip') }}</van-button>
         <div class="foot-right">
           <van-button v-if="step > 0" plain size="small" style="margin-right: 10px;" @click="step--">
@@ -206,7 +206,7 @@
             {{ $t('onboarding.finish') }}
           </van-button>
         </div>
-      </div>
+      </van-row>
     </div>
   </div>
 </template>
@@ -287,7 +287,8 @@ function useLatestRequest() {
   mockPath.value = request.url
 }
 
-async function createMock() {  let parsed: any
+async function createMock() {
+  let parsed: any
   try {
     parsed = JSON.parse(responseBody.value)
   } catch (err) {
@@ -346,13 +347,11 @@ async function finish() {
 <style scoped>
 .onboarding-head {
   flex: none;
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-2xl);
 }
 
 .onboarding-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
   font-size: var(--van-font-size-lg);
   font-weight: 600;
 }
@@ -363,7 +362,7 @@ async function finish() {
 }
 
 .onboarding-subtitle {
-  margin: 6px 0 10px;
+  margin: var(--sp-md) 0 var(--sp-xl);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -371,7 +370,7 @@ async function finish() {
 .onboarding-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding-right: 4px;
+  padding-right: var(--sp-sm);
 }
 
 /* 视口默认按内容撑高，保持步骤面板按滚动区高度铺满的原有布局 */
@@ -381,14 +380,12 @@ async function finish() {
 }
 
 .step-panel {
-  padding-top: 4px;
+  padding-top: var(--sp-sm);
 }
 
 .step-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-sm);
   font-size: var(--van-font-size-lg);
   font-weight: 600;
 }
@@ -403,23 +400,21 @@ async function finish() {
 }
 
 .step-desc {
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-2xl);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
   line-height: 1.6;
 }
 
 .step-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
+  gap: var(--sp-xl);
+  margin-top: var(--sp-2xl);
 }
 
 .proxy-address,
 .register-url {
-  margin-top: 8px;
-  padding: 8px 10px;
+  margin-top: var(--sp-lg);
+  padding: var(--sp-lg) var(--sp-xl);
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
   font-family: var(--mono-font);
@@ -429,16 +424,14 @@ async function finish() {
 }
 
 .register-url {
-  margin-top: 10px;
+  margin-top: var(--sp-xl);
   width: 100%;
   box-sizing: border-box;
   text-align: center;
 }
 
 .client-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--sp-3xl);
 }
 
 .client-col {
@@ -454,7 +447,7 @@ async function finish() {
 }
 
 .col-title {
-  margin: 6px 0;
+  margin: var(--sp-md) 0;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -490,23 +483,34 @@ async function finish() {
 
   .client-step > .van-notice-bar {
     flex: none;
-    margin-top: 8px;
+    margin-top: var(--sp-lg);
   }
 }
 
 .snippet-tabs {
-  margin-bottom: 4px;
+  margin-bottom: var(--sp-sm);
 }
 
 .snippet {
   position: relative;
   box-sizing: border-box;
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-lg);
   height: 160px;
-  padding: 6px 0 6px 6px;
+  padding: var(--sp-md) 0 var(--sp-md) var(--sp-md);
   overflow: hidden;
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
+}
+
+/* 步骤 4 的 curl 片段：下面的 @media 覆盖只命中 .client-step（步骤 1），这里的 pre 会退回固定 160px
+   并把超出的命令直接裁掉、连滚动条都没有，改成随字号的上限 + 内部滚动换行 */
+pre.snippet {
+  height: auto;
+  max-height: calc(var(--van-font-size-md) * 11.5);
+  padding-right: var(--sp-md);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .snippet :deep(.ace_scroller) {
@@ -528,20 +532,18 @@ async function finish() {
 }
 
 .copy-btn {
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-lg);
 }
 
 .latest-request {
-  margin: 10px 0;
-  padding: 10px 12px;
+  margin: var(--sp-xl) 0;
+  padding: var(--sp-xl) var(--sp-2xl);
   border-radius: var(--van-radius-md);
   background-color: var(--van-gray-2);
 }
 
 .latest-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: var(--sp-lg);
 }
 
 .latest-url {
@@ -550,11 +552,8 @@ async function finish() {
 }
 
 .latest-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 6px;
+  gap: var(--sp-2xl);
+  margin-top: var(--sp-md);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
@@ -565,33 +564,32 @@ async function finish() {
 }
 
 .body-label {
-  margin: 10px 0 6px;
+  margin: var(--sp-xl) 0 var(--sp-md);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
 .json-editor {
   width: 100%;
-  height: 150px;
-  padding: 10px;
+  /* 高度与字号挂钩：原来的 150px 在字号 10 下只能看到两行 JSON */
+  height: calc(var(--van-font-size-md) * 11.5);
+  padding: var(--sp-md);
   box-sizing: border-box;
   border: 1px solid var(--van-gray-3);
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-1);
   color: var(--van-text-color);
   font-family: var(--mono-font);
-  font-size: var(--van-font-size-xs);
+  /* 与所在页其他正文同级，不再用全站最小的 xs */
+  font-size: var(--van-font-size-sm);
   line-height: 1.6;
   resize: vertical;
 }
 
 .onboarding-foot {
   flex: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: var(--sp-3xl);
+  padding-top: var(--sp-2xl);
   border-top: 1px solid var(--van-gray-2);
 }
 </style>

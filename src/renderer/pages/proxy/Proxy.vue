@@ -1,7 +1,7 @@
 <template>
-  <van-row class="proxy-page">
+  <van-row class="proxy-page" :wrap="false">
     <van-col class="bg-border left-panel">
-      <van-row class="left-toolbar" justify="space-between">
+      <van-row class="left-toolbar" justify="space-between" :wrap="false">
         <van-checkbox-group class="proxy-type-group" v-model="recordStore.proxyTypes" direction="horizontal">
           <van-checkbox shape="square" name="5010">
             <i class="iconfont icon-api proxy-type-icon"></i>
@@ -14,42 +14,42 @@
               :class="{ 'is-live': recordStore.activeSocketCount > 0 }" />
           </van-checkbox>
         </van-checkbox-group>
-        <div class="left-toolbar-actions">
+        <van-row class="left-toolbar-actions" align="center" :wrap="false">
           <van-icon class="iconfont icon-qrcode left-panel-icon" @click="commonStore.showQrCode = true" />
           <van-icon class="iconfont icon-rule left-panel-icon" @click="openRuleMgr" />
           <van-icon class="iconfont icon-setting left-panel-icon" @click="openSettings">
             <span class="badge-dot"></span>
           </van-icon>
-        </div>
+        </van-row>
       </van-row>
-      <div class="mock-global-bar" :class="{ 'is-on': mockEnabled }" @click="toggleMock">
+      <van-row class="mock-global-bar" :class="{ 'is-on': mockEnabled }" align="center" :wrap="false"
+        @click="toggleMock">
         <i class="iconfont icon-rule mock-global-icon"></i>
         <span class="mock-global-text">{{ mockLabel }}</span>
         <van-switch :model-value="mockEnabled" :loading="mockToggling" class="mock-global-switch"
           @click.stop="toggleMock" />
-      </div>
-      <div class="proxy-delay-bar">
-        <van-popover v-model:show="showClientPicker" placement="bottom-start" class="client-picker-popup">
-          <OverlayScrollbarsComponent class="client-picker-list" :options="scrollOptions" defer>
-            <van-cell v-for="item in clientInfos" :key="item.uid" clickable :title="clientLabel(item)"
-              :title-style="{ color: item.uid == targetUid ? 'var(--van-primary-color)' : '' }"
-              @click="selectClient(item)" />
-            <van-cell v-if="clientInfos.length == 0" title="暂无在线客户端" />
-          </OverlayScrollbarsComponent>
-          <template #reference>
-            <div class="client-picker">
-              <van-icon class="iconfont icon-device client-picker-icon" />
-              <span class="client-picker-name">{{ targetLabel }}</span>
-              <van-icon name="arrow-down" class="client-picker-arrow" />
-            </div>
-          </template>
-        </van-popover>
-        <van-field v-model="proxyDelay" type="number" placeholder="延迟(ms)" class="delay-input">
-          <template #right-icon>
-            <van-icon class="iconfont icon-cloud-sync action-icon" @click="saveProxyDelay" />
-          </template>
+      </van-row>
+      <van-row class="proxy-delay-bar" align="center" :wrap="false">
+        <mini-select class="client-picker" :model-value="targetUid ?? ''" :options="clientOptions" font-size="sm"
+          :placeholder="$t('proxy.clientUnset')" :title="$t('proxy.clientScopeHint')" @open="loadClients"
+          @change="onClientChange" />
+        <mini-select v-model="delayPreset" class="delay-preset" :options="delayOptions" font-size="sm" align="end"
+          :title="delayHint" @change="onPresetChange" />
+      </van-row>
+      <van-row v-if="showCustomDelay" class="proxy-delay-custom" align="center" :wrap="false">
+        <span class="delay-label">{{ $t('proxy.delay') }}</span>
+        <van-field ref="delayField" v-model="proxyDelay" type="digit" class="delay-input" maxlength="5"
+          :placeholder="$t('proxy.delayPlaceholder')" @keyup.enter="applyDelay">
+          <template #extra><span class="delay-unit">ms</span></template>
         </van-field>
-      </div>
+        <span v-if="delayDirty" class="delay-dirty" :title="$t('proxy.delayPending')"></span>
+        <van-button class="delay-apply" size="mini" :loading="delaySaving" :disabled="!delayDirty"
+          @click="applyDelay">{{ $t('proxy.delayApply') }}</van-button>
+        <van-button class="btn-icon-only delay-close" size="mini" plain :title="$t('proxy.delayClose')"
+          @click="closeCustomDelay">
+          <van-icon name="cross" />
+        </van-button>
+      </van-row>
       <van-search v-model="recordStore.filterKeyword" show-action class="record-search"
         :placeholder="$t('common.searchPlaceholder')">
         <template #action>
@@ -66,7 +66,7 @@
             </div>
           </van-empty>
         </div>
-        <van-list v-else ref="snaplist">
+        <van-list v-else>
           <proxy-record-snap v-for="record in recordStore.visibleRecords" :key="record.id"
             :source="record as ProxyMock.ProxyRequestRecord" />
         </van-list>
@@ -107,27 +107,37 @@ import {
 } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
-import { List, showNotify } from 'vant'
-import { computed, defineAsyncComponent, onMounted, provide, ref, watch } from 'vue'
+import { showNotify } from 'vant'
+import type { FieldInstance } from 'vant'
+import { computed, defineAsyncComponent, nextTick, onMounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { copyToClipboard } from '../../common/clipboard'
 import { scrollOptions } from '../../common/scroll'
 import { CommonStore, ProxyRecordStore } from '../../store'
+import MiniSelect from '../components/MiniSelect.vue'
 import Settings from '../settings/Settings.vue'
 import ProxyRecordSnap from './ProxyRecordSnap.vue'
 import ProxyRequestDetail from './ProxyRequestDetail.vue'
 import ProxyStatDetail from './ProxyStatDetail.vue'
 import SocketDetail from './SocketDetail.vue'
+import {
+  DELAY_CUSTOM_KEY, DELAY_CUSTOM_LABEL_KEY, DELAY_PRESETS, presetKeyOf, presetMsOf, toDelayMs,
+} from './delay.preset'
 import { MockMgrTarget } from './mock/recording'
 import { readRecentRuleId } from './mock/rule.recent'
 
-const MockRuleMgr = defineAsyncComponent(() => import('./MockRuleMgr.vue'))
+const MockRuleMgr = defineAsyncComponent(() => import('./mock/MockRuleMgr.vue'))
 const proxyDelay = ref('0')
-const showClientPicker = ref(false)
+// savedDelay 是最近一次写入服务端的值，档位与脏态都由它推导
+const savedDelay = ref(0)
+const delayPreset = ref(presetKeyOf(0))
+// 档位为自定义时输入行是否展开，档位标签本身仍由 presetKeyOf 推导
+const customOpen = ref(false)
+const delaySaving = ref(false)
+const delayField = ref<FieldInstance>()
 const targetUid = ref<string>(null)
 const clientInfos = ref<ProxyMock.ClientInfo[]>([])
-const snaplist = ref<typeof List>()
 const commonStore = CommonStore()
 const recordStore = ProxyRecordStore()
 const { t } = useI18n()
@@ -147,10 +157,27 @@ const mockLabel = computed(() => mockEnabled.value
   ? t('mock.global.enabled', { rule: mockRuleName.value || shortUid(mockRuleId.value) })
   : t('mock.global.disabled'))
 
-const targetLabel = computed(() => {
-  if (targetUid.value == null) return '选择客户端'
-  return shortUid(targetUid.value) + uidSuffix(targetUid.value)
+// 在线列表为空时用哨兵项占位：它的值不等于任何 uid，被选中时直接忽略
+const CLIENT_NONE = '__client_none__'
+// targetUid 可能来自本机注册或上次的兜底选择，此刻还没进在线列表；
+// 不补一项的话 MiniSelect 查不到文案，触发条会退回「选择客户端」而不是当前设备
+const clientOptions = computed(() => {
+  const items = clientInfos.value.map(it => ({ label: it.uid, value: it.uid, tag: uidTag(it.uid) }))
+  if (targetUid.value != null && !items.some(it => it.value === targetUid.value)) {
+    items.unshift({ label: targetUid.value, value: targetUid.value, tag: uidTag(targetUid.value) })
+  }
+  return items.length > 0 ? items : [{ label: t('proxy.noClients'), value: CLIENT_NONE }]
 })
+
+const delayOptions = computed(() => [
+  ...DELAY_PRESETS.map(it => ({ value: it.key, label: t(it.labelKey) })),
+  { value: DELAY_CUSTOM_KEY, label: t(DELAY_CUSTOM_LABEL_KEY) },
+])
+const showCustomDelay = computed(() => delayPreset.value === DELAY_CUSTOM_KEY && customOpen.value)
+const delayDirty = computed(() => toDelayMs(proxyDelay.value) !== savedDelay.value)
+// 档位标签不再带毫秒数，对应关系放进悬停说明，数字仍取自档位表本身
+const delayHint = computed(() => `${t('proxy.delayHint')}（${DELAY_PRESETS
+  .map(it => `${t(it.labelKey)}=${it.ms}ms`).join(' · ')}）`)
 
 const socketEmptyQuery = computed(() => String(recordStore.filterKeyword ?? '').trim() !== '')
 const showSocketEmpty = computed(() => recordStore.proxyTypes.includes(String(ProxyMock.ProxyType.SOCKET))
@@ -168,10 +195,6 @@ onMounted(async () => {
   await loadSocketSnapshot()
 })
 
-watch(() => showClientPicker.value, (show) => {
-  if (show) loadClients()
-})
-
 // 其他窗口切换 Mock 后同步本窗口的全局开关
 watch(() => commonStore.mockStatus, (status) => {
   if (status == null) return
@@ -184,10 +207,6 @@ watch(() => commonStore.uid, async (uid) => {
   if (!uid || (targetUid.value != null && targetUid.value !== '')) return
   targetUid.value = uid
   await loadDelay()
-})
-
-watch(() => recordStore.isChanged, () => {
-  // snaplist.value.$el.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
 function openRuleMgr() {
@@ -292,48 +311,93 @@ async function loadClients() {
   await loadDelay()
 }
 
+// 载入或写入成功后统一重置基线值、输入文本与档位
+function setDelay(ms: number) {
+  savedDelay.value = ms
+  proxyDelay.value = `${ms}`
+  delayPreset.value = presetKeyOf(ms)
+}
+
 async function loadDelay() {
   if (targetUid.value == null) return
   try {
     const config = await getProxyConfig(targetUid.value)
-    proxyDelay.value = `${config?.delay ?? 0}`
+    setDelay(toDelayMs(config?.delay) ?? 0)
   } catch (err) {
     // 错误提示已由请求层弹出
   }
 }
 
-async function selectClient(client: ProxyMock.ClientInfo) {
-  targetUid.value = client.uid
-  showClientPicker.value = false
+async function onClientChange(uid: string) {
+  if (uid == CLIENT_NONE || uid == targetUid.value) return
+  targetUid.value = uid
   await loadDelay()
 }
 
-function uidSuffix(uid: string): string {
+// 本机/设备标签：交给 MiniSelect 当 tag 渲染，触发条与弹层选项里都单独成段、不参与截断
+function uidTag(uid: string): string {
   if (!uid) return ''
-  if (uid == commonStore.uid) return ' (本机)'
-  return clientInfos.value.find(it => it.uid == uid)?.kind == 'device' ? ' (设备)' : ''
-}
-
-function clientLabel(client: ProxyMock.ClientInfo) {
-  return shortUid(client.uid) + uidSuffix(client.uid)
+  if (uid == commonStore.uid) return t('proxy.clientLocal')
+  return clientInfos.value.find(it => it.uid == uid)?.kind == 'device' ? t('proxy.clientDevice') : ''
 }
 
 function shortUid(uid: string) {
   return uid.length > 12 ? `${uid.slice(0, 6)}…${uid.slice(-4)}` : uid
 }
 
-async function saveProxyDelay() {
-  if (targetUid.value == null) {
-    showNotify({ message: '请先选择客户端', type: 'warning', duration: 800 })
+// 预设档位立即写盘；自定义档位只展开输入框，由回车或应用按钮提交
+async function onPresetChange(key: string) {
+  const ms = presetMsOf(key)
+  if (ms == null) {
+    customOpen.value = true
+    await nextTick()
+    delayField.value?.focus()
     return
   }
+  customOpen.value = false
+  proxyDelay.value = `${ms}`
+  await applyDelay()
+}
+
+// 收起输入行只丢弃未应用的编辑，已生效的延迟与对应档位保持不变
+function closeCustomDelay() {
+  customOpen.value = false
+  setDelay(savedDelay.value)
+}
+
+async function applyDelay() {
+  if (delaySaving.value) return
+  if (targetUid.value == null) {
+    showNotify({ message: t('proxy.pickClientFirst'), type: 'warning', duration: 800 })
+    // 没有写入对象，档位选择要退回上次生效值
+    setDelay(savedDelay.value)
+    customOpen.value = false
+    return
+  }
+
+  const ms = toDelayMs(proxyDelay.value)
+  if (ms == null) {
+    showNotify({ message: t('mock.editor.validation.delayRange'), type: 'warning', duration: 1200 })
+    return
+  }
+  if (ms === savedDelay.value) return
+
+  delaySaving.value = true
   try {
-    const delay = Math.max(0, Number(proxyDelay.value) || 0)
-    await saveProxyConfig(targetUid.value, { delay })
-    proxyDelay.value = `${delay}`
-    showNotify({ message: `已为 [${shortUid(targetUid.value)}] 设置延迟 ${delay}ms`, type: 'success', duration: 800 })
+    await saveProxyConfig(targetUid.value, { delay: ms })
+    setDelay(ms)
+    customOpen.value = false
+    showNotify({
+      message: t('proxy.delayApplied', { uid: shortUid(targetUid.value), delay: ms }),
+      type: 'success',
+      duration: 800,
+    })
   } catch (err) {
-    showNotify({ message: '设置延迟失败', type: 'danger', duration: 1200 })
+    showNotify({ message: t('proxy.delayApplyFailed'), type: 'danger', duration: 1200 })
+    // 写入失败退回上次生效值，档位与脏态才不会骗人
+    setDelay(savedDelay.value)
+  } finally {
+    delaySaving.value = false
   }
 }
 
@@ -366,17 +430,18 @@ async function copyRegisterUrl() {
   right: -3px;
 }
 
-.proxy-page {
-  flex-wrap: nowrap;
-}
-
 .left-panel {
   display: flex;
   flex-direction: column;
-  width: 340px;
-  height: calc(100% - 10px);
+  /* 地板 340px 即原先写死的值：字号 7/9 都是 340，字号 10 放宽到 md*26=364。
+     新增的 40% 封顶只在包含块窄于 850px 时才接管，而窗口 ≤900px 已切到上下堆叠（width:auto），
+     所以字号 9 的观感与改写前一致，封顶只在中等窄窗口（约 900–950px）按回 364 以下。 */
+  width: min(max(340px, calc(var(--van-font-size-md) * 26)), 40%);
+  height: calc(100% - var(--card-gutter) * 2);
   min-height: 0;
-  margin: 5px;
+  margin: var(--card-gutter);
+  /* 设备 chip、档位下拉、自定义数值框共用同一行高 */
+  --delay-control-height: calc(var(--van-font-size-md) * 2.2);
 }
 
 /* 列表内容过长时只压缩列表，避免头部工具行被挤扁后与相邻行重叠 */
@@ -388,9 +453,9 @@ async function copyRegisterUrl() {
   flex-grow: 19;
   flex-basis: 50%;
   min-width: 375px;
-  height: calc(100% - 10px);
+  height: calc(100% - var(--card-gutter) * 2);
   min-height: 0;
-  margin: 5px 2px;
+  margin: var(--card-gutter) var(--sp-xs);
 }
 
 .right-panel [data-overlayscrollbars-content] {
@@ -399,20 +464,17 @@ async function copyRegisterUrl() {
 
 .left-panel-icon {
   font-size: 1.4rem;
-  margin: 3px 6px;
+  margin: var(--sp-xs) var(--sp-md);
   color: var(--van-gray-8)
 }
 
 /* 顶部工具行：左侧类型筛选 + 右侧功能图标，禁用拖拽区穿透 */
 .left-toolbar {
-  flex-wrap: nowrap;
   z-index: 100;
   -webkit-app-region: no-drag;
 }
 
 .left-toolbar-actions {
-  display: flex;
-  align-items: center;
   padding: 1px 0;
 }
 
@@ -443,57 +505,32 @@ async function copyRegisterUrl() {
 .socket-empty-hint {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 4px;
+  gap: var(--sp-md);
+  margin-top: var(--sp-sm);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
   text-align: left;
 }
 
+/* 设备作用域 chip：与右侧档位下拉同一个 MiniSelect，描边/圆角/箭头与字号都由组件与所在行提供；
+   这里只规定宽度分配——chip 吃掉档位下拉之外的剩余空间 */
 .client-picker {
-  display: flex;
-  align-items: center;
-  color: var(--van-text-color);
-  cursor: pointer;
-  padding-left: 4px;
-}
-
-.client-picker-icon {
-  font-size: calc(var(--van-font-size-md) * 1.8);
-  color: var(--van-gray-8);
-}
-
-.client-picker-name {
-  font-size: var(--van-font-size-sm);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-right: calc(var(--van-font-size-md) * 0.2);
-}
-
-.client-picker-arrow {
-  font-size: calc(var(--van-font-size-md) * 0.8);
-}
-
-.client-picker-popup {
-  min-width: calc(var(--van-font-size-md) * 16.9);
+  flex: 1 1 auto;
 }
 
 .snap-panel {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  margin: calc(var(--van-font-size-md) * 0.4) 0 0 0;
+  margin: var(--sp-tight) 0 0 0;
 }
 
 /* 全局 Mock 开关：状态与场景名同处一行，点击整行即可切换 */
 .mock-global-bar {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--van-font-size-md) * 0.5);
+  gap: var(--sp-md);
   flex: none;
-  margin-top: calc(var(--van-font-size-md) * 0.3);
-  padding: calc(var(--van-font-size-md) * 0.2) calc(var(--van-font-size-md) * 0.6);
+  margin-top: var(--sp-sm);
+  padding: var(--sp-xs) var(--sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
@@ -524,45 +561,77 @@ async function copyRegisterUrl() {
   text-overflow: ellipsis;
 }
 
-.client-picker-list {
-  max-height: 45vh;
-}
-
+/* 档位行：设备 chip 吃掉剩余宽度，档位下拉定宽；两个下拉共用同一行高 */
 .proxy-delay-bar {
+  gap: var(--sp-lg);
+  padding: var(--sp-lg) 0 var(--sp-sm) var(--sp-sm);
+  --mini-select-bar-height: var(--delay-control-height);
+}
+
+/* 定宽而不是按内容伸缩：切换档位时标签长短不一，让宽度跟着变会把左侧设备 chip 挤来挤去 */
+.proxy-delay-bar .delay-preset {
+  flex: none;
+  width: calc(var(--van-font-size-md) * 6);
+}
+
+/* 自定义档位才展开的数值行：单位常驻，未应用点与应用按钮成对 */
+.proxy-delay-custom {
+  gap: var(--sp-lg);
+  padding: 0 0 var(--sp-lg) var(--sp-sm);
+}
+
+.proxy-delay-custom .delay-label {
+  flex: none;
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-sm);
+}
+
+.proxy-delay-custom .delay-input {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0 8px 4px;
+  height: var(--delay-control-height);
+  box-sizing: border-box;
+  padding: 0 var(--sp-tight);
+  border: 1px solid var(--van-border-color);
+  border-radius: var(--van-radius-md);
+  background: var(--van-background-2);
+  font-size: var(--van-font-size-sm);
 }
 
-.proxy-delay-bar .client-picker {
-  flex: 3;
+.proxy-delay-custom .delay-input .van-field__body {
+  flex: 1 1 auto;
   min-width: 0;
-}
-
-.proxy-delay-bar .delay-input {
-  flex: 2;
-  min-width: 0;
-  --van-field-input-height: calc(var(--van-font-size-md) * 2.6);
-  --van-cell-vertical-padding: 0;
-  padding: 0 4px 0 5px;
-}
-
-.proxy-delay-bar .delay-input :deep(.van-field__right-icon) {
-  width: calc(var(--van-font-size-md) * 2.6);
-  margin-right: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
-.proxy-delay-bar .delay-input :deep(.van-field__body) {
-  height: 100%;
+.proxy-delay-custom .delay-unit {
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-sm);
 }
 
-.proxy-delay-bar .delay-input :deep(.van-field__control) {
-  height: 100%;
-  line-height: calc(var(--van-font-size-md) * 2.6);
+.proxy-delay-custom .delay-dirty {
+  flex: none;
+  width: calc(var(--van-font-size-md) * 0.5);
+  height: calc(var(--van-font-size-md) * 0.5);
+  border-radius: 50%;
+  background: var(--van-warning-color);
+}
+
+.proxy-delay-custom .delay-apply {
+  flex: none;
+  height: var(--delay-control-height);
+  box-sizing: border-box;
+  padding: 0 var(--sp-xl);
+  font-size: var(--van-font-size-sm);
+}
+
+/* 关闭按钮复用 .btn-icon-only 的方形尺寸，与「应用」等高 */
+.proxy-delay-custom .delay-close {
+  flex: none;
+  color: var(--van-text-color-3);
 }
 
 .record-search {
@@ -622,7 +691,7 @@ async function copyRegisterUrl() {
     width: auto;
     min-width: 0;
     height: 42%;
-    margin: 5px;
+    margin: var(--card-gutter);
   }
 
   .right-panel {
@@ -631,7 +700,7 @@ async function copyRegisterUrl() {
     min-width: 0;
     height: auto;
     min-height: 0;
-    margin: 5px;
+    margin: var(--card-gutter);
   }
 }
 
@@ -639,7 +708,7 @@ async function copyRegisterUrl() {
   text-decoration: underline;
   width: 300px;
   color: var(--van-text-color);
-  padding: 5px;
+  padding: var(--sp-tight);
   font-size: var(--van-font-size-md);
   user-select: text;
   word-break: break-all;

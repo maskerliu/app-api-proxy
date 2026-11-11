@@ -1,11 +1,11 @@
+import type { LocalServerConfig } from '@shared/base.models'
+import type { Diagnostic } from '@shared/diagnostic.models'
 import { app, nativeTheme } from 'electron'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { inject, injectable } from 'inversify'
 import path from 'path'
 import 'reflect-metadata'
-import type { LocalServerConfig } from '@shared/base.models'
-import type { Diagnostic } from '@shared/diagnostic.models'
-import { IocTypes, Lynx_Mqtt_Broker, USER_DATA_DIR } from '../MainConst'
+import { IocTypes, USER_DATA_DIR } from '../MainConst'
 import { getLocalIPs } from '../misc/utils'
 import { DiagnosticService } from './diagnostic.service'
 import { MockService } from './mock.service'
@@ -58,7 +58,6 @@ export class CommonService {
       portValid: config.portValid,
       domain: config.domain,
       ips,
-      mqttBroker: Lynx_Mqtt_Broker,
       onboarded: config.onboarded === true,
     }
   }

@@ -1,15 +1,15 @@
 <template>
   <section class="miss-panel">
-    <header class="miss-head">
-      <div class="miss-title">
+    <van-row tag="header" class="miss-head" align="center" :wrap="false">
+      <van-row class="miss-title" align="center" :wrap="false">
         <van-icon name="warning-o" class="miss-icon" />
         <span v-if="miss.recordName">{{ $t('mock.miss.title', {
           record: miss.recordName, score: scorePercent
         }) }}</span>
         <span v-else>{{ $t('mock.miss.noCandidate') }}</span>
-      </div>
+      </van-row>
       <van-button class="btn-icon-only" size="mini" plain icon="description" :title="$t('mock.miss.copy')" @click="copyDiagnosis" />
-    </header>
+    </van-row>
 
     <div v-if="degraded" class="miss-degraded">{{ $t('mock.miss.degraded') }}</div>
 
@@ -24,7 +24,7 @@
         <span class="miss-dimension">{{ dimensionText(failure.dimension) }}</span>
         <span class="miss-value" :title="failure.expected">{{ failure.expected }}</span>
         <span class="miss-value" :title="failure.actual">{{ failure.actual }}</span>
-        <span class="miss-action">
+        <van-row class="miss-action" align="center" :wrap="false">
           <van-button v-if="failure.key" size="mini" plain type="primary" @click="emit('ignore-key', failure)">
             {{ $t('mock.miss.ignoreKey') }}
           </van-button>
@@ -33,15 +33,15 @@
             {{ $t('mock.miss.loosen') }}
           </van-button>
           <span v-else class="miss-detail">{{ failure.detail ? detailText(failure.detail) : '' }}</span>
-        </span>
+        </van-row>
       </div>
     </div>
 
-    <footer class="miss-actions">
+    <van-row tag="footer" class="miss-actions" justify="end">
       <van-button size="mini" plain type="primary" @click="emit('edit')">{{ $t('mock.miss.editRecord') }}</van-button>
       <van-button size="mini" plain @click="emit('loosen')">{{ $t('mock.miss.loosen') }}</van-button>
       <van-button size="mini" plain @click="copyDiagnosis">{{ $t('mock.miss.copy') }}</van-button>
-    </footer>
+    </van-row>
   </section>
 </template>
 
@@ -50,7 +50,7 @@ import type { MockMissDiagnostic, MockMissFailure } from '@shared/mock.models'
 import { showNotify } from 'vant'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { copyToClipboard } from '../../common/clipboard'
+import { copyToClipboard } from '../../../common/clipboard'
 
 const props = defineProps<{
   miss: MockMissDiagnostic
@@ -113,14 +113,10 @@ function buildMarkdown(): string {
 }
 
 .miss-head {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
 }
 
 .miss-title {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
   flex: 1 1 auto;
   min-width: 0;
@@ -178,8 +174,6 @@ function buildMarkdown(): string {
 }
 
 .miss-action {
-  display: flex;
-  align-items: center;
   min-width: 0;
 }
 
@@ -192,9 +186,6 @@ function buildMarkdown(): string {
 }
 
 .miss-actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
   gap: var(--sp-md);
   margin-top: var(--sp-lg);
 }

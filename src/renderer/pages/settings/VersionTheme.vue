@@ -1,6 +1,6 @@
 <template>
   <van-cell-group inset title=" ">
-    <van-field center :label="$t('settings.sys.theme')" label-width="4rem" :readonly="true">
+    <van-field center :label="$t('settings.sys.theme')" label-width="4.9em" :readonly="true">
       <template #left-icon>
         <van-icon class="iconfont icon-theme setting-cell-icon" />
       </template>
@@ -19,7 +19,7 @@
       </template>
     </van-field>
 
-    <van-field center input-align="right" :label="$t('settings.sys.fontsize')" label-width="4rem" :readonly="true">
+    <van-field center input-align="right" :label="$t('settings.sys.fontsize')" label-width="4.9em" :readonly="true">
       <template #left-icon>
         <van-icon class="iconfont icon-font-size setting-cell-icon" />
       </template>
@@ -31,14 +31,14 @@
       </template>
     </van-field>
 
-    <van-field center input-align="right" :label="$t('settings.sys.version')" label-width="4rem" :readonly="true">
+    <van-field center input-align="right" :label="$t('settings.sys.version')" label-width="4.9em" :readonly="true">
       <template #left-icon>
         <van-icon class="iconfont icon-info setting-cell-icon" />
       </template>
       <template #input>
-        <div class="version-value" @click="onVersionCheck">
+        <van-row class="version-value" align="center" justify="center" :wrap="false" @click="onVersionCheck">
           <span>{{ commonStore.serverConfig.appVersion }}</span>
-        </div>
+        </van-row>
 
       </template>
       <template #right-icon>
@@ -49,7 +49,7 @@
       </template>
     </van-field>
 
-    <van-field center input-align="right" :label="$t('settings.sys.lang')" label-width="4rem" :readonly="true">
+    <van-field center input-align="right" :label="$t('settings.sys.lang')" label-width="4.9em" :readonly="true">
       <template #left-icon>
         <van-icon class="iconfont icon-lang setting-cell-icon" />
       </template>
@@ -87,7 +87,7 @@ import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showNotify, showToast } from 'vant'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MiniSelect from '../../common/MiniSelect.vue'
+import MiniSelect from '../components/MiniSelect.vue'
 import { scrollOptions } from '../../common/scroll'
 import { CommonStore, FONT_SIZE_MAX, FONT_SIZE_MIN } from '../../store'
 
@@ -191,14 +191,11 @@ function restart() {
 </script>
 <style lang="css" scoped>
 .setting-cell-icon {
-  margin-left: 15px;
+  margin-left: var(--sp-3xl);
 }
 
 /* 版本号：跟随所在 van-field 行高，字号缩放时不再脱节 */
 .version-value {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100%;
   min-height: calc(var(--van-font-size-md) * 2.2);
   cursor: pointer;
@@ -211,13 +208,13 @@ function restart() {
 .version-popup {
   width: min(450px, calc(100vw - 60px));
   min-height: 300px;
-  margin: 15px;
+  margin: var(--sp-3xl);
 }
 
 .update-message {
   width: calc(100% - 0px);
   height: 190px;
-  margin: 0 15px;
+  margin: 0 var(--sp-3xl);
   color: var(--van-text-color);
 }
 
@@ -228,6 +225,6 @@ function restart() {
 }
 
 .download-progress {
-  margin: 10px 0;
+  margin: var(--sp-xl) 0;
 }
 </style>

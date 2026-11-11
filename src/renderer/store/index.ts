@@ -4,7 +4,7 @@ import type { LocalServerConfig } from '@shared/base.models'
 import type { MockStatusBroadcast } from '@shared/mock.models'
 import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID, updateUpdateServer } from '@shared'
 import { API_URL } from '@shared/api.const'
-import { PushClient } from '../common'
+import { PushClient } from '../common/PushClient'
 
 export { ProxyRecordStore } from './ProxyRecords'
 
@@ -12,29 +12,48 @@ let pushClient: PushClient = null
 
 const GRAYS = ['#333333', '#646566', '#969799', '#c8c9cc', '#dcdee0', '#ebedf0', '#f2f3f5', '#f5f6f8']
 
+// Vant 组件的行高、控件高度与内边距默认是写死的 px/rem，不随全局字号变化；而全站业务尺寸都按
+// calc(var(--van-font-size-md) * N) 缩放，字号调到 10（md=14px）时缩放的内容就长进这些恒定盒子里，表现为拥挤与裁切。
+// 因此凡属「结构尺寸」的一律写成 calc(var(--van-font-size-md) * K)：K 按项目约定保留 1 位小数，取值以默认字号 9
+// （md=13px）为锚点，即 13*K ≈ 原像素值，于是字号 9 的观感不变，只有小字号收紧、大字号放宽。
+// ConfigProvider 以 theme-vars-scope="global" 把这些值原样写到 :root，calc 引用的 --van-font-size-md 在同一元素上，
+// 使用时才求值，因此不需要随字号重算；Proxy 顶部类型筛选组的 --van-checkbox-size: 16px 是本地覆盖，不受影响。
+// 圆角、边框、弹窗按钮高度不在此列：装饰性常量，且牵动既有的卡片对齐与弹窗固定高度约定。
+// cellGroupInsetPadding 单独处理：它刻意保持恒定 5px（卡片外缘要与面板沟道严格对齐），
+// 但与面板侧的 margin: 5px / calc(100% - var(--card-gutter) * 2) 是同一个数，所以让 Vant 这侧也读全局 token，
+// 避免出现两处各自写死的 5px。
 const BASE_THEME_VARS: ConfigProviderThemeVars = {
   dialogButtonHeight: '40px',
   floatingBubbleSize: '2.5rem',
-  gridItemContentPadding: '8px',
+  // 客户端卡片内边距
+  gridItemContentPadding: 'calc(var(--van-font-size-md) * 0.6)',
   popoverRadius: 'var(--van-radius-sm)',
-  switchSize: '1.2rem',
-  radioSize: '1rem',
-  checkboxSize: '1rem',
-  cellGroupInsetPadding: '5px',
+  // 开关/单选/复选的图标热区，同时决定 label 的行高
+  switchSize: 'calc(var(--van-font-size-md) * 1.5)',
+  radioSize: 'calc(var(--van-font-size-md) * 1.2)',
+  checkboxSize: 'calc(var(--van-font-size-md) * 1.2)',
+  cellGroupInsetPadding: 'var(--card-gutter, 5px)',
   cellGroupInsetTitlePadding: '5px 20px',
   collapseItemContentPadding: '0px',
   tagPadding: '2px 5px',
   tagRadius: '5px',
-  cellVerticalPadding: '8px',
-  cellHorizontalPadding: '15px',
+  tagLineHeight: 'calc(var(--van-font-size-md) * 1.2)',
+  cellLineHeight: 'calc(var(--van-font-size-md) * 1.9)',
+  cellLabelLineHeight: 'calc(var(--van-font-size-md) * 1.3)',
+  cellVerticalPadding: 'calc(var(--van-font-size-md) * 0.6)',
+  cellHorizontalPadding: 'calc(var(--van-font-size-md) * 1.2)',
+  buttonMiniHeight: 'calc(var(--van-font-size-md) * 1.8)',
+  buttonSmallHeight: 'calc(var(--van-font-size-md) * 2.5)',
+  searchInputHeight: 'calc(var(--van-font-size-md) * 2.6)',
   popupRoundRadius: '8px',
   popupCloseIconMargin: '23px',
   borderWidth: '1.4px',
   radiusMd: '8px',
   dialogRadius: '8px',
   floatingBubbleBackground: '#f04b1e',
-  tabsLineHeight: '1.8rem',
-  tabLineHeight: '1rem',
+  // 导航条高度对齐全站控件基准 md*2.2；标签文字行高按它自己的字号（设置值 + 5）
+  tabsLineHeight: 'calc(var(--van-font-size-md) * 2.2)',
+  tabLineHeight: 'calc(var(--van-tab-font-size) * 1.4)',
 }
 
 const FONT_SIZE_MIN = 7

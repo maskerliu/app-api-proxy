@@ -12,6 +12,7 @@ const CONFIG = 'tsconfig.strict.json'
 const CLEAN_PATHS = [
   'src/main/service/mock.migration.ts',
   'src/renderer/common',
+  'src/renderer/pages/proxy/delay.preset.ts',
 ]
 
 const parsed = ts.readConfigFile(path.join(ROOT, CONFIG), ts.sys.readFile)

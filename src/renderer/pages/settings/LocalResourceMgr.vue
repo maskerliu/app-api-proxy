@@ -1,6 +1,6 @@
 <template>
   <van-cell-group inset :title="$t('settings.resources.title')">
-    <van-field name="uploader" :label="$t('settings.resources.manage')" label-width="10rem">
+    <van-field name="uploader" :label="$t('settings.resources.manage')" label-width="12.3em">
       <template #input>
         <van-uploader multiple accept="*" />
       </template>

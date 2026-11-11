@@ -1,62 +1,63 @@
 <template>
   <section class="stability-panel">
-    <header class="panel-head">
+    <van-row tag="header" class="panel-head" align="center" justify="space-between" :wrap="false">
       <span class="panel-title">{{ $t('mock.stability.title') }}</span>
       <van-button size="mini" plain type="primary" :loading="analyzing" :disabled="!canAnalyze"
         @click="analyze">
         {{ $t('mock.match.autoAnalyze') }}
       </van-button>
-    </header>
+    </van-row>
 
     <div v-if="listSuggestions.length > 0" class="panel-block">
-      <div class="block-head">
+      <van-row class="block-head" align="center" justify="space-between" :wrap="false">
         <span class="block-title">{{ $t('mock.stability.suggestions') }}</span>
         <van-button v-if="applicableSuggestions.length > 1" size="mini" plain type="warning"
           @click="applyAllSuggestions">
           {{ $t('mock.stability.applyAll') }}
         </van-button>
-      </div>
+      </van-row>
       <div class="key-list">
-        <div v-for="item in listSuggestions" :key="`${item.evidence}-${item.key}`" class="key-row">
-          <div class="key-info">
+        <van-row v-for="item in listSuggestions" :key="`${item.evidence}-${item.key}`" class="key-row" align="center"
+          :wrap="false">
+          <van-row class="key-info" align="center" :wrap="false">
             <span class="key-name">{{ item.key }}</span>
             <van-tag plain :type="item.evidence === 'E5' ? 'primary' : 'warning'" class="evidence-tag">
               {{ item.evidence }}
             </van-tag>
             <span class="key-reason">{{ reasonText(item) }}</span>
-          </div>
+          </van-row>
           <van-button v-if="item.evidence !== 'E5'" size="mini" plain type="primary" class="key-action"
             :disabled="isIgnored(item.key)" @click="applySuggestion(item)">
             {{ $t('mock.stability.apply') }}
           </van-button>
           <span v-else class="key-keep">{{ $t('mock.stability.semanticKeep') }}</span>
-        </div>
+        </van-row>
       </div>
       <p v-if="hasSemanticSuggestion" class="panel-hint">{{ $t('mock.stability.suggestionHint') }}</p>
     </div>
 
     <div class="panel-block">
-      <div class="block-head">
+      <van-row class="block-head" align="center" justify="space-between" :wrap="false">
         <span class="block-title">{{ $t('mock.stability.autoIgnored') }}</span>
-      </div>
+      </van-row>
       <div v-if="ignoredKeys.length === 0" class="panel-empty">{{ $t('mock.stability.noAutoIgnored') }}</div>
       <div v-else class="key-list">
-        <div v-for="key in ignoredKeys" :key="key" class="key-row">
-          <div class="key-info">
+        <van-row v-for="key in ignoredKeys" :key="key" class="key-row" align="center" :wrap="false">
+          <van-row class="key-info" align="center" :wrap="false">
             <span class="key-name">{{ key }}</span>
             <van-tag v-if="RISK_KEYS.has(key)" plain type="warning" class="evidence-tag">E2</van-tag>
             <span class="key-reason">{{ evidenceText(key) }}</span>
-          </div>
+          </van-row>
           <van-button size="mini" plain class="key-action" @click="undoIgnore(key)">{{ $t('mock.stability.undo') }}</van-button>
-        </div>
+        </van-row>
       </div>
     </div>
 
     <div v-if="pathParameterized || isPathDynamic || pathSuggestion != null" class="panel-block">
-      <div class="block-head">
+      <van-row class="block-head" align="center" justify="space-between" :wrap="false">
         <span class="block-title">{{ $t('mock.stability.path') }}</span>
-      </div>
-      <div class="path-row">
+      </van-row>
+      <van-row class="path-row" align="center" :wrap="false">
         <div class="path-info">
           <span class="path-value">{{ match.path }}</span>
           <span v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original">
@@ -69,7 +70,7 @@
         <van-button v-else size="mini" plain type="primary" :disabled="!canAnalyze" @click="analyze">
           {{ $t('mock.stability.pathApply') }}
         </van-button>
-      </div>
+      </van-row>
     </div>
 
     <p v-if="listSuggestions.length === 0 && ignoredKeys.length === 0 && !pathParameterized && pathSuggestion == null"
@@ -85,7 +86,7 @@ import type { MockMatchSuggestion } from '@shared/mock.models'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RISK_KEYS, SEMANTIC_KEYS } from './mock/match.helper'
+import { RISK_KEYS, SEMANTIC_KEYS } from './match.helper'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
@@ -217,9 +218,6 @@ async function showConfirm(message: string) {
 }
 
 .panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--sp-lg);
 }
 
@@ -240,9 +238,6 @@ async function showConfirm(message: string) {
 }
 
 .block-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: var(--sp-lg);
   margin-bottom: var(--sp-sm);
 }
@@ -259,8 +254,6 @@ async function showConfirm(message: string) {
 }
 
 .key-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
   padding: var(--sp-sm) var(--sp-md);
   border-radius: var(--van-radius-md);
@@ -271,13 +264,11 @@ async function showConfirm(message: string) {
 .key-row :deep(.key-action.van-button--mini) {
   flex: none;
   height: calc(var(--van-font-size-md) * 2.2);
-  padding: 0 calc(var(--van-font-size-md) * .8);
+  padding: 0 var(--sp-xl);
   box-sizing: border-box;
 }
 
 .key-info {
-  display: flex;
-  align-items: center;
   gap: var(--sp-md);
   flex: 1 1 auto;
   min-width: 0;
@@ -311,8 +302,6 @@ async function showConfirm(message: string) {
 }
 
 .path-row {
-  display: flex;
-  align-items: center;
   gap: var(--sp-lg);
 }
 

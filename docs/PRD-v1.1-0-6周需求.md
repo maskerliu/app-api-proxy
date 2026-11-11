@@ -722,7 +722,7 @@ interface MockMissDiagnostic {
 | 新增 `getMockRecord` 单条接口 | 未新增；使用分页列表 + 保存返回 `{ id, updatedAt }` | 当前页面模型足够，减少一个接口 |
 | 并发保存 409 自动重试 | PouchDB 版本冲突内部重试 2 次；用户级乐观锁冲突直接提示刷新 | 区分内部版本冲突与用户并发编辑 |
 
-实现位置：`src/shared/mock.validation.ts`（校验与归一化）、`src/shared/proxy.models.ts`（模型与有效响应）、`src/main/service/mock.service.ts`（命中与发送）、`src/main/repository/mock.repo.ts`（存储与迁移）、`src/renderer/pages/proxy/mock/`（编辑器组件）、`src/renderer/pages/proxy/MockRuleMgr.vue`（列表、保存与未保存保护）。
+实现位置：`src/shared/mock.validation.ts`（校验与归一化）、`src/shared/proxy.models.ts`（模型与有效响应）、`src/main/service/mock.service.ts`（命中与发送）、`src/main/repository/mock.repo.ts`（存储与迁移）、`src/renderer/pages/proxy/mock/`（编辑器组件）、`src/renderer/pages/proxy/mock/MockRuleMgr.vue`（列表、保存与未保存保护）。
 
 #### 4.2.1 目标
 
@@ -2004,7 +2004,7 @@ interface MockMissDiagnostic {
 | Windows 防火墙放行规则 | 未提及 | 已交付：按名查询再添加规则，且需同时匹配中英文输出 | `src/main/MainApp.ts:314`、`:317` |
 | Linux/root 与 HiDPI 启动差异 | 未提及 | 已交付：root 下禁用沙箱并强制 2× 缩放因子 | `src/main/MainApp.ts:57-60` |
 | Mock 模板变量与预览 | 4.2.0 已回写「本期未实现」 | 与文档一致（不算缺口） | `{{...}}` 按原文返回 |
-| R4 规则导入/导出 + HAR | 1.4 包含、O4 目标 | **完全未实现**，无任何调用方 | `src/renderer/pages/proxy/MockRuleMgr.vue` 无导入导出模块 |
+| R4 规则导入/导出 + HAR | 1.4 包含、O4 目标 | **完全未实现**，无任何调用方 | `src/renderer/pages/proxy/mock/MockRuleMgr.vue` 无导入导出模块 |
 | 迁移复核页与撤销 UI | 6.5 + 4.1 | 后端与 API 封装齐备，**渲染层零调用** | `src/main/service/mock.migration.ts:49`；`src/shared/proxy.api.ts:70-77` |
 | 第 8 节本地埋点指标 | 独立成章 | **全部缺失**，指标无法验证 | `mockHitTotal` 等标识符在 `src/` 零命中 |
 | i18n 覆盖（7.5 要求中英完整） | 一句要求 | 托盘菜单、文件对话框、开发者面板仍硬编码中文 | `src/main/MainApp.ts:190`、`src/main/IPCServices.ts:104` |

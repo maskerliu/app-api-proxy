@@ -17,6 +17,6 @@ defineProps({
 <style scoped>
 .stat-detail {
   /* 与 HTTP / WebSocket 详情页顶部留白对齐 */
-  padding: var(--detail-top-gap) 5px 5px;
+  padding: var(--detail-top-gap) var(--card-gutter) var(--card-gutter);
 }
 </style>
