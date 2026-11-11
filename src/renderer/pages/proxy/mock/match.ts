@@ -1,6 +1,6 @@
 import { ProxyMock } from '@shared/proxy.models'
 import type {
-  MockMatchLevel, MockMatchOrdering, MockMatchRule, MockMatchWarningType, MockQueryCondition, MockQueryOperator,
+  MockMatchLevel, MockMatchOrdering, MockMatchRule, MockQueryCondition, MockQueryOperator,
 } from '@shared/mock.models'
 import {
   MOCK_ANY_METHOD, MOCK_HIGH_RISK_KEYS, MOCK_METHODS, MOCK_MATCH_LEVELS, MOCK_PATH_TYPES,
@@ -292,40 +292,4 @@ export function testSeedOf(record: ProxyMock.MockRecord): MatchTestSeed {
 export function orderingLabelKey(ordering: MockMatchOrdering): string {
   const known: MockMatchOrdering[] = ['manual-priority', 'path-specificity', 'condition-count', 'updated-at', 'record-id']
   return known.indexOf(ordering) >= 0 ? `mock.ordering.${ordering}` : 'mock.ordering.updated-at'
-}
-
-export function warningLabelKey(type: MockMatchWarningType): string {
-  return `mock.list.warning.${type}`
-}
-
-export function sortRecords(records: ProxyMock.MockRecord[], sort: 'updated' | 'created' | 'priority'): ProxyMock.MockRecord[] {
-  const list = [...(records ?? [])]
-  if (sort === 'created') return list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-  if (sort === 'priority') {
-    return list.sort((a, b) => {
-      const left = a.match?.priority
-      const right = b.match?.priority
-      if (left == null && right == null) return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
-      if (left == null) return 1
-      if (right == null) return -1
-      // 与 Matcher 一致：优先级数值越大越优先
-      return right - left || (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
-    })
-  }
-  return list.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-}
-
-export function matchesKeyword(record: ProxyMock.MockRecord, keyword: string): boolean {
-  const text = String(keyword ?? '').trim().toLowerCase()
-  if (text === '') return true
-  const summary = summaryOf(record)
-  const fields = [
-    record.name,
-    record.url,
-    summary?.method,
-    summary?.host,
-    summary?.path,
-    summary?.ignoredKeys?.join(','),
-  ]
-  return fields.some(it => String(it ?? '').toLowerCase().includes(text))
 }
