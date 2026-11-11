@@ -1,9 +1,10 @@
 import { MOCK_ANY_METHOD, ProxyMock } from '@shared'
-import type { MockMatchWarning } from '@shared/mock.models'
+import type { MockMatchWarning, MockMatchWarningType } from '@shared/mock.models'
 import type { MatchSummary } from './match'
 import { summaryOf } from './match'
 
-// 记录列表的行视图模型：一次算好标题、副标题与标签配色，模板里不做条件拼装。
+// 记录列表的视图层：行模型、标签配色、关键字筛选与排序都在这里，模板里不做条件拼装。
+// 匹配档位本身的推导在 match.ts，这一层只负责展示口径。
 
 export type TagType = 'primary' | 'success' | 'warning' | 'danger' | 'default'
 
@@ -70,4 +71,40 @@ export function warningTagType(type: string): TagType {
   if (type === 'duplicate') return 'danger'
   if (type === 'shadowed' || type === 'unreachable') return 'warning'
   return 'default'
+}
+
+export function warningLabelKey(type: MockMatchWarningType): string {
+  return `mock.list.warning.${type}`
+}
+
+export function sortRecords(records: ProxyMock.MockRecord[], sort: 'updated' | 'created' | 'priority'): ProxyMock.MockRecord[] {
+  const list = [...(records ?? [])]
+  if (sort === 'created') return list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+  if (sort === 'priority') {
+    return list.sort((a, b) => {
+      const left = a.match?.priority
+      const right = b.match?.priority
+      if (left == null && right == null) return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+      if (left == null) return 1
+      if (right == null) return -1
+      // 与 Matcher 一致：优先级数值越大越优先
+      return right - left || (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+    })
+  }
+  return list.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+}
+
+export function matchesKeyword(record: ProxyMock.MockRecord, keyword: string): boolean {
+  const text = String(keyword ?? '').trim().toLowerCase()
+  if (text === '') return true
+  const summary = summaryOf(record)
+  const fields = [
+    record.name,
+    record.url,
+    summary?.method,
+    summary?.host,
+    summary?.path,
+    summary?.ignoredKeys?.join(','),
+  ]
+  return fields.some(it => String(it ?? '').toLowerCase().includes(text))
 }
