@@ -141,9 +141,9 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
 .body-types {
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--sp-3xl);
-  row-gap: var(--sp-sm);
-  padding: var(--sp-xl) 0;
+  column-gap: var(--app-sp-3xl);
+  row-gap: var(--app-sp-sm);
+  padding: var(--app-sp-xl) 0;
 }
 
 .form-body-scroll {
@@ -154,16 +154,16 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
 .form-body {
   text-align: left;
   /* 左侧与代码视图（Ace 内容起点 / .body-text 的 20px）对齐，栅格本身由全局 .header-list 单源提供 */
-  padding: var(--sp-tight) var(--sp-3xl) var(--sp-tight) var(--sp-4xl);
+  padding: var(--app-sp-tight) var(--app-sp-3xl) var(--app-sp-tight) var(--app-sp-4xl);
 }
 
 .body-text {
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   white-space: pre-wrap;
   word-break: break-all;
   text-align: left;
   /* 代码区已隐藏行号槽，文本内边距与 Ace 内容起始位置对齐 */
-  padding: var(--sp-sm) var(--sp-3xl) var(--sp-sm) var(--sp-4xl);
+  padding: var(--app-sp-sm) var(--app-sp-3xl) var(--app-sp-sm) var(--app-sp-4xl);
   user-select: text;
 }
 </style>

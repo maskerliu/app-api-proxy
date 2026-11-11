@@ -316,8 +316,8 @@ function applyRaw() {
 }
 
 .editor-head {
-  gap: var(--sp-lg);
-  padding: 0 var(--sp-sm);
+  gap: var(--app-sp-lg);
+  padding: 0 var(--app-sp-sm);
   flex: none;
 }
 
@@ -325,7 +325,7 @@ function applyRaw() {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  gap: var(--sp-sm);
+  gap: var(--app-sp-sm);
   min-width: 0;
 }
 
@@ -334,12 +334,12 @@ function applyRaw() {
 .path-field {
   flex: none;
   width: 100%;
-  padding: var(--sp-md) var(--sp-lg);
+  padding: var(--app-sp-md) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .head-actions {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   flex: none;
 }
 
@@ -353,7 +353,7 @@ function applyRaw() {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: var(--sp-md);
+  margin-top: var(--app-sp-md);
 }
 
 .editor-tabs :deep(.van-tabs__content) {
@@ -370,13 +370,13 @@ function applyRaw() {
 .editor-tabs :deep(.van-tab__panel) {
   height: 100%;
   overflow: auto;
-  padding: 0 var(--sp-sm);
+  padding: 0 var(--app-sp-sm);
   /* 预留滚动条宽度：展开响应头等操作触发溢出时，内容不会左右跳动 */
   scrollbar-gutter: stable;
 }
 
 .tab-body {
-  padding-bottom: var(--sp-lg);
+  padding-bottom: var(--app-sp-lg);
 }
 
 /* 响应体已贴合面板底部，额外的下边距会撑出滚动条 */
@@ -387,7 +387,7 @@ function applyRaw() {
 .variants-tab {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   height: 100%;
   min-height: 0;
   /* 变体编辑区已贴合面板底部 */
@@ -396,31 +396,31 @@ function applyRaw() {
 
 /* 变体条固定在顶部，高度不随变体数量增长，把剩余高度全留给响应体 */
 .variant-bar {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   flex: none;
   min-width: 0;
   /* 固定高度：出现横向滚动条时不改变编辑区位置 */
   height: calc(var(--van-font-size-md) * 2.5);
-  margin-top: var(--sp-tight);
+  margin-top: var(--app-sp-tight);
 }
 
 .variant-strip {
   display: flex;
   align-items: center;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex: 1 1 auto;
   min-width: 0;
-  padding-bottom: var(--sp-xs);
+  padding-bottom: var(--app-sp-xs);
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .variant-strip::-webkit-scrollbar {
-  height: var(--sp-xs);
+  height: var(--app-sp-xs);
 }
 
 .variant-strip::-webkit-scrollbar-thumb {
-  border-radius: var(--sp-xs);
+  border-radius: var(--app-sp-xs);
   background: var(--van-border-color);
 }
 
@@ -438,7 +438,7 @@ function applyRaw() {
   flex: none;
   max-width: calc(var(--van-font-size-md) * 13.8);
   height: calc(var(--van-font-size-md) * 2.5);
-  padding: 0 var(--sp-xl);
+  padding: 0 var(--app-sp-xl);
   font-size: var(--van-font-size-md);
 }
 
@@ -454,7 +454,7 @@ function applyRaw() {
 .variant-chip :deep(.van-button__text) {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   min-width: 0;
   max-width: 100%;
 }
@@ -509,8 +509,8 @@ function applyRaw() {
 
 /* 名称编辑与变体级操作合并到一行，替代原来单独的”编辑变体：xxx”标题 */
 .variant-editor-bar {
-  gap: var(--sp-md);
-  margin-bottom: var(--sp-lg);
+  gap: var(--app-sp-md);
+  margin-bottom: var(--app-sp-lg);
   min-width: 0;
 }
 
@@ -518,7 +518,7 @@ function applyRaw() {
 .variant-name-field {
   flex: 1 1 0;
   min-width: calc(var(--van-font-size-md) * 7.4);
-  padding: var(--sp-sm) var(--sp-lg);
+  padding: var(--app-sp-sm) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
@@ -529,14 +529,14 @@ function applyRaw() {
 /* 状态码与延迟作为名称行的紧凑元信息，标签内联不占整行 */
 .variant-meta-field {
   flex: none;
-  padding: var(--sp-sm) var(--sp-md);
+  padding: var(--app-sp-sm) var(--app-sp-md);
   border-radius: var(--van-radius-md);
   font-size: var(--van-font-size-md);
 }
 
 .variant-meta-field :deep(.van-field__label) {
   flex: none;
-  margin-right: var(--sp-sm);
+  margin-right: var(--app-sp-sm);
   width: auto;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
@@ -562,7 +562,7 @@ function applyRaw() {
 }
 
 .variant-active {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex: none;
 }
 
@@ -581,7 +581,7 @@ function applyRaw() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   flex: 1 1 auto;
   min-height: 0;
   color: var(--van-text-color-3);
@@ -591,14 +591,14 @@ function applyRaw() {
 .raw-body {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   height: 100%;
   /* 高度已由面板限定，额外的下内边距会撑出滚动条 */
   padding-bottom: 0;
 }
 
 .raw-head {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
   flex: none;
 }
 

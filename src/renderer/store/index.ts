@@ -20,7 +20,7 @@ const GRAYS = ['#333333', '#646566', '#969799', '#c8c9cc', '#dcdee0', '#ebedf0',
 // 使用时才求值，因此不需要随字号重算；Proxy 顶部类型筛选组的 --van-checkbox-size: 16px 是本地覆盖，不受影响。
 // 圆角、边框、弹窗按钮高度不在此列：装饰性常量，且牵动既有的卡片对齐与弹窗固定高度约定。
 // cellGroupInsetPadding 单独处理：它刻意保持恒定 5px（卡片外缘要与面板沟道严格对齐），
-// 但与面板侧的 margin: 5px / calc(100% - var(--card-gutter) * 2) 是同一个数，所以让 Vant 这侧也读全局 token，
+// 但与面板侧的 margin: 5px / calc(100% - var(--app-card-gutter) * 2) 是同一个数，所以让 Vant 这侧也读全局 token，
 // 避免出现两处各自写死的 5px。
 const BASE_THEME_VARS: ConfigProviderThemeVars = {
   dialogButtonHeight: '40px',
@@ -32,7 +32,7 @@ const BASE_THEME_VARS: ConfigProviderThemeVars = {
   switchSize: 'calc(var(--van-font-size-md) * 1.5)',
   radioSize: 'calc(var(--van-font-size-md) * 1.2)',
   checkboxSize: 'calc(var(--van-font-size-md) * 1.2)',
-  cellGroupInsetPadding: 'var(--card-gutter, 5px)',
+  cellGroupInsetPadding: 'var(--app-card-gutter, 5px)',
   cellGroupInsetTitlePadding: '5px 20px',
   collapseItemContentPadding: '0px',
   tagPadding: '2px 5px',

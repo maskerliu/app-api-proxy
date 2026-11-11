@@ -321,7 +321,7 @@ defineExpose({ focusField })
 
 <style scoped>
 .response-form {
-  padding: 0 var(--sp-sm) var(--sp-lg);
+  padding: 0 var(--app-sp-sm) var(--app-sp-lg);
 }
 
 /* 响应体贴合弹层底部时去掉外围留白，避免多出可滚动的空白 */
@@ -330,7 +330,7 @@ defineExpose({ focusField })
 }
 
 .form-row {
-  gap: var(--sp-xl);
+  gap: var(--app-sp-xl);
 }
 
 .status-field,
@@ -352,8 +352,8 @@ defineExpose({ focusField })
 }
 
 .form-section {
-  margin-top: var(--sp-xl);
-  padding: var(--sp-lg);
+  margin-top: var(--app-sp-xl);
+  padding: var(--app-sp-lg);
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--van-border-color);
@@ -369,17 +369,17 @@ defineExpose({ focusField })
 /* 卡片外观（描边/圆角/底色/裁切）统一由 global.css 的 .header-collapse 提供，
    这里只留本面板的间距与撑满需求 */
 .header-collapse {
-  margin-top: var(--sp-xl);
+  margin-top: var(--app-sp-xl);
   width: 100%;
 }
 
 /* 只调整折叠标题行，内容区的字段不要一起改 */
 .header-collapse :deep(.van-collapse-item > .van-cell) {
-  padding: var(--sp-lg);
+  padding: var(--app-sp-lg);
 }
 
 .header-collapse :deep(.van-collapse-item__content) {
-  padding: 0 var(--sp-lg) var(--sp-lg);
+  padding: 0 var(--app-sp-lg) var(--app-sp-lg);
 }
 
 .header-add {
@@ -387,8 +387,8 @@ defineExpose({ focusField })
 }
 
 .section-head {
-  gap: var(--sp-lg);
-  margin-bottom: var(--sp-md);
+  gap: var(--app-sp-lg);
+  margin-bottom: var(--app-sp-md);
 }
 
 .section-title {
@@ -401,37 +401,37 @@ defineExpose({ focusField })
 .field-list {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-sm);
+  gap: var(--app-sp-sm);
 }
 
 .field-row {
-  gap: var(--sp-sm);
+  gap: var(--app-sp-sm);
 }
 
 .field-key {
-  /* 与只读键值网格同一条 key 列宽口径，见 global.css 的 --header-key-width */
-  flex: 0 0 var(--header-key-width);
+  /* 与只读键值网格同一条 key 列宽口径，见 global.css 的 --app-header-key-width */
+  flex: 0 0 var(--app-header-key-width);
   min-width: 0;
-  padding: var(--sp-md) var(--sp-lg);
+  padding: var(--app-sp-md) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .field-value {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--sp-md) var(--sp-lg);
+  padding: var(--app-sp-md) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .row-delete {
   flex: none;
-  padding: var(--sp-md);
+  padding: var(--app-sp-md);
   color: var(--van-danger-color);
   cursor: pointer;
 }
 
 .empty-tip {
-  padding: var(--sp-sm) var(--sp-xs);
+  padding: var(--app-sp-sm) var(--app-sp-xs);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
@@ -445,7 +445,7 @@ defineExpose({ focusField })
 }
 
 .body-type :deep(.van-radio) {
-  margin-right: var(--sp-xl);
+  margin-right: var(--app-sp-xl);
 }
 
 .body-type :deep(.van-radio__label) {
@@ -453,12 +453,12 @@ defineExpose({ focusField })
 }
 
 .body-tools {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   margin-left: auto;
 }
 
 .body-actions {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
 }
 
 /* 仅隐藏可见性，仍占位，保证顶部行高恒定 */
@@ -469,7 +469,7 @@ defineExpose({ focusField })
 /* 体积紧贴格式化按钮左侧，不参与按钮等宽 */
 .body-size {
   flex: none;
-  margin-right: var(--sp-xs);
+  margin-right: var(--app-sp-xs);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   white-space: nowrap;
@@ -490,11 +490,11 @@ defineExpose({ focusField })
 }
 
 .fill-body .body-section {
-  padding-bottom: var(--sp-sm);
+  padding-bottom: var(--app-sp-sm);
 }
 
 .binary-tip {
-  padding: var(--sp-xl);
+  padding: var(--app-sp-xl);
   border: 1px dashed var(--van-border-color);
   border-radius: var(--van-radius-md);
   color: var(--van-text-color-2);
@@ -503,7 +503,7 @@ defineExpose({ focusField })
 
 /* 状态行移到编辑器上方，让编辑器成为区块末尾元素，便于贴合底部 */
 .body-warning {
-  margin: 0 0 var(--sp-sm);
+  margin: 0 0 var(--app-sp-sm);
   font-size: var(--van-font-size-sm);
 }
 

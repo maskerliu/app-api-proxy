@@ -289,14 +289,14 @@ async function copyLink() {
 /* 命中解释：命中记录、忽略键、排序依据与耗时同属一个区块 */
 .mock-hit {
   margin: var(--van-padding-md) var(--van-padding-md) 0;
-  padding: var(--sp-lg) var(--sp-2xl);
+  padding: var(--app-sp-lg) var(--app-sp-2xl);
   border: 1px solid var(--van-success-color);
   border-radius: var(--van-radius-lg);
   background: color-mix(in srgb, var(--van-success-color) 8%, transparent);
 }
 
 .hit-head {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
 }
 
 .hit-icon {
@@ -311,8 +311,8 @@ async function copyLink() {
 }
 
 .hit-line {
-  gap: var(--sp-lg);
-  margin-top: var(--sp-md);
+  gap: var(--app-sp-lg);
+  margin-top: var(--app-sp-md);
 }
 
 .hit-label {
@@ -331,17 +331,17 @@ async function copyLink() {
 }
 
 .hit-value.mono {
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
 }
 
 .hit-meta {
-  gap: var(--sp-3xl);
+  gap: var(--app-sp-3xl);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
 }
 
 .hit-degraded {
-  margin-top: var(--sp-md);
+  margin-top: var(--app-sp-md);
   color: var(--van-warning-color);
   font-size: var(--van-font-size-xs);
 }

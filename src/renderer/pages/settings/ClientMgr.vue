@@ -114,7 +114,7 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
   max-width: calc(var(--van-font-size-md) * 9.2);
   font-size: var(--van-font-size-sm);
   color: var(--van-text-color);
-  padding: var(--sp-tight);
+  padding: var(--app-sp-tight);
   display: block;
   white-space: nowrap;
   overflow: hidden;

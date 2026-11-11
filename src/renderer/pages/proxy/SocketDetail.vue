@@ -267,7 +267,7 @@ onUnmounted(() => {
 
 .socket-summary {
   /* 与 HTTP 详情页 stickyTop (25px)、统计详情页顶部间距保持同一视觉线；引用统一 Token */
-  margin: var(--detail-top-gap) var(--van-padding-md) 0;
+  margin: var(--app-detail-top-gap) var(--van-padding-md) 0;
 }
 
 .socket-url {
@@ -280,11 +280,11 @@ onUnmounted(() => {
 .socket-stats {
   /* van-row 自带 flex + wrap：指标合并在一条信息带内，宽度不足才换行，避免详情区被统计块挤高 */
   gap: 4px 14px;
-  padding: var(--sp-lg) var(--sp-3xl) var(--sp-xl);
+  padding: var(--app-sp-lg) var(--app-sp-3xl) var(--app-sp-xl);
 }
 
 .socket-stat {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   min-width: 0;
   font-size: var(--van-font-size-sm);
 }
@@ -312,9 +312,9 @@ onUnmounted(() => {
 }
 
 .socket-error {
-  gap: var(--sp-lg);
-  margin: 0 var(--sp-3xl) var(--sp-xl);
-  padding: var(--sp-md) var(--sp-xl);
+  gap: var(--app-sp-lg);
+  margin: 0 var(--app-sp-3xl) var(--app-sp-xl);
+  padding: var(--app-sp-md) var(--app-sp-xl);
   border-radius: var(--van-radius-md);
   background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
   color: var(--van-danger-color);
@@ -346,8 +346,8 @@ onUnmounted(() => {
 .msg-toolbar {
   /* radio 自身高度写死 20px，这里按字号兜底，保证整行高度跟随全局字号缩放 */
   min-height: calc(var(--van-font-size-md) * 1.9);
-  gap: var(--sp-md);
-  padding: var(--sp-lg) var(--sp-xl) 0;
+  gap: var(--app-sp-md);
+  padding: var(--app-sp-lg) var(--app-sp-xl) 0;
 }
 
 .filter-btn-group {
@@ -365,7 +365,7 @@ onUnmounted(() => {
 }
 
 .filter-btn-group :deep(.van-radio__label) {
-  padding: 0 var(--sp-lg);
+  padding: 0 var(--app-sp-lg);
   white-space: nowrap;
 }
 
@@ -399,8 +399,8 @@ onUnmounted(() => {
 }
 
 .msg-search {
-  margin: var(--sp-md) 0;
-  padding: var(--sp-xs) var(--sp-2xl);
+  margin: var(--app-sp-md) 0;
+  padding: var(--app-sp-xs) var(--app-sp-2xl);
   font-size: var(--van-font-size-sm);
 
   --van-cell-vertical-padding: 0;
@@ -424,10 +424,10 @@ onUnmounted(() => {
 .msg-row {
   display: flex;
   align-items: center;
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   height: calc(var(--van-font-size-sm) * 2.2);
-  padding: 0 var(--sp-lg);
-  font-family: var(--mono-font);
+  padding: 0 var(--app-sp-lg);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-sm);
   color: var(--van-text-color-2);
   cursor: pointer;
@@ -531,8 +531,8 @@ onUnmounted(() => {
 }
 
 .msg-detail-head {
-  gap: var(--sp-lg);
-  padding: var(--sp-md) var(--sp-xl);
+  gap: var(--app-sp-lg);
+  padding: var(--app-sp-md) var(--app-sp-xl);
 }
 
 .msg-detail-head .van-button {
@@ -551,7 +551,7 @@ onUnmounted(() => {
   min-width: 0;
   overflow: hidden;
   color: var(--van-text-color-3);
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-xs);
 }
 
@@ -563,7 +563,7 @@ onUnmounted(() => {
 /* 分隔符交给伪元素，比原先写在文案里的 " · " 少占近一半横向空间 */
 .meta-item + .meta-item::before {
   content: '·';
-  margin: 0 var(--card-gutter);
+  margin: 0 var(--app-card-gutter);
 }
 
 .msg-detail-empty {

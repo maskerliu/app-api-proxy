@@ -350,7 +350,7 @@ async function onSSE() {
   width: 100%;
   min-width: min(375px, 100vw);
   height: 100%;
-  padding: var(--sp-xl) 0;
+  padding: var(--app-sp-xl) 0;
   background-color: var(--van-gray-1);
 }
 

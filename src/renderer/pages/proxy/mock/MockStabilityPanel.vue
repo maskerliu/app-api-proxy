@@ -210,7 +210,7 @@ async function showConfirm(message: string) {
 
 <style scoped>
 .stability-panel {
-  padding: var(--sp-lg);
+  padding: var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-lg);
   background: var(--van-background-2);
@@ -218,7 +218,7 @@ async function showConfirm(message: string) {
 }
 
 .panel-head {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
 }
 
 .panel-title {
@@ -227,19 +227,19 @@ async function showConfirm(message: string) {
 }
 
 .panel-block {
-  margin-top: var(--sp-lg);
-  padding-top: var(--sp-lg);
+  margin-top: var(--app-sp-lg);
+  padding-top: var(--app-sp-lg);
   border-top: 1px dashed var(--van-border-color);
 }
 
 .panel-block:first-of-type {
   border-top: 0;
-  padding-top: var(--sp-sm);
+  padding-top: var(--app-sp-sm);
 }
 
 .block-head {
-  gap: var(--sp-lg);
-  margin-bottom: var(--sp-sm);
+  gap: var(--app-sp-lg);
+  margin-bottom: var(--app-sp-sm);
 }
 
 .block-title {
@@ -250,12 +250,12 @@ async function showConfirm(message: string) {
 .key-list {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-sm);
+  gap: var(--app-sp-sm);
 }
 
 .key-row {
-  gap: var(--sp-lg);
-  padding: var(--sp-sm) var(--sp-md);
+  gap: var(--app-sp-lg);
+  padding: var(--app-sp-sm) var(--app-sp-md);
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
 }
@@ -264,12 +264,12 @@ async function showConfirm(message: string) {
 .key-row :deep(.key-action.van-button--mini) {
   flex: none;
   height: calc(var(--van-font-size-md) * 2.2);
-  padding: 0 var(--sp-xl);
+  padding: 0 var(--app-sp-xl);
   box-sizing: border-box;
 }
 
 .key-info {
-  gap: var(--sp-md);
+  gap: var(--app-sp-md);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -277,7 +277,7 @@ async function showConfirm(message: string) {
 .key-name {
   flex: none;
   max-width: 60%;
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
   word-break: break-all;
 }
@@ -302,7 +302,7 @@ async function showConfirm(message: string) {
 }
 
 .path-row {
-  gap: var(--sp-lg);
+  gap: var(--app-sp-lg);
 }
 
 /* 长路径挤占空间时按钮不收缩，文案保持单行 */
@@ -318,27 +318,27 @@ async function showConfirm(message: string) {
 
 .path-value {
   display: block;
-  font-family: var(--mono-font);
+  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
   word-break: break-all;
 }
 
 .path-original {
   display: block;
-  margin-top: var(--sp-xs);
+  margin-top: var(--app-sp-xs);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
 }
 
 .panel-empty {
-  margin: var(--sp-sm) 0 0;
+  margin: var(--app-sp-sm) 0 0;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
 
 .panel-hint {
-  margin: var(--sp-md) 0 0;
+  margin: var(--app-sp-md) 0 0;
   color: var(--van-warning-color);
   font-size: var(--van-font-size-sm);
 }

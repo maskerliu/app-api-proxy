@@ -191,7 +191,7 @@ function restart() {
 </script>
 <style lang="css" scoped>
 .setting-cell-icon {
-  margin-left: var(--sp-3xl);
+  margin-left: var(--app-sp-3xl);
 }
 
 /* 版本号：跟随所在 van-field 行高，字号缩放时不再脱节 */
@@ -208,13 +208,13 @@ function restart() {
 .version-popup {
   width: min(450px, calc(100vw - 60px));
   min-height: 300px;
-  margin: var(--sp-3xl);
+  margin: var(--app-sp-3xl);
 }
 
 .update-message {
   width: calc(100% - 0px);
   height: 190px;
-  margin: 0 var(--sp-3xl);
+  margin: 0 var(--app-sp-3xl);
   color: var(--van-text-color);
 }
 
@@ -225,6 +225,6 @@ function restart() {
 }
 
 .download-progress {
-  margin: var(--sp-xl) 0;
+  margin: var(--app-sp-xl) 0;
 }
 </style>
