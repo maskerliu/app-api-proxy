@@ -3,7 +3,9 @@
     <van-row tag="header" class="panel-head" align="center" justify="space-between" :wrap="false">
       <span class="panel-title">{{ $t('mock.stability.title') }}</span>
       <van-row class="head-side" align="center" :wrap="false">
-        <span v-if="lastAnalyzed !== ''" class="panel-stamp">{{ $t('mock.stability.lastAnalyzed', { time: lastAnalyzed }) }}</span>
+        <span v-if="lastAnalyzed !== ''" class="panel-stamp">{{ $t('mock.stability.lastAnalyzed', {
+          time: lastAnalyzed
+          }) }}</span>
         <van-button size="mini" plain type="primary" :loading="analyzing" :disabled="!canAnalyze" @click="analyze">
           {{ $t('mock.match.autoAnalyze') }}
         </van-button>
@@ -47,8 +49,9 @@
       <div v-if="ignoredKeys.length === 0" class="panel-empty">{{ $t('mock.stability.noAutoIgnored') }}</div>
       <!-- 已忽略态用和「Query 匹配 › 忽略参数」同款的可关闭标签：同一份状态的同一副面孔，✕ 即撤销 -->
       <van-row v-else class="tag-list">
-        <van-tag v-for="key in ignoredKeys" :key="key" closeable plain :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'"
-          :title="ignoreTitle(key)" @close="undoIgnore(key)">{{ key }}</van-tag>
+        <van-tag v-for="key in ignoredKeys" :key="key" closeable plain
+          :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" :title="ignoreTitle(key)"
+          @close="undoIgnore(key)">{{ key }}</van-tag>
       </van-row>
     </div>
 
@@ -82,7 +85,7 @@
 
 <script lang="ts" setup>
 import { analyzeMockMatch, ProxyMock } from '@shared'
-import type { MockMatchRule, MockMatchSuggestion } from '@shared/mock.models'
+import type { MockMatchSuggestion } from '@shared/mock.models'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -245,8 +248,8 @@ async function showConfirm(message: string) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--van-font-size-md) * 1.25);
-  height: calc(var(--van-font-size-md) * 1.25);
+  width: calc(var(--van-font-size-md));
+  height: calc(var(--van-font-size-md));
   border-radius: 50%;
   color: var(--van-white);
   font-size: var(--van-font-size-sm);
