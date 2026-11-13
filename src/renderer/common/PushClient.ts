@@ -1,6 +1,7 @@
 import SockJS from 'sockjs-client'
 import { showNotify } from 'vant'
 import { ProxyMock } from '@shared/proxy.models'
+import { $t } from '../../lang'
 import { CommonStore, ProxyRecordStore } from '../store'
 
 export class PushClient {
@@ -77,17 +78,17 @@ export class PushClient {
         this.uid = uid
         this.commonStore.applyUid(uid)
         this.commonStore.updateShowQrCode(false)
-        showNotify({ message: '注册成功', type: 'success', duration: 500 })
+        showNotify({ message: $t('proxy.push.registered'), type: 'success', duration: 500 })
         break
       }
       case ProxyMock.CMDType.DEVICE_REGISTERED: {
         const uid: string = typeof msg.content === 'string' ? msg.content : msg.content?.uid
         this.commonStore.updateShowQrCode(false)
-        showNotify({ message: '设备[' + uid + ']注册成功', type: 'success', duration: 800 })
+        showNotify({ message: $t('proxy.push.deviceRegistered', { uid }), type: 'success', duration: 800 })
         break
       }
       case ProxyMock.CMDType.KICKDOWN:
-        showNotify({ message: '被踢下线', type: 'danger', duration: 1200 })
+        showNotify({ message: $t('proxy.push.kickedDown'), type: 'danger', duration: 1200 })
         window.close()
         break
     }

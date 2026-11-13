@@ -6,13 +6,25 @@ export default {
     save: 'Save',
     upload: 'Upload',
     loading: 'Loading...',
-    searchPlaceholder: 'keyword for search',
-    searchNoMatch: 'no match rule found',
+    searchPlaceholder: 'Keyword for search',
+    searchNoMatch: 'No match rule found',
     copy: 'Copy',
-    copyFailed: 'Copy failed, please copy manually'
+    copyFailed: 'Copy failed, please copy manually',
+    linkCopied: 'Link copied to clipboard',
+    searchTip: 'Search (Ctrl+F)',
+    previewFailed: 'Resource preview failed',
+    previewUnsupported: 'Unsupported preview type',
+    saveOnboardFailed: 'Failed to save the access state'
   },
   proxy: {
-    waitingRegister: 'connecting push channel, please wait...',
+    waitingRegister: 'Connecting push channel, please wait...',
+    push: {
+      registered: 'Registered',
+      deviceRegistered: 'Device [{uid}] registered',
+      kickedDown: 'Kicked offline'
+    },
+    statTag: 'Stat',
+    statEvent: 'Event',
     requestHeader: 'Request Headers',
     requestParams: 'Request Parameters',
     requestBody: 'Request Body',
@@ -117,13 +129,13 @@ export default {
       disabledToast: 'Rule disabled',
       delete: {
         title: 'Warning',
-        confirm: 'are you sure to delete rule[ {rule} ]?'
+        confirm: 'Are you sure to delete rule[ {rule} ]?'
       }
     },
     record: {
       delete: {
         title: 'Warning',
-        confirm: 'are you sure to delete this record?'
+        confirm: 'Are you sure to delete this record?'
       },
       openExistingTitle: 'Path Already Exists',
       openExistingMessage: 'Rule "{rule}" already contains a record with the same path. Open it?',
@@ -156,8 +168,8 @@ export default {
       updateEnable: 'Update & Enable',
       successEnabled: 'Recorded to rule "{rule}" and enabled · {action} · click to view',
       successRecorded: 'Recorded to rule "{rule}" · {action} · click to view',
-      actionCreated: 'new record',
-      actionUpdated: 'updated record',
+      actionCreated: 'New record',
+      actionUpdated: 'Updated record',
       enableFailed: 'Recorded, but enabling failed: {reason}',
       enableFailedUnknown: 'Unknown error',
       recordFailed: 'Recording failed',
@@ -165,7 +177,7 @@ export default {
       conflictMessage: 'The record was modified elsewhere. Try again later.',
       validationMessage: 'The recorded content failed validation. Check it and try again.',
       selectRecordFirst: 'Select a request first',
-      copied: 'copied to clipboard',
+      copied: 'Copied to clipboard',
       historyTitle: 'Recent Recordings',
       undo: 'Undo',
       undoTitle: 'Undo Recording',
@@ -332,6 +344,7 @@ export default {
       conditionEmpty: 'No conditions',
       conditionKey: 'Key',
       conditionValue: 'Expected Value',
+      querySuggest: 'Query in the recorded request:',
       queryAllowExtra: 'Allow Extra Query Params',
       queryAllowExtraHint: 'When off, any undeclared Query parameter causes a miss.',
       queryMultiValue: 'Multiple Values',
@@ -367,14 +380,14 @@ export default {
     stability: {
       title: 'Stability Suggestions',
       suggestions: 'Pending Suggestions',
-      apply: 'Apply',
-      applyAll: 'Apply All',
-      applyAllConfirm: 'Ignore {count} suggested keys. Apply now?',
+      apply: 'Ignore',
+      applyAll: 'Ignore All',
+      applyAllConfirm: 'Ignore {count} suggested keys?',
       semanticKeep: 'Semantic key; never auto-ignored',
       suggestionHint: 'Semantic keys (e.g. version, tenantId) stay as conditions; ignoring them may cause false hits.',
-      autoIgnored: 'Auto Ignored',
-      noAutoIgnored: 'No auto-ignored keys',
-      undo: 'Undo',
+      autoIgnored: 'Ignored',
+      noAutoIgnored: 'No ignored keys',
+      lastAnalyzed: 'Analyzed {time}',
       path: 'Path Parameterization',
       pathApply: 'Analyze & Parameterize',
       pathUndo: 'Restore Path',
@@ -445,37 +458,41 @@ export default {
     },
     sys: {
       title: 'System Info',
-      protocol: 'Protocol',
       server: 'Server',
-      port: 'Server Port',
-      porterror: "Port has been used",
+      protocol: 'Protocol',
       serverDomain: 'Server Domain',
+      port: 'Server Port',
+      portError: 'Port has been used',
       updateServer: 'App Update Server',
       apiDefineServer: 'API Define Server',
       statRuleServer: 'Stat Rule Server',
       dataProxyServer: 'Data Proxy Server',
       theme: 'Theme',
       fontsize: 'FontSize',
-      lang: 'locales',
+      lang: 'Locales',
       version: 'Version',
-      restart: 'restart',
+      restart: 'Restart',
       cancelUpdate: 'Cancel Update',
-      noNewVersion: 'No New Version'
+      noNewVersion: 'No New Version',
+      saveConfigFailed: 'Failed to save config: {reason}'
     },
     broadcast: {
       onlineClient: 'Online Client',
-      placeholder: 'please enter message',
+      placeholder: 'Please enter message',
       btnSend: 'Send'
     },
     resources: {
-      title: 'Manage Remote Static Resources'
+      title: 'Manage Remote Static Resources',
+      manage: 'Static Resources'
     }
   },
+  // 开发者面板：面板内 Event Source / HLS / Camera 等分组标题仍是组件里硬编码的技术名，未走 i18n
   debug: {
     common: {
       title: 'Common',
       versionCheck: 'Check Version',
-      devTools: 'Developer Tools'
+      devTools: 'Developer Tools',
+      goNew: 'Switch to the new version'
     }
   },
   onboarding: {

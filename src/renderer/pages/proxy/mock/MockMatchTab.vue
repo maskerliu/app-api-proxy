@@ -91,9 +91,12 @@
 
       <div v-if="match.query.mode === 'match'" class="sub-block">
         <van-collapse v-model="expandedSections" :border="false" class="condition-collapse">
-          <van-collapse-item name="queryConditions" :border="false">
+          <van-collapse-item :name="CONDITIONS_PANEL" :border="false">
             <template #title>
-              <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
+              <van-row class="collapse-title" align="center" :wrap="false">
+                <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
+                <van-tag plain type="primary">{{ match.query.conditions.length }}</van-tag>
+              </van-row>
             </template>
             <template #right-icon>
               <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" @click.stop="onAddCondition" />
@@ -111,13 +114,21 @@
                 :placeholder="$t('mock.match.conditionValue')" @update:model-value="touch" />
               <van-icon name="cross" class="row-delete" @click="removeCondition(idx)" />
             </van-row>
+            <van-row v-if="querySuggestions.length > 0" class="suggest-row" align="center">
+              <span class="row-hint">{{ $t('mock.match.querySuggest') }}</span>
+              <van-tag v-for="item in querySuggestions" :key="item.key" plain type="primary"
+                class="suggest-tag query-suggest" :title="`${item.key}=${item.value}`"
+                @click="addQuerySuggestion(item)">
+                {{ item.key }}={{ item.value }}
+              </van-tag>
+            </van-row>
           </van-collapse-item>
         </van-collapse>
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryAllowExtra') }}</span>
           <van-switch v-model="match.query.allowExtra" size="18px" @change="touch" />
+          <span class="row-hint switch-hint">{{ $t('mock.match.queryAllowExtraHint') }}</span>
         </van-row>
-        <p class="row-hint">{{ $t('mock.match.queryAllowExtraHint') }}</p>
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryMultiValue') }}</span>
           <van-radio-group :model-value="match.query.multiValue" direction="horizontal" class="inline-radio"
@@ -236,9 +247,9 @@ import MockStabilityPanel from './MockStabilityPanel.vue'
 import {
   MATCH_LEVELS, MATCH_METHODS, PATH_TYPES, QUERY_OPERATORS, addHeaderCondition, addQueryCondition,
   diffLinesOf, ensureRecordMatch, ignoreSourceOf, operatorNeedsValue, orderingLabelKey, previewLevel,
-  testSeedOf,
+  querySuggestionsOf, testSeedOf,
 } from './match'
-import type { LevelPresetPreview } from './match'
+import type { LevelPresetPreview, QuerySuggestion } from './match'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
@@ -251,6 +262,8 @@ const priorityField = ref<FieldInstance>()
 const querySection = ref<HTMLElement>()
 const headerSection = ref<HTMLElement>()
 const newIgnoreKey = ref('')
+// 折叠面板名：模板的 :name 与点「+」时的自动展开取同一个值，写两处必然漂移
+const CONDITIONS_PANEL = 'queryConditions'
 const expandedSections = ref<string[]>([])
 const priorityText = ref('')
 const pending = ref<LevelPresetPreview>(null)
@@ -272,6 +285,8 @@ const pathTypeOptions = computed(() => PATH_TYPES.map(value => ({
 const operatorOptions = computed(() => QUERY_OPERATORS.map(value => ({
   value, label: t(`mock.match.op.${value}`)
 })))
+
+const querySuggestions = computed(() => querySuggestionsOf(props.record, match.value))
 
 // 首次渲染就要有可编辑对象，否则模板读取 match.method 会报空
 if (props.record != null) {
@@ -379,9 +394,27 @@ function removeIgnoreKey(key: string) {
   touch()
 }
 
+// 折叠态下只改数据不出图，写条件前先把这一栏展开
+function expandConditions() {
+  if (expandedSections.value.indexOf(CONDITIONS_PANEL) === -1) {
+    expandedSections.value = [CONDITIONS_PANEL]
+  }
+}
+
 function onAddCondition() {
   if (match.value == null) return
+  expandConditions()
   addQueryCondition(match.value)
+  touch()
+}
+
+function addQuerySuggestion(item: QuerySuggestion) {
+  if (match.value == null) return
+  if (match.value.query.conditions.some(it => it.key === item.key)) return
+  expandConditions()
+  const condition = addQueryCondition(match.value)
+  condition.key = item.key
+  condition.value = item.value
   touch()
 }
 
@@ -514,9 +547,8 @@ defineExpose({ focusField })
 
 <style scoped>
 .match-tab {
-  /* 控件尺寸统一由字号推导：md 13px 时 28px 高、24px 行高，与改动前的固定值一致 */
+  /* 控件尺寸统一由字号推导：md 13px 时 28px 高，与改动前的固定值一致 */
   --match-control-height: calc(var(--van-font-size-md) * 2.2);
-  --match-control-line-height: calc(var(--van-font-size-md) * 1.8);
   --match-control-padding-y: calc(var(--van-font-size-md) * 0.3);
   --mini-select-bar-height: var(--match-control-height);
   display: flex;
@@ -533,19 +565,38 @@ defineExpose({ focusField })
   box-sizing: border-box;
 }
 
+/* .btn-icon-only 是定边长的方格，但同行输入框的 flex 基准是整行宽，
+   不锁住收缩就会被按比例压掉 1~2px，四个「+」与测试行的按钮就不再同宽 */
+.match-tab .btn-icon-only {
+  flex: none;
+}
+
 /* 键名/建议 Header 等标签是内容而非徽标，跟随 sm */
 .match-tab :deep(.van-tag) {
   font-size: var(--van-font-size-sm);
 }
 
+/* 次要说明的一档（text-3 + sm）只写一次，各站点的规则只留自己的排布 */
+.row-hint,
+.level-hint,
+.empty-tip,
+.preview-empty,
+.path-original {
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-sm);
+}
+
+/* 区块小标题与行标签共用同一档正文（text-2 + md），列宽由 .row-label 自己补 */
+.sub-title,
+.bar-label,
+.row-label {
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-md);
+}
+
 .level-bar {
   gap: var(--app-sp-lg);
   margin-top: var(--app-sp-lg);
-}
-
-.bar-label {
-  color: var(--van-text-color-2);
-  font-size: var(--van-font-size-md);
 }
 
 .level-chips {
@@ -556,8 +607,6 @@ defineExpose({ focusField })
 
 .level-hint {
   margin: calc(var(--app-sp-xs) * -1) 0 0;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .level-preview {
@@ -576,8 +625,6 @@ defineExpose({ focusField })
 
 .preview-empty {
   flex: 1;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .preview-tags {
@@ -622,8 +669,6 @@ defineExpose({ focusField })
 .row-label {
   flex: none;
   min-width: calc(var(--van-font-size-md) * 3.7);
-  color: var(--van-text-color-2);
-  font-size: var(--van-font-size-md);
 }
 
 /* 请求标识三行统一：标签固定列宽、置灰、右对齐，控件同宽描边 */
@@ -634,7 +679,8 @@ defineExpose({ focusField })
 }
 
 .match-field,
-.path-input {
+.path-input,
+.add-input {
   flex: 1 1 auto;
   min-width: 0;
   height: var(--match-control-height);
@@ -646,22 +692,26 @@ defineExpose({ focusField })
 }
 
 .match-field::after,
-.path-input::after {
+.path-input::after,
+.add-input::after {
   display: none;
 }
 
 .match-field :deep(.van-field__body),
-.path-input :deep(.van-field__body) {
+.path-input :deep(.van-field__body),
+.add-input :deep(.van-field__body) {
   height: 100%;
 }
 
 .match-field :deep(.van-field__value),
-.path-input :deep(.van-field__value) {
+.path-input :deep(.van-field__value),
+.add-input :deep(.van-field__value) {
   padding: 0;
 }
 
 .match-field :deep(.van-field__control),
-.path-input :deep(.van-field__control) {
+.path-input :deep(.van-field__control),
+.add-input :deep(.van-field__control) {
   height: var(--match-control-height);
 }
 
@@ -684,8 +734,6 @@ defineExpose({ focusField })
 .path-original {
   gap: var(--app-sp-lg);
   margin-top: var(--app-sp-sm);
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
   word-break: break-all;
 }
 
@@ -703,9 +751,10 @@ defineExpose({ focusField })
   font-size: var(--van-font-size-md);
 }
 
+/* 虚线只作为分组的上边界：留一档给上一组收尾、贴紧下一组，上下各留一档会把两个子块推远 */
 .sub-block {
   margin-top: var(--app-sp-lg);
-  padding-top: var(--app-sp-lg);
+  padding-top: var(--app-sp-sm);
   border-top: 1px dashed var(--van-border-color);
 }
 
@@ -714,22 +763,24 @@ defineExpose({ focusField })
   margin-bottom: var(--app-sp-sm);
 }
 
-.sub-title {
-  color: var(--van-text-color-2);
-  font-size: var(--van-font-size-md);
-}
-
 /* 匹配条件用折叠面板，标题行贴合区块样式，内容区不额外缩进 */
+/* 标题行按控件那一档定高：Vant 的 24px 单元格行高是死值，不随字号走，且右侧 + 按钮本来就把行撑到等高 */
 .condition-collapse :deep(.van-collapse-item > .van-cell) {
-  padding: var(--app-sp-xs) 0;
+  padding: 0;
+  line-height: var(--match-control-height);
 }
 
 .condition-collapse :deep(.van-collapse-item__content) {
-  padding: var(--app-sp-sm) 0 0;
+  padding: var(--app-sp-xs) 0 0;
 }
 
 .condition-collapse :deep(.van-collapse-item__title) {
   min-width: 0;
+}
+
+/* 折叠态也要看得出条件数，和「忽略参数」那块的计数同款 */
+.collapse-title {
+  gap: var(--app-sp-md);
 }
 
 .tag-list {
@@ -743,21 +794,11 @@ defineExpose({ focusField })
 
 .add-row {
   gap: var(--app-sp-md);
-  margin-top: var(--app-sp-md);
-}
-
-.add-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: var(--match-control-padding-y) var(--app-sp-lg);
-  line-height: var(--match-control-line-height);
-  border-radius: var(--van-radius-md);
+  margin-top: var(--app-sp-sm);
 }
 
 .empty-tip {
   padding: var(--app-sp-xs) 0;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .condition-row {
@@ -792,8 +833,9 @@ defineExpose({ focusField })
   height: var(--match-control-height);
 }
 
+/* 8.5 档是按英文留的，四个运算符里最长的「不存在」只要 6.2 档，多出来的宽度让给期望值 */
 .op-select {
-  width: calc(var(--van-font-size-md) * 8.5);
+  width: calc(var(--van-font-size-md) * 6.2);
 }
 
 .condition-value {
@@ -823,21 +865,29 @@ defineExpose({ focusField })
   height: var(--match-control-height);
 }
 
+/* 删除图标收成与同行控件等高的方格：Vant 图标自带 line-height:1，靠行高而不是内边距居中 */
 .row-delete {
   flex: none;
-  padding: var(--app-sp-md);
+  width: var(--match-control-height);
+  height: var(--match-control-height);
+  line-height: var(--match-control-height);
+  text-align: center;
   color: var(--van-danger-color);
   cursor: pointer;
-}
-
-.row-hint {
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .switch-row {
   gap: var(--app-sp-lg);
   padding: var(--app-sp-xs) 0;
+}
+
+/* 说明与开关同行排，空间不够时折的是说明自己，不能把开关挤扁 */
+.switch-row .van-switch {
+  flex: none;
+}
+
+.switch-hint {
+  min-width: 0;
 }
 
 /* 开关与输入框切换时保持行高不变，避免整行跳动 */
@@ -873,6 +923,17 @@ defineExpose({ focusField })
 
 .suggest-tag {
   cursor: pointer;
+}
+
+/* 建议正文是 key=value，值常是长 token：Vant 的 tag 是 inline-flex，text-overflow 要落到 inline-block 上才出省略号，
+   全文由 title 给出 */
+.query-suggest {
+  display: inline-block;
+  max-width: calc(var(--van-font-size-md) * 13);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .test-row {

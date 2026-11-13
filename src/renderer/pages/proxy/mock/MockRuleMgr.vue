@@ -28,8 +28,6 @@
                       @click.stop="onRuleEdit(rule)" />
                     <van-icon class="iconfont icon-delete result-action-icon result-action-icon--danger"
                       @click.stop="onRuleDelete(rule)" />
-                    <van-icon class="iconfont icon-upload result-action-icon result-action-icon--danger"
-                      @click.stop="onSave" />
                   </div>
                 </template>
               </van-cell>
@@ -242,15 +240,15 @@ import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MiniSelect from '../../components/MiniSelect.vue'
 import { scrollOptions } from '../../../common/scroll'
+import MiniSelect from '../../components/MiniSelect.vue'
 import MockRecordEditor from './MockRecordEditor.vue'
+import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import {
   levelTagType, matchesKeyword, methodTagType, recordRowOf, sortRecords, warningLabelKey, warningTagType,
 } from './record.row'
-import { describeMockSaveError, normalizeErrorText } from './save-error'
-import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import { findRecordByUrl, MockMgrTarget } from './recording'
+import { describeMockSaveError, normalizeErrorText } from './save-error'
 
 const { t } = useI18n()
 const searchBox = ref<HTMLElement>()
@@ -1307,10 +1305,7 @@ async function onRecordDeleteConfirm() {
   background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
 }
 
-.btn-action-icon {
-  font-size: calc(var(--van-font-size-md) * 1.1);
-}
-
+/* 图标尺寸已由 global.css 的 .btn-icon-only .van-icon 单源，这里只保留配色语义 */
 .btn-action-icon--danger {
   color: var(--van-danger-color);
 }

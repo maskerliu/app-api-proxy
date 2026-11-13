@@ -28,7 +28,7 @@
         <van-field label="client key" :model-value="selectClient.connId" readonly />
         <van-field label="client ip" :model-value="`${selectClient.ip}:${selectClient.port}`" readonly />
 
-        <van-field placeholder="请输入内容" v-model="imMsg">
+        <van-field :placeholder="$t('settings.broadcast.placeholder')" v-model="imMsg">
           <template #right-icon>
             <van-button class="btn-icon-only" plain icon="guide-o" @click="sendMsg" size="small" />
           </template>

@@ -2,7 +2,7 @@
   <!-- 跳过 Vant touch 模拟：合成 touch 事件会被 Ace 的移动端处理器当成触摸，
        长按选词、拖动变滚动，导致鼠标拖选失效 -->
   <div data-no-touch-simulate class="ace-editor-wrapper" :class="maxLines || fill ? null : 'ace-editor'">
-    <van-icon v-if="searchable && !searchVisible" name="search" class="ace-search-toggle" title="搜索 (Ctrl+F)"
+    <van-icon v-if="searchable && !searchVisible" name="search" class="ace-search-toggle" :title="$t('common.searchTip')"
       @click="openSearch" />
     <!-- ace.edit 会清空容器子节点，悬浮控件必须放在编辑器容器外层 -->
     <div ref="aceEditor" class="ace-editor-inner"></div>
@@ -38,8 +38,10 @@ import axios from 'axios'
 import Hls from 'hls.js'
 import { showToast } from 'vant'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { CommonStore, FONT_SIZE_MD_OFFSET } from '../../store'
 
+const { t } = useI18n()
 const commonStore = CommonStore()
 
 interface VueAceEditorProps {
@@ -335,7 +337,7 @@ function previewHls(url: string) {
         if (!showPreview.value) return
         previewType.value = -1
         showPreview.value = false
-        showToast('资源预览失败')
+        showToast(t('common.previewFailed'))
       })
 
       instance.loadSource(url)
@@ -352,7 +354,7 @@ function previewHls(url: string) {
 
     previewType.value = -1
     showPreview.value = false
-    showToast('不支持的预览类型')
+    showToast(t('common.previewUnsupported'))
   })
 }
 
@@ -374,7 +376,7 @@ function onPreviewError(e: Event) {
 
   releasePreviewUrls()
   showPreview.value = false
-  showToast('资源预览失败')
+  showToast(t('common.previewFailed'))
 }
 
 function onMouseDown(e: MouseEvent) {
@@ -509,7 +511,7 @@ async function onClick(e: MouseEvent) {
       default:
         previewType.value = -1
         showPreview.value = false
-        showToast('不支持的预览类型')
+        showToast(t('common.previewUnsupported'))
     }
   } catch (err) {
     console.log(err)
@@ -517,7 +519,7 @@ async function onClick(e: MouseEvent) {
     if (seq != previewSeq || !showPreview.value) return
     previewType.value = -1
     showPreview.value = false
-    showToast('资源预览失败')
+    showToast(t('common.previewFailed'))
   }
 }
 

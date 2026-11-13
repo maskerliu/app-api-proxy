@@ -56,6 +56,11 @@ export interface MatchTestSeed {
   headers?: Record<string, string>
 }
 
+export interface QuerySuggestion {
+  key: string
+  value: string
+}
+
 function safeUrl(url: string): URL | null {
   const value = String(url ?? '').trim()
   return value === '' ? null : parseLooseUrl(value)
@@ -269,8 +274,32 @@ export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
   if (match.query == null) match.query = { mode: 'match', ignoreKeys: [], conditions: [], allowExtra: true, multiValue: 'any' }
   match.query.mode = 'match'
   const condition: MockQueryCondition = { key: '', op: 'equals', value: '', source: 'manual' }
-  match.query.conditions.push(condition)
+  // 新行插在顶部：条件之间是 AND，顺序无语义，排在最前才和「展开后第一眼就是它」对得上
+  match.query.conditions.unshift(condition)
   return condition
+}
+
+// 一行放不下太多，且首屏能点到的键才是有用的键；超出部分仍可走「+」手输
+const QUERY_SUGGEST_LIMIT = 8
+
+/** 录制来源里尚未进条件的 Query 键值对：一键补条件用，已忽略的键不推荐，否则会和忽略状态自相矛盾 */
+export function querySuggestionsOf(record: ProxyMock.MockRecord,
+  match: MockMatchRule | null | undefined): QuerySuggestion[] {
+  const fromSource = queryConditionsFrom(record?.source?.url ?? record?.url ?? '')
+  if (fromSource == null) return []
+
+  const used = new Set([
+    ...(match?.query?.conditions ?? []).map(it => it.key),
+    ...(match?.query?.ignoreKeys ?? []),
+  ])
+  const result: QuerySuggestion[] = []
+  for (const it of fromSource) {
+    // 同名键的第二个值不该再出现一次，queryConditionsFrom 按出现顺序给的是首个值
+    if (used.has(it.key) || result.some(s => s.key === it.key)) continue
+    result.push({ key: it.key, value: it.value })
+    if (result.length >= QUERY_SUGGEST_LIMIT) break
+  }
+  return result
 }
 
 export function addHeaderCondition(match: MockMatchRule, name: string = ''): void {

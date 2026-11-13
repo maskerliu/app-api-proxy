@@ -8,7 +8,11 @@
           </template>
           <template #right-icon>
             <van-button class="btn-icon-only" style="margin: 0 10px;" plain size="small" type="success"
-              icon="description" @click="copyLink" />
+              @click="copyLink">
+              <template #icon>
+                <van-icon class="iconfont icon-copy" />
+              </template>
+            </van-button>
             <mock-record-panel :record="record" />
           </template>
         </van-cell>
@@ -108,10 +112,10 @@ import { copyToClipboard } from '../../common/clipboard'
 import { toKeyValueEntries } from '../../common/headerUtil'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import { ensureRecordMatch, orderingLabelKey, previewLevel, summaryText } from './mock/match'
-import { describeMockSaveError } from './mock/save-error'
-import { MockMgrTarget } from './mock/recording'
 import MockMissPanel from './mock/MockMissPanel.vue'
 import MockRecordPanel from './mock/MockRecordPanel.vue'
+import { MockMgrTarget } from './mock/recording'
+import { describeMockSaveError } from './mock/save-error'
 import ProxyRequestBody from './ProxyRequestBody.vue'
 
 // 吸顶位置相对右侧滚动容器计算：electron 标题栏拖拽区 32px，容器顶部距窗口 5px，
@@ -349,5 +353,4 @@ async function copyLink() {
 .detail-miss {
   margin: var(--van-padding-md) var(--van-padding-md) 0;
 }
-
 </style>

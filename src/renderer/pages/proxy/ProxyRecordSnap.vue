@@ -32,7 +32,7 @@
           <template v-for="(item, idx) in ((source as ProxyMock.ProxyStatRecord).statistics?.bps?.slice(0, 2) ?? [])"
             :key="idx">
             <span class="stat-pid">{{ item.pageId }}</span>
-            <strong class="stat-type">[{{ item.event_id == 2001 ? "PV" : "事件" }}]</strong>
+            <strong class="stat-type">[{{ item.event_id == 2001 ? "PV" : $t('proxy.statEvent') }}]</strong>
             <span class="stat-eid" v-if="item.event_id != 2001">{{ item.elementId == "" ? item.arg1 : item.elementId
             }}</span>
           </template>
@@ -48,7 +48,7 @@
             :type="parseInt(source.responseData.code) === 2000 ? 'success' : 'warning'">
             {{ source.responseData.code }}
           </van-tag>
-          <van-tag v-if="source.type == 5020" type="primary">打点</van-tag>
+          <van-tag v-if="source.type == 5020" type="primary">{{ $t('proxy.statTag') }}</van-tag>
           <van-tag v-if="missBadge" plain type="default">{{ missBadge }}%</van-tag>
           <van-icon v-if="source.isMock" class="iconfont icon-shuiguan mock-icon" />
           <span class="snap-timecost" :class="{ 'is-slow': (source.time ?? 0) > 500 }">

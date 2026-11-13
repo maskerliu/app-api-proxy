@@ -409,9 +409,9 @@ async function copyRegisterUrl() {
   }
   try {
     await copyToClipboard(url)
-    showNotify({ message: '链接已复制到剪贴板', type: 'success', duration: 800 })
+    showNotify({ message: t('common.linkCopied'), type: 'success', duration: 800 })
   } catch (err) {
-    showNotify({ message: '复制失败，请手动复制', type: 'danger', duration: 1200 })
+    showNotify({ message: t('common.copyFailed'), type: 'danger', duration: 1200 })
   }
 }
 
