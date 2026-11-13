@@ -4,7 +4,7 @@ import { matchRecords, normalizeRequest } from '@main/service/mock.matcher'
 import { analyzeMatchStability, createMatchFromUrl, deriveMatch, restoreStrict } from '@main/service/mock.derive'
 import { levelOf } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
-import { previewLevel, summaryOf } from '@renderer/pages/proxy/mock/match'
+import { addQueryCondition, previewLevel, querySuggestionsOf, summaryOf } from '@renderer/pages/proxy/mock/match'
 import { condition, legacyRecord, makeMatch, makeRecord } from './fixtures'
 
 function keysOf(match): string[] {
@@ -312,5 +312,42 @@ describe('deriveMatch · 只存 url 的记录写入前派生', () => {
 
   it('AC-R1-09 · 空 url 不派生，由仓库层按 matchMissing 拒绝', () => {
     assert.equal(deriveMatch(makeRecord({ url: '' }), ''), null)
+  })
+})
+
+describe('addQueryCondition', () => {
+  it('新行插在条件列表顶部并把 Query 切到匹配模式', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')] })
+    match.query.mode = 'ignore'
+    const added = addQueryCondition(match)
+    assert.deepEqual(match.query.conditions.map(it => it.key), ['', 'page'])
+    assert.equal(match.query.conditions[0], added)
+    assert.equal(match.query.mode, 'match')
+  })
+})
+
+describe('querySuggestionsOf', () => {
+  it('给出录制里尚未进条件的键值，已忽略的键不推荐', () => {
+    const record = makeRecord({ match: makeMatch({ conditions: [condition('role', 'admin')], ignoreKeys: ['ts'] }) })
+    record.source = { url: '/v1/users?role=admin&sign=abc&page=1&page=2&ts=9', method: 'GET' }
+
+    assert.deepEqual(querySuggestionsOf(record, record.match), [
+      { key: 'sign', value: 'abc' },
+      { key: 'page', value: '1' },
+    ])
+  })
+
+  it('缺少录制来源与来源里没有待补的键都返回空', () => {
+    const record = makeRecord({ match: makeMatch() })
+    assert.deepEqual(querySuggestionsOf(record, record.match), [])
+    record.source = { url: '/v1/users', method: 'GET' }
+    assert.deepEqual(querySuggestionsOf(record, record.match), [])
+  })
+
+  it('建议条数封顶，长 Query 不会把一行撑爆', () => {
+    const record = makeRecord({ match: makeMatch() })
+    const query = Array.from({ length: 12 }, (_, i) => `k${i}=v${i}`).join('&')
+    record.source = { url: `/v1/users?${query}`, method: 'GET' }
+    assert.equal(querySuggestionsOf(record, record.match).length, 8)
   })
 })

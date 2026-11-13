@@ -2,59 +2,59 @@
   <section class="stability-panel">
     <van-row tag="header" class="panel-head" align="center" justify="space-between" :wrap="false">
       <span class="panel-title">{{ $t('mock.stability.title') }}</span>
-      <van-button size="mini" plain type="primary" :loading="analyzing" :disabled="!canAnalyze"
-        @click="analyze">
-        {{ $t('mock.match.autoAnalyze') }}
-      </van-button>
+      <van-row class="head-side" align="center" :wrap="false">
+        <span v-if="lastAnalyzed !== ''" class="panel-stamp">{{ $t('mock.stability.lastAnalyzed', { time: lastAnalyzed }) }}</span>
+        <van-button size="mini" plain type="primary" :loading="analyzing" :disabled="!canAnalyze" @click="analyze">
+          {{ $t('mock.match.autoAnalyze') }}
+        </van-button>
+      </van-row>
     </van-row>
 
     <div v-if="listSuggestions.length > 0" class="panel-block">
-      <van-row class="block-head" align="center" justify="space-between" :wrap="false">
+      <van-row class="block-head" align="center" :wrap="false">
+        <span class="sev sev-warn" />
         <span class="block-title">{{ $t('mock.stability.suggestions') }}</span>
-        <van-button v-if="applicableSuggestions.length > 1" size="mini" plain type="warning"
-          @click="applyAllSuggestions">
+        <van-tag plain type="primary">{{ listSuggestions.length }}</van-tag>
+        <span class="head-spacer" />
+        <span v-if="applicableSuggestions.length > 1" class="link-action" @click="applyAllSuggestions">
           {{ $t('mock.stability.applyAll') }}
-        </van-button>
+        </span>
       </van-row>
       <div class="key-list">
+        <!-- 分级只画在最左侧的图标上：E1~E4 是要处理的「!」，E5 只是告知的「i」；档位码退到 title 备查，不再占一列 -->
         <van-row v-for="item in listSuggestions" :key="`${item.evidence}-${item.key}`" class="key-row" align="center"
           :wrap="false">
-          <van-row class="key-info" align="center" :wrap="false">
-            <span class="key-name">{{ item.key }}</span>
-            <van-tag plain :type="item.evidence === 'E5' ? 'primary' : 'warning'" class="evidence-tag">
-              {{ item.evidence }}
-            </van-tag>
-            <span class="key-reason">{{ reasonText(item) }}</span>
-          </van-row>
-          <van-button v-if="item.evidence !== 'E5'" size="mini" plain type="primary" class="key-action"
-            :disabled="isIgnored(item.key)" @click="applySuggestion(item)">
+          <span class="sev" :class="item.evidence === 'E5' ? 'sev-info' : 'sev-warn'"
+            :title="`${item.evidence} · ${reasonText(item)}`" />
+          <span class="key-name" :title="item.key">{{ item.key }}</span>
+          <span class="key-reason">
+            {{ item.evidence === 'E5' ? $t('mock.stability.semanticKeep') : reasonText(item) }}
+          </span>
+          <span v-if="item.evidence !== 'E5'" class="link-action" @click="applySuggestion(item)">
             {{ $t('mock.stability.apply') }}
-          </van-button>
-          <span v-else class="key-keep">{{ $t('mock.stability.semanticKeep') }}</span>
+          </span>
         </van-row>
       </div>
       <p v-if="hasSemanticSuggestion" class="panel-hint">{{ $t('mock.stability.suggestionHint') }}</p>
     </div>
 
     <div class="panel-block">
-      <van-row class="block-head" align="center" justify="space-between" :wrap="false">
+      <van-row class="block-head" align="center" :wrap="false">
+        <span class="sev sev-ok" />
         <span class="block-title">{{ $t('mock.stability.autoIgnored') }}</span>
+        <van-tag plain type="primary">{{ ignoredKeys.length }}</van-tag>
       </van-row>
       <div v-if="ignoredKeys.length === 0" class="panel-empty">{{ $t('mock.stability.noAutoIgnored') }}</div>
-      <div v-else class="key-list">
-        <van-row v-for="key in ignoredKeys" :key="key" class="key-row" align="center" :wrap="false">
-          <van-row class="key-info" align="center" :wrap="false">
-            <span class="key-name">{{ key }}</span>
-            <van-tag v-if="RISK_KEYS.has(key)" plain type="warning" class="evidence-tag">E2</van-tag>
-            <span class="key-reason">{{ evidenceText(key) }}</span>
-          </van-row>
-          <van-button size="mini" plain class="key-action" @click="undoIgnore(key)">{{ $t('mock.stability.undo') }}</van-button>
-        </van-row>
-      </div>
+      <!-- 已忽略态用和「Query 匹配 › 忽略参数」同款的可关闭标签：同一份状态的同一副面孔，✕ 即撤销 -->
+      <van-row v-else class="tag-list">
+        <van-tag v-for="key in ignoredKeys" :key="key" closeable plain :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'"
+          :title="ignoreTitle(key)" @close="undoIgnore(key)">{{ key }}</van-tag>
+      </van-row>
     </div>
 
     <div v-if="pathParameterized || isPathDynamic || pathSuggestion != null" class="panel-block">
-      <van-row class="block-head" align="center" justify="space-between" :wrap="false">
+      <van-row class="block-head" align="center" :wrap="false">
+        <span class="sev" :class="pathParameterized ? 'sev-ok' : 'sev-info'" />
         <span class="block-title">{{ $t('mock.stability.path') }}</span>
       </van-row>
       <van-row class="path-row" align="center" :wrap="false">
@@ -64,12 +64,12 @@
             {{ $t('mock.match.pathParameterized', { original: match.pathOriginal, path: match.path }) }}
           </span>
         </div>
-        <van-button v-if="pathParameterized" size="mini" plain type="primary" @click="undoPath">
+        <span v-if="pathParameterized" class="link-action" @click="undoPath">
           {{ $t('mock.stability.pathUndo') }}
-        </van-button>
-        <van-button v-else size="mini" plain type="primary" :disabled="!canAnalyze" @click="analyze">
+        </span>
+        <span v-else class="link-action" :class="{ 'link-action-off': !canAnalyze }" @click="analyze">
           {{ $t('mock.stability.pathApply') }}
-        </van-button>
+        </span>
       </van-row>
     </div>
 
@@ -82,11 +82,11 @@
 
 <script lang="ts" setup>
 import { analyzeMockMatch, ProxyMock } from '@shared'
-import type { MockMatchSuggestion } from '@shared/mock.models'
+import type { MockMatchRule, MockMatchSuggestion } from '@shared/mock.models'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RISK_KEYS, SEMANTIC_KEYS } from './match'
+import { ignoreSourceOf, RISK_KEYS, SEMANTIC_KEYS } from './match'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
@@ -107,6 +107,19 @@ const canAnalyze = computed(() => {
   const url = props.record?.source?.url ?? props.record?.url ?? ''
   return url !== '' && props.record?.ruleId != null
 })
+// 建议是某一次分析的快照，不写时间就分不清下面是新结论还是上次留下的
+const lastAnalyzed = computed(() => {
+  const at = Number(derivation.value?.analyzedAt) || 0
+  if (at <= 0) return ''
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+})
+const ignoreSource = (key: string) => ignoreSourceOf(match.value, key)
+
+function ignoreTitle(key: string): string {
+  // 自动忽略的键把依据带在标签上；手动与建议来源沿用忽略参数列表的说法
+  const source = ignoreSource(key)
+  return source === 'auto' ? evidenceText(key) : t(`mock.match.ignoreSource.${source}`)
+}
 
 function reasonText(item: MockMatchSuggestion): string {
   return t(`mock.stability.reason.${item.reason ?? 'dynamicValueShape'}`)
@@ -217,6 +230,54 @@ async function showConfirm(message: string) {
   color: var(--van-text-color);
 }
 
+/* 次要说明的一档（text-3 + sm）只写一次，各站点规则只留自己的排布 */
+.panel-stamp,
+.key-reason,
+.path-original,
+.panel-empty {
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-sm);
+}
+
+/* 分级靠图标本身，不写文字：DevTools Issues 用同一支圆点，靠颜色和字形区分待处理 / 只告知 / 已解决 */
+.sev {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--van-font-size-md) * 1.25);
+  height: calc(var(--van-font-size-md) * 1.25);
+  border-radius: 50%;
+  color: var(--van-white);
+  font-size: var(--van-font-size-sm);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sev-warn {
+  background: var(--van-warning-color);
+}
+
+.sev-warn::before {
+  content: '!';
+}
+
+.sev-info {
+  background: var(--van-primary-color);
+}
+
+.sev-info::before {
+  content: 'i';
+}
+
+.sev-ok {
+  background: var(--van-success-color);
+}
+
+.sev-ok::before {
+  content: '✓';
+}
+
 .panel-head {
   gap: var(--app-sp-lg);
 }
@@ -226,20 +287,35 @@ async function showConfirm(message: string) {
   font-weight: 500;
 }
 
+.head-side {
+  gap: var(--app-sp-md);
+  flex: none;
+}
+
+.panel-stamp {
+  white-space: nowrap;
+}
+
 .panel-block {
-  margin-top: var(--app-sp-lg);
-  padding-top: var(--app-sp-lg);
-  border-top: 1px dashed var(--van-border-color);
+  margin-top: var(--app-sp-md);
+  padding-top: var(--app-sp-md);
+  border-top: 1px solid var(--van-border-color);
 }
 
 .panel-block:first-of-type {
   border-top: 0;
+  margin-top: var(--app-sp-xs);
   padding-top: var(--app-sp-sm);
 }
 
 .block-head {
-  gap: var(--app-sp-lg);
-  margin-bottom: var(--app-sp-sm);
+  gap: var(--app-sp-md);
+  margin-bottom: var(--app-sp-xs);
+}
+
+/* 标题与计数靠左、批量动作靠右，比 justify=space-between 更能在长标题下保住右缘 */
+.head-spacer {
+  flex: 1 1 auto;
 }
 
 .block-title {
@@ -250,65 +326,71 @@ async function showConfirm(message: string) {
 .key-list {
   display: flex;
   flex-direction: column;
-  gap: var(--app-sp-sm);
 }
 
+/* 行是平的：铺底色会把说明文字框成控件，这里只留一条发丝线，行高仍取上层 .match-tab 的控件高度 */
 .key-row {
-  gap: var(--app-sp-lg);
-  padding: var(--app-sp-sm) var(--app-sp-md);
-  border-radius: var(--van-radius-md);
-  background: var(--van-gray-1);
-}
-
-/* 行内「应用 / 撤销」被上层 .match-tab 的 mini 统一内边距压到 ~4px，这里按字号放宽留白 */
-.key-row :deep(.key-action.van-button--mini) {
-  flex: none;
-  height: calc(var(--van-font-size-md) * 2.2);
-  padding: 0 var(--app-sp-xl);
-  box-sizing: border-box;
-}
-
-.key-info {
   gap: var(--app-sp-md);
-  flex: 1 1 auto;
-  min-width: 0;
+  min-height: var(--match-control-height);
+  border-bottom: 1px solid var(--van-border-color);
 }
 
+.key-row:last-child {
+  border-bottom: 0;
+}
+
+/* 动作收成文字链接：DevTools 的 issue 动作（Learn more / Ignore issue）不是描边按钮。
+   带 loading 的面板工具（重新分析）仍用按钮，链接给不出进行中状态。 */
+.link-action {
+  flex: none;
+  color: var(--van-primary-color);
+  font-size: var(--van-font-size-md);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.link-action:hover {
+  text-decoration: underline;
+}
+
+.link-action-off {
+  color: var(--van-text-color-3);
+  cursor: default;
+}
+
+.link-action-off:hover {
+  text-decoration: none;
+}
+
+/* 键名列定宽，说明列才不会被上一条的键长推来推去 */
 .key-name {
   flex: none;
-  max-width: 60%;
-  font-family: var(--app-mono-font);
-  font-size: var(--van-font-size-md);
-  word-break: break-all;
-}
-
-.evidence-tag {
-  flex: none;
-}
-
-.key-reason {
-  min-width: 0;
+  width: calc(var(--van-font-size-md) * 8);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
+  font-family: var(--app-mono-font);
+  font-size: var(--van-font-size-md);
 }
 
-.key-keep {
-  flex: none;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
+/* 说明是唯一要说服人的字段，宁可折行也不打点 */
+.key-reason {
+  flex: 1 1 0;
+  min-width: 0;
+  line-height: calc(var(--van-font-size-sm) * 1.5);
+}
+
+.tag-list {
+  gap: var(--app-sp-md);
+  min-height: calc(var(--van-font-size-md) * 1.7);
+}
+
+.tag-list :deep(.van-tag) {
+  font-family: var(--app-mono-font);
 }
 
 .path-row {
-  gap: var(--app-sp-lg);
-}
-
-/* 长路径挤占空间时按钮不收缩，文案保持单行 */
-.path-row :deep(.van-button--mini) {
-  flex: none;
-  white-space: nowrap;
+  gap: var(--app-sp-md);
 }
 
 .path-info {
@@ -326,15 +408,11 @@ async function showConfirm(message: string) {
 .path-original {
   display: block;
   margin-top: var(--app-sp-xs);
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
   word-break: break-all;
 }
 
 .panel-empty {
   margin: var(--app-sp-sm) 0 0;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .panel-hint {

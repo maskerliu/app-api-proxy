@@ -5,6 +5,7 @@ import type { MockStatusBroadcast } from '@shared/mock.models'
 import { ProxyMock, getServerConfig, updateBaseDomain, updateClientUID, updateUpdateServer } from '@shared'
 import { API_URL } from '@shared/api.const'
 import { PushClient } from '../common/PushClient'
+import { $t } from '../../lang'
 
 export { ProxyRecordStore } from './ProxyRecords'
 
@@ -214,7 +215,7 @@ export const CommonStore = defineStore('Common', {
         // 只更新接入标记，不重启服务/推送连接
         await window.mainApi?.updateBizConfig(JSON.stringify(this.serverConfig))
       } catch (err) {
-        showNotify({ message: '保存接入状态失败', type: 'warning', duration: 1200 })
+        showNotify({ message: $t('common.saveOnboardFailed'), type: 'warning', duration: 1200 })
       }
     },
   }

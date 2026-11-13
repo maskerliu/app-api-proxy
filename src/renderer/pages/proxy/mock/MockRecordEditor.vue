@@ -70,7 +70,6 @@
               <van-row class="variant-active" align="center" :wrap="false">
                 <van-switch :model-value="record.activeVariantId === selectedVariant.id"
                   @update:model-value="toggleActive(selectedVariant)" />
-                <span class="variant-active-label">{{ $t('mock.editor.activeHint') }}</span>
               </van-row>
               <van-button class="btn-icon-only" size="mini" plain type="success" :disabled="atVariantLimit"
                 :title="$t('mock.editor.duplicateVariant')" @click="duplicateVariant">
@@ -343,11 +342,6 @@ function applyRaw() {
   flex: none;
 }
 
-/* 保存是主操作，图标随正文字号走，不再继承 mini 的 xs */
-.editor-head :deep(.van-button--mini) {
-  font-size: var(--van-font-size-md);
-}
-
 .editor-tabs {
   display: flex;
   flex-direction: column;
@@ -422,11 +416,6 @@ function applyRaw() {
 .variant-strip::-webkit-scrollbar-thumb {
   border-radius: var(--app-sp-xs);
   background: var(--van-border-color);
-}
-
-/* 变体条内的按钮/胶囊统一用正文字号，图标按钮不再继承 mini 的 xs */
-.variant-bar :deep(.van-button--mini) {
-  font-size: var(--van-font-size-md);
 }
 
 .variant-bar :deep(.van-tag) {
@@ -514,10 +503,10 @@ function applyRaw() {
   min-width: 0;
 }
 
-/* 基准宽度取 0，换行判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作 */
+/* 基准宽度取 0，收缩判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作 */
 .variant-name-field {
   flex: 1 1 0;
-  min-width: calc(var(--van-font-size-md) * 7.4);
+  min-width: calc(var(--van-font-size-md) * 5.5);
   padding: var(--app-sp-sm) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
@@ -526,9 +515,12 @@ function applyRaw() {
   font-weight: 500;
 }
 
-/* 状态码与延迟作为名称行的紧凑元信息，标签内联不占整行 */
+/* 状态码与延迟作为名称行的紧凑元信息，标签内联不占整行。
+   可收缩是这一行不撑破面板的关键：原先六个子项全是 flex:none + 写死宽，最小宽之和在字号 10 约 561px，
+   已超过默认窗口下编辑列的实测宽（约 557px），多出来的部分只能把右侧按钮顶出面板并撑出横向滚动。
+   现在窄的时候先压这两列，开关与按钮始终留在行内。 */
 .variant-meta-field {
-  flex: none;
+  flex: 0 1 auto;
   padding: var(--app-sp-sm) var(--app-sp-md);
   border-radius: var(--van-radius-md);
   font-size: var(--van-font-size-md);
@@ -547,29 +539,27 @@ function applyRaw() {
   font-variant-numeric: tabular-nums;
 }
 
-/* 宽度按英文 “Status Code” + 数值预留，避免最大字号下标签挤掉输入值 */
+/* 宽度按英文 “Status Code” + 数值预留，避免最大字号下标签挤掉输入值；
+   地板只保证标签与两三位数字，压到地板时由输入框自身裁切，不再撑破整行 */
 .variant-status-field {
   width: calc(var(--van-font-size-md) * 10.5);
+  min-width: calc(var(--van-font-size-md) * 7.5);
 }
 
 .variant-delay-field {
   width: calc(var(--van-font-size-md) * 9.5);
+  min-width: calc(var(--van-font-size-md) * 6.5);
 }
 
 .meta-unit {
+  flex: none;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
+/* 生效开关组只剩开关本身，不收缩 */
 .variant-active {
-  gap: var(--app-sp-md);
   flex: none;
-}
-
-.variant-active-label {
-  color: var(--van-text-color-2);
-  font-size: var(--van-font-size-md);
-  white-space: nowrap;
 }
 
 .variant-editor-bar :deep(.van-button) {

@@ -8,10 +8,22 @@ export default {
     searchPlaceholder: '请输入搜索关键词',
     searchNoMatch: '未找到符合的规则',
     copy: '复制',
-    copyFailed: '复制失败，请手动复制'
+    copyFailed: '复制失败，请手动复制',
+    linkCopied: '链接已复制到剪贴板',
+    searchTip: '搜索 (Ctrl+F)',
+    previewFailed: '资源预览失败',
+    previewUnsupported: '不支持的预览类型',
+    saveOnboardFailed: '保存接入状态失败'
   },
   proxy: {
     waitingRegister: '推送连接注册中，请稍后…',
+    push: {
+      registered: '注册成功',
+      deviceRegistered: '设备[{uid}]注册成功',
+      kickedDown: '被踢下线'
+    },
+    statTag: '打点',
+    statEvent: '事件',
     requestHeader: '请求头',
     requestParams: '请求参数',
     requestBody: '请求体',
@@ -331,6 +343,7 @@ export default {
       conditionEmpty: '暂无条件',
       conditionKey: '参数名',
       conditionValue: '期望值',
+      querySuggest: '录制请求里的 Query：',
       queryAllowExtra: '允许额外 Query 参数',
       queryAllowExtraHint: '关闭后，出现未声明的 Query 参数即判定为未命中。',
       queryMultiValue: '多值语义',
@@ -366,14 +379,14 @@ export default {
     stability: {
       title: '稳定性建议',
       suggestions: '待确认建议',
-      apply: '应用',
-      applyAll: '全部应用',
-      applyAllConfirm: '将忽略 {count} 个建议参数，确定应用吗？',
+      apply: '忽略',
+      applyAll: '全部忽略',
+      applyAllConfirm: '将忽略 {count} 个建议参数，确定吗？',
       semanticKeep: '业务语义键，不自动忽略',
       suggestionHint: '业务语义键（如 version、tenantId）默认保留为匹配条件，忽略后可能造成误命中。',
-      autoIgnored: '已自动忽略',
-      noAutoIgnored: '暂无自动忽略参数',
-      undo: '撤销',
+      autoIgnored: '已忽略',
+      noAutoIgnored: '暂无忽略参数',
+      lastAnalyzed: '上次分析 {time}',
       path: 'Path 参数化',
       pathApply: '分析并参数化',
       pathUndo: '还原 Path',
@@ -448,7 +461,7 @@ export default {
       protocol: 'Http协议',
       serverDomain: '服务域名',
       port: '代理Http服务端口',
-      porterror: "端口已被占用，请更换",
+      portError: '端口已被占用，请更换',
       updateServer: '应用更新服务地址',
       apiDefineServer: 'API定义服务地址',
       statRuleServer: '埋点规则服务地址',
@@ -459,7 +472,8 @@ export default {
       version: '版本',
       restart: '重启',
       cancelUpdate: '取消更新',
-      noNewVersion: '当前已是最新版本'
+      noNewVersion: '当前已是最新版本',
+      saveConfigFailed: '保存配置失败: {reason}'
     },
     broadcast: {
       onlineClient: '在线Client',
@@ -467,14 +481,17 @@ export default {
       btnSend: '发送'
     },
     resources: {
-      title: '静态资源管理'
+      title: '静态资源管理',
+      manage: '静态资源'
     }
   },
+  // 开发者面板：面板内 Event Source / HLS / Camera 等分组标题仍是组件里硬编码的技术名，未走 i18n
   debug: {
     common: {
-      title: 'Common',
-      versionCheck: 'Check Version',
-      devTools: 'Developer Tools'
+      title: '通用',
+      versionCheck: '检查版本',
+      devTools: '开发者工具',
+      goNew: '去新版'
     }
   },
   onboarding: {

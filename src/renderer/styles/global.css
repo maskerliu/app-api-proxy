@@ -163,6 +163,14 @@
   box-sizing: border-box;
 }
 
+/* 纯图标按钮的字形尺寸单源。不继承按钮字号：mini 是 10px、small 是 12px，同一族按钮的图标会差 2~4px，
+   页面里再各自 :deep(.van-button--mini) 提一档就更散。压到图标本身（0,2,0）同时盖住两条竞争规则——
+   iconfont 基类写死的 16px 与 .van-icon 的 font-size: inherit，因此也与样式表插入顺序无关。
+   1.2 取自 Vant 的 --van-button-icon-size，等于把各处抬到原本最大的一档，没有站点会变小。 */
+.btn-icon-only .van-icon {
+  font-size: calc(var(--van-font-size-md) * 1.2);
+}
+
 /* ---- 操作按钮区：弹窗/面板底部按钮行统一（结构；上下文间距由使用方覆盖） ---- */
 
 .actions-bar {

@@ -6,8 +6,11 @@
           <div class="socket-url" :title="socket.url">{{ socket.url }}</div>
         </template>
         <template #right-icon>
-          <van-button class="btn-icon-only" plain size="small" type="primary" icon="description"
-            @click="copyText(socket.url)" />
+          <van-button class="btn-icon-only" plain size="small" type="primary" @click="copyText(socket.url)">
+            <template #icon>
+              <van-icon class="iconfont icon-copy" />
+            </template>
+          </van-button>
         </template>
       </van-cell>
       <van-row align="center" class="socket-stats">
@@ -15,8 +18,10 @@
         <van-row v-for="stat in stats" :key="stat.key" align="center" :wrap="false" class="socket-stat"
           :title="stat.title">
           <span v-if="stat.label" class="stat-label">{{ stat.label }}</span>
-          <span v-for="(value, idx) in stat.values" :key="idx" class="stat-value" :class="value.cls" :title="value.title">
-            <template v-if="value.icon"><i class="iconfont dir-icon" :class="value.icon"></i> {{ value.text }}</template>
+          <span v-for="(value, idx) in stat.values" :key="idx" class="stat-value" :class="value.cls"
+            :title="value.title">
+            <template v-if="value.icon"><i class="iconfont dir-icon" :class="value.icon"></i> {{ value.text
+            }}</template>
             <template v-else>{{ value.text }}</template>
           </span>
         </van-row>
@@ -105,11 +110,11 @@ import type { PropType } from 'vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { copyToClipboard } from '../../common/clipboard'
+import { formatBytes, formatElapsed, formatFrameOffset } from '../../common/format'
 import { toKeyValueEntries } from '../../common/headerUtil'
 import MiniSelect from '../components/MiniSelect.vue'
 import VueAceEditor from '../components/VueAceEditor.vue'
 import { dirIcon, frameCategory, frameContent, framePreview, socketStatsOf, socketStatusOf } from './socket'
-import { formatBytes, formatElapsed, formatFrameOffset } from '../../common/format'
 
 const props = defineProps({
   record: { type: Object as PropType<ProxyMock.SocketRecord> },
@@ -561,7 +566,7 @@ onUnmounted(() => {
 }
 
 /* 分隔符交给伪元素，比原先写在文案里的 " · " 少占近一半横向空间 */
-.meta-item + .meta-item::before {
+.meta-item+.meta-item::before {
   content: '·';
   margin: 0 var(--app-card-gutter);
 }

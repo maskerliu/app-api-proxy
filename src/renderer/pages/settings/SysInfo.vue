@@ -21,7 +21,7 @@
 
     <van-field center :label="$t(item.tooltip)" label-width="12.3em" v-for="item in perferences"
       v-model="commonStore.serverConfig[item.key]" :readonly="item.readonly ? true : item.readonly"
-      :error-message="!commonStore.serverConfig['portValid'] && item.tooltip == 'settings.sys.port' ? $t('settings.sys.porterror') : null">
+      :error-message="!commonStore.serverConfig['portValid'] && item.tooltip == 'settings.sys.port' ? $t('settings.sys.portError') : null">
       <template #right-icon>
         <van-switch v-if="item.hasStatus" style="margin-top: 5px;" :model-value="!!commonStore.serverConfig.status"
           @update:model-value="(val: boolean) => commonStore.serverConfig.status = val"></van-switch>
@@ -116,7 +116,7 @@ async function onSave() {
     }
     showSettings.value = false
   } catch (err: any) {
-    showNotify({ type: 'warning', message: `保存配置失败: ${err?.message ?? err}` })
+    showNotify({ type: 'warning', message: t('settings.sys.saveConfigFailed', { reason: err?.message ?? err }) })
   }
 }
 

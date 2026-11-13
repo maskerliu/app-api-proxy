@@ -40,12 +40,12 @@
         <van-row class="body-tools" align="center" :wrap="false">
           <span class="body-size">{{ $t('mock.editor.bodySize', { size: bodySizeText }) }}</span>
           <van-row class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }" :wrap="false">
-            <van-button size="mini" plain class="tool-btn" @click="formatBody">
+            <van-button size="mini" plain class="btn-icon-only tool-btn" @click="formatBody">
               <template #icon>
                 <van-icon class="iconfont icon-format" />
               </template>
             </van-button>
-            <van-button size="mini" plain class="tool-btn" @click="compactBody">
+            <van-button size="mini" plain class="btn-icon-only tool-btn" @click="compactBody">
               <template #icon>
                 <van-icon class="iconfont icon-compress" />
               </template>
@@ -475,9 +475,9 @@ defineExpose({ focusField })
   white-space: nowrap;
 }
 
+/* 盒型与字形尺寸都交给 .btn-icon-only，这里只保证按钮在窄行里不被压缩 */
 .tool-btn {
   flex: none;
-  width: calc(var(--van-font-size-md) * 1.8);
 }
 
 .body-editor {

@@ -51,11 +51,13 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import Hls from 'hls.js'
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { baseDomain, broadcast } from '@shared'
 import { API_URL } from '@shared/api.const'
 import { MOCK_UID_HEADER } from '@shared/http-header'
 import { CommonStore } from '../../store'
 
+const { t } = useI18n()
 const commonStore = CommonStore()
 const sseData = ref<string>('')
 const sseStatus = ref<string>('idle')
@@ -239,7 +241,7 @@ async function registerSSE() {
 }
 
 function toNew() {
-  alert('去新版')
+  alert(t('debug.common.goNew'))
 }
 
 
