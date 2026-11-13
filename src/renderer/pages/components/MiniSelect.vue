@@ -313,7 +313,7 @@ function stackingZ(el: HTMLElement) {
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--app-shadow-float);
 }
 
 /* 选项的内边距与行高都按弹层自身的字号计算。原先只有 --font-md 有行高规则，

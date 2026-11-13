@@ -5,7 +5,7 @@
       <van-row class="head-side" align="center" :wrap="false">
         <span v-if="lastAnalyzed !== ''" class="panel-stamp">{{ $t('mock.stability.lastAnalyzed', {
           time: lastAnalyzed
-          }) }}</span>
+        }) }}</span>
         <van-button size="mini" plain type="primary" :loading="analyzing" :disabled="!canAnalyze" @click="analyze">
           {{ $t('mock.match.autoAnalyze') }}
         </van-button>
@@ -48,7 +48,7 @@
       </van-row>
       <div v-if="ignoredKeys.length === 0" class="panel-empty">{{ $t('mock.stability.noAutoIgnored') }}</div>
       <!-- 已忽略态用和「Query 匹配 › 忽略参数」同款的可关闭标签：同一份状态的同一副面孔，✕ 即撤销 -->
-      <van-row v-else class="tag-list">
+      <van-row v-else class="tag-list" align="center">
         <van-tag v-for="key in ignoredKeys" :key="key" closeable plain
           :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" :title="ignoreTitle(key)"
           @close="undoIgnore(key)">{{ key }}</van-tag>
@@ -89,7 +89,7 @@ import type { MockMatchSuggestion } from '@shared/mock.models'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ignoreSourceOf, RISK_KEYS, SEMANTIC_KEYS } from './match'
+import { applyAutoIgnoredKeys, ignoreSourceOf, RISK_KEYS, SEMANTIC_KEYS, stabilitySuggestionsOf } from './match'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
@@ -100,7 +100,7 @@ const derivation = computed(() => match.value?.derivation)
 const suggestions = computed(() => derivation.value?.suggestions ?? [])
 // Path 参数化是独立动作，不能当作忽略键批量应用
 const pathSuggestion = computed(() => suggestions.value.find(it => it.reason === 'pathParameterizable'))
-const listSuggestions = computed(() => suggestions.value.filter(it => it.reason !== 'pathParameterizable'))
+const listSuggestions = computed(() => stabilitySuggestionsOf(match.value))
 const applicableSuggestions = computed(() => listSuggestions.value.filter(it => it.evidence !== 'E5'))
 const hasSemanticSuggestion = computed(() => listSuggestions.value.some(it => it.evidence === 'E5'))
 const ignoredKeys = computed(() => match.value?.query?.ignoreKeys ?? [])
@@ -134,21 +134,10 @@ function evidenceText(key: string): string {
   return t('mock.stability.reason.dynamicValueShape')
 }
 
-function isIgnored(key: string): boolean {
-  return ignoredKeys.value.indexOf(key) >= 0
-}
-
 function applySuggestion(item: MockMatchSuggestion) {
-  if (match.value == null || isIgnored(item.key)) return
-  const query = match.value.query
-  if (query.ignoreKeys == null) query.ignoreKeys = []
-  query.ignoreKeys.push(item.key)
-  // 应用后从建议中移除，避免重复展示
-  const list = derivation.value?.suggestions
-  if (list != null) {
-    const index = list.findIndex(it => it.key === item.key && it.evidence === item.evidence)
-    if (index >= 0) list.splice(index, 1)
-  }
+  if (match.value == null) return
+  // 只写忽略名单，建议行留在分析快照里不删：视图按忽略名单过滤这一行，来源配色才认得出它是「来自建议」
+  applyAutoIgnoredKeys(match.value, [item.key])
 }
 
 async function applyAllSuggestions() {
@@ -198,6 +187,8 @@ async function analyze() {
     const result = await analyzeMockMatch(request, { silentError: true })
     if (result?.derivation == null || match.value == null) return
     match.value.derivation = result.derivation
+    // 自动忽略只有落进 ignoreKeys 才被引擎承认；此前只回填 derivation，「重新分析」点下去界面里什么都不变
+    applyAutoIgnoredKeys(match.value, result.autoIgnoredKeys)
     if (result.pathSuggested != null) {
       match.value.pathOriginal = result.pathOriginal ?? match.value.pathOriginal ?? match.value.path
       match.value.path = result.pathSuggested
@@ -386,6 +377,7 @@ async function showConfirm(message: string) {
 .tag-list {
   gap: var(--app-sp-md);
   min-height: calc(var(--van-font-size-md) * 1.7);
+  margin-top: 5px;
 }
 
 .tag-list :deep(.van-tag) {

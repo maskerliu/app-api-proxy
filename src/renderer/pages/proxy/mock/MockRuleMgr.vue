@@ -1236,15 +1236,18 @@ async function onRecordDeleteConfirm() {
   }
 }
 
+/* 保存冲突走的是自定义内容 + 自定义动作区，不经过 van-dialog 的 message/footer，
+   所以这里逐档复刻标准弹窗的间距：8/24/8 的正文 + 8/24/16 的动作区，
+   与标题共用同一条沟道，否则正文比标题窄半档、底部还会多出一条白带 */
 .conflict-message {
-  padding: var(--app-sp-2xl) var(--app-sp-3xl) 0;
+  padding: var(--van-padding-xs) var(--app-dialog-gutter);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
   line-height: 1.5;
 }
 
 .conflict-actions {
-  padding: var(--app-sp-3xl);
+  padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
 
 .mgr-content :deep(.van-popover__wrapper) {

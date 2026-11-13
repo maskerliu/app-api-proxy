@@ -31,7 +31,7 @@
       <van-tab :title="$t('mock.editor.tab.variants')" name="variants">
         <div class="tab-body variants-tab">
           <van-row class="variant-bar" align="center" :wrap="false">
-            <div ref="variantStrip" class="variant-strip">
+            <div ref="variantStrip" class="variant-strip" @wheel="onStripWheel">
               <van-button v-for="variant in record.variants" :key="variant.id" size="mini" class="variant-chip"
                 :type="variant.id === selectedVariantId ? 'primary' : 'default'"
                 :plain="variant.id !== selectedVariantId" :title="variant.name" @click="selectVariant(variant)">
@@ -191,6 +191,19 @@ watch(selectedVariantId, () => {
     variantStrip.value?.querySelector('.variant-chip.van-button--primary')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   })
 })
+
+// 条内 overflow-y 是 hidden，滚轮默认既滚不动横向也传不上去；把纵向增量转给 scrollLeft。
+// 到端点或不溢出时不拦事件，纵向翻页仍归外层面板，否则鼠标停在条上就滚不动响应体了。
+function onStripWheel(event: WheelEvent) {
+  const strip = variantStrip.value
+  if (strip == null) return
+  const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+  const max = strip.scrollWidth - strip.clientWidth
+  if (delta === 0 || max <= 0) return
+  if (delta < 0 ? strip.scrollLeft <= 0 : strip.scrollLeft >= max) return
+  strip.scrollLeft += delta
+  event.preventDefault()
+}
 watch(() => record.value?.variants, () => {
   if (selectedVariantId.value != null && !record.value.variants.some(it => it.id === selectedVariantId.value)) {
     selectedVariantId.value = null
@@ -270,7 +283,7 @@ function focusField(issue: { code: string; field?: string }) {
   }
   if (field.startsWith('match')) {
     activeTab.value = 'match'
-    nextTick(() => nextTick(() => matchForm.value?.focusField(issue.code)))
+    nextTick(() => nextTick(() => matchForm.value?.focusField(issue.code, issue.field)))
     return
   }
   if (field.startsWith('variants') || field === 'activeVariantId') {
@@ -422,11 +435,12 @@ function applyRaw() {
   font-size: var(--van-font-size-sm);
 }
 
-/* 变体胶囊直接用 van-button（mini + round），选中态由 primary 实心样式提供 */
+/* 变体胶囊直接用 van-button（mini + round），选中态由 primary 实心样式提供；
+   高度与同行右侧的「+」（.btn-icon-only）同源，胶囊不再自己占一档 */
 .variant-chip {
   flex: none;
   max-width: calc(var(--van-font-size-md) * 13.8);
-  height: calc(var(--van-font-size-md) * 2.5);
+  height: var(--app-control-height);
   padding: 0 var(--app-sp-xl);
   font-size: var(--van-font-size-md);
 }

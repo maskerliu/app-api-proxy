@@ -1,6 +1,7 @@
 import { ProxyMock } from '@shared/proxy.models'
 import type {
-  MockMatchLevel, MockMatchOrdering, MockMatchRule, MockQueryCondition, MockQueryOperator,
+  MockHeaderCondition, MockMatchLevel, MockMatchOrdering, MockMatchRule, MockMatchSuggestion, MockQueryCondition,
+  MockQueryMatch, MockQueryOperator,
 } from '@shared/mock.models'
 import {
   MOCK_ANY_METHOD, MOCK_HIGH_RISK_KEYS, MOCK_METHODS, MOCK_MATCH_LEVELS, MOCK_PATH_TYPES,
@@ -270,13 +271,49 @@ export function ignoreSourceOf(match: MockMatchRule | null | undefined, key: str
   return 'manual'
 }
 
-export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
+// 档位应用与忽略写入两处都可能碰到整段缺失的老规则，补的是同一份空壳
+function ensureQuery(match: MockMatchRule): MockQueryMatch {
   if (match.query == null) match.query = { mode: 'match', ignoreKeys: [], conditions: [], allowExtra: true, multiValue: 'any' }
-  match.query.mode = 'match'
+  return match.query
+}
+
+/** 「+」加一行空条件：只插行、不动档位。空键名本来就不参与匹配，档位是忽略时新行置灰才对得上；
+ *  面板头现在只有这一枚「+」，Query 与 Header 都从它出发，加 Header 行更不该被顺带改掉 Query 档位 */
+export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
+  const query = ensureQuery(match)
   const condition: MockQueryCondition = { key: '', op: 'equals', value: '', source: 'manual' }
   // 新行插在顶部：条件之间是 AND，顺序无语义，排在最前才和「展开后第一眼就是它」对得上
-  match.query.conditions.unshift(condition)
+  query.conditions.unshift(condition)
   return condition
+}
+
+/** 点录制里的键值对补条件：这是明确要按它匹配，档位随之切到匹配 */
+export function applyQuerySuggestion(match: MockMatchRule, item: QuerySuggestion): MockQueryCondition {
+  const condition = addQueryCondition(match)
+  condition.key = item.key
+  condition.value = item.value
+  match.query.mode = 'match'
+  return condition
+}
+
+/**
+ * 把分析算出的自动忽略键并进 ignoreKeys：testQuery 只认 ignoreKeys，derivation.autoIgnoredKeys 本身不改变匹配。
+ * 条件行留着不删——忽略名单优先于条件（matcher.ts 里命中即 continue），所以 ✕ 撤销把键摘掉就回到原状。
+ */
+export function applyAutoIgnoredKeys(match: MockMatchRule, keys: string[] | undefined): void {
+  const query = ensureQuery(match)
+  if (query.ignoreKeys == null) query.ignoreKeys = []
+  for (const key of keys ?? []) {
+    // 只补缺的、接在末尾：和忽略参数框的 push 同一口径，手动键的次序不会被分析结果打乱
+    if (query.ignoreKeys.indexOf(key) === -1) query.ignoreKeys.push(key)
+  }
+}
+
+/** 稳定性面板的建议行：Path 参数化另有自己的区块；E3/E4 已进忽略名单的不再摆出来，点它没有可发生的变化 */
+export function stabilitySuggestionsOf(match: MockMatchRule | null | undefined): MockMatchSuggestion[] {
+  const ignored = new Set(match?.query?.ignoreKeys ?? [])
+  return (match?.derivation?.suggestions ?? []).filter(it => it.reason !== 'pathParameterizable'
+    && (it.evidence === 'E5' || !ignored.has(it.key)))
 }
 
 // 一行放不下太多，且首屏能点到的键才是有用的键；超出部分仍可走「+」手输
@@ -302,9 +339,67 @@ export function querySuggestionsOf(record: ProxyMock.MockRecord,
   return result
 }
 
-export function addHeaderCondition(match: MockMatchRule, name: string = ''): void {
+export type ConditionLocation = 'query' | 'header'
+
+/** 合表后的一行视图模型：底层仍是 query.conditions 与 headers.conditions 两个数组，location 只决定读写哪一个 */
+export interface ConditionRow {
+  location: ConditionLocation
+  condition: MockQueryCondition | MockHeaderCondition
+  /** 两种「不参与」都要置灰：档位设为忽略时 testQuery 整段放行；档位是匹配时命中忽略名单的那一行被逐条跳过 */
+  inert: boolean
+}
+
+export function conditionRowsOf(match: MockMatchRule | null | undefined): ConditionRow[] {
+  if (match == null) return []
+  const query = match.query
+  const inertAll = query?.mode === 'ignore'
+  const ignored = new Set(query?.ignoreKeys ?? [])
+  const queryRows = (query?.conditions ?? []).map(condition => ({
+    location: 'query' as ConditionLocation, condition, inert: inertAll || ignored.has(condition.key),
+  }))
+  const headerRows = (match.headers?.conditions ?? []).map(condition => ({
+    location: 'header' as ConditionLocation, condition, inert: false,
+  }))
+  return [...queryRows, ...headerRows]
+}
+
+// 只有键名的载体不同：Query 条件用 key，Header 条件用 name
+export function conditionName(row: ConditionRow): string {
+  return row.location === 'query'
+    ? (row.condition as MockQueryCondition).key
+    : (row.condition as MockHeaderCondition).name
+}
+
+export function setConditionName(row: ConditionRow, value: string): void {
+  if (row.location === 'query') (row.condition as MockQueryCondition).key = value
+  else (row.condition as MockHeaderCondition).name = value
+}
+
+/** 切换位置即把整行搬到另一个数组：op/value/来源原样带走，落在新组的开头 */
+export function relocateCondition(match: MockMatchRule, row: ConditionRow, next: ConditionLocation): void {
+  if (next === row.location) return
+  const name = conditionName(row)
+  const { op, value, ignoreCase, source } = row.condition
+  removeCondition(match, row)
+  if (next === 'query') match.query.conditions.unshift({ key: name, op, value, ignoreCase, source })
+  else match.headers.conditions.unshift({ name, op, value, ignoreCase, source })
+}
+
+// 两个数组的元素类型不同，先同宽成 A|B 再按对象身份定位，否则 indexOf 的参数会被推成交集
+export function removeCondition(match: MockMatchRule, row: ConditionRow): void {
+  const list: Array<MockQueryCondition | MockHeaderCondition> = row.location === 'query'
+    ? match.query.conditions
+    : match.headers.conditions
+  const index = list.indexOf(row.condition)
+  if (index >= 0) list.splice(index, 1)
+}
+
+export function addHeaderCondition(match: MockMatchRule, name: string = ''): MockHeaderCondition {
   if (match.headers == null) match.headers = { ignoreKeys: [], conditions: [] }
-  match.headers.conditions.push({ name, op: 'equals', value: '', source: 'manual' })
+  const condition: MockHeaderCondition = { name, op: 'equals', value: '', source: 'manual' }
+  // 与 addQueryCondition 同款：合表后两类新行都落在列表开头，切换位置也才有同一归宿
+  match.headers.conditions.unshift(condition)
+  return condition
 }
 
 export function operatorNeedsValue(op: MockQueryOperator): boolean {

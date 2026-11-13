@@ -19,12 +19,14 @@ const GRAYS = ['#333333', '#646566', '#969799', '#c8c9cc', '#dcdee0', '#ebedf0',
 // （md=13px）为锚点，即 13*K ≈ 原像素值，于是字号 9 的观感不变，只有小字号收紧、大字号放宽。
 // ConfigProvider 以 theme-vars-scope="global" 把这些值原样写到 :root，calc 引用的 --van-font-size-md 在同一元素上，
 // 使用时才求值，因此不需要随字号重算；Proxy 顶部类型筛选组的 --van-checkbox-size: 16px 是本地覆盖，不受影响。
-// 圆角、边框、弹窗按钮高度不在此列：装饰性常量，且牵动既有的卡片对齐与弹窗固定高度约定。
+// 圆角、边框不在此列：装饰性常量，且牵动既有的卡片对齐与弹窗固定高度约定。
+// dialogButtonHeight 是例外：弹窗按钮区改成右对齐描边按钮后，它必须落在行内控件那一档，
+// 否则同一屏里弹窗按钮和表单按钮两种高度；40px 是移动端拇指区。
 // cellGroupInsetPadding 单独处理：它刻意保持恒定 5px（卡片外缘要与面板沟道严格对齐），
 // 但与面板侧的 margin: 5px / calc(100% - var(--app-card-gutter) * 2) 是同一个数，所以让 Vant 这侧也读全局 token，
 // 避免出现两处各自写死的 5px。
 const BASE_THEME_VARS: ConfigProviderThemeVars = {
-  dialogButtonHeight: '40px',
+  dialogButtonHeight: 'var(--app-control-height)',
   floatingBubbleSize: '2.5rem',
   // 客户端卡片内边距
   gridItemContentPadding: 'calc(var(--van-font-size-md) * 0.6)',
