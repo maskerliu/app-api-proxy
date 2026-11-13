@@ -206,16 +206,19 @@ function restart() {
   font-size: 1.2rem;
 }
 
+/* 弹层高度随说明条数走，正文区只封顶不占死：原先 min-height:300 + 正文固定 190 让三条说明
+   也要撑出 145px 空白。上限 190 与旧的固定值同档，长说明仍是区内滚动（与 client-grid 的 max-height 同款）；
+   下载/重启两枚按钮同高，切换时弹层高度不变。 */
 .version-popup {
-  width: min(450px, calc(100vw - 60px));
-  min-height: 300px;
+  width: var(--app-popup-w-sm);
   margin: var(--app-sp-3xl);
 }
 
+/* 弹层外缘已经由 .version-popup 的 margin 让出 15.6px，正文不再自己加一档：
+   原先正文比进度条和按钮多缩 15.6px，三者的左缘不在一条线上 */
 .update-message {
-  width: calc(100% - 0px);
-  height: 190px;
-  margin: 0 var(--app-sp-3xl);
+  width: 100%;
+  max-height: 190px;
   color: var(--van-text-color);
 }
 

@@ -23,7 +23,7 @@
     </OverlayScrollbarsComponent>
 
     <van-popup round v-model:show="dialogVisible" closeable close-icon="close" teleport="#app">
-      <van-cell-group inset style="width: min(450px, calc(100vw - 60px)); margin: 15px">
+      <van-cell-group inset class="client-detail" :title="$t('settings.broadcast.clientDetail')">
         <van-field label="client id" :model-value="selectClient.uid" readonly />
         <van-field label="client key" :model-value="selectClient.connId" readonly />
         <van-field label="client ip" :model-value="`${selectClient.ip}:${selectClient.port}`" readonly />
@@ -98,6 +98,13 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
 .client-grid {
   /* 客户端网格内滚动，避免大数量时把 Settings 页拉得过长；用视口比例替代魔法数字 */
   max-height: 50vh;
+}
+
+/* 详情弹层的宽与沟道走全局档位。带标题不只为了署名：标题行把首行数据顶到右上角 ✕ 之下，
+   原先 ✕ 正好压在 client id 那一行的纵向带里，读起来像那一行的清除按钮 */
+.client-detail {
+  width: var(--app-popup-w-sm);
+  margin: var(--app-sp-3xl);
 }
 
 /* 卡片高度与图标尺寸改为随字号缩放：原先 80px + 30px 图标 + 120px 文本轨三重冻结，

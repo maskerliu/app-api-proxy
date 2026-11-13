@@ -4,8 +4,12 @@ import { matchRecords, normalizeRequest } from '@main/service/mock.matcher'
 import { analyzeMatchStability, createMatchFromUrl, deriveMatch, restoreStrict } from '@main/service/mock.derive'
 import { levelOf } from '@shared/mock.models'
 import { normalizeMatchRule } from '@shared/mock.validation'
-import { addQueryCondition, previewLevel, querySuggestionsOf, summaryOf } from '@renderer/pages/proxy/mock/match'
-import { condition, legacyRecord, makeMatch, makeRecord } from './fixtures'
+import {
+  addHeaderCondition, addQueryCondition, applyAutoIgnoredKeys, applyQuerySuggestion, conditionName, conditionRowsOf,
+  previewLevel, querySuggestionsOf, relocateCondition, removeCondition, setConditionName, stabilitySuggestionsOf,
+  summaryOf,
+} from '@renderer/pages/proxy/mock/match'
+import { condition, headerCondition, legacyRecord, makeMatch, makeRecord } from './fixtures'
 
 function keysOf(match): string[] {
   return (match?.query?.conditions ?? []).map(it => it.key)
@@ -315,13 +319,24 @@ describe('deriveMatch · 只存 url 的记录写入前派生', () => {
   })
 })
 
-describe('addQueryCondition', () => {
-  it('新行插在条件列表顶部并把 Query 切到匹配模式', () => {
+describe('addQueryCondition / applyQuerySuggestion', () => {
+  it('「+」的新行插在条件列表顶部，但不改动 Query 档位', () => {
     const match = makeMatch({ conditions: [condition('page', '1')] })
     match.query.mode = 'ignore'
     const added = addQueryCondition(match)
     assert.deepEqual(match.query.conditions.map(it => it.key), ['', 'page'])
     assert.equal(match.query.conditions[0], added)
+    // 面板头只剩这一枚「+」，用它加 Header 行时不该被顺带改掉 Query 档位
+    assert.equal(match.query.mode, 'ignore')
+  })
+
+  it('点录制里的键值对补条件：填上键值并把档位切到匹配', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')] })
+    match.query.mode = 'ignore'
+    const added = applyQuerySuggestion(match, { key: 'role', value: 'admin' })
+
+    assert.deepEqual(match.query.conditions.map(it => it.key), ['role', 'page'])
+    assert.deepEqual([added.key, added.value, added.source], ['role', 'admin', 'manual'])
     assert.equal(match.query.mode, 'match')
   })
 })
@@ -349,5 +364,102 @@ describe('querySuggestionsOf', () => {
     const query = Array.from({ length: 12 }, (_, i) => `k${i}=v${i}`).join('&')
     record.source = { url: `/v1/users?${query}`, method: 'GET' }
     assert.equal(querySuggestionsOf(record, record.match).length, 8)
+  })
+})
+
+describe('条件合表 · conditionRowsOf / relocateCondition', () => {
+  it('Query 行排在 Header 行之前，忽略档只把 Query 行标为不参与匹配', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')], headerConditions: [headerCondition('x-tenant', 't1')] })
+    assert.deepEqual(conditionRowsOf(match).map(it => [it.location, it.inert]), [['query', false], ['header', false]])
+
+    match.query.mode = 'ignore'
+    assert.deepEqual(conditionRowsOf(match).map(it => [it.location, it.inert]), [['query', true], ['header', false]])
+  })
+
+  it('键进了忽略名单时那一行也置灰，档位本身仍是匹配', () => {
+    const match = makeMatch({ conditions: [condition('page', '1'), condition('trace', '1')], ignoreKeys: ['trace'] })
+    assert.equal(match.query.mode, 'match')
+    assert.deepEqual(conditionRowsOf(match).map(it => [conditionName(it), it.inert]), [['page', false], ['trace', true]])
+  })
+
+  it('切位置把整行搬进另一个数组：值跟着走、键名换载体、不动档位', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')], headerConditions: [headerCondition('x-tenant', 't1')] })
+    match.query.mode = 'ignore'
+    relocateCondition(match, conditionRowsOf(match)[0], 'header')
+
+    assert.deepEqual(match.query.conditions, [])
+    assert.deepEqual(match.headers.conditions.map(it => [it.name, it.value]), [['page', '1'], ['x-tenant', 't1']])
+    assert.equal(match.query.mode, 'ignore')
+  })
+
+  it('反向搬回 Query 组开头，name 落回 key', () => {
+    const match = makeMatch({
+      conditions: [condition('page', '1')],
+      headerConditions: [headerCondition('x-tenant', 't1'), headerCondition('x-role', 'admin')],
+    })
+    relocateCondition(match, conditionRowsOf(match)[1], 'query')
+
+    assert.deepEqual(match.query.conditions.map(it => [it.key, it.value]), [['x-tenant', 't1'], ['page', '1']])
+    assert.deepEqual(match.headers.conditions.map(it => it.name), ['x-role'])
+  })
+
+  it('参数名只写进 key、Header 名称只写进 name', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')], headerConditions: [headerCondition('x-tenant', 't1')] })
+    const rows = conditionRowsOf(match)
+    setConditionName(rows[0], 'size')
+    setConditionName(rows[1], 'x-role')
+
+    assert.equal(match.query.conditions[0].key, 'size')
+    assert.equal(match.headers.conditions[0].name, 'x-role')
+    assert.deepEqual(rows.map(it => conditionName(it)), ['size', 'x-role'])
+  })
+
+  it('删除只吃掉所在数组的那一行', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')], headerConditions: [headerCondition('x-tenant', 't1')] })
+    removeCondition(match, conditionRowsOf(match)[0])
+
+    assert.deepEqual(match.query.conditions, [])
+    assert.equal(match.headers.conditions.length, 1)
+  })
+
+  it('Header 新行也落在顶部，与「+」和切位置的归宿一致', () => {
+    const match = makeMatch({ headerConditions: [headerCondition('x-tenant', 't1')] })
+    const added = addHeaderCondition(match, 'x-role')
+
+    assert.equal(match.headers.conditions[0], added)
+    assert.deepEqual(match.headers.conditions.map(it => it.name), ['x-role', 'x-tenant'])
+  })
+})
+
+describe('稳定性面板三个动作 · applyAutoIgnoredKeys / stabilitySuggestionsOf', () => {
+  it('重新分析的自动忽略键落进 ignoreKeys，已有键不重复也不挪位', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')], ignoreKeys: ['trace'] })
+    applyAutoIgnoredKeys(match, ['blob', 'trace', 'sign'])
+
+    // 手动加的 trace 留在原位，新键接在末尾，和忽略参数框的 push 同一口径
+    assert.deepEqual(match.query.ignoreKeys, ['trace', 'blob', 'sign'])
+  })
+
+  it('老规则整段缺 query 时先补空壳再写忽略名单', () => {
+    const match = makeMatch()
+    match.query = undefined
+    applyAutoIgnoredKeys(match, ['trace'])
+
+    assert.deepEqual(match.query.ignoreKeys, ['trace'])
+    assert.deepEqual(match.query.conditions, [])
+    assert.equal(match.query.mode, 'match')
+  })
+
+  it('已忽略的 E3/E4 不再摆进建议，E5 与 Path 建议各有去处', () => {
+    const match = makeMatch({ conditions: [condition('page', '1')], ignoreKeys: ['blob', 'version'] })
+    match.derivation.suggestions = [
+      { key: 'blob', evidence: 'E3', reason: 'dynamicValueShape' },
+      { key: 'flag', evidence: 'E4', reason: 'optionalKey' },
+      { key: 'version', evidence: 'E5', reason: 'semanticKey' },
+      { key: 'path[1]', evidence: 'E3', reason: 'pathParameterizable' },
+    ]
+
+    // Path 参数化在面板里是独立区块；E5 只告知、不带动作，所以已忽略也留着说明
+    assert.deepEqual(stabilitySuggestionsOf(match).map(it => it.key), ['flag', 'version'])
   })
 })

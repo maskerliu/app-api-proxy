@@ -39,9 +39,19 @@
   --app-method-square: max(22px, calc(var(--van-font-size-md) * 1.7));
   --app-method-square-font: max(11px, calc(var(--van-font-size-md) * 0.85));
 
+  /* 控件基准高度（与 store 里 tabsLineHeight 用的同一个 md*2.2）：纯图标按钮按它取方边长，
+     需要与这枚按钮等高的其他控件也读它，不再各处重抄一遍乘数。 */
+  --app-control-height: calc(var(--van-font-size-md) * 2.2);
+
   /* 弹层宽度档位 */
   --app-popup-w-lg: min(80vw, 1200px);
   --app-popup-w-md: min(70vw, 960px);
+  /* 内容型居中弹窗（客户端详情 / 更新进度）共用：450 是内容上限，窄窗口时留 60px 给遮罩 */
+  --app-popup-w-sm: min(450px, calc(100vw - 60px));
+
+  /* 浮层投影单源：居中弹窗（对话框 / 二维码 / 客户端详情 / 更新进度）与 MiniSelect 下拉共用同一档。
+     取值沿用 MiniSelect 那一份——它是这个应用里唯一被反复目测调过的浮层投影，弹窗只是并进来。 */
+  --app-shadow-float: 0 6px 16px rgba(0, 0, 0, 0.16);
 
   /* key 列宽口径：只读键值网格与响应头编辑行的 key 输入框共用同一个右缘；
      随字号缩放，约容 21 个等宽字符，最窄也留给值列一半 */
@@ -152,9 +162,13 @@
 
 /* ---- 纯图标按钮工具类：圆角正方形 ---- */
 
+/* flex: none 是这条工具类的定义的一部分：定边长的方格一旦允许收缩，同一行的滚动区（flex-basis 是全部
+   内容的宽度）虽然吃掉大部分负空间，剩下的仍按比例摊到按钮头上，实测 20 个变体 + 420px 行宽时按钮被压到
+   17.6x28.59，就成了竖椭圆。收缩交还给同行真正该收缩的内容。 */
 .btn-icon-only {
-  width: calc(var(--van-font-size-md) * 2.2);
-  height: calc(var(--van-font-size-md) * 2.2);
+  flex: none;
+  width: var(--app-control-height);
+  height: var(--app-control-height);
   padding: 0;
   border-radius: var(--van-radius-md);
   display: inline-flex;
@@ -169,6 +183,88 @@
    1.2 取自 Vant 的 --van-button-icon-size，等于把各处抬到原本最大的一档，没有站点会变小。 */
 .btn-icon-only .van-icon {
   font-size: calc(var(--van-font-size-md) * 1.2);
+}
+
+/* ---- 弹窗（van-dialog / showConfirmDialog）：Vant 默认是移动端排版，统一到桌面口径 ---- */
+
+/* 弹窗沟道单源：标题/正文/按钮区，以及自带内容的弹窗（保存冲突）都读同一个值，否则标题与正文错开半档。
+   24px 是 Vant 正文本来就用的一档（--van-padding-lg），标题的 26px 顶沟是 Vant 写死的另一档，一并并进来。 */
+:root {
+  --app-dialog-gutter: var(--van-padding-lg);
+
+  /* 320 装不下常见的确认文案，折行后只剩「吗?」两个字单独成行。改 Vant 自己的变量，不动组件的 style 绑定。
+     90vw 兜窄窗口：Vant 只在 ≤321px 才退到百分比，360 定宽在 322~360 之间会把弹窗两头裁掉 */
+  --van-dialog-width: min(360px, 90vw);
+  --van-dialog-header-padding-top: var(--app-dialog-gutter);
+  --van-dialog-message-padding: var(--app-dialog-gutter);
+}
+
+/* 只有遮罩分层、没有投影时浮不起来。挂在 --center 而不是 .van-dialog 上：对话框自带这个类，
+   二维码 / 客户端详情 / 更新进度这几个居中弹窗同样该浮起来，而贴住窗口左右边缘的抽屉面板不该有投影 */
+.van-popup--center {
+  box-shadow: var(--app-shadow-float);
+}
+
+/* Vant 居中排版时标题没有左右内边距，与正文共用正文那一档沟道 */
+.van-dialog__header {
+  padding-left: var(--app-dialog-gutter);
+  padding-right: var(--app-dialog-gutter);
+  text-align: start;
+}
+
+/* 下沿 26px 是给紧贴其下的发丝线按钮区留的；按钮区自己有了内边距后只剩 8px，否则中段空出一大截 */
+.van-dialog__message {
+  padding-bottom: var(--van-padding-xs);
+  text-align: start;
+}
+
+/* 弹窗里放表单（规则名/说明）时，van-form 贴着弹窗圆边画分隔线，标签也只缩进 cell 自带的 7.8px，
+   与标题那条 24px 的左缘不齐。扣掉 cell 自己的横向内边距，让标签文字正好落在标题文字那一列上；
+   分隔线仍略宽一点，那是分隔线的常规读法。全站只有这一处 van-form 在弹窗里。 */
+.van-dialog .van-form {
+  padding: 0 calc(var(--app-dialog-gutter) - var(--van-cell-horizontal-padding));
+}
+
+/* 按钮区改成右对齐的描边按钮，与面板底部 .actions-bar 同款：全宽对分加发丝线是移动端手势区尺寸，
+   而且按钮字号跟 --van-dialog-font-size（15px），比正文的 13px 还大一档。
+   按钮间距也并到 .actions-bar 的同一档，弹窗内与面板内不再是两套。 */
+.van-dialog__footer {
+  height: auto;
+  padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
+  justify-content: flex-end;
+  gap: var(--app-sp-lg);
+}
+
+/* 两个按钮都关掉的弹窗（保存冲突把动作放在内容区里）：Vant 仍然渲染 footer，只是两个按钮位是注释节点，
+   上面那 8+16 内边距会在弹窗底部撑出一条没有内容的白带。Chromium 的 :empty 忽略注释节点，正好只放过这一种 */
+.van-dialog__footer:empty {
+  padding: 0;
+}
+
+.van-dialog__footer.van-hairline--top::after {
+  border-top-width: 0;
+}
+
+/* Vant 在这两个类上写死 flex:1 / border:0 / border-radius:0，靠这里的双类选择器压回去 */
+.van-dialog__footer .van-button {
+  flex: none;
+  width: auto;
+  border: 1px solid var(--van-border-color);
+  border-radius: var(--van-radius-md);
+}
+
+.van-dialog__footer .van-button::after {
+  border-left-width: 0;
+}
+
+/* 弹窗内只有一档按钮：footer 那两枚走 --van-dialog-button-height（store 里指到控件基准）与正文字号，
+   而内容区自排的动作行（保存冲突）跟着 van-button size="small" 那一档，同族按钮高差 4px、字号差 2px、
+   左右内边距差 7.6px。压在这里而不是改组件的 size：尺寸档位仍由使用方声明，只是弹窗内一律收到同一档。
+   边框与圆角不用管——Vant 的描边按钮本来就是 --van-radius-md + 1px 边，与 footer 那两枚同款。 */
+.van-dialog .van-button {
+  height: var(--app-control-height);
+  padding: 0 var(--app-sp-3xl);
+  font-size: var(--van-font-size-md);
 }
 
 /* ---- 操作按钮区：弹窗/面板底部按钮行统一（结构；上下文间距由使用方覆盖） ---- */

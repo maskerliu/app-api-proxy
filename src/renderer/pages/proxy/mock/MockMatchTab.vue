@@ -4,7 +4,8 @@
       <span class="bar-label">{{ $t('mock.match.levelLabel') }}</span>
       <van-radio-group :model-value="currentLevel" direction="horizontal" class="level-chips"
         @update:model-value="onLevelClick">
-        <van-radio v-for="level in MATCH_LEVELS" :key="level" :name="level">{{ $t(`mock.match.level.${level}`) }}</van-radio>
+        <van-radio v-for="level in MATCH_LEVELS" :key="level" :name="level">{{ $t(`mock.match.level.${level}`)
+        }}</van-radio>
       </van-radio-group>
     </van-row>
     <p class="level-hint">{{ $t(`mock.match.levelHint.${currentLevel}`) }}</p>
@@ -19,8 +20,7 @@
       </van-row>
       <van-row class="preview-actions" :wrap="false">
         <van-button size="mini" plain @click="pending = null">{{ $t('common.cancel') }}</van-button>
-        <van-button size="mini" type="primary" :disabled="pending.reason === 'sourceMissing'"
-          @click="applyPending">
+        <van-button size="mini" type="primary" :disabled="pending.reason === 'sourceMissing'" @click="applyPending">
           {{ $t('mock.match.apply') }}
         </van-button>
       </van-row>
@@ -32,8 +32,8 @@
       </van-row>
       <van-row class="field-row identity-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.method') }}</span>
-        <mini-select v-model="match.method" class="match-select method-select" :options="methodOptions"
-          font-size="md" @change="touch" />
+        <mini-select v-model="match.method" class="match-select method-select" :options="methodOptions" font-size="md"
+          @change="touch" />
       </van-row>
       <van-row class="field-row identity-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.host') }}</span>
@@ -67,11 +67,12 @@
       </van-row>
 
       <div class="sub-block">
-        <van-row class="sub-head" align="center" justify="space-between" :wrap="false">
+        <van-row class="sub-head" align="center" :wrap="false">
           <span class="sub-title">{{ $t('mock.match.queryIgnoreKeys') }}</span>
-          <van-tag plain type="primary">{{ match.query.ignoreKeys.length }}</van-tag>
+          <van-tag round>{{ match.query.ignoreKeys.length }}</van-tag>
         </van-row>
-        <van-row class="tag-list">
+        <!-- 居中不是排版偏好：.tag-list 的 min-height 是空列表占位，换行 row 默认会把标签拉到那个高度 -->
+        <van-row class="tag-list" align="center">
           <van-tag v-for="key in match.query.ignoreKeys" :key="key" closeable
             :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" plain
             :title="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
@@ -84,46 +85,12 @@
         <van-row class="add-row" align="center" :wrap="false">
           <van-field v-model="newIgnoreKey" class="add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
             @keyup.enter="addIgnoreKey" />
-          <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" :disabled="newIgnoreKey.trim() === ''"
-            @click="addIgnoreKey" />
+          <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
+            :disabled="newIgnoreKey.trim() === ''" @click="addIgnoreKey" />
         </van-row>
       </div>
 
       <div v-if="match.query.mode === 'match'" class="sub-block">
-        <van-collapse v-model="expandedSections" :border="false" class="condition-collapse">
-          <van-collapse-item :name="CONDITIONS_PANEL" :border="false">
-            <template #title>
-              <van-row class="collapse-title" align="center" :wrap="false">
-                <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
-                <van-tag plain type="primary">{{ match.query.conditions.length }}</van-tag>
-              </van-row>
-            </template>
-            <template #right-icon>
-              <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" @click.stop="onAddCondition" />
-            </template>
-            <div v-if="match.query.conditions.length === 0" class="empty-tip">
-              {{ $t('mock.match.conditionEmpty') }}
-            </div>
-            <van-row v-for="(condition, idx) in match.query.conditions" :key="idx" class="condition-row" align="center"
-              :wrap="false">
-              <van-field v-model="condition.key" class="condition-key" :placeholder="$t('mock.match.conditionKey')"
-                @update:model-value="touch" />
-              <mini-select v-model="condition.op" class="match-select op-select" :options="operatorOptions"
-                font-size="md" @change="touch" />
-              <van-field v-if="operatorNeedsValue(condition.op)" v-model="condition.value" class="condition-value"
-                :placeholder="$t('mock.match.conditionValue')" @update:model-value="touch" />
-              <van-icon name="cross" class="row-delete" @click="removeCondition(idx)" />
-            </van-row>
-            <van-row v-if="querySuggestions.length > 0" class="suggest-row" align="center">
-              <span class="row-hint">{{ $t('mock.match.querySuggest') }}</span>
-              <van-tag v-for="item in querySuggestions" :key="item.key" plain type="primary"
-                class="suggest-tag query-suggest" :title="`${item.key}=${item.value}`"
-                @click="addQuerySuggestion(item)">
-                {{ item.key }}={{ item.value }}
-              </van-tag>
-            </van-row>
-          </van-collapse-item>
-        </van-collapse>
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryAllowExtra') }}</span>
           <van-switch v-model="match.query.allowExtra" size="18px" @change="touch" />
@@ -140,33 +107,52 @@
       </div>
     </div>
 
-    <div ref="headerSection" class="section">
-      <van-row class="section-title" align="center" justify="space-between" :wrap="false">
-        <span>{{ $t('mock.match.headerConditions') }}</span>
-        <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" @click="onAddHeader" />
-      </van-row>
-      <div v-if="match.headers.conditions.length === 0" class="empty-tip">{{ $t('mock.match.headerEmpty') }}</div>
-      <van-row v-for="(condition, idx) in match.headers.conditions" :key="idx" class="condition-row" align="center"
-        :wrap="false">
-        <van-field v-model="condition.name" class="condition-key" :placeholder="$t('mock.match.headerName')"
-          @update:model-value="touch" />
-        <mini-select v-model="condition.op" class="match-select op-select" :options="operatorOptions"
-          font-size="md" @change="touch" />
-        <van-field v-if="operatorNeedsValue(condition.op)" v-model="condition.value" class="condition-value"
-          :placeholder="$t('mock.match.conditionValue')" @update:model-value="touch" />
-        <van-icon name="cross" class="row-delete" @click="removeHeader(idx)" />
-      </van-row>
-      <van-row class="suggest-row" align="center">
-        <span class="row-hint">{{ $t('mock.match.headerSuggest') }}</span>
-        <van-tag v-for="name in HEADER_SUGGESTIONS" :key="name" plain type="primary" class="suggest-tag"
-          @click="addHeaderSuggestion(name)">
-          {{ name }}
-        </van-tag>
-      </van-row>
+    <div ref="conditionsSection" class="section">
+      <van-collapse v-model="expandedSections" :border="false" class="condition-collapse">
+        <van-collapse-item :name="CONDITIONS_PANEL" :border="false">
+          <template #title>
+            <van-row class="collapse-title" align="center" :wrap="false">
+              <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
+              <van-tag round type="primary">{{ conditionRows.length }}</van-tag>
+            </van-row>
+          </template>
+          <template #right-icon>
+            <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
+              :title="$t('mock.match.addCondition')" @click.stop="onAddCondition" />
+          </template>
+          <div v-if="conditionRows.length === 0" class="empty-tip">{{ $t('mock.match.conditionEmpty') }}</div>
+          <van-row v-for="(row, idx) in conditionRows" :key="idx" class="condition-row"
+            :class="{ 'is-inert': row.inert }" align="center" :wrap="false">
+            <mini-select :model-value="row.location" class="match-select location-select" :options="locationOptions"
+              font-size="md" @change="onLocationChange(row, $event)" />
+            <van-field :model-value="conditionName(row)" class="condition-key"
+              :placeholder="$t(row.location === 'header' ? 'mock.match.headerName' : 'mock.match.conditionKey')"
+              @update:model-value="onRowName(row, $event)" />
+            <mini-select v-model="row.condition.op" class="match-select op-select" :options="operatorOptions"
+              font-size="md" @change="touch" />
+            <!-- 值列常驻：随运算符拆掉整列会把行末宽度腾出来，键名列与删除钮都跟着平移 -->
+            <van-field v-model="row.condition.value" class="condition-value" :disabled="!needsValue(row)"
+              :placeholder="$t(needsValue(row) ? 'mock.match.conditionValue' : 'mock.match.conditionValueSkip')"
+              @update:model-value="touch" />
+            <van-icon name="cross" class="row-delete" @click="removeRow(row)" />
+          </van-row>
+          <!-- 置灰必须自己说明自己，否则看上去像控件坏了 -->
+          <div v-if="inertCount > 0" class="inert-hint">
+            {{ $t(inertHintKey, { count: inertCount }) }}
+          </div>
+          <van-row v-if="querySuggestions.length > 0" class="suggest-row" align="center">
+            <span class="row-hint">{{ $t('mock.match.querySuggest') }}</span>
+            <van-tag v-for="item in querySuggestions" :key="item.key" type="primary" class="suggest-tag query-suggest"
+              :title="`${item.key}=${item.value}`" @click="addQuerySuggestion(item)">
+              {{ item.key }}={{ item.value }}
+            </van-tag>
+          </van-row>
+        </van-collapse-item>
+      </van-collapse>
     </div>
 
     <div class="section">
-      <van-row class="switch-row priority-row" align="center" :wrap="false">
+      <van-row class="switch-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.priority') }}</span>
         <van-switch :model-value="match.priority != null" size="18px" @update:model-value="togglePriority" />
         <van-field v-if="match.priority != null" ref="priorityField" v-model="priorityText" type="digit"
@@ -189,13 +175,14 @@
         <span>{{ $t('mock.match.test') }}</span>
       </van-row>
       <van-row class="test-row" align="center">
-        <mini-select v-model="testMethod" class="match-select method-select" :options="methodOptions"
-          font-size="md" :title="$t('mock.match.method')" />
+        <mini-select v-model="testMethod" class="match-select method-select" :options="methodOptions" font-size="md"
+          :title="$t('mock.match.method')" />
         <van-field v-model="testUrl" class="test-url" :placeholder="$t('mock.match.testUrlPlaceholder')" />
         <van-button size="mini" type="primary" :loading="testing" @click="runTest">
           {{ $t('mock.match.testRun') }}
         </van-button>
-        <van-button class="btn-icon-only" size="mini" plain icon="replay" :title="$t('mock.match.testSeed')" @click="seedTest" />
+        <van-button class="btn-icon-only" size="mini" plain icon="replay" :title="$t('mock.match.testSeed')"
+          @click="seedTest" />
       </van-row>
       <div v-if="testError" class="test-error">{{ testError }}</div>
       <div v-if="testHit != null" class="test-hit">
@@ -216,7 +203,7 @@
         <div v-if="testHit.explain?.conditions?.length" class="explain-list">
           <van-row v-for="(condition, idx) in testHit.explain.conditions" :key="idx" class="explain-row"
             :class="{ 'is-failed': !condition.passed, 'is-ignored': condition.ignored }" align="center" :wrap="false">
-            <van-tag plain :type="condition.passed ? 'success' : 'danger'" class="explain-tag">
+            <van-tag round :type="condition.passed ? 'success' : 'danger'" class="explain-tag">
               {{ testHit.explain ? $t(`mock.miss.dim.${condition.dimension}`) : '' }}
             </van-tag>
             <span class="explain-key">{{ condition.key }}</span>
@@ -225,8 +212,8 @@
           </van-row>
         </div>
       </div>
-      <mock-miss-panel v-if="testMiss != null" :miss="testMiss" @ignore-key="onIgnoreMissKey"
-        @loosen="onLoosen" @edit="testMiss = null" />
+      <mock-miss-panel v-if="testMiss != null" :miss="testMiss" @ignore-key="onIgnoreMissKey" @loosen="onLoosen"
+        @edit="testMiss = null" />
     </div>
   </div>
 </template>
@@ -244,27 +231,34 @@ import { useI18n } from 'vue-i18n'
 import MiniSelect from '../../components/MiniSelect.vue'
 import MockMissPanel from './MockMissPanel.vue'
 import MockStabilityPanel from './MockStabilityPanel.vue'
+import type { ConditionLocation, ConditionRow, LevelPresetPreview, QuerySuggestion } from './match'
 import {
-  MATCH_LEVELS, MATCH_METHODS, PATH_TYPES, QUERY_OPERATORS, addHeaderCondition, addQueryCondition,
-  diffLinesOf, ensureRecordMatch, ignoreSourceOf, operatorNeedsValue, orderingLabelKey, previewLevel,
-  querySuggestionsOf, testSeedOf,
+  addQueryCondition,
+  applyQuerySuggestion, conditionName, conditionRowsOf, diffLinesOf, ensureRecordMatch, ignoreSourceOf,
+  MATCH_LEVELS, MATCH_METHODS,
+  operatorNeedsValue, orderingLabelKey,
+  PATH_TYPES,
+  previewLevel,
+  QUERY_OPERATORS,
+  querySuggestionsOf, relocateCondition, removeCondition,
+  setConditionName, testSeedOf,
 } from './match'
-import type { LevelPresetPreview, QuerySuggestion } from './match'
 
 const props = defineProps<{ record: ProxyMock.MockRecord }>()
 const { t } = useI18n()
 
-const HEADER_SUGGESTIONS = ['x-tenant-id', 'x-user-role', 'x-exp']
+const CONDITION_LOCATIONS: ConditionLocation[] = ['query', 'header']
 
 const hostField = ref<FieldInstance>()
 const pathField = ref<FieldInstance>()
 const priorityField = ref<FieldInstance>()
 const querySection = ref<HTMLElement>()
-const headerSection = ref<HTMLElement>()
+const conditionsSection = ref<HTMLElement>()
 const newIgnoreKey = ref('')
 // 折叠面板名：模板的 :name 与点「+」时的自动展开取同一个值，写两处必然漂移
-const CONDITIONS_PANEL = 'queryConditions'
-const expandedSections = ref<string[]>([])
+const CONDITIONS_PANEL = 'matchConditions'
+// 默认展开：条件表现在承担了「忽略档下也要看得见」的职责，收起就只剩一个数字
+const expandedSections = ref<string[]>([CONDITIONS_PANEL])
 const priorityText = ref('')
 const pending = ref<LevelPresetPreview>(null)
 const testing = ref(false)
@@ -285,7 +279,17 @@ const pathTypeOptions = computed(() => PATH_TYPES.map(value => ({
 const operatorOptions = computed(() => QUERY_OPERATORS.map(value => ({
   value, label: t(`mock.match.op.${value}`)
 })))
+const locationOptions = computed(() => CONDITION_LOCATIONS.map(value => ({
+  value, label: t(`mock.match.location.${value}`)
+})))
 
+const conditionRows = computed(() => conditionRowsOf(match.value))
+const needsValue = (row: ConditionRow) => operatorNeedsValue(row.condition.op)
+const inertCount = computed(() => conditionRows.value.filter(row => row.inert).length)
+// 忽略档下 testQuery 整段放行，置灰的是全部 Query 行，说「N 条」会被读成「其中几条」，两种成因各用一句
+const inertHintKey = computed(() => (match.value?.query?.mode === 'ignore'
+  ? 'mock.match.conditionsInertAllHint'
+  : 'mock.match.conditionsInertHint'))
 const querySuggestions = computed(() => querySuggestionsOf(props.record, match.value))
 
 // 首次渲染就要有可编辑对象，否则模板读取 match.method 会报空
@@ -412,32 +416,25 @@ function addQuerySuggestion(item: QuerySuggestion) {
   if (match.value == null) return
   if (match.value.query.conditions.some(it => it.key === item.key)) return
   expandConditions()
-  const condition = addQueryCondition(match.value)
-  condition.key = item.key
-  condition.value = item.value
+  applyQuerySuggestion(match.value, item)
   touch()
 }
 
-function removeCondition(index: number) {
-  match.value?.query.conditions.splice(index, 1)
-  touch()
-}
-
-function onAddHeader() {
+// 切位置只换归属：条件本身跟着走，不顺手改动 Query 档位——用户刚设成忽略就该停在忽略
+function onLocationChange(row: ConditionRow, value: string) {
   if (match.value == null) return
-  addHeaderCondition(match.value)
+  relocateCondition(match.value, row, value as ConditionLocation)
   touch()
 }
 
-function addHeaderSuggestion(name: string) {
+function onRowName(row: ConditionRow, value: string) {
+  setConditionName(row, value)
+  touch()
+}
+
+function removeRow(row: ConditionRow) {
   if (match.value == null) return
-  if (match.value.headers.conditions.some(it => it.name.toLowerCase() === name)) return
-  addHeaderCondition(match.value, name)
-  touch()
-}
-
-function removeHeader(index: number) {
-  match.value?.headers.conditions.splice(index, 1)
+  removeCondition(match.value, row)
   touch()
 }
 
@@ -509,7 +506,9 @@ function onLoosen() {
   showNotify({ message: t('mock.match.loosenApplied'), type: 'success', duration: 800 })
 }
 
-function focusField(code: string) {
+// 条件行合并后 query/header 两类校验错误落在同一区块，只看 code 分不开：
+// queryOperatorInvalid 既可能是档位非法也可能是运算符非法，归属要靠 field
+function focusField(code: string, field?: string) {
   if (match.value == null) ensureMatch()
   if (code === 'methodInvalid') {
     querySection.value?.scrollIntoView({ block: 'nearest' })
@@ -527,17 +526,23 @@ function focusField(code: string) {
     priorityField.value?.focus()
     return
   }
-  if (code.startsWith('header')) {
-    headerSection.value?.scrollIntoView({ block: 'nearest' })
-    nextTick(() => {
-      const input = headerSection.value?.querySelector('input') as HTMLInputElement
-      input?.focus()
-    })
+  if (code.startsWith('header') || field?.includes('.conditions[') === true) {
+    focusConditions()
     return
   }
   querySection.value?.scrollIntoView({ block: 'nearest' })
   nextTick(() => {
     const input = querySection.value?.querySelector('input') as HTMLInputElement
+    input?.focus()
+  })
+}
+
+// 折叠起来就没有 input 可聚焦，定位前先展开
+function focusConditions() {
+  expandConditions()
+  conditionsSection.value?.scrollIntoView({ block: 'nearest' })
+  nextTick(() => {
+    const input = conditionsSection.value?.querySelector('input') as HTMLInputElement
     input?.focus()
   })
 }
@@ -565,22 +570,12 @@ defineExpose({ focusField })
   box-sizing: border-box;
 }
 
-/* .btn-icon-only 是定边长的方格，但同行输入框的 flex 基准是整行宽，
-   不锁住收缩就会被按比例压掉 1~2px，四个「+」与测试行的按钮就不再同宽 */
-.match-tab .btn-icon-only {
-  flex: none;
-}
-
-/* 键名/建议 Header 等标签是内容而非徽标，跟随 sm */
-.match-tab :deep(.van-tag) {
-  font-size: var(--van-font-size-sm);
-}
-
 /* 次要说明的一档（text-3 + sm）只写一次，各站点的规则只留自己的排布 */
 .row-hint,
 .level-hint,
 .empty-tip,
 .preview-empty,
+.inert-hint,
 .path-original {
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
@@ -758,8 +753,9 @@ defineExpose({ focusField })
   border-top: 1px dashed var(--van-border-color);
 }
 
+/* 计数标签紧跟标题，间距与折叠标题、面板区块头同档；居右会让它看起来像行末动作 */
 .sub-head {
-  gap: var(--app-sp-lg);
+  gap: var(--app-sp-md);
   margin-bottom: var(--app-sp-sm);
 }
 
@@ -786,6 +782,7 @@ defineExpose({ focusField })
 .tag-list {
   gap: var(--app-sp-md);
   min-height: calc(var(--van-font-size-md) * 1.7);
+  margin-top: 5px;
 }
 
 .tag-list :deep(.van-tag) {
@@ -807,8 +804,9 @@ defineExpose({ focusField })
 }
 
 .condition-key {
-  flex: 0 0 32%;
-  min-width: 0;
+  /* 多了一列位置，键名列要能让位：地板按「参数名」三个字留，压到地板由输入自身裁切 */
+  flex: 0 1 26%;
+  min-width: calc(var(--van-font-size-md) * 5);
   height: var(--match-control-height);
   padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
@@ -833,13 +831,20 @@ defineExpose({ focusField })
   height: var(--match-control-height);
 }
 
+/* 位置列只装 Query / Header 两个词，宽度按较长的那个留 */
+.location-select {
+  width: calc(var(--van-font-size-md) * 7.6);
+}
+
 /* 8.5 档是按英文留的，四个运算符里最长的「不存在」只要 6.2 档，多出来的宽度让给期望值 */
 .op-select {
   width: calc(var(--van-font-size-md) * 6.2);
 }
 
 .condition-value {
-  flex: 1 1 auto;
+  /* basis 不能留 auto：Vant 的 .van-cell 自带 width:100%，auto 会让值列按整行宽参加收缩，
+     把同行的键名列（0 1 26%）压掉一半。0 基准＝只吃余量，键名列才拿得到设计里那 26%。 */
+  flex: 1 1 0;
   min-width: 0;
   height: var(--match-control-height);
   padding: 0 var(--app-sp-lg);
@@ -865,6 +870,12 @@ defineExpose({ focusField })
   height: var(--match-control-height);
 }
 
+/* 无值运算符（存在/不存在）下值列整格改虚线：Vant 的禁用只灰文本（--van-field-input-disabled-text-color），
+   描边照旧会看着像待填。不用 opacity 收——.is-inert 行已经压了 0.55，再乘一次这格就没了。 */
+.condition-value.van-field--disabled {
+  border-style: dashed;
+}
+
 /* 删除图标收成与同行控件等高的方格：Vant 图标自带 line-height:1，靠行高而不是内边距居中 */
 .row-delete {
   flex: none;
@@ -876,9 +887,21 @@ defineExpose({ focusField })
   cursor: pointer;
 }
 
+.is-inert {
+  /* 忽略档下的 Query 行仍留在表里，只是不参与匹配：压暗而不是抽走，配套下面那行说明 */
+  opacity: 0.55;
+}
+
+.inert-hint {
+  margin-top: var(--app-sp-xs);
+}
+
 .switch-row {
   gap: var(--app-sp-lg);
   padding: var(--app-sp-xs) 0;
+  /* 标签行一律占满控件那一档高度：开关与输入框切换时行高不变，纯文字行（Body）也和带控件的行同节奏。
+     内容盒 28.6 + 上下内边距 2.6×2 = 33.8，与带输入框的行实测等高 */
+  min-height: var(--match-control-height);
 }
 
 /* 说明与开关同行排，空间不够时折的是说明自己，不能把开关挤扁 */
@@ -888,11 +911,6 @@ defineExpose({ focusField })
 
 .switch-hint {
   min-width: 0;
-}
-
-/* 开关与输入框切换时保持行高不变，避免整行跳动 */
-.priority-row {
-  min-height: calc(var(--match-control-height) + var(--match-control-padding-y));
 }
 
 .priority-input {

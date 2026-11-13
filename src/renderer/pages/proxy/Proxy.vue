@@ -708,7 +708,8 @@ async function copyRegisterUrl() {
   text-decoration: underline;
   width: 300px;
   color: var(--van-text-color);
-  padding: var(--app-sp-tight);
+  /* 下沿单给到弹层沟道那一档：5.2px 时下划线几乎压在 8px 圆角上，看着像被裁掉了 */
+  padding: var(--app-sp-tight) var(--app-sp-tight) var(--app-sp-3xl);
   font-size: var(--van-font-size-md);
   user-select: text;
   word-break: break-all;
