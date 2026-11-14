@@ -35,9 +35,9 @@
               <van-button v-for="variant in record.variants" :key="variant.id" size="mini" class="variant-chip"
                 :type="variant.id === selectedVariantId ? 'primary' : 'default'"
                 :plain="variant.id !== selectedVariantId" :title="variant.name" @click="selectVariant(variant)">
-                <span class="variant-chip-name">{{ variant.name || $t('mock.editor.variantName') }}</span>
+                <span class="variant-chip-name truncate">{{ variant.name || $t('mock.editor.variantName') }}</span>
                 <span class="variant-chip-status" :class="statusTone(variant.statusCode)">{{ variant.statusCode
-                }}</span>
+                  }}</span>
                 <van-icon v-if="record.activeVariantId === variant.id" name="success" class="variant-chip-check"
                   :title="$t('mock.editor.active')" />
               </van-button>
@@ -58,10 +58,10 @@
             <van-row v-if="selectedVariant != null" class="variant-editor-bar" align="center" :wrap="false">
               <van-field class="variant-name-field" v-model="selectedVariant.name"
                 :placeholder="$t('mock.editor.variantName')" />
-              <van-field class="variant-meta-field variant-status-field" type="digit"
+              <van-field class="variant-meta-field" type="digit"
                 :label="$t('mock.editor.statusCode')" :placeholder="$t('mock.editor.statusCode')"
                 v-model="variantStatusText" />
-              <van-field class="variant-meta-field variant-delay-field" type="digit" :label="$t('mock.editor.delay')"
+              <van-field class="variant-meta-field" type="digit" :label="$t('mock.editor.delay')"
                 :placeholder="$t('mock.editor.delay')" v-model="variantDelayText">
                 <template #extra>
                   <span class="meta-unit">ms</span>
@@ -94,7 +94,7 @@
       <van-tab :title="$t('mock.editor.tab.raw')" name="raw">
         <div class="tab-body raw-body">
           <van-row class="raw-head" align="center" :wrap="false">
-            <span class="raw-hint">{{ $t('mock.editor.rawHint') }}</span>
+            <span class="raw-hint hint">{{ $t('mock.editor.rawHint') }}</span>
             <van-button size="mini" plain type="primary" @click="applyRaw">{{ $t('mock.editor.rawApply') }}</van-button>
           </van-row>
           <van-notice-bar v-if="rawError" :text="rawError" mode="closeable" color="var(--van-danger-color)"
@@ -464,9 +464,6 @@ function applyRaw() {
 
 .variant-chip-name {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .variant-chip-status {
@@ -510,18 +507,26 @@ function applyRaw() {
   min-height: 0;
 }
 
-/* 名称编辑与变体级操作合并到一行，替代原来单独的”编辑变体：xxx”标题 */
+/* 名称编辑与变体级操作合并到一行，替代原来单独的”编辑变体：xxx”标题。
+   这一行是右侧编辑列里地板最宽的一行（各子项 min-width 之和 27.9md，再加 Vant 相邻 mini按钮写死的 4px margin；
+   匹配 tab 与响应头的行都把 min-width 放到了 0，收缩得到更狠），MockRuleMgr 的 @container mgr (max-width: 50em)
+   就是从它反推的：动这里的 min-width / gap / 按钮个数，要回去把那个 em 阈值重算一遍，
+   否则窄窗口又会回到「断点还没到、行已经放不下」的那段。 */
 .variant-editor-bar {
   gap: var(--app-sp-md);
   margin-bottom: var(--app-sp-lg);
   min-width: 0;
 }
 
-/* 基准宽度取 0，收缩判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作 */
+/* 基准宽度取 0，收缩判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作。
+   内边距走 Vant 自己的 --van-cell-*-padding 而不是 padding：global.css 那条分割线读的就是横向这一档，
+   只有从这里声明，底线才会和标签同列起笔（padding 写死在组件里，线仍会停在 Vant 的那一档）。 */
 .variant-name-field {
+  --van-cell-vertical-padding: var(--app-sp-sm);
+  --van-cell-horizontal-padding: var(--app-sp-sm);
+
   flex: 1 1 0;
   min-width: calc(var(--van-font-size-md) * 5.5);
-  padding: var(--app-sp-sm) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
@@ -532,10 +537,18 @@ function applyRaw() {
 /* 状态码与延迟作为名称行的紧凑元信息，标签内联不占整行。
    可收缩是这一行不撑破面板的关键：原先六个子项全是 flex:none + 写死宽，最小宽之和在字号 10 约 561px，
    已超过默认窗口下编辑列的实测宽（约 557px），多出来的部分只能把右侧按钮顶出面板并撑出横向滚动。
-   现在窄的时候先压这两列，开关与按钮始终留在行内。 */
+   现在窄的时候先压这两列，开关与按钮始终留在行内。
+   两列合并成同一档（基准 10em / 地板 7em）：与原先分开的 10.5+9.5、7.5+6.5 之和相等，
+   所以统一宽度不会把这一行的最小宽之和推回撑破面板的那条线。
+   基准按英文全称 “Status Code” + 数值预留，地板只保证标签与两三位数字，压到地板时由输入框自身裁切。
+   内边距同样走 --van-cell-*-padding，理由见 .variant-name-field。 */
 .variant-meta-field {
+  --van-cell-vertical-padding: var(--app-sp-sm);
+  --van-cell-horizontal-padding: var(--app-sp-md);
+
   flex: 0 1 auto;
-  padding: var(--app-sp-sm) var(--app-sp-md);
+  width: calc(var(--van-font-size-md) * 10);
+  min-width: calc(var(--van-font-size-md) * 7);
   border-radius: var(--van-radius-md);
   font-size: var(--van-font-size-md);
 }
@@ -551,18 +564,6 @@ function applyRaw() {
 .variant-meta-field :deep(.van-field__control) {
   font-size: var(--van-font-size-md);
   font-variant-numeric: tabular-nums;
-}
-
-/* 宽度按英文 “Status Code” + 数值预留，避免最大字号下标签挤掉输入值；
-   地板只保证标签与两三位数字，压到地板时由输入框自身裁切，不再撑破整行 */
-.variant-status-field {
-  width: calc(var(--van-font-size-md) * 10.5);
-  min-width: calc(var(--van-font-size-md) * 7.5);
-}
-
-.variant-delay-field {
-  width: calc(var(--van-font-size-md) * 9.5);
-  min-width: calc(var(--van-font-size-md) * 6.5);
 }
 
 .meta-unit {
@@ -610,8 +611,6 @@ function applyRaw() {
   flex: 1 1 auto;
   /* 所在行不换行：缺少这条的话提示语不能收缩，会把右侧「应用」按钮顶出面板 */
   min-width: 0;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .raw-editor {

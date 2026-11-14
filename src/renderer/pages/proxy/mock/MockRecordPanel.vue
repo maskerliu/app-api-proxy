@@ -4,23 +4,23 @@
     <div class="record-panel">
       <van-row class="record-panel-head" align="center" justify="space-between" :wrap="false">
         <span class="record-panel-title">{{ $t('mock.recordPanel.title') }}</span>
-        <span v-if="activeRuleName" class="record-panel-active">
+        <span v-if="activeRuleName" class="record-panel-active truncate">
           {{ $t('mock.recordPanel.activeRule', { rule: activeRuleName }) }}
         </span>
       </van-row>
-      <div class="record-panel-url" :title="record?.url">{{ record?.method }} {{ record?.url }}</div>
+      <div class="record-panel-url mono truncate" :title="record?.url">{{ record?.method }} {{ record?.url }}</div>
 
       <van-search v-model="ruleKeyword" class="record-rule-search"
         :placeholder="$t('mock.recordPanel.searchPlaceholder')" />
       <OverlayScrollbarsComponent class="record-rule-list" :options="scrollOptions" defer>
-        <div v-if="rulesLoading" class="record-rule-empty">{{ $t('mock.recordPanel.loading') }}</div>
+        <div v-if="rulesLoading" class="record-rule-empty hint">{{ $t('mock.recordPanel.loading') }}</div>
         <template v-else>
-          <van-cell v-for="rule in recordingRules" :key="rule._id" clickable
-            :class="{ 'record-rule-selected': selectedRule?._id === rule._id }" @click="selectRule(rule)">
+          <van-cell v-for="rule in recordingRules" :key="rule._id" clickable class="list-row"
+            :class="{ 'is-selected': selectedRule?._id === rule._id }" @click="selectRule(rule)">
             <template #title>
               <div class="record-rule-title">
-                <span class="record-rule-name" :title="rule.name">{{ rule.name }}</span>
-                <span v-if="rule.desc" class="record-rule-desc" :title="rule.desc">{{ rule.desc }}</span>
+                <span class="record-rule-name truncate" :title="rule.name">{{ rule.name }}</span>
+                <span v-if="rule.desc" class="record-rule-desc truncate" :title="rule.desc">{{ rule.desc }}</span>
               </div>
             </template>
             <template v-if="rule._id === activeRuleId" #value>
@@ -29,7 +29,7 @@
           </van-cell>
           <van-cell v-if="showCreateRow" clickable class="record-rule-create" icon="plus"
             :title="$t('mock.recordPanel.createRule', { name: ruleKeyword.trim() })" @click="useCreateName" />
-          <div v-if="recordingRules.length === 0 && !showCreateRow" class="record-rule-empty">
+          <div v-if="recordingRules.length === 0 && !showCreateRow" class="record-rule-empty hint">
             {{ $t('mock.recordPanel.noRules') }}
           </div>
         </template>
@@ -64,10 +64,10 @@
         <van-row v-for="entry in recentHistory" :key="entry.id" class="record-history-row" align="center"
           :wrap="false">
           <div class="record-history-info">
-            <span class="record-history-name" :title="entry.recordName || entry.url">
+            <span class="record-history-name truncate" :title="entry.recordName || entry.url">
               {{ entry.recordName || entry.url }}
             </span>
-            <span class="record-history-meta">
+            <span class="record-history-meta truncate hint">
               {{ entry.ruleName }} ·
               {{ entry.created ? $t('mock.recordPanel.actionCreated') : $t('mock.recordPanel.actionUpdated')
               }}
@@ -395,9 +395,6 @@ onUnmounted(() => {
   flex: none;
   color: var(--van-success-color);
   font-size: var(--van-font-size-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 50%;
 }
 
@@ -407,11 +404,7 @@ onUnmounted(() => {
   border-radius: var(--van-radius-md);
   background: var(--van-gray-1);
   color: var(--van-text-color-2);
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .record-rule-search {
@@ -436,10 +429,6 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.record-rule-selected {
-  background: var(--van-gray-2);
-}
-
 .record-rule-title {
   display: flex;
   align-items: baseline;
@@ -450,30 +439,24 @@ onUnmounted(() => {
 .record-rule-name {
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .record-rule-desc {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
 }
 
-.record-rule-selected :deep(.van-cell__title),
+/* 选中行与「新建规则」行都把规则名提到主色：淡底 + 左缘色条是 global 的 .list-row 给的，
+   这一条只是让「要点的就是它」在文字上再确认一次。 */
+.list-row.is-selected :deep(.van-cell__title),
 .record-rule-create :deep(.van-cell__title) {
   color: var(--van-primary-color);
 }
 
 .record-rule-empty {
   padding: var(--app-sp-2xl) var(--app-sp-lg);
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
   text-align: center;
 }
 
@@ -532,9 +515,6 @@ onUnmounted(() => {
 .record-history-name {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--van-text-color);
   font-size: var(--van-font-size-md);
 }
@@ -542,10 +522,5 @@ onUnmounted(() => {
 .record-history-meta {
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 </style>

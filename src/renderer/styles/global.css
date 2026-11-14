@@ -33,14 +33,14 @@
   --app-card-gutter: 5px;
 
   /* 方法色块（HTTP 方法首字母方块）：ProxyRecordSnap 的记录行与 MockRuleMgr 的记录条目共用这一对取值，
-     原先两处各写死 22px/11px 并靠注释互相提醒同步。地板取原来的写死值：字号 7 由地板接管（仍是 22/11），
+     原先两处各写死 22px/11px 并靠注释互相提醒同步。方块本身的排版见下方 .method-square，也只有一条。地板取原来的写死值：字号 7 由地板接管（仍是 22/11），
      字号 9 为 22.1/11.05（与写死值差 0.1px，不可辨），字号 10 放大到 23.8/11.9，让小方块与 14px 标题行盒重新拉开距离。
      乘数写 2 位小数是刻意的：1 位小数的邻值里 0.8 在字号 10 只有 11.2（几乎不放大），0.9 在字号 9 就到 11.7（超出 0.6px 容差）。 */
   --app-method-square: max(22px, calc(var(--van-font-size-md) * 1.7));
   --app-method-square-font: max(11px, calc(var(--van-font-size-md) * 0.85));
 
-  /* 控件基准高度（与 store 里 tabsLineHeight 用的同一个 md*2.2）：纯图标按钮按它取方边长，
-     需要与这枚按钮等高的其他控件也读它，不再各处重抄一遍乘数。 */
+  /* 控件基准高度：纯图标按钮按它取方边长，需要与这枚按钮等高的控件（下拉触发条、行高、版本号格子）
+     和 Vant 的 tabsLineHeight / dialogButtonHeight 都读这一个值，不再各处重抄 md*2.2。 */
   --app-control-height: calc(var(--van-font-size-md) * 2.2);
 
   /* 弹层宽度档位 */
@@ -120,6 +120,36 @@
   background: var(--van-cell-group-background);
 }
 
+/* ---- 描边分区卡片：面板内部的一块区域 ---- */
+
+/* 三份逐字相同的定义（Mock 匹配 tab 的分区、稳定性建议面板、响应表单的 Body 区）并到这一条；
+   带状态色的那一族（命中 / 未命中 / 档位预览 / 试匹配结果）用 is-* 修饰类只换描边与底色，
+   tint 一律 8%——原先 6% 与 8% 并存，差两个百分点肉眼分不出来，不值得留成两档。
+   站点只允许保留自己的 margin / padding / width，边框和底色不要再写回去。
+   与 .header-collapse 的区别是刻意的：那条是折叠面板的外框，本条是面板里的分区，两者不互换。 */
+.section-card {
+  box-sizing: border-box;
+  padding: var(--app-sp-lg);
+  border: 1px solid var(--van-border-color);
+  border-radius: var(--van-radius-lg);
+  background: var(--van-background-2);
+}
+
+.section-card.is-primary {
+  border-color: var(--van-primary-color);
+  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
+}
+
+.section-card.is-success {
+  border-color: var(--van-success-color);
+  background: color-mix(in srgb, var(--van-success-color) 8%, transparent);
+}
+
+.section-card.is-warning {
+  border-color: var(--van-warning-color);
+  background: color-mix(in srgb, var(--van-warning-color) 8%, transparent);
+}
+
 /* ---- 键值对网格：请求头 / 响应头 / 参数等 key-value 展示区共用 ---- */
 
 .header-list {
@@ -185,6 +215,128 @@
   font-size: calc(var(--van-font-size-md) * 1.2);
 }
 
+/* ---- 行内图标动作：不带按钮外壳的裸图标 ---- */
+
+/* 「删掉这一行 / 撤销 / 关闭」这类行末动作：热区靠内边距撑开，而不是定边长的方格；
+   底色只在悬停时出现，色调跟着图标自身的颜色走（danger 浮红、primary 浮蓝、灰浮灰），
+   所以站点只保留颜色与字形尺寸，不再各写一套 padding + radius + hover。
+   与 .btn-icon-only 的分工是刻意的：那一类是「按钮」，等宽等高的方格；这一类是「行内动作」，随文字排布。
+   定边长的那一处（Mock 匹配 tab 的删除格）在自己的规则里补 padding: 0，把内边距交还方格。 */
+.icon-action {
+  flex: none;
+  padding: var(--app-sp-tight);
+  border-radius: var(--van-radius-md);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.icon-action:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+/* ---- HTTP 方法色块：记录列表里那枚首字母方块 ---- */
+
+/* 把 van-tag 的紧凑排版拉成正方形，边长与字号只读 --app-method-square* 这一对 token。
+   代理记录列表（ProxyRecordSnap）与 Mock 规则记录条目（MockRuleMgr）共用同一条定义，
+   两处的父行都是 flex，所以 flex: none 与 .btn-icon-only 同理：定边长的方格不许被同行内容挤扁。
+   圆角仍是 van-tag 默认的 --van-tag-radius。global.css 排在 vant/lib/index.css 之后，
+   因此这条（0,1,0）能按源码顺序盖住 .van-tag 自带的 padding / font-size / line-height。 */
+.method-square {
+  flex: none;
+  min-width: var(--app-method-square);
+  height: var(--app-method-square);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--app-method-square-font);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---- 单元格分割线：左右缩进跟着单元格自己的横向内边距 ---- */
+
+/* Vant 把这条线钉在恒定的 --van-padding-md（16px）上，内容的缩进却是 --van-cell-horizontal-padding
+   （store 里 = md*1.2，随字号在 13.2~16.8px 之间）：字号两头本来就错开 0.8~2.8px，组件一旦自定义内边距
+   差得更明显（Mock 编辑器变体行的元信息列，线比标签文字晚起笔 9.5px）。改读同一个来源后缩进只剩一处定义、
+   跟着字号缩放，把内边距交给这条变量声明的字段自动同列。默认单元格只收紧 0.4px（16→15.6），肉眼看不出来。
+   与 Vant 同特异度，靠 vant.js 先于 renderer.js 注入生效（见 dist/electron/index.html 的 script 顺序）。 */
+.van-cell:after {
+  left: var(--van-cell-horizontal-padding);
+  right: var(--van-cell-horizontal-padding);
+}
+
+/* ---- 列表行：点一条、另一侧出详情 ---- */
+
+/* 同一个「选中」此前有四套面孔：淡主色底 + 左缘色条（Mock 规则管理器的记录行）、
+   --van-active-color（HTTP 快照行）、实心主色反白（WebSocket 消息行，还要给 4 个子元素补色）、
+   --van-gray-2（写回规则的选择行）。收成 DevTools 那一档：淡主色底 + 左缘 2.6px 主色条，
+   文字一概不换色——反白那一套之所以要逐子元素补色，就是因为它动了整行的颜色。
+   position: relative 只为给色条定位，不改变行的布局；hover 在选中态下加深一档而不是换色。 */
+.list-row {
+  position: relative;
+  cursor: pointer;
+}
+
+.list-row:hover {
+  background: var(--van-active-color);
+}
+
+.list-row.is-selected {
+  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
+}
+
+.list-row.is-selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--van-font-size-md) * 0.2);
+  background: var(--van-primary-color);
+}
+
+.list-row.is-selected:hover {
+  background: color-mix(in srgb, var(--van-primary-color) 12%, transparent);
+}
+
+/* ---- 文本工具类：单行截断 / 等宽 / 次要说明 ---- */
+
+/* 三件套在 12 个文件里各抄过一遍，ClientMgr 还给它另起名叫 .single-line。
+   只收这三条：min-width: 0 与 max-width 是各自所在 flex/grid 轨道的布局约束，不属于截断本身，留在站点。 */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ProxyRequestDetail 已经用 .hit-value.mono 这个写法，类名沿用它，不再另造。 */
+.mono {
+  font-family: var(--app-mono-font);
+}
+
+/* 各处叫 .poll-tip / .empty-tip / .row-hint / .panel-stamp / .key-reason / .raw-hint，取的是同一档次要说明。
+   站点自己决定 padding、对齐、换行，颜色和字号只读这一条。 */
+.hint {
+  color: var(--van-text-color-3);
+  font-size: var(--van-font-size-sm);
+}
+
+/* ---- 标签行（可关闭的忽略键 / 待补条件）---- */
+
+/* Mock 匹配 tab 与稳定性建议面板两份逐字相同，其中 margin-top 的 5px 是原值，不是沟道 token。
+   父行是 van-row，display/align-items 由 Vant 提供，这里只补间距与最小高。
+   global.css 不作用于 scoped，因此 .van-tag 的后代选择器直接写（0,2,0），与原先的 :deep() 等价。 */
+.tag-list {
+  gap: var(--app-sp-md);
+  min-height: calc(var(--van-font-size-md) * 1.7);
+  margin-top: 5px;
+}
+
+.tag-list .van-tag {
+  font-family: var(--app-mono-font);
+}
+
 /* ---- 弹窗（van-dialog / showConfirmDialog）：Vant 默认是移动端排版，统一到桌面口径 ---- */
 
 /* 弹窗沟道单源：标题/正文/按钮区，以及自带内容的弹窗（保存冲突）都读同一个值，否则标题与正文错开半档。
@@ -220,7 +372,7 @@
 
 /* 弹窗里放表单（规则名/说明）时，van-form 贴着弹窗圆边画分隔线，标签也只缩进 cell 自带的 7.8px，
    与标题那条 24px 的左缘不齐。扣掉 cell 自己的横向内边距，让标签文字正好落在标题文字那一列上；
-   分隔线仍略宽一点，那是分隔线的常规读法。全站只有这一处 van-form 在弹窗里。 */
+   分隔线跟着上面那条单元格规则读同一个缩进，于是也与标签同列（原先略宽 0.4px）。全站只有这一处 van-form 在弹窗里。 */
 .van-dialog .van-form {
   padding: 0 calc(var(--app-dialog-gutter) - var(--van-cell-horizontal-padding));
 }

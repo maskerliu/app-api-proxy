@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ProxyMock } from '@shared/proxy.models'
 import {
-  levelTagType, methodTagType, recordRowOf, warningTagType,
+  levelTagType, recordRowOf, warningTagType,
 } from '@renderer/pages/proxy/mock/record.row'
 import { recordSnapshot } from '@renderer/pages/proxy/mock/record'
 import { condition, makeMatch, makeRecord } from './fixtures'
@@ -89,15 +89,6 @@ describe('标签配色', () => {
     assert.equal(levelTagType('standard'), 'primary')
     assert.equal(levelTagType('loose'), 'success')
     assert.equal(levelTagType('custom'), 'warning')
-  })
-
-  it('方法：GET 蓝 / POST 绿 / DELETE 红 / ANY 橙 / 其余默认，大小写不敏感', () => {
-    assert.equal(methodTagType('get'), 'primary')
-    assert.equal(methodTagType('POST'), 'success')
-    assert.equal(methodTagType('delete'), 'danger')
-    assert.equal(methodTagType('ANY'), 'warning')
-    assert.equal(methodTagType('PUT'), 'default')
-    assert.equal(methodTagType(undefined), 'default')
   })
 
   it('告警：重复红，遮挡与不可达橙，其余默认', () => {

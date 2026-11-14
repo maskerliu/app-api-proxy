@@ -1,5 +1,5 @@
 <template>
-  <section class="miss-panel">
+  <section class="section-card is-warning">
     <van-row tag="header" class="miss-head" align="center" :wrap="false">
       <van-row class="miss-title" align="center" :wrap="false">
         <van-icon name="warning-o" class="miss-icon" />
@@ -22,8 +22,8 @@
       </div>
       <div v-for="(failure, idx) in miss.failures" :key="idx" class="miss-row">
         <span class="miss-dimension">{{ dimensionText(failure.dimension) }}</span>
-        <span class="miss-value" :title="failure.expected">{{ failure.expected }}</span>
-        <span class="miss-value" :title="failure.actual">{{ failure.actual }}</span>
+        <span class="miss-value mono truncate" :title="failure.expected">{{ failure.expected }}</span>
+        <span class="miss-value mono truncate" :title="failure.actual">{{ failure.actual }}</span>
         <van-row class="miss-action" align="center" :wrap="false">
           <van-button v-if="failure.key" size="mini" plain type="primary" @click="emit('ignore-key', failure)">
             {{ $t('mock.miss.ignoreKey') }}
@@ -32,7 +32,7 @@
             @click="emit('loosen')">
             {{ $t('mock.miss.loosen') }}
           </van-button>
-          <span v-else class="miss-detail">{{ failure.detail ? detailText(failure.detail) : '' }}</span>
+          <span v-else class="miss-detail truncate">{{ failure.detail ? detailText(failure.detail) : '' }}</span>
         </van-row>
       </div>
     </div>
@@ -105,13 +105,6 @@ function buildMarkdown(): string {
 </script>
 
 <style scoped>
-.miss-panel {
-  padding: var(--app-sp-lg);
-  border: 1px solid var(--van-warning-color);
-  border-radius: var(--van-radius-lg);
-  background: color-mix(in srgb, var(--van-warning-color) 8%, transparent);
-}
-
 .miss-head {
   gap: var(--app-sp-lg);
 }
@@ -166,10 +159,6 @@ function buildMarkdown(): string {
 
 .miss-value {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--app-mono-font);
   word-break: break-all;
 }
 
@@ -179,9 +168,6 @@ function buildMarkdown(): string {
 
 .miss-detail {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--van-text-color-3);
 }
 

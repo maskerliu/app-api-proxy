@@ -1,12 +1,12 @@
-import { MOCK_ANY_METHOD, ProxyMock } from '@shared'
+import { ProxyMock } from '@shared'
 import type { MockMatchWarning, MockMatchWarningType } from '@shared/mock.models'
+import type { TagType } from '../../../common/tag'
 import type { MatchSummary } from './match'
 import { summaryOf } from './match'
 
 // 记录列表的视图层：行模型、标签配色、关键字筛选与排序都在这里，模板里不做条件拼装。
 // 匹配档位本身的推导在 match.ts，这一层只负责展示口径。
-
-export type TagType = 'primary' | 'success' | 'warning' | 'danger' | 'default'
+// 方法色块的配色不在这张表里——代理记录列表也用同一枚方块，见 common/tag.ts 的 methodTagType。
 
 export interface RecordRow {
   record: ProxyMock.MockRecord
@@ -55,16 +55,6 @@ export function levelTagType(level: string): TagType {
   if (level === 'standard') return 'primary'
   if (level === 'loose') return 'success'
   return 'warning'
-}
-
-// 方法用小色块区分，便于在列表中按请求类型快速扫读
-export function methodTagType(method: string): TagType {
-  const value = String(method ?? '').toUpperCase()
-  if (value === 'GET') return 'primary'
-  if (value === 'POST') return 'success'
-  if (value === 'DELETE') return 'danger'
-  if (MOCK_ANY_METHOD === value) return 'warning'
-  return 'default'
 }
 
 export function warningTagType(type: string): TagType {

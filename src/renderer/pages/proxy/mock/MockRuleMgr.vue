@@ -10,7 +10,7 @@
               <van-search class="rule-search" show-action :clearable="false" v-model="keyword"
                 :placeholder="$t('common.searchPlaceholder')">
                 <template #action>
-                  <van-button class="rule-add-btn btn-icon-only" plain type="primary" size="small" icon="plus"
+                  <van-button class="btn-icon-only" plain type="primary" size="small" icon="plus"
                     @click.stop="onRuleEdit(null)" />
                 </template>
               </van-search>
@@ -24,9 +24,9 @@
                 :label="rule.desc" @click="onRuleSelect(rule)">
                 <template #value>
                   <div>
-                    <van-icon class="iconfont icon-edit result-action-icon result-action-icon--primary"
+                    <van-icon class="iconfont icon-edit icon-action result-action-icon result-action-icon--primary"
                       @click.stop="onRuleEdit(rule)" />
-                    <van-icon class="iconfont icon-delete result-action-icon result-action-icon--danger"
+                    <van-icon class="iconfont icon-delete icon-action result-action-icon result-action-icon--danger"
                       @click.stop="onRuleDelete(rule)" />
                   </div>
                 </template>
@@ -46,7 +46,7 @@
           </template>
           <template #title>
             <van-row class="rule-head-title" align="center" :wrap="false">
-              <span class="rule-head-name">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
+              <span class="rule-head-name truncate">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
               <van-tag v-if="curRule._id != null" class="rule-state-tag" plain
                 :type="curRule.isMock ? 'success' : 'warning'" :title="mockStateTip">
                 {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
@@ -88,7 +88,7 @@
       <van-col class="record-pane">
         <van-row class="record-pane-head" align="center" justify="space-between" :wrap="false">
           <span class="record-pane-title">{{ $t('mock.records') }}</span>
-          <van-button class="record-new-btn btn-icon-only" plain type="primary" size="mini" icon="plus"
+          <van-button class="btn-icon-only" plain type="primary" size="mini" icon="plus"
             :disabled="curRule._id == null" @click="addRecord"></van-button>
         </van-row>
         <van-row class="record-filter" align="center" :wrap="false">
@@ -119,7 +119,7 @@
               @click="recordEditorRef?.focusField({ code: 'urlEmpty', field: 'url' })">
               <template #title>
                 <div class="record-line">
-                  <span class="record-title">{{ draft.name || $t('mock.editor.newRecord') }}</span>
+                  <span class="record-title truncate">{{ draft.name || $t('mock.editor.newRecord') }}</span>
                   <van-tag plain type="warning" class="record-draft-tag">{{ $t('mock.editor.unsaved') }}</van-tag>
                 </div>
               </template>
@@ -127,31 +127,31 @@
                    那 5.6px 上边距会把 title 列撑高，居中后文字与右侧 × 就错开了 -->
               <template v-if="draft.url" #label>
                 <div class="record-line record-line--meta">
-                  <span class="record-path">{{ draft.url }}</span>
+                  <span class="record-path mono truncate">{{ draft.url }}</span>
                 </div>
               </template>
               <template #right-icon>
-                <van-icon name="cross" class="record-action record-action--muted" @click.stop="clearEditorState" />
+                <van-icon name="cross" class="icon-action record-action record-action--muted" @click.stop="clearEditorState" />
               </template>
             </van-cell>
             <van-cell center clickable v-for="row in recordRows" :key="row.record.id"
-              @click="onRecordSelected(row.record)" :data-record-id="row.record.id" class="record-row"
-              :class="{ 'record-row--selected': row.record.id === curRecordId, 'record-flash': row.record.id === flashRecordId }">
+              @click="onRecordSelected(row.record)" :data-record-id="row.record.id" class="list-row record-row"
+              :class="{ 'is-selected': row.record.id === curRecordId, 'record-flash': row.record.id === flashRecordId }">
               <template #title>
                 <div class="record-line">
-                  <van-tag v-if="row.summary" :type="methodTagType(row.summary.method)" class="record-method"
+                  <van-tag v-if="row.summary" :type="methodTagType(row.summary.method)" class="method-square"
                     :title="row.summary.method">
                     {{ row.summary.method.charAt(0) }}
                   </van-tag>
-                  <span class="record-title" :class="{ 'record-title--scroll': row.record.id === curRecordId }"
+                  <span class="record-title truncate" :class="{ 'record-title--scroll': row.record.id === curRecordId }"
                     :title="row.titleHint">
-                    <span class="record-title-text">{{ row.title }}</span>
+                    <span class="record-title-text truncate">{{ row.title }}</span>
                   </span>
                 </div>
               </template>
               <template #label>
                 <div class="record-line record-line--meta">
-                  <span v-if="row.subPath" class="record-path" :title="row.subPath">{{ row.subPath }}</span>
+                  <span v-if="row.subPath" class="record-path mono truncate" :title="row.subPath">{{ row.subPath }}</span>
                   <span v-if="row.active" class="record-meta record-meta--active">
                     {{ $t('mock.editor.active') }}
                   </span>
@@ -166,7 +166,7 @@
                       :title="$t(`mock.match.levelHint.${row.summary.level}`)">
                       {{ $t(`mock.match.level.${row.summary.level}`) }}
                     </van-tag>
-                    <van-tag plain :type="row.statusOk ? 'success' : 'danger'" class="record-status"
+                    <van-tag plain :type="row.statusOk ? 'success' : 'danger'" class="record-status mono"
                       :title="`HTTP ${row.statusCode}`">
                       {{ row.statusCode }}
                     </van-tag>
@@ -174,7 +174,7 @@
                 </div>
               </template>
               <template #right-icon>
-                <van-icon class="iconfont icon-delete record-action record-action--danger"
+                <van-icon class="iconfont icon-delete icon-action record-action record-action--danger"
                   @click.stop="onRecordDelete(row.record.id)" />
               </template>
             </van-cell>
@@ -241,11 +241,12 @@ import { showConfirmDialog, showNotify } from 'vant'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { scrollOptions } from '../../../common/scroll'
+import { methodTagType } from '../../../common/tag'
 import MiniSelect from '../../components/MiniSelect.vue'
 import MockRecordEditor from './MockRecordEditor.vue'
 import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import {
-  levelTagType, matchesKeyword, methodTagType, recordRowOf, sortRecords, warningLabelKey, warningTagType,
+  levelTagType, matchesKeyword, recordRowOf, sortRecords, warningLabelKey, warningTagType,
 } from './record.row'
 import { findRecordByUrl, MockMgrTarget } from './recording'
 import { describeMockSaveError, normalizeErrorText } from './save-error'
@@ -842,6 +843,12 @@ async function onRecordDeleteConfirm() {
 </script>
 
 <style scoped>
+/* 分栏阈值要跟着字号走，所以这里做成查询容器而不是用视口 @media：容器查询里的 em 按容器的 font-size
+   解析（#app 继承下来的 --van-font-size-md，中间没有任何一层改过字号），与右侧编辑区那些 min-width
+   全部用 md 倍数的行是同一把尺子。@container 管不到容器自己，本条查询的三条规则都在后代上。
+   副作用 checked 过：inline-size containment 带出的 layout containment 会让本元素成为 fixed 后代的包含块，
+   而子树里的浮层都绕开了——MiniSelect 的下拉 teleport="body"、确认弹窗挂 body、van-popover 是 absolute
+   且本元素早已是 position:relative。 */
 .mgr-content {
   flex-direction: column;
   /* van-row 默认 wrap，列方向下高度超出弹层时会把主体换到右侧列并移出可视区 */
@@ -853,6 +860,8 @@ async function onRecordDeleteConfirm() {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: mgr;
   /* background: var(--van-gray-1); */
 }
 
@@ -905,17 +914,6 @@ async function onRecordDeleteConfirm() {
   font-size: var(--van-font-size-md);
   font-weight: 500;
   color: var(--van-text-color);
-}
-
-/* 列表头的小按钮高度与内边距随全局字号缩放，图标继承按钮字号 */
-.record-pane-head :deep(.van-button--mini) {
-  height: calc(var(--van-font-size-md) * 1.9);
-  padding: 0 var(--app-sp-sm);
-  border-radius: calc(var(--van-font-size-md) * 0.3);
-}
-
-.record-new-btn {
-  flex: none;
 }
 
 .record-filter {
@@ -987,29 +985,6 @@ async function onRecordDeleteConfirm() {
   min-width: 0;
 }
 
-.record-row:hover {
-  background: var(--van-active-color);
-}
-
-/* 选中态：左侧色条 + 淡底，替代只靠点击态区分 */
-.record-row--selected {
-  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
-}
-
-.record-row--selected::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(var(--record-line-font) * 0.2);
-  background: var(--van-primary-color);
-}
-
-.record-row--selected:hover {
-  background: color-mix(in srgb, var(--van-primary-color) 12%, transparent);
-}
-
 .record-line {
   display: flex;
   align-items: center;
@@ -1024,21 +999,6 @@ async function onRecordDeleteConfirm() {
   font-size: var(--van-font-size-xs);
   line-height: 1.78;
   min-width: 0;
-}
-
-/* 方法色块：边长与字号取自全局 --app-method-square*，与 ProxyRecordSnap 的 .method-tag 同一来源，
-   不再需要「改一边记得改另一边」；圆角仍是 Vant van-tag 的默认 2px。 */
-.record-method {
-  flex: none;
-  min-width: var(--app-method-square);
-  height: var(--app-method-square);
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--app-method-square-font);
-  font-weight: 700;
-  line-height: 1;
 }
 
 .record-status-group {
@@ -1056,16 +1016,12 @@ async function onRecordDeleteConfirm() {
 
 .record-status {
   flex: none;
-  font-family: var(--app-mono-font);
   font-weight: 600;
 }
 
 .record-title {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--van-text-color);
   font-size: var(--van-font-size-md);
   font-weight: 600;
@@ -1075,9 +1031,6 @@ async function onRecordDeleteConfirm() {
 .record-title-text {
   display: inline-block;
   max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   vertical-align: bottom;
   /* 仅选中行滚动：取消选中后立即回到默认省略状态 */
   transform: none;
@@ -1111,11 +1064,7 @@ async function onRecordDeleteConfirm() {
 .record-path {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--van-text-color-3);
-  font-family: var(--app-mono-font);
 }
 
 .record-meta {
@@ -1137,26 +1086,19 @@ async function onRecordDeleteConfirm() {
   font-size: 1em;
 }
 
-/* 行内操作：裸图标，热区与字号同比缩放，悬停才强调 */
+/* 行内操作：内边距、圆角、hover 底色读 global.css 的 .icon-action，这里只留字号与颜色语义 */
 .record-action {
-  flex: none;
-  padding: .27em;
   margin-left: .4em;
-  border-radius: .27em;
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-lg);
-  cursor: pointer;
-  transition: color .15s, background-color .15s;
 }
 
 .record-action--danger:hover {
   color: var(--van-danger-color);
-  background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
 }
 
 .record-action--muted:hover {
   color: var(--van-text-color);
-  background: var(--van-active-color);
 }
 
 .record-load-more-cell {
@@ -1179,8 +1121,9 @@ async function onRecordDeleteConfirm() {
   /* flex-basis 归零，避免内容固有宽度参与换行判断 */
   flex: 1 1 0;
   min-width: 0;
-  height: calc(100% - calc(var(--van-font-size-md) * 0.8));
-  /* 左侧列表有外边距，这里同步下移，两侧底边才能对齐 */
+  /* 让位量取列表卡片的外边距（.border-bg 的 --app-card-gutter），两侧底边才对得齐。
+     原先按顶部拖拽区高度 md*0.8 扣，字号 13 档实测编辑器列比列表卡片底高出 5.4px，字号越大差得越多。 */
+  height: calc(100% - var(--app-card-gutter));
   padding: 0 var(--app-sp-tight);
   position: relative;
 }
@@ -1198,9 +1141,6 @@ async function onRecordDeleteConfirm() {
 
 .rule-head-name {
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .rule-state-tag {
@@ -1285,27 +1225,16 @@ async function onRecordDeleteConfirm() {
 }
 
 .result-action-icon {
+  /* 内边距、圆角、hover 底色读 global.css 的 .icon-action，这里只留字形尺寸 */
   font-size: calc(var(--van-font-size-md) * 1.2);
-  padding: var(--app-sp-tight);
-  border-radius: calc(var(--van-font-size-md) * 0.4);
-  cursor: pointer;
-  transition: background-color 0.15s;
 }
 
 .result-action-icon--primary {
   color: var(--van-primary-color);
 }
 
-.result-action-icon--primary:hover {
-  background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
-}
-
 .result-action-icon--danger {
   color: var(--van-danger-color);
-}
-
-.result-action-icon--danger:hover {
-  background: color-mix(in srgb, var(--van-danger-color) 8%, transparent);
 }
 
 /* 图标尺寸已由 global.css 的 .btn-icon-only .van-icon 单源，这里只保留配色语义 */
@@ -1346,10 +1275,10 @@ async function onRecordDeleteConfirm() {
   --van-cell-vertical-padding: 0;
 }
 
-/* 收窄 search action 的可点击区域，避免 + 按钮被撑成长条 */
+/* 收窄 search action 的可点击区域，避免 + 按钮被撑成长条：容器仍占满搜索行高，按钮只居中 */
 .rule-search :deep(.van-search__action) {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   align-self: stretch;
   height: var(--van-search-input-height);
   padding: 0 var(--app-sp-sm);
@@ -1360,15 +1289,6 @@ async function onRecordDeleteConfirm() {
   background-color: transparent;
 }
 
-/* 高度直接取自搜索输入框，保证严格一致 */
-.rule-add-btn {
-  flex: none;
-  box-sizing: border-box;
-  width: var(--van-search-input-height);
-  height: var(--van-search-input-height);
-  padding: 0;
-}
-
 .search-result {
   max-height: 50vh;
 }
@@ -1377,15 +1297,28 @@ async function onRecordDeleteConfirm() {
   width: 100%;
 }
 
-/* 与 Onboarding 的分栏阈值一致：popup 宽约 80vw，此处需 >=720px 才能容下列表 300 + 编辑器 340 */
-@media (max-width: 720px) {
+/* 阈值由右侧编辑区最宽的那一行反推，不是拍的：变体行（名称 + 状态码 + 延迟 + 生效开关 + 两个图标按钮）
+   的地板 = 5.5 + 7 + 7 + 1.5 + 2.2×2 + 0.5×5 = 27.9md，再加 Vant 写死的相邻 mini 按钮 margin 4px；
+   这一列自身还要扣 editor-col 的 2×0.4md、tab 面板的 2×0.3md 与 scrollbar-gutter 预留的 4px。
+   并排时记录列取 38%（它的 300px 地板要到主体 789px 以上才接管，字号 10 那档是 847px，窄的这一侧都只在 38% 段里），
+   编辑器拿 62%，于是主体需要 ≥ (29.3md + 8px) / 0.62 = 47.3md + 12.9px，字号 7~10 落在 533~675px。
+   取 50em（550~700px）留 17~26px 余量。
+   原先写死的 720px 视口（= 主体 576px）按这套算法只有字号 7 那一档还留有余量：字号 8 差 4px、字号 9 要 ~785px、
+   字号 10 要 ~845px。中间那段窗口「已经不算窄、但行放不下」，表现为变体 tab 里右侧两个按钮被顶出编辑列
+   加面板内横向滚动。
+   Onboarding 的 720px 不跟着改：那是真正的视口分栏，量的是窗口，不是这个 80vw 抽屉的自身宽度。 */
+@container mgr (max-width: 50em) {
   .mgr-body {
     flex-direction: column;
   }
 
   .record-pane {
     width: 100%;
-    height: 36%;
+    /* 堆叠时上下两段抢同一份高度。列表 32% 是常规档（670px 高的窗口给列表卡片约 3 行）；
+       30md 是编辑器地板：编辑器列扣掉两行表头、tab 标签栏和响应区上方 11md 的固定开销后，
+       正文至少要能显示 8 行，所以窗口偏矮时以这一项接管。104px 只防极矮窗口把列表压没。
+       原先写死 36% 时，670px 高的窗口正文只剩 4~6 行，即「窄窗口里编辑器显示不全」。 */
+    height: max(104px, min(32%, calc(100% - calc(var(--van-font-size-md) * 30))));
   }
 
   .rule-editor-col {

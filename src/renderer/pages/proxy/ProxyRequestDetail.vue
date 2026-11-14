@@ -19,7 +19,7 @@
       </van-cell-group>
     </div>
 
-    <section v-if="mockMeta?.hit" class="mock-hit">
+    <section v-if="mockMeta?.hit" class="section-card is-success mock-hit">
       <van-row tag="header" class="hit-head" align="center" :wrap="false">
         <van-icon name="passed" class="hit-icon" />
         <span class="hit-title">{{ $t('mock.hit.title') }}</span>
@@ -30,16 +30,16 @@
       </van-row>
       <van-row class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.record') }}</span>
-        <span class="hit-value">{{ hitRecord?.name || hitRecord?.url || mockMeta.recordId }}</span>
+        <span class="hit-value truncate">{{ hitRecord?.name || hitRecord?.url || mockMeta.recordId }}</span>
         <van-button size="mini" plain type="primary" @click="openHitRecord">{{ $t('mock.hit.open') }}</van-button>
       </van-row>
       <van-row v-if="hitRecord" class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.conditions') }}</span>
-        <span class="hit-value">{{ summaryText(hitRecord, $t) }}</span>
+        <span class="hit-value truncate">{{ summaryText(hitRecord, $t) }}</span>
       </van-row>
       <van-row v-if="mockMeta.ignoredKeys?.length" class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.ignored', { count: mockMeta.ignoredKeys.length }) }}</span>
-        <span class="hit-value mono">{{ mockMeta.ignoredKeys.join(',') }}</span>
+        <span class="hit-value mono truncate">{{ mockMeta.ignoredKeys.join(',') }}</span>
         <van-button size="mini" plain type="warning" @click="openHitRecord">{{ $t('mock.hit.tighten') }}</van-button>
       </van-row>
       <van-row class="hit-line hit-meta" align="center" :wrap="false">
@@ -292,11 +292,10 @@ async function copyLink() {
 
 /* 命中解释：命中记录、忽略键、排序依据与耗时同属一个区块 */
 .mock-hit {
+  /* 描边与底色读 global.css 的 .section-card + is-success；横向沟道跟同页的 .header-collapse 对齐，
+     纵向内边距比分区卡片宽一档，是因为这一块里是整段命中说明文字 */
   margin: var(--van-padding-md) var(--van-padding-md) 0;
   padding: var(--app-sp-lg) var(--app-sp-2xl);
-  border: 1px solid var(--van-success-color);
-  border-radius: var(--van-radius-lg);
-  background: color-mix(in srgb, var(--van-success-color) 8%, transparent);
 }
 
 .hit-head {
@@ -328,14 +327,7 @@ async function copyLink() {
 .hit-value {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   font-size: var(--van-font-size-sm);
-}
-
-.hit-value.mono {
-  font-family: var(--app-mono-font);
 }
 
 .hit-meta {

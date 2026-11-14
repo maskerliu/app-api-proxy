@@ -23,14 +23,14 @@
               @update:model-value="applyHeaders" />
             <van-field class="field-value" v-model="row.value" :placeholder="$t('mock.editor.headerValue')"
               @update:model-value="applyHeaders" />
-            <van-icon name="cross" class="row-delete" @click="removeHeader(idx)" />
+            <van-icon name="cross" class="icon-action row-delete" @click="removeHeader(idx)" />
           </van-row>
-          <div v-if="headerRows.length === 0" class="empty-tip">{{ $t('mock.editor.noHeaders') }}</div>
+          <div v-if="headerRows.length === 0" class="empty-tip hint">{{ $t('mock.editor.noHeaders') }}</div>
         </div>
       </van-collapse-item>
     </van-collapse>
 
-    <div ref="bodySection" class="form-section body-section"
+    <div ref="bodySection" class="section-card form-section body-section"
       :style="fillBody ? { paddingBottom: `${sectionPadBottom}px` } : null">
       <van-row class="section-head body-head" align="center">
         <span class="section-title">{{ $t('mock.editor.body') }}</span>
@@ -38,7 +38,7 @@
           <van-radio v-for="type in bodyTypes" :key="type" :name="type">{{ type.toUpperCase() }}</van-radio>
         </van-radio-group>
         <van-row class="body-tools" align="center" :wrap="false">
-          <span class="body-size">{{ $t('mock.editor.bodySize', { size: bodySizeText }) }}</span>
+          <span class="body-size hint">{{ $t('mock.editor.bodySize', { size: bodySizeText }) }}</span>
           <van-row class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }" :wrap="false">
             <van-button size="mini" plain class="btn-icon-only tool-btn" @click="formatBody">
               <template #icon>
@@ -352,13 +352,10 @@ defineExpose({ focusField })
 }
 
 .form-section {
+  /* 卡片外框（描边 / 圆角 / 底色 / lg 内边距）读 global.css 的 .section-card，
+     这里只留它在响应表单列里占满宽度并与上一块拉开 */
   margin-top: var(--app-sp-xl);
-  padding: var(--app-sp-lg);
   width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-lg);
-  background: var(--van-background-2);
 }
 
 /* 状态行并入上方工具栏时，折叠卡片直接贴住上一行 */
@@ -423,17 +420,13 @@ defineExpose({ focusField })
   border-radius: var(--van-radius-md);
 }
 
+/* 热区、圆角、hover 底色都在 global.css 的 .icon-action 里，这里只留颜色语义 */
 .row-delete {
-  flex: none;
-  padding: var(--app-sp-md);
   color: var(--van-danger-color);
-  cursor: pointer;
 }
 
 .empty-tip {
   padding: var(--app-sp-sm) var(--app-sp-xs);
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .body-head {
@@ -470,8 +463,6 @@ defineExpose({ focusField })
 .body-size {
   flex: none;
   margin-right: var(--app-sp-xs);
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
   white-space: nowrap;
 }
 

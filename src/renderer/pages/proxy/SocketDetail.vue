@@ -18,7 +18,7 @@
         <van-row v-for="stat in stats" :key="stat.key" align="center" :wrap="false" class="socket-stat"
           :title="stat.title">
           <span v-if="stat.label" class="stat-label">{{ stat.label }}</span>
-          <span v-for="(value, idx) in stat.values" :key="idx" class="stat-value" :class="value.cls"
+          <span v-for="(value, idx) in stat.values" :key="idx" class="stat-value truncate" :class="value.cls"
             :title="value.title">
             <template v-if="value.icon"><i class="iconfont dir-icon" :class="value.icon"></i> {{ value.text
             }}</template>
@@ -60,18 +60,18 @@
 
       <van-row :wrap="false" class="msg-body">
         <div ref="listRef" class="msg-list">
-          <div v-for="frame in filteredFrames" :key="frame.seq" class="msg-row"
+          <div v-for="frame in filteredFrames" :key="frame.seq" class="list-row msg-row mono"
             :class="{ 'is-selected': frame.seq === selectedSeq }" @click="selectedSeq = frame.seq">
             <span class="msg-time" :title="`${frame.at} ms`">{{ formatFrameOffset(frame.at) }}</span>
             <span class="msg-dir"><i class="iconfont dir-icon" :class="dirIcon(frame.dir)"></i></span>
             <span class="msg-opcode">{{ frame.opcode }}</span>
-            <span class="msg-preview" :title="framePreview(frame)">{{ framePreview(frame) }}</span>
+            <span class="msg-preview truncate" :title="framePreview(frame)">{{ framePreview(frame) }}</span>
             <van-tag v-if="frame.truncated" plain type="warning" class="msg-tag">
               {{ $t('proxy.socket.truncated') }}
             </van-tag>
             <span class="msg-size">{{ formatBytes(frame.size) }}</span>
           </div>
-          <div v-if="filteredFrames.length === 0" class="msg-empty">
+          <div v-if="filteredFrames.length === 0" class="msg-empty hint">
             {{ $t(frames.length === 0 ? 'proxy.socket.noFrames' : 'proxy.socket.noMatch') }}
           </div>
         </div>
@@ -80,7 +80,7 @@
           <van-row align="center" :wrap="false" class="msg-detail-head">
             <span class="msg-detail-title">{{ $t('proxy.socket.messageDetail') }}</span>
             <template v-if="selectedFrame != null">
-              <van-row align="center" :wrap="false" class="msg-detail-meta">
+              <van-row align="center" :wrap="false" class="msg-detail-meta mono">
                 <span class="meta-item">#{{ selectedFrame.seq }}</span>
                 <span class="meta-item"><i class="iconfont dir-icon" :class="dirIcon(selectedFrame.dir)"></i></span>
                 <span class="meta-item">{{ selectedFrame.opcode }}</span>
@@ -93,7 +93,7 @@
               </van-button>
             </template>
           </van-row>
-          <van-row v-if="selectedFrame == null" align="center" justify="center" class="msg-detail-empty">
+          <van-row v-if="selectedFrame == null" align="center" justify="center" class="msg-detail-empty hint">
             {{ $t('proxy.socket.selectFrame') }}
           </van-row>
           <vue-ace-editor v-else :fold="false" :data="frameText" searchable />
@@ -302,9 +302,6 @@ onUnmounted(() => {
 
 .stat-value {
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--van-text-color);
 }
 
@@ -432,28 +429,13 @@ onUnmounted(() => {
   gap: var(--app-sp-md);
   height: calc(var(--van-font-size-sm) * 2.2);
   padding: 0 var(--app-sp-lg);
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-sm);
   color: var(--van-text-color-2);
-  cursor: pointer;
   user-select: none;
 }
 
-.msg-row:hover {
-  background: var(--van-gray-1);
-}
-
-.msg-row.is-selected {
-  background: var(--van-primary-color);
-  color: #fff;
-}
-
-.msg-row.is-selected .msg-preview,
-.msg-row.is-selected .msg-time,
-.msg-row.is-selected .msg-opcode,
-.msg-row.is-selected .msg-size {
-  color: rgba(255, 255, 255, 0.86);
-}
+/* 选中态与 hover 读 global.css 的 .list-row：原先这里是实心主色 + 整行反白，
+   要逐个点子元素的颜色才能压住，方向图标也跟着失色；换成淡底后这些覆盖一条都不需要。 */
 
 /* 时间/类型/字节三列是次要信息，宽度按字号比例给足等宽字符数，既列对齐又跟随字号缩放 */
 .msg-time,
@@ -503,16 +485,9 @@ onUnmounted(() => {
   width: calc(var(--van-font-size-sm) * 1.4);
 }
 
-.msg-row.is-selected .dir-icon {
-  color: #fff;
-}
-
 .msg-preview {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--van-text-color);
 }
 
@@ -522,8 +497,6 @@ onUnmounted(() => {
 
 .msg-empty {
   padding: 24px 12px;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
   text-align: center;
 }
 
@@ -556,7 +529,6 @@ onUnmounted(() => {
   min-width: 0;
   overflow: hidden;
   color: var(--van-text-color-3);
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-xs);
 }
 
@@ -573,8 +545,6 @@ onUnmounted(() => {
 
 .msg-detail-empty {
   flex: 1 1 auto;
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 .msg-detail :deep(.ace-editor-wrapper) {

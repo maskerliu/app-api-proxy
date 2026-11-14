@@ -9,7 +9,7 @@
         :data-mini-select="popupId" @change="onChange" @open="onOpen" @opened="onOpened" @close="onClosing">
         <!-- 带 tag 时触发条与选项行都由本组件排版：正文段交给省略号收缩，末尾标签固定不参与截断 -->
         <template v-if="hasTag" #title>
-          <span class="mini-select-text">{{ selectedText ?? placeholder }}</span>
+          <span class="mini-select-text truncate">{{ selectedText ?? placeholder }}</span>
           <span v-if="selectedTag" class="mini-select-tag">{{ selectedTag }}</span>
         </template>
         <template v-if="hasTag">
@@ -18,7 +18,7 @@
             :class="{ 'van-dropdown-item__option--active': it.value === modelValue }" role="menuitem" clickable
             :tabindex="it.value === modelValue ? 0 : -1" @click="pick(it.value)">
             <template #title>
-              <span class="mini-select-text">{{ it.label }}</span>
+              <span class="mini-select-text truncate">{{ it.label }}</span>
               <span v-if="it.tag" class="mini-select-tag">{{ it.tag }}</span>
             </template>
             <template #value>
@@ -233,8 +233,8 @@ function stackingZ(el: HTMLElement) {
 }
 
 .mini-select :deep(.van-dropdown-menu__bar) {
-  /* 使用方可按字号覆盖触发条高度，默认保持紧凑的 28px */
-  height: var(--mini-select-bar-height, calc(var(--van-font-size-md) * 2.2));
+  /* 使用方可按字号覆盖触发条高度，默认保持紧凑的 28px（与全站控件基准同源） */
+  height: var(--mini-select-bar-height, var(--app-control-height));
   background: var(--van-background-2);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
@@ -268,9 +268,6 @@ function stackingZ(el: HTMLElement) {
 
 .mini-select--tagged :deep(.mini-select-text) {
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .mini-select--tagged :deep(.mini-select-tag) {
@@ -342,9 +339,6 @@ function stackingZ(el: HTMLElement) {
 
 :global(.mini-select-popup--tagged .mini-select-text) {
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 :global(.mini-select-popup--tagged .mini-select-tag) {

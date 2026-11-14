@@ -88,7 +88,7 @@
             <van-tag :type="result.ok ? 'success' : 'danger'">
               {{ result.ok ? $t('diagnostic.reachable') : $t('diagnostic.unreachable') }}
             </van-tag>
-            <span class="result-target">{{ result.target }}</span>
+            <span class="result-target mono">{{ result.target }}</span>
           </van-row>
           <div v-for="step in result.steps" :key="step.step" class="result-step">
             <van-tag :type="step.ok ? 'success' : 'danger'" plain>{{ $t(`diagnostic.step.${step.step}`) }}</van-tag>
@@ -255,7 +255,6 @@ function goBack() {
 }
 
 .result-target {
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
 }

@@ -25,7 +25,7 @@
       <van-row class="mock-global-bar" :class="{ 'is-on': mockEnabled }" align="center" :wrap="false"
         @click="toggleMock">
         <i class="iconfont icon-rule mock-global-icon"></i>
-        <span class="mock-global-text">{{ mockLabel }}</span>
+        <span class="mock-global-text truncate">{{ mockLabel }}</span>
         <van-switch :model-value="mockEnabled" :loading="mockToggling" class="mock-global-switch"
           @click.stop="toggleMock" />
       </van-row>
@@ -440,8 +440,6 @@ async function copyRegisterUrl() {
   height: calc(100% - var(--app-card-gutter) * 2);
   min-height: 0;
   margin: var(--app-card-gutter);
-  /* 设备 chip、档位下拉、自定义数值框共用同一行高 */
-  --delay-control-height: calc(var(--van-font-size-md) * 2.2);
 }
 
 /* 列表内容过长时只压缩列表，避免头部工具行被挤扁后与相邻行重叠 */
@@ -556,16 +554,13 @@ async function copyRegisterUrl() {
 
 .mock-global-text {
   flex: 1 1 auto;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 /* 档位行：设备 chip 吃掉剩余宽度，档位下拉定宽；两个下拉共用同一行高 */
 .proxy-delay-bar {
   gap: var(--app-sp-lg);
   padding: var(--app-sp-lg) 0 var(--app-sp-sm) var(--app-sp-sm);
-  --mini-select-bar-height: var(--delay-control-height);
+  --mini-select-bar-height: var(--app-control-height);
 }
 
 /* 定宽而不是按内容伸缩：切换档位时标签长短不一，让宽度跟着变会把左侧设备 chip 挤来挤去 */
@@ -591,7 +586,7 @@ async function copyRegisterUrl() {
   min-width: 0;
   display: flex;
   align-items: center;
-  height: var(--delay-control-height);
+  height: var(--app-control-height);
   box-sizing: border-box;
   padding: 0 var(--app-sp-tight);
   border: 1px solid var(--van-border-color);
@@ -622,7 +617,7 @@ async function copyRegisterUrl() {
 
 .proxy-delay-custom .delay-apply {
   flex: none;
-  height: var(--delay-control-height);
+  height: var(--app-control-height);
   box-sizing: border-box;
   padding: 0 var(--app-sp-xl);
   font-size: var(--van-font-size-sm);
