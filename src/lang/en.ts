@@ -339,7 +339,7 @@ export default {
         suggestion: 'Suggested',
         manual: 'Added manually'
       },
-      addKeyPlaceholder: 'Type a key and press Enter',
+      addKeyPlaceholder: 'Key, then Enter',
       conditions: 'Conditions',
       addCondition: 'Add a match condition (Query or Header)',
       conditionEmpty: 'No conditions',
@@ -354,7 +354,7 @@ export default {
       conditionsInertAllHint: 'The Query mode is ignore, so this rule checks no Query parameters.',
       querySuggest: 'Query in the recorded request:',
       queryAllowExtra: 'Allow Extra Query Params',
-      queryAllowExtraHint: 'When off, any undeclared Query parameter causes a miss.',
+      queryAllowExtraHint: 'Extra params cause a miss when off',
       queryMultiValue: 'Multiple Values',
       multiAny: 'Match Any',
       multiAll: 'Match All',

@@ -36,7 +36,7 @@
         <van-icon class="iconfont icon-info setting-cell-icon" />
       </template>
       <template #input>
-        <van-row class="version-value" align="center" justify="center" :wrap="false" @click="onVersionCheck">
+        <van-row class="version-value" align="center" justify="end" :wrap="false" @click="onVersionCheck">
           <span>{{ commonStore.serverConfig.appVersion }}</span>
         </van-row>
 
@@ -198,7 +198,7 @@ function restart() {
 /* 版本号：跟随所在 van-field 行高，字号缩放时不再脱节 */
 .version-value {
   width: 100%;
-  min-height: calc(var(--van-font-size-md) * 2.2);
+  min-height: var(--app-control-height);
   cursor: pointer;
 }
 

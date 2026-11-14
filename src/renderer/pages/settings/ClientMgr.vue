@@ -12,7 +12,7 @@
       <van-grid :column-num="3" clickable>
         <van-grid-item v-for="item in clients" :key="item.uid" class="client-item" @click="showOpMenu(item)">
           <template #text>
-            <span class="single-line">{{ item.uid }}</span>
+            <span class="single-line truncate">{{ item.uid }}</span>
           </template>
           <template #icon>
             <van-icon class="iconfont icon-network-data"
@@ -123,8 +123,5 @@ function showOpMenu(client: ProxyMock.ClientInfo): void {
   color: var(--van-text-color);
   padding: var(--app-sp-tight);
   display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 </style>

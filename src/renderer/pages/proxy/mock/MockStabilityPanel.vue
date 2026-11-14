@@ -1,9 +1,9 @@
 <template>
-  <section class="stability-panel">
+  <section class="section-card stability-panel">
     <van-row tag="header" class="panel-head" align="center" justify="space-between" :wrap="false">
       <span class="panel-title">{{ $t('mock.stability.title') }}</span>
       <van-row class="head-side" align="center" :wrap="false">
-        <span v-if="lastAnalyzed !== ''" class="panel-stamp">{{ $t('mock.stability.lastAnalyzed', {
+        <span v-if="lastAnalyzed !== ''" class="panel-stamp hint">{{ $t('mock.stability.lastAnalyzed', {
           time: lastAnalyzed
         }) }}</span>
         <van-button size="mini" plain type="primary" :loading="analyzing" :disabled="!canAnalyze" @click="analyze">
@@ -16,7 +16,7 @@
       <van-row class="block-head" align="center" :wrap="false">
         <span class="sev sev-warn" />
         <span class="block-title">{{ $t('mock.stability.suggestions') }}</span>
-        <van-tag plain type="primary">{{ listSuggestions.length }}</van-tag>
+        <van-tag round>{{ listSuggestions.length }}</van-tag>
         <span class="head-spacer" />
         <span v-if="applicableSuggestions.length > 1" class="link-action" @click="applyAllSuggestions">
           {{ $t('mock.stability.applyAll') }}
@@ -28,8 +28,8 @@
           :wrap="false">
           <span class="sev" :class="item.evidence === 'E5' ? 'sev-info' : 'sev-warn'"
             :title="`${item.evidence} · ${reasonText(item)}`" />
-          <span class="key-name" :title="item.key">{{ item.key }}</span>
-          <span class="key-reason">
+          <span class="key-name mono truncate" :title="item.key">{{ item.key }}</span>
+          <span class="key-reason hint">
             {{ item.evidence === 'E5' ? $t('mock.stability.semanticKeep') : reasonText(item) }}
           </span>
           <span v-if="item.evidence !== 'E5'" class="link-action" @click="applySuggestion(item)">
@@ -46,7 +46,7 @@
         <span class="block-title">{{ $t('mock.stability.autoIgnored') }}</span>
         <van-tag plain type="primary">{{ ignoredKeys.length }}</van-tag>
       </van-row>
-      <div v-if="ignoredKeys.length === 0" class="panel-empty">{{ $t('mock.stability.noAutoIgnored') }}</div>
+      <div v-if="ignoredKeys.length === 0" class="panel-empty hint">{{ $t('mock.stability.noAutoIgnored') }}</div>
       <!-- 已忽略态用和「Query 匹配 › 忽略参数」同款的可关闭标签：同一份状态的同一副面孔，✕ 即撤销 -->
       <van-row v-else class="tag-list" align="center">
         <van-tag v-for="key in ignoredKeys" :key="key" closeable plain
@@ -62,8 +62,8 @@
       </van-row>
       <van-row class="path-row" align="center" :wrap="false">
         <div class="path-info">
-          <span class="path-value">{{ match.path }}</span>
-          <span v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original">
+          <span class="path-value mono">{{ match.path }}</span>
+          <span v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original hint">
             {{ $t('mock.match.pathParameterized', { original: match.pathOriginal, path: match.path }) }}
           </span>
         </div>
@@ -77,7 +77,7 @@
     </div>
 
     <p v-if="listSuggestions.length === 0 && ignoredKeys.length === 0 && !pathParameterized && pathSuggestion == null"
-      class="panel-empty">
+      class="panel-empty hint">
       {{ $t('mock.stability.empty') }}
     </p>
   </section>
@@ -217,20 +217,8 @@ async function showConfirm(message: string) {
 
 <style scoped>
 .stability-panel {
-  padding: var(--app-sp-lg);
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-lg);
-  background: var(--van-background-2);
+  /* 外框读 global.css 的 .section-card，这里只补面板自身的正文色（主题切换下必须显式取色） */
   color: var(--van-text-color);
-}
-
-/* 次要说明的一档（text-3 + sm）只写一次，各站点规则只留自己的排布 */
-.panel-stamp,
-.key-reason,
-.path-original,
-.panel-empty {
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 /* 分级靠图标本身，不写文字：DevTools Issues 用同一支圆点，靠颜色和字形区分待处理 / 只告知 / 已解决 */
@@ -325,7 +313,7 @@ async function showConfirm(message: string) {
 /* 行是平的：铺底色会把说明文字框成控件，这里只留一条发丝线，行高仍取上层 .match-tab 的控件高度 */
 .key-row {
   gap: var(--app-sp-md);
-  min-height: var(--match-control-height);
+  min-height: var(--app-control-height);
   border-bottom: 1px solid var(--van-border-color);
 }
 
@@ -360,10 +348,6 @@ async function showConfirm(message: string) {
 .key-name {
   flex: none;
   width: calc(var(--van-font-size-md) * 8);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
 }
 
@@ -372,16 +356,6 @@ async function showConfirm(message: string) {
   flex: 1 1 0;
   min-width: 0;
   line-height: calc(var(--van-font-size-sm) * 1.5);
-}
-
-.tag-list {
-  gap: var(--app-sp-md);
-  min-height: calc(var(--van-font-size-md) * 1.7);
-  margin-top: 5px;
-}
-
-.tag-list :deep(.van-tag) {
-  font-family: var(--app-mono-font);
 }
 
 .path-row {
@@ -395,7 +369,6 @@ async function showConfirm(message: string) {
 
 .path-value {
   display: block;
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
   word-break: break-all;
 }

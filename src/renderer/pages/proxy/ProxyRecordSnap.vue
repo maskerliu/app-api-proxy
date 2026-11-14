@@ -1,5 +1,5 @@
 <template>
-  <div class="record-snap" :class="{ 'is-selected': recordStore.curRecordId == source.id }"
+  <div class="list-row record-snap" :class="{ 'is-selected': recordStore.curRecordId == source.id }"
     @click="recordStore.curRecordId = source.id">
     <div class="snap-timeline">
       <div class="snap-timeline-dot"
@@ -8,7 +8,7 @@
     </div>
     <div class="snap-content">
       <div class="snap-url-row">
-        <div class="snap-url" :title="source.url">{{ source.url }}</div>
+        <div class="snap-url truncate" :title="source.url">{{ source.url }}</div>
         <div class="snap-arrow">
           <van-loading size="18" color="var(--van-primary-color)" v-if="showLoading" />
           <van-icon v-else name="arrow" size="18" color="var(--van-text-color-3)" />
@@ -20,7 +20,7 @@
           <span class="snap-io">↑{{ formatBytes(socket.bytesSent) }} ↓{{ formatBytes(socket.bytesReceived) }}</span>
           <span class="snap-time">{{ socketDuration }}</span>
           <van-tag v-if="socket.subprotocol" plain type="primary">{{ socket.subprotocol }}</van-tag>
-          <span v-if="socket.closeReason" class="snap-reason" :title="socket.closeReason">
+          <span v-if="socket.closeReason" class="snap-reason truncate" :title="socket.closeReason">
             {{ socket.closeReason }}
           </span>
           <span v-if="(socket.droppedFrames ?? 0) > 0" class="snap-dropped">
@@ -38,7 +38,7 @@
           </template>
         </template>
         <template v-else>
-          <van-tag :type="source.method == 'POST' ? 'success' : 'warning'" class="method-tag">
+          <van-tag :type="methodTagType(source.method)" class="method-square">
             {{ source.method?.charAt(0) ?? '?' }}
           </van-tag>
           <van-tag plain :type="source.statusCode === 200 ? 'success' : 'danger'">
@@ -67,6 +67,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ProxyRecordStore } from '../../store'
 import { formatBytes, formatElapsed } from '../../common/format'
+import { methodTagType } from '../../common/tag'
 
 const { t, te } = useI18n()
 
@@ -130,18 +131,12 @@ const recordStore = ProxyRecordStore()
   display: flex;
   align-items: flex-start;
   padding: var(--app-sp-xl) 0;
-  cursor: pointer;
   border-bottom: 1px solid var(--van-border-color);
   transition: background-color 0.2s;
 }
 
-.record-snap:hover {
-  background-color: var(--van-hover-color);
-}
-
-.record-snap.is-selected {
-  background-color: var(--van-active-color);
-}
+/* 选中态（淡主色底 + 左缘色条）与 hover 读 global.css 的 .list-row；
+   时间线那一列本身从 x=0 起笔，色条压在它的空沟道里，不碰圆点。 */
 
 .snap-timeline {
   position: relative;
@@ -191,9 +186,6 @@ const recordStore = ProxyRecordStore()
   min-width: 0;
   font-size: var(--van-font-size-md);
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   direction: ltr;
   text-align: left;
 }
@@ -241,9 +233,6 @@ const recordStore = ProxyRecordStore()
 
 .snap-reason {
   max-width: 120px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .snap-dropped {
@@ -253,18 +242,6 @@ const recordStore = ProxyRecordStore()
 .snap-error {
   color: var(--van-danger-color);
   font-weight: 500;
-}
-
-.method-tag {
-  font-weight: 700;
-  font-size: var(--app-method-square-font);
-  min-width: var(--app-method-square);
-  height: var(--app-method-square);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
 }
 
 .mock-icon {

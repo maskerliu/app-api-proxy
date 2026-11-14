@@ -8,13 +8,13 @@
         }}</van-radio>
       </van-radio-group>
     </van-row>
-    <p class="level-hint">{{ $t(`mock.match.levelHint.${currentLevel}`) }}</p>
+    <p class="level-hint hint">{{ $t(`mock.match.levelHint.${currentLevel}`) }}</p>
 
-    <van-row v-if="pending != null" class="level-preview" align="center" :wrap="false">
+    <van-row v-if="pending != null" class="section-card is-primary level-preview" align="center" :wrap="false">
       <div v-if="pending.reason === 'sourceMissing'" class="preview-warn">
         {{ $t('mock.match.sourceMissing') }}
       </div>
-      <div v-else-if="diffLines.length === 0" class="preview-empty">{{ $t('mock.match.diffEmpty') }}</div>
+      <div v-else-if="diffLines.length === 0" class="preview-empty hint">{{ $t('mock.match.diffEmpty') }}</div>
       <van-row v-else class="preview-tags">
         <span v-for="(line, idx) in diffLines" :key="idx" class="preview-tag">{{ line }}</span>
       </van-row>
@@ -26,7 +26,7 @@
       </van-row>
     </van-row>
 
-    <div class="section">
+    <div class="section-card">
       <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         {{ $t('mock.match.identity') }}
       </van-row>
@@ -47,7 +47,7 @@
         <van-field ref="pathField" class="path-input" v-model="match.path"
           :placeholder="$t('mock.match.pathPlaceholder')" @update:model-value="touch" />
       </van-row>
-      <van-row v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original" align="center"
+      <van-row v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original hint" align="center"
         :wrap="false">
         <span>{{ $t('mock.match.pathParameterized', { original: match.pathOriginal, path: match.path }) }}</span>
         <van-button size="mini" plain type="primary" class="restore-path" @click="restorePath">
@@ -56,7 +56,7 @@
       </van-row>
     </div>
 
-    <div ref="querySection" class="section">
+    <div ref="querySection" class="section-card">
       <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         <span>{{ $t('mock.match.queryMode') }}</span>
         <van-radio-group :model-value="match.query.mode" direction="horizontal" class="inline-radio"
@@ -70,6 +70,10 @@
         <van-row class="sub-head" align="center" :wrap="false">
           <span class="sub-title">{{ $t('mock.match.queryIgnoreKeys') }}</span>
           <van-tag round>{{ match.query.ignoreKeys.length }}</van-tag>
+          <van-field v-model="newIgnoreKey" class="add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
+            @keyup.enter="addIgnoreKey" />
+          <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
+            :disabled="newIgnoreKey.trim() === ''" @click="addIgnoreKey" />
         </van-row>
         <!-- 居中不是排版偏好：.tag-list 的 min-height 是空列表占位，换行 row 默认会把标签拉到那个高度 -->
         <van-row class="tag-list" align="center">
@@ -78,15 +82,9 @@
             :title="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
             {{ key }}
           </van-tag>
-          <span v-if="match.query.ignoreKeys.length === 0" class="empty-tip">
+          <span v-if="match.query.ignoreKeys.length === 0" class="empty-tip hint">
             {{ $t('mock.match.queryIgnoreEmpty') }}
           </span>
-        </van-row>
-        <van-row class="add-row" align="center" :wrap="false">
-          <van-field v-model="newIgnoreKey" class="add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
-            @keyup.enter="addIgnoreKey" />
-          <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
-            :disabled="newIgnoreKey.trim() === ''" @click="addIgnoreKey" />
         </van-row>
       </div>
 
@@ -94,7 +92,7 @@
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryAllowExtra') }}</span>
           <van-switch v-model="match.query.allowExtra" size="18px" @change="touch" />
-          <span class="row-hint switch-hint">{{ $t('mock.match.queryAllowExtraHint') }}</span>
+          <span class="switch-hint hint">{{ $t('mock.match.queryAllowExtraHint') }}</span>
         </van-row>
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryMultiValue') }}</span>
@@ -107,20 +105,22 @@
       </div>
     </div>
 
-    <div ref="conditionsSection" class="section">
+    <div ref="conditionsSection" class="section-card">
       <van-collapse v-model="expandedSections" :border="false" class="condition-collapse">
         <van-collapse-item :name="CONDITIONS_PANEL" :border="false">
           <template #title>
             <van-row class="collapse-title" align="center" :wrap="false">
               <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
               <van-tag round type="primary">{{ conditionRows.length }}</van-tag>
+              <!-- 置灰必须自己说明自己，否则看上去像控件坏了；折叠态也要看得到，所以写在标题行而不是面板内 -->
+              <span v-if="inertCount > 0" class="inert-hint hint truncate" :title="inertHintText">{{ inertHintText }}</span>
             </van-row>
           </template>
           <template #right-icon>
             <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
               :title="$t('mock.match.addCondition')" @click.stop="onAddCondition" />
           </template>
-          <div v-if="conditionRows.length === 0" class="empty-tip">{{ $t('mock.match.conditionEmpty') }}</div>
+          <div v-if="conditionRows.length === 0" class="empty-tip hint">{{ $t('mock.match.conditionEmpty') }}</div>
           <van-row v-for="(row, idx) in conditionRows" :key="idx" class="condition-row"
             :class="{ 'is-inert': row.inert }" align="center" :wrap="false">
             <mini-select :model-value="row.location" class="match-select location-select" :options="locationOptions"
@@ -134,15 +134,11 @@
             <van-field v-model="row.condition.value" class="condition-value" :disabled="!needsValue(row)"
               :placeholder="$t(needsValue(row) ? 'mock.match.conditionValue' : 'mock.match.conditionValueSkip')"
               @update:model-value="touch" />
-            <van-icon name="cross" class="row-delete" @click="removeRow(row)" />
+            <van-icon name="cross" class="icon-action row-delete" @click="removeRow(row)" />
           </van-row>
-          <!-- 置灰必须自己说明自己，否则看上去像控件坏了 -->
-          <div v-if="inertCount > 0" class="inert-hint">
-            {{ $t(inertHintKey, { count: inertCount }) }}
-          </div>
           <van-row v-if="querySuggestions.length > 0" class="suggest-row" align="center">
-            <span class="row-hint">{{ $t('mock.match.querySuggest') }}</span>
-            <van-tag v-for="item in querySuggestions" :key="item.key" type="primary" class="suggest-tag query-suggest"
+            <span class="hint">{{ $t('mock.match.querySuggest') }}</span>
+            <van-tag v-for="item in querySuggestions" :key="item.key" type="primary" class="suggest-tag query-suggest truncate"
               :title="`${item.key}=${item.value}`" @click="addQuerySuggestion(item)">
               {{ item.key }}={{ item.value }}
             </van-tag>
@@ -151,26 +147,26 @@
       </van-collapse>
     </div>
 
-    <div class="section">
+    <div class="section-card">
       <van-row class="switch-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.priority') }}</span>
         <van-switch :model-value="match.priority != null" size="18px" @update:model-value="togglePriority" />
         <van-field v-if="match.priority != null" ref="priorityField" v-model="priorityText" type="digit"
           class="priority-input" :placeholder="$t('mock.match.priorityHint')" />
-        <span v-else class="row-hint priority-hint">{{ $t('mock.match.priorityAuto') }}</span>
+        <span v-else class="priority-hint hint truncate">{{ $t('mock.match.priorityAuto') }}</span>
       </van-row>
     </div>
 
-    <div class="section">
+    <div class="section-card">
       <van-row class="switch-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.bodyLabel') }}</span>
-        <span class="row-hint">{{ $t('mock.match.bodyHint') }}</span>
+        <span class="hint">{{ $t('mock.match.bodyHint') }}</span>
       </van-row>
     </div>
 
     <mock-stability-panel :record="record" />
 
-    <div class="section test-section">
+    <div class="section-card test-section">
       <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         <span>{{ $t('mock.match.test') }}</span>
       </van-row>
@@ -185,7 +181,7 @@
           @click="seedTest" />
       </van-row>
       <div v-if="testError" class="test-error">{{ testError }}</div>
-      <div v-if="testHit != null" class="test-hit">
+      <div v-if="testHit != null" class="section-card is-success test-hit">
         <div class="test-hit-title">
           {{ $t('mock.match.testHit', {
             record: testHit.record?.name || testHit.record?.url || testHit.recordId,
@@ -206,8 +202,8 @@
             <van-tag round :type="condition.passed ? 'success' : 'danger'" class="explain-tag">
               {{ testHit.explain ? $t(`mock.miss.dim.${condition.dimension}`) : '' }}
             </van-tag>
-            <span class="explain-key">{{ condition.key }}</span>
-            <span class="explain-value">{{ condition.expected }}</span>
+            <span class="explain-key mono">{{ condition.key }}</span>
+            <span class="explain-value truncate">{{ condition.expected }}</span>
             <span v-if="condition.ignored" class="explain-ignored">{{ $t('mock.match.ignored') }}</span>
           </van-row>
         </div>
@@ -257,8 +253,8 @@ const conditionsSection = ref<HTMLElement>()
 const newIgnoreKey = ref('')
 // 折叠面板名：模板的 :name 与点「+」时的自动展开取同一个值，写两处必然漂移
 const CONDITIONS_PANEL = 'matchConditions'
-// 默认展开：条件表现在承担了「忽略档下也要看得见」的职责，收起就只剩一个数字
-const expandedSections = ref<string[]>([CONDITIONS_PANEL])
+// 默认折叠：折叠态也看得出条数与「几条不参与匹配」（说明已挪到标题行），面板只在选择档位后再点开
+const expandedSections = ref<string[]>([])
 const priorityText = ref('')
 const pending = ref<LevelPresetPreview>(null)
 const testing = ref(false)
@@ -287,9 +283,9 @@ const conditionRows = computed(() => conditionRowsOf(match.value))
 const needsValue = (row: ConditionRow) => operatorNeedsValue(row.condition.op)
 const inertCount = computed(() => conditionRows.value.filter(row => row.inert).length)
 // 忽略档下 testQuery 整段放行，置灰的是全部 Query 行，说「N 条」会被读成「其中几条」，两种成因各用一句
-const inertHintKey = computed(() => (match.value?.query?.mode === 'ignore'
+const inertHintText = computed(() => t(match.value?.query?.mode === 'ignore'
   ? 'mock.match.conditionsInertAllHint'
-  : 'mock.match.conditionsInertHint'))
+  : 'mock.match.conditionsInertHint', { count: inertCount.value }))
 const querySuggestions = computed(() => querySuggestionsOf(props.record, match.value))
 
 // 首次渲染就要有可编辑对象，否则模板读取 match.method 会报空
@@ -552,10 +548,10 @@ defineExpose({ focusField })
 
 <style scoped>
 .match-tab {
-  /* 控件尺寸统一由字号推导：md 13px 时 28px 高，与改动前的固定值一致 */
-  --match-control-height: calc(var(--van-font-size-md) * 2.2);
+  /* 控件高度读全局 --app-control-height（原先这里另起一个同值别名，子面板要跨文件继承它）；
+     只留本 tab 自己的密排内边距档 */
   --match-control-padding-y: calc(var(--van-font-size-md) * 0.3);
-  --mini-select-bar-height: var(--match-control-height);
+  --mini-select-bar-height: var(--app-control-height);
   display: flex;
   flex-direction: column;
   gap: var(--app-sp-lg);
@@ -564,21 +560,10 @@ defineExpose({ focusField })
 
 /* mini 按钮默认继承 xs，表单里统一提到 sm，高度也随字号一起变化 */
 .match-tab :deep(.van-button--mini) {
-  height: var(--match-control-height);
+  height: var(--app-control-height);
   padding: 0 var(--match-control-padding-y);
   font-size: var(--van-font-size-sm);
   box-sizing: border-box;
-}
-
-/* 次要说明的一档（text-3 + sm）只写一次，各站点的规则只留自己的排布 */
-.row-hint,
-.level-hint,
-.empty-tip,
-.preview-empty,
-.inert-hint,
-.path-original {
-  color: var(--van-text-color-3);
-  font-size: var(--van-font-size-sm);
 }
 
 /* 区块小标题与行标签共用同一档正文（text-2 + md），列宽由 .row-label 自己补 */
@@ -606,10 +591,8 @@ defineExpose({ focusField })
 
 .level-preview {
   gap: var(--app-sp-md);
+  /* 外框、圆角、底色读 global.css 的 .section-card + is-primary；这里只留这一块的密排内边距 */
   padding: var(--app-sp-sm) var(--app-sp-md);
-  border: 1px solid var(--van-primary-color);
-  border-radius: var(--van-radius-lg);
-  background: color-mix(in srgb, var(--van-primary-color) 6%, transparent);
 }
 
 .preview-warn {
@@ -639,13 +622,6 @@ defineExpose({ focusField })
 .preview-actions {
   gap: var(--app-sp-xs);
   flex-shrink: 0;
-}
-
-.section {
-  padding: var(--app-sp-lg);
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-lg);
-  background: var(--van-background-2);
 }
 
 .section-title {
@@ -678,12 +654,22 @@ defineExpose({ focusField })
 .add-input {
   flex: 1 1 auto;
   min-width: 0;
-  height: var(--match-control-height);
+  height: var(--app-control-height);
   padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
   background: var(--van-background-2);
   box-sizing: border-box;
+}
+
+/* 忽略参数的输入框不再吃满整行：宽度取下方条件表「参数名」列那一档（26% 列宽在 md*11 上下），
+   与 + 一起用 margin-left:auto 贴到行末，空出来的宽度留给标题。
+   让位的仍是它自己：地板留 6 个字符，压到地板由输入框裁切，不像 Host/Path 那样缩到 0 把整行顶出面板。 */
+.add-input {
+  flex: 0 1 auto;
+  width: calc(var(--van-font-size-md) * 11);
+  min-width: calc(var(--van-font-size-md) * 6);
+  margin-left: auto;
 }
 
 .match-field::after,
@@ -707,7 +693,7 @@ defineExpose({ focusField })
 .match-field :deep(.van-field__control),
 .path-input :deep(.van-field__control),
 .add-input :deep(.van-field__control) {
-  height: var(--match-control-height);
+  height: var(--app-control-height);
 }
 
 .match-select {
@@ -759,11 +745,18 @@ defineExpose({ focusField })
   margin-bottom: var(--app-sp-sm);
 }
 
+/* 小标题只负责说明，不参与让位：中文没有词边界，不锁收缩会被压成一字一行。
+   同一行里输入框（.add-input）与计数标签各自定尺寸，挤的时候先缩输入框。
+   折叠面板的「匹配条件」标题同款，那一行的右侧只剩 + 按钮。 */
+.sub-title {
+  flex: none;
+}
+
 /* 匹配条件用折叠面板，标题行贴合区块样式，内容区不额外缩进 */
 /* 标题行按控件那一档定高：Vant 的 24px 单元格行高是死值，不随字号走，且右侧 + 按钮本来就把行撑到等高 */
 .condition-collapse :deep(.van-collapse-item > .van-cell) {
   padding: 0;
-  line-height: var(--match-control-height);
+  line-height: var(--app-control-height);
 }
 
 .condition-collapse :deep(.van-collapse-item__content) {
@@ -779,21 +772,6 @@ defineExpose({ focusField })
   gap: var(--app-sp-md);
 }
 
-.tag-list {
-  gap: var(--app-sp-md);
-  min-height: calc(var(--van-font-size-md) * 1.7);
-  margin-top: 5px;
-}
-
-.tag-list :deep(.van-tag) {
-  font-family: var(--app-mono-font);
-}
-
-.add-row {
-  gap: var(--app-sp-md);
-  margin-top: var(--app-sp-sm);
-}
-
 .empty-tip {
   padding: var(--app-sp-xs) 0;
 }
@@ -807,7 +785,7 @@ defineExpose({ focusField })
   /* 多了一列位置，键名列要能让位：地板按「参数名」三个字留，压到地板由输入自身裁切 */
   flex: 0 1 26%;
   min-width: calc(var(--van-font-size-md) * 5);
-  height: var(--match-control-height);
+  height: var(--app-control-height);
   padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
@@ -828,7 +806,7 @@ defineExpose({ focusField })
 }
 
 .condition-key :deep(.van-field__control) {
-  height: var(--match-control-height);
+  height: var(--app-control-height);
 }
 
 /* 位置列只装 Query / Header 两个词，宽度按较长的那个留 */
@@ -846,7 +824,7 @@ defineExpose({ focusField })
      把同行的键名列（0 1 26%）压掉一半。0 基准＝只吃余量，键名列才拿得到设计里那 26%。 */
   flex: 1 1 0;
   min-width: 0;
-  height: var(--match-control-height);
+  height: var(--app-control-height);
   padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
@@ -867,7 +845,7 @@ defineExpose({ focusField })
 }
 
 .condition-value :deep(.van-field__control) {
-  height: var(--match-control-height);
+  height: var(--app-control-height);
 }
 
 /* 无值运算符（存在/不存在）下值列整格改虚线：Vant 的禁用只灰文本（--van-field-input-disabled-text-color），
@@ -876,15 +854,15 @@ defineExpose({ focusField })
   border-style: dashed;
 }
 
-/* 删除图标收成与同行控件等高的方格：Vant 图标自带 line-height:1，靠行高而不是内边距居中 */
+/* 删除格与同行控件等高：定边长留在站点，圆角与 hover 底色读 global.css 的 .icon-action。
+   Vant 图标自带 line-height:1，靠行高而不是内边距居中，所以这里把公共内边距压回 0，方格才不会被撑大。 */
 .row-delete {
-  flex: none;
-  width: var(--match-control-height);
-  height: var(--match-control-height);
-  line-height: var(--match-control-height);
+  padding: 0;
+  width: var(--app-control-height);
+  height: var(--app-control-height);
+  line-height: var(--app-control-height);
   text-align: center;
   color: var(--van-danger-color);
-  cursor: pointer;
 }
 
 .is-inert {
@@ -892,8 +870,12 @@ defineExpose({ focusField })
   opacity: 0.55;
 }
 
+/* 标题行里紧跟计数 tag：单行不换行，宽度不够由说明自己省略，完整句子留在 title 上。
+   min-width:0 是让位链的关键——不写它，这条文字的 min-content 会顶着 Vant 单元格的标题列，
+   把右侧的 + 按钮挤出面板。 */
 .inert-hint {
-  margin-top: var(--app-sp-xs);
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .switch-row {
@@ -901,7 +883,14 @@ defineExpose({ focusField })
   padding: var(--app-sp-xs) 0;
   /* 标签行一律占满控件那一档高度：开关与输入框切换时行高不变，纯文字行（Body）也和带控件的行同节奏。
      内容盒 28.6 + 上下内边距 2.6×2 = 33.8，与带输入框的行实测等高 */
-  min-height: var(--match-control-height);
+  min-height: var(--app-control-height);
+}
+
+/* 独立成卡的标签行（手动优先级 / Body）不自己加上下沟道：卡片本身已有 .section-card 的 lg 内边距，
+   去掉后行高回到控件那一档，正好与折叠面板的标题行等高。区块内相邻的两行（允许多余参数 / 多值语义）
+   仍走上面的间距，否则两行会贴在一起。 */
+.section-card > .switch-row {
+  padding: 0;
 }
 
 /* 说明与开关同行排，空间不够时折的是说明自己，不能把开关挤扁 */
@@ -924,14 +913,11 @@ defineExpose({ focusField })
 }
 
 .priority-input :deep(.van-field__control) {
-  height: var(--match-control-height);
+  height: var(--app-control-height);
 }
 
 .priority-hint {
-  overflow: hidden;
-  line-height: var(--match-control-height);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: var(--app-control-height);
 }
 
 .suggest-row {
@@ -948,9 +934,6 @@ defineExpose({ focusField })
 .query-suggest {
   display: inline-block;
   max-width: calc(var(--van-font-size-md) * 13);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   vertical-align: middle;
 }
 
@@ -961,7 +944,7 @@ defineExpose({ focusField })
 .test-url {
   flex: 1 1 calc(var(--van-font-size-md) * 15.4);
   min-width: 0;
-  height: var(--match-control-height);
+  height: var(--app-control-height);
   padding: 0 var(--app-sp-lg);
   border: 1px solid var(--van-border-color);
   border-radius: var(--van-radius-md);
@@ -982,7 +965,7 @@ defineExpose({ focusField })
 }
 
 .test-url :deep(.van-field__control) {
-  height: var(--match-control-height);
+  height: var(--app-control-height);
 }
 
 .test-error {
@@ -992,11 +975,8 @@ defineExpose({ focusField })
 }
 
 .test-hit {
+  /* 描边、底色、内边距读 global.css 的 .section-card + is-success，这里只留它与上方表单的间距 */
   margin-top: var(--app-sp-lg);
-  padding: var(--app-sp-lg);
-  border: 1px solid var(--van-success-color);
-  border-radius: var(--van-radius-lg);
-  background: color-mix(in srgb, var(--van-success-color) 6%, transparent);
 }
 
 .test-hit-title {
@@ -1029,14 +1009,10 @@ defineExpose({ focusField })
 
 .explain-key {
   flex: none;
-  font-family: var(--app-mono-font);
 }
 
 .explain-value {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--van-text-color-2);
 }
 

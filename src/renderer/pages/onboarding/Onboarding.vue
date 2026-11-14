@@ -46,7 +46,7 @@
               {{ $t('onboarding.service.copy') }}
             </van-button>
           </van-row>
-          <div class="proxy-address">{{ proxyBaseUrl || '--' }}</div>
+          <div class="proxy-address mono">{{ proxyBaseUrl || '--' }}</div>
         </div>
 
         <!-- 2. 接入客户端 -->
@@ -63,7 +63,7 @@
               <qrcode-vue v-if="commonStore.registerUrl" :value="commonStore.registerUrl" :size="180" :margin="1"
                 level="Q" gradient gradient-type="linear" gradient-start-color="#4338ca"
                 gradient-end-color="#0f766e" />
-              <div class="register-url" @click="copyText(commonStore.registerUrl, $t('common.copy'))">
+              <div class="register-url mono" @click="copyText(commonStore.registerUrl, $t('common.copy'))">
                 {{ commonStore.registerUrl || $t('onboarding.client.waitingUid') }}
               </div>
             </div>
@@ -111,7 +111,7 @@
           <div v-if="latestRequest" class="latest-request">
             <van-row class="latest-line" align="center" :wrap="false">
               <van-tag type="success">{{ latestRequest.method }}</van-tag>
-              <span class="latest-url">{{ latestRequest.url }}</span>
+              <span class="latest-url mono">{{ latestRequest.url }}</span>
             </van-row>
             <van-row class="latest-meta" align="center">
               <span>{{ latestRequest.host || '--' }}</span>
@@ -139,7 +139,7 @@
             <van-button plain type="primary" size="small" :loading="healthLoading" @click="refreshHealth(true)">
               {{ $t('onboarding.verify.refresh') }}
             </van-button>
-            <span v-if="!received" class="poll-tip">{{ $t('onboarding.verify.waiting') }}</span>
+            <span v-if="!received" class="hint">{{ $t('onboarding.verify.waiting') }}</span>
           </van-row>
         </div>
 
@@ -158,7 +158,7 @@
               placeholder="/api/demo" :disabled="mockCreated" />
           </van-cell-group>
           <div class="body-label">{{ $t('onboarding.mock.body') }}</div>
-          <textarea v-model="responseBody" class="json-editor" spellcheck="false" :disabled="mockCreated"></textarea>
+          <textarea v-model="responseBody" class="json-editor mono" spellcheck="false" :disabled="mockCreated"></textarea>
 
           <van-row class="step-actions" align="center" :wrap="false">
             <van-button type="primary" size="small" :loading="creating" :disabled="mockCreated" @click="createMock">
@@ -417,7 +417,6 @@ async function finish() {
   padding: var(--app-sp-lg) var(--app-sp-xl);
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-2);
-  font-family: var(--app-mono-font);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
   cursor: pointer;
@@ -547,7 +546,6 @@ pre.snippet {
 }
 
 .latest-url {
-  font-family: var(--app-mono-font);
   word-break: break-all;
 }
 
@@ -555,11 +553,6 @@ pre.snippet {
   gap: var(--app-sp-2xl);
   margin-top: var(--app-sp-md);
   color: var(--van-text-color-2);
-  font-size: var(--van-font-size-sm);
-}
-
-.poll-tip {
-  color: var(--van-text-color-3);
   font-size: var(--van-font-size-sm);
 }
 
@@ -579,7 +572,6 @@ pre.snippet {
   border-radius: var(--app-radius-md);
   background-color: var(--van-gray-1);
   color: var(--van-text-color);
-  font-family: var(--app-mono-font);
   /* 与所在页其他正文同级，不再用全站最小的 xs */
   font-size: var(--van-font-size-sm);
   line-height: 1.6;

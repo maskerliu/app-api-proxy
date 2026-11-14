@@ -54,8 +54,8 @@ const BASE_THEME_VARS: ConfigProviderThemeVars = {
   radiusMd: '8px',
   dialogRadius: '8px',
   floatingBubbleBackground: '#f04b1e',
-  // 导航条高度对齐全站控件基准 md*2.2；标签文字行高按它自己的字号（设置值 + 5）
-  tabsLineHeight: 'calc(var(--van-font-size-md) * 2.2)',
+  // 导航条高度与全站控件基准同一处定义；标签文字行高按它自己的字号（设置值 + 5）
+  tabsLineHeight: 'var(--app-control-height)',
   tabLineHeight: 'calc(var(--van-tab-font-size) * 1.4)',
 }
 

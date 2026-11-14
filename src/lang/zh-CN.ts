@@ -338,7 +338,7 @@ export default {
         suggestion: '建议忽略',
         manual: '手动添加'
       },
-      addKeyPlaceholder: '输入参数名后回车',
+      addKeyPlaceholder: '参数名，回车添加',
       conditions: '匹配条件',
       addCondition: '添加匹配条件（Query 或 Header）',
       conditionEmpty: '暂无条件',
@@ -353,7 +353,7 @@ export default {
       conditionsInertAllHint: 'Query 档位设为忽略，本规则不检查任何 Query 参数。',
       querySuggest: '录制请求里的 Query：',
       queryAllowExtra: '允许额外 Query 参数',
-      queryAllowExtraHint: '关闭后，出现未声明的 Query 参数即判定为未命中。',
+      queryAllowExtraHint: '关闭后，额外参数视为未命中',
       queryMultiValue: '多值语义',
       multiAny: '任一匹配',
       multiAll: '全部匹配',

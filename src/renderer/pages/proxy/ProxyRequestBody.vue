@@ -15,7 +15,7 @@
         </div>
       </div>
     </OverlayScrollbarsComponent>
-    <div v-else class="body-text">{{ activeView?.content }}</div>
+    <div v-else class="body-text mono">{{ activeView?.content }}</div>
   </div>
 </template>
 
@@ -158,7 +158,6 @@ const activeView = computed(() => views.value.find(it => it.name == active.value
 }
 
 .body-text {
-  font-family: var(--app-mono-font);
   white-space: pre-wrap;
   word-break: break-all;
   text-align: left;
