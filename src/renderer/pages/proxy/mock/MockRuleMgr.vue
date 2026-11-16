@@ -48,7 +48,7 @@
             <van-row class="rule-head-title" align="center" :wrap="false">
               <span class="rule-head-name truncate">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
               <van-tag v-if="curRule._id != null" class="rule-state-tag" plain
-                :type="curRule.isMock ? 'success' : 'warning'" :title="mockStateTip">
+                :type="curRule.isMock ? 'success' : 'warning'" v-tip="mockStateTip">
                 {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
               </van-tag>
             </van-row>
@@ -75,7 +75,7 @@
             </div>
           </template>
           <template #right-icon>
-            <van-row class="rule-mock-switch" :title="mockStateTip" align="center" :wrap="false">
+            <van-row class="rule-mock-switch" v-tip="mockStateTip" align="center" :wrap="false">
               <span class="rule-mock-switch-label">{{ $t('mock.rule.mockLabel') }}</span>
               <van-switch v-model="curRule.isMock" @change="onMockSwitchChanged(curRule)"
                 :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
@@ -92,7 +92,7 @@
             :disabled="curRule._id == null" @click="addRecord"></van-button>
         </van-row>
         <van-row class="record-filter" align="center" :wrap="false">
-          <van-field v-model="recordKeyword" class="record-field" clearable
+          <van-field v-model="recordKeyword" class="control-field record-field" clearable
             :placeholder="$t('mock.list.searchPlaceholder')">
             <template #left-icon>
               <van-icon name="search" size="var(--van-font-size-md)" />
@@ -140,34 +140,33 @@
               <template #title>
                 <div class="record-line">
                   <van-tag v-if="row.summary" :type="methodTagType(row.summary.method)" class="method-square"
-                    :title="row.summary.method">
+                    v-tip="row.summary.method">
                     {{ row.summary.method.charAt(0) }}
                   </van-tag>
-                  <span class="record-title truncate" :class="{ 'record-title--scroll': row.record.id === curRecordId }"
-                    :title="row.titleHint">
+                  <span class="record-title truncate" v-tip="row.titleHint">
                     <span class="record-title-text truncate">{{ row.title }}</span>
                   </span>
                 </div>
               </template>
               <template #label>
                 <div class="record-line record-line--meta">
-                  <span v-if="row.subPath" class="record-path mono truncate" :title="row.subPath">{{ row.subPath }}</span>
-                  <span v-if="row.active" class="record-meta record-meta--active">
-                    {{ $t('mock.editor.active') }}
+                  <span v-if="row.servesVariant" class="record-meta truncate"
+                    v-tip="$t('mock.editor.servesVariantHint', { name: row.servingVariantName || $t('mock.editor.variantName') })">
+                    {{ $t(row.servingLabelKey, { name: row.servingVariantName }) }}
                   </span>
                   <van-tag v-if="row.warning" plain :type="warningTagType(row.warning.type)" class="record-warn"
-                    :title="warningTitle(row.record)">
+                    v-tip="warningTitle(row.record)">
                     <van-icon name="warning-o" />
                     {{ $t(warningLabelKey(row.warning.type)) }}
                     <template v-if="row.warningExtra > 0">+{{ row.warningExtra }}</template>
                   </van-tag>
                   <span class="record-status-group">
                     <van-tag v-if="row.summary" plain :type="levelTagType(row.summary.level)" class="record-level"
-                      :title="$t(`mock.match.levelHint.${row.summary.level}`)">
+                      v-tip="$t(`mock.match.levelHint.${row.summary.level}`)">
                       {{ $t(`mock.match.level.${row.summary.level}`) }}
                     </van-tag>
                     <van-tag plain :type="row.statusOk ? 'success' : 'danger'" class="record-status mono"
-                      :title="`HTTP ${row.statusCode}`">
+                      v-tip="`HTTP ${row.statusCode}`">
                       {{ row.statusCode }}
                     </van-tag>
                   </span>
@@ -919,24 +918,17 @@ async function onRecordDeleteConfirm() {
 .record-filter {
   gap: var(--app-sp-md);
   padding: 0 var(--app-sp-xl) var(--app-sp-sm);
-  /* 搜索框与筛选下拉共享同一行高，字号切换时始终对齐 */
-  --record-row-h: calc(var(--van-font-size-md) * 2.3);
+  /* 搜索框与筛选下拉共享同一行高，字号切换时始终对齐。
+     行高直接取全局控件高度：搜索框的外观已经并进 global.css 的 .control-field，
+     再在这里留一档 md*2.3 就会和下拉差出 1.3px。 */
+  --record-row-h: var(--app-control-height);
 }
 
+/* 下划线、定高、左右内边距全在 .control-field，这里只剩这一行自己的排版。 */
 .record-field {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  padding: 0;
-  height: var(--record-row-h);
-  --van-field-input-height: var(--record-row-h);
-  --van-cell-vertical-padding: 0;
-  --van-cell-padding: calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 0.6);
-}
-
-.record-field :deep(.van-cell) {
-  padding: var(--van-cell-padding);
-  height: var(--record-row-h);
 }
 
 .record-field :deep(.van-field__left-icon) {
@@ -1032,33 +1024,6 @@ async function onRecordDeleteConfirm() {
   display: inline-block;
   max-width: 100%;
   vertical-align: bottom;
-  /* 仅选中行滚动：取消选中后立即回到默认省略状态 */
-  transform: none;
-  animation: none;
-}
-
-/* 选中行的记录名在可视宽度内来回滚动，长路径无需悬停即可看全 */
-.record-title--scroll {
-  container-type: inline-size;
-}
-
-.record-title--scroll .record-title-text {
-  max-width: none;
-  padding-right: calc(var(--record-line-font) * 0.9);
-  animation: record-title-marquee 5s ease-in-out infinite alternate;
-}
-
-@keyframes record-title-marquee {
-
-  0%,
-  12% {
-    transform: translateX(0);
-  }
-
-  88%,
-  100% {
-    transform: translateX(min(0px, calc(-100% + 100cqw)));
-  }
 }
 
 .record-path {
@@ -1067,13 +1032,14 @@ async function onRecordDeleteConfirm() {
   color: var(--van-text-color-3);
 }
 
+/* 徽标带变体名，允许收缩截断（nowrap/ellipsis 走全局 .truncate），上限用 em 跟着本行字号缩放。
+   变体应答是「返回哪份响应」的属性而不是开关状态，所以不跟规则的启用一样用绿色，
+   否则同一行里绿字既表示启用又表示选过变体，读不出区别。 */
 .record-meta {
-  flex: none;
-  white-space: nowrap;
-}
-
-.record-meta--active {
-  color: var(--van-success-color);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 10em;
+  color: var(--van-text-color-2);
 }
 
 /* 告警只显示第一条，其余折叠成 +N，完整说明放在 title 里 */
@@ -1242,14 +1208,6 @@ async function onRecordDeleteConfirm() {
   color: var(--van-danger-color);
 }
 
-.rule-mgr-cell-value {
-  display: flex !important;
-  align-items: center;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  flex: none !important;
-}
-
 .rule-head-actions {
   display: inline-flex;
   align-items: center;
@@ -1297,17 +1255,22 @@ async function onRecordDeleteConfirm() {
   width: 100%;
 }
 
-/* 阈值由右侧编辑区最宽的那一行反推，不是拍的：变体行（名称 + 状态码 + 延迟 + 生效开关 + 两个图标按钮）
-   的地板 = 5.5 + 7 + 7 + 1.5 + 2.2×2 + 0.5×5 = 27.9md，再加 Vant 写死的相邻 mini 按钮 margin 4px；
-   这一列自身还要扣 editor-col 的 2×0.4md、tab 面板的 2×0.3md 与 scrollbar-gutter 预留的 4px。
-   并排时记录列取 38%（它的 300px 地板要到主体 789px 以上才接管，字号 10 那档是 847px，窄的这一侧都只在 38% 段里），
-   编辑器拿 62%，于是主体需要 ≥ (29.3md + 8px) / 0.62 = 47.3md + 12.9px，字号 7~10 落在 533~675px。
-   取 50em（550~700px）留 17~26px 余量。
-   原先写死的 720px 视口（= 主体 576px）按这套算法只有字号 7 那一档还留有余量：字号 8 差 4px、字号 9 要 ~785px、
-   字号 10 要 ~845px。中间那段窗口「已经不算窄、但行放不下」，表现为变体 tab 里右侧两个按钮被顶出编辑列
-   加面板内横向滚动。
-   Onboarding 的 720px 不跟着改：那是真正的视口分栏，量的是窗口，不是这个 80vw 抽屉的自身宽度。 */
-@container mgr (max-width: 50em) {
+/* 阈值由右侧编辑区最宽的那一行反推，不是拍的。今天这一行是响应表单的响应体头部：
+   「响应体」+ JSON/XML/TEXT/BINARY 四枚单选 + 体积数字 + 两枚工具按钮，两头都不许折行
+   （见 MockResponseForm 的 .section-head 与 .body-type），所以它排不开时只能靠分栏来救。
+   整行固有宽（字号 7~10 = md 11~14）：中文 335.7 / 365.4 / 395.2 / 425.0px，英文 380.3 / 414.2 / 448.0 / 481.9px；
+   这一版把行内密度收了（单选右边距 sp-xl→sp-md、头部 gap sp-lg→sp-md）并去掉「体积：」前缀，数字只剩 '1.2 KB' 那一量级。
+   再扣编辑器列自身的 3.2md + 2px（editor-col 2×0.4md、tab 面板 2×0.3md、response-form 2×0.3md、卡片 2×0.6md 加描边）、
+   并排记录列 min(max(300px, 23md), 38%)（两个分支都算取较严的），另留 12px 建模余量，换算成容器宽：
+     整行完整——中文最坏 56.4em，英文最坏 63.0em（数字宽到 '123.5 KB' 则 64.4em）；
+     只保标题+单选+按钮、数字让位——最坏 59.0em。
+   取 63em：中文无论字号与数字宽窄都整行完整；英文数字在 3sm 那一量级时全字号完整，宽一档则字号 7~8 会把数字省略号掉约 8px，
+   单选组最多让出末枚那 0.5md 的尾边距（是空白不是字形，看不出来）——先缩数字而不是先裁单选，靠的是 .body-size 的 shrink 20。
+   窗口门槛：字号 9 时并排保到约 1024px，上一版 68em 是约 1105px；再低到 59em 才轮到单选自己挨裁。
+   方法账也要记一笔：上一版那组 411.5~539.1 出自一个复刻页没带上 scoped 属性（:deep 规则整条没生效、单选标签按 md 而非 sm 排）的测量，
+   整行高估约 20px、阈值跟着抬了 5em。这次是 dist 里抽出的真 scoped CSS + Vant 组件 SSR 出来的真 markup，在 Chromium 里直接量。
+   原先的 50em 只保证变体行（29.3md + 8px）排得开。Onboarding 的 720px 不跟着改：那量的是窗口，不是这个 80vw 抽屉的自身宽度。 */
+@container mgr (max-width: 63em) {
   .mgr-body {
     flex-direction: column;
   }

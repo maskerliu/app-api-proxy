@@ -27,8 +27,8 @@
         <van-row v-for="item in listSuggestions" :key="`${item.evidence}-${item.key}`" class="key-row" align="center"
           :wrap="false">
           <span class="sev" :class="item.evidence === 'E5' ? 'sev-info' : 'sev-warn'"
-            :title="`${item.evidence} · ${reasonText(item)}`" />
-          <span class="key-name mono truncate" :title="item.key">{{ item.key }}</span>
+            v-tip="`${item.evidence} · ${reasonText(item)}`" />
+          <span class="key-name mono truncate" v-tip="item.key">{{ item.key }}</span>
           <span class="key-reason hint">
             {{ item.evidence === 'E5' ? $t('mock.stability.semanticKeep') : reasonText(item) }}
           </span>
@@ -50,7 +50,7 @@
       <!-- 已忽略态用和「Query 匹配 › 忽略参数」同款的可关闭标签：同一份状态的同一副面孔，✕ 即撤销 -->
       <van-row v-else class="tag-list" align="center">
         <van-tag v-for="key in ignoredKeys" :key="key" closeable plain
-          :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" :title="ignoreTitle(key)"
+          :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" v-tip="ignoreTitle(key)"
           @close="undoIgnore(key)">{{ key }}</van-tag>
       </van-row>
     </div>

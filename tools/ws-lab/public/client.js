@@ -28,10 +28,9 @@ const els = {
   statOut: document.getElementById('statOut'),
   statBytes: document.getElementById('statBytes'),
   statUptime: document.getElementById('statUptime'),
-  sendText: document.getElementById('sendText'),
-  sendTextBtn: document.getElementById('sendTextBtn'),
-  sendBinary: document.getElementById('sendBinary'),
-  sendBinaryBtn: document.getElementById('sendBinaryBtn'),
+  sendTypeSeg: document.getElementById('sendTypeSeg'),
+  sendData: document.getElementById('sendData'),
+  sendBtn: document.getElementById('sendBtn'),
   toast: document.getElementById('toast'),
 }
 
@@ -41,6 +40,7 @@ let reconnectTimer = null
 let reconnectDelay = RECONNECT_BASE
 let openedAt = null
 let currentFilter = 'all'
+let sendType = 'text'
 let stats = { inCount: 0, outCount: 0, bytes: 0 }
 let toastTimer = null
 
@@ -177,8 +177,7 @@ function setState(next) {
   els.connectBtn.disabled = busy
   els.disconnectBtn.disabled = !busy
   els.connectBtn.textContent = next === 'connecting' ? '连接中…' : '连接'
-  els.sendTextBtn.disabled = next !== 'open'
-  els.sendBinaryBtn.disabled = next !== 'open'
+  els.sendBtn.disabled = next !== 'open'
 }
 
 /* ---------- messages ---------- */
@@ -422,36 +421,31 @@ function fromBase64(text) {
 
 /* ---------- send ---------- */
 
-function sendText() {
+function sendPayload() {
   if (ws == null || ws.readyState !== WebSocket.OPEN) {
     toast('连接未建立', 'error')
     return
   }
-  const text = els.sendText.value
-  ws.send(text)
-  const size = new TextEncoder().encode(text).length
-  stats.outCount += 1
-  stats.bytes += size
-  appendMessage('out', 'text', prettyText(text), `${size} B`)
-  renderStats()
-}
-
-function sendBinary() {
-  if (ws == null || ws.readyState !== WebSocket.OPEN) {
-    toast('连接未建立', 'error')
-    return
+  if (sendType === 'binary') {
+    let bytes
+    try {
+      bytes = fromBase64(els.sendData.value)
+    } catch (err) {
+      toast('Base64 格式不正确', 'error')
+      return
+    }
+    ws.send(bytes)
+    stats.outCount += 1
+    stats.bytes += bytes.length
+    appendMessage('out', 'binary', `[${bytes.length} bytes]\n${els.sendData.value.trim()}`, `${bytes.length} B`)
+  } else {
+    const text = els.sendData.value
+    ws.send(text)
+    const size = new TextEncoder().encode(text).length
+    stats.outCount += 1
+    stats.bytes += size
+    appendMessage('out', 'text', prettyText(text), `${size} B`)
   }
-  let bytes
-  try {
-    bytes = fromBase64(els.sendBinary.value)
-  } catch (err) {
-    toast('Base64 格式不正确', 'error')
-    return
-  }
-  ws.send(bytes)
-  stats.outCount += 1
-  stats.bytes += bytes.length
-  appendMessage('out', 'binary', `[${bytes.length} bytes]\n${els.sendBinary.value.trim()}`, `${bytes.length} B`)
   renderStats()
 }
 
@@ -485,13 +479,21 @@ els.search.addEventListener('input', applyFilter)
 
 els.connectBtn.addEventListener('click', connect)
 els.disconnectBtn.addEventListener('click', disconnect)
-els.sendTextBtn.addEventListener('click', sendText)
-els.sendBinaryBtn.addEventListener('click', sendBinary)
+els.sendTypeSeg.addEventListener('click', (event) => {
+  const button = event.target.closest('.seg-btn')
+  if (button == null) return
+  els.sendTypeSeg.querySelectorAll('.seg-btn').forEach(it => it.classList.remove('active'))
+  button.classList.add('active')
+  sendType = button.dataset.type
+  els.sendData.placeholder = sendType === 'binary' ? 'AQIDBA==（Base64）' : '{"event":"ping"}'
+})
 
-els.sendText.addEventListener('keydown', (event) => {
+els.sendBtn.addEventListener('click', sendPayload)
+
+els.sendData.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
     event.preventDefault()
-    sendText()
+    sendPayload()
   }
 })
 

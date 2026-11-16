@@ -38,8 +38,10 @@ export const MOCK_SERVER_CODES = [
 ] as const
 
 /** 冲突与未实现：UI 要单独分流，不能混进校验提示 */
+// saveConflict 的文案由调用方按 kind==='conflict' 自取（乐观锁三选项弹窗），不进 mock.editor.validation 码表
 export const MOCK_CONFLICT_CODES = [
   'matchDuplicate',
+  'saveConflict',
   'notImplemented',
 ] as const
 

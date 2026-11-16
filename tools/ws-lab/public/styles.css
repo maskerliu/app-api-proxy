@@ -112,6 +112,10 @@ a {
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 400px);
 }
 
+.client-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+}
+
 .stack {
   display: flex;
   flex-direction: column;
@@ -123,10 +127,77 @@ a {
   grid-column: 1 / -1;
 }
 
+/* 客户端页与推送控制台共用：卡片吃掉剩余高度，滚动只发生在消息列表/表格/日志内部，页面本身不滚 */
+@media (min-width: 961px) {
+  body.page-fill {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  body.page-fill .topbar {
+    position: static;
+    flex: none;
+  }
+
+  body.page-fill .layout {
+    max-width: none;
+    margin: 0;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  body.page-fill .stack {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  body.page-fill .card-fill {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 260px;
+  }
+
+  body.page-fill .card-fill .card-head,
+  body.page-fill .card-fill .hint {
+    flex: none;
+  }
+
+  body.page-fill .card-fill .messages,
+  body.page-fill .card-fill .table-wrap,
+  body.page-fill .card-fill .logs {
+    flex: 1 1 auto;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  body.page-fill .card-fill .hint {
+    margin-bottom: 0;
+  }
+
+  body.page-fill .side-card {
+    min-height: 0;
+    overflow: auto;
+  }
+}
+
 @media (max-width: 960px) {
   .layout,
-  .admin-layout {
+  .admin-layout,
+  .client-layout {
     grid-template-columns: 1fr;
+  }
+
+  /* 窄屏回到单列时，连接配置仍排在消息之前 */
+  .client-layout .side-card {
+    order: -1;
   }
 }
 
@@ -147,6 +218,11 @@ a {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+/* 卡片头内容放不下时让右侧控件整组换行，避免统计与筛选被挤出卡片 */
+.card-head.head-wrap {
+  flex-wrap: wrap;
 }
 
 .card-head h2,
@@ -251,6 +327,24 @@ textarea::placeholder {
   color: #a6b2c6;
 }
 
+/* 发送区：按钮嵌在输入框右缘，垂直居中 */
+.input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.input-wrap .btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+input.with-btn,
+textarea.with-btn {
+  padding-right: 96px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -262,7 +356,7 @@ textarea::placeholder {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.grid .field.wide {
+.grid .wide {
   grid-column: 1 / -1;
 }
 
@@ -466,20 +560,20 @@ textarea::placeholder {
 
 /* ---------- messages ---------- */
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+.card-head .row {
+  min-width: 0;
 }
 
-.toolbar .seg {
-  flex: 0 0 auto;
+.card-head .row > .seg,
+.card-head .row > .muted,
+.card-head .row > .btn {
+  flex: none;
+  white-space: nowrap;
 }
 
-.toolbar .search {
-  flex: 1;
-  min-width: 120px;
+.card-head .row > .search {
+  flex: 1 1 160px;
+  min-width: 96px;
   padding: 6px 10px;
   font-size: 12.5px;
 }
@@ -592,18 +686,21 @@ textarea::placeholder {
   color: var(--primary);
 }
 
+/* 卡片头统计：两页共用，跟在标题后的行内计数，标签与数值同一行 */
 .stats-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  align-items: center;
+  flex: none;
+  flex-wrap: nowrap;
+  gap: 6px;
 }
 
 .stat {
   display: flex;
   align-items: baseline;
+  flex: 0 0 auto;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 2px 8px;
   background: #f7faff;
   border: 1px solid #e8eef9;
   border-radius: 8px;
@@ -617,39 +714,6 @@ textarea::placeholder {
 .stat strong {
   font-family: var(--mono);
   font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---------- admin stats ---------- */
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-@media (max-width: 560px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.stat-card {
-  padding: 8px 10px;
-  background: #f7faff;
-  border: 1px solid #e8eef9;
-  border-radius: 9px;
-}
-
-.stat-card .stat-label {
-  display: block;
-  margin-bottom: 2px;
-}
-
-.stat-card strong {
-  font-family: var(--mono);
-  font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
 

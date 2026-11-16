@@ -58,7 +58,7 @@ export default {
       binary: 'Binary',
       control: 'Control',
       searchPlaceholder: 'Search messages',
-      follow: 'Follow latest',
+      newFrames: '{count} new messages',
       noFrames: 'No messages yet',
       noMatch: 'No matching messages',
       connected: 'Connected',
@@ -77,7 +77,7 @@ export default {
       truncatedNote: 'Truncated, original size {size}',
       selectFrame: 'Select a message to inspect',
       emptyTitle: 'No WebSocket connections',
-      emptyHint: 'Enable 5030 above; long connections opened via /_proxy will show up here in real time.',
+      emptyHint: 'Enable socket above; long connections opened via /_proxy will show up here in real time.',
       emptyQuery: 'No matching connections',
       live: 'Live',
       bytesTitle: 'Upstream / downstream bytes',
@@ -161,7 +161,7 @@ export default {
       noTarget: 'No rule selected',
       duplicate: 'This request was already recorded{variants}; the existing record will be updated',
       duplicateVariants: ' ({count} variants)',
-      replaceHint: 'Enabling will replace the active rule "{rule}"',
+      replaceHint: 'Enabling will replace the enabled rule "{rule}"',
       recordOnly: 'Record Only',
       recordEnable: 'Record & Enable',
       updateOnly: 'Update Only',
@@ -195,7 +195,6 @@ export default {
       noHeaders: 'No headers',
       body: 'Response Body',
       binaryTip: 'Binary response only shows its size ({size}); text editing is not supported yet',
-      bodySize: 'Size: {size}',
       invalidJson: 'Invalid JSON; it will be returned as plain text',
       bodyTooLarge: 'Response body exceeds 2MB',
       name: 'Name',
@@ -220,8 +219,10 @@ export default {
       duplicateVariant: 'Duplicate',
       noVariants: 'No variants yet',
       variantName: 'Variant Name',
-      active: 'Active',
-      activeHint: 'Active',
+      servesVariant: 'Variant in use',
+      servesVariantName: 'Serving: {name}',
+      servesVariantHint: 'Requests matching this record return variant “{name}”; if no variant is set, the Response tab is used.',
+      setServing: 'Serve this variant',
       deleteVariant: 'Delete Variant',
       selectVariant: 'Select a variant to edit',
       copySuffix: 'copy',
@@ -492,13 +493,11 @@ export default {
       manage: 'Static Resources'
     }
   },
-  // 开发者面板：面板内 Event Source / HLS / Camera 等分组标题仍是组件里硬编码的技术名，未走 i18n
+  // 开发者面板：面板内 Event Source / HLS 等分组标题仍是组件里硬编码的技术名，未走 i18n
   debug: {
     common: {
       title: 'Common',
-      versionCheck: 'Check Version',
-      devTools: 'Developer Tools',
-      goNew: 'Switch to the new version'
+      devTools: 'Developer Tools'
     }
   },
   onboarding: {

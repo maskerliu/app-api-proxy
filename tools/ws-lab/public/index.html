@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 
-<body class="mode-direct">
+<body class="mode-direct page-fill">
   <header class="topbar">
     <div class="brand">
       <span class="brand-dot"></span>
@@ -21,8 +21,56 @@
     </nav>
   </header>
 
-  <main class="layout">
-    <section class="card">
+  <main class="layout client-layout">
+    <div class="stack">
+      <section class="card card-fill">
+        <div class="card-head head-wrap">
+          <div class="row">
+            <h2>消息</h2>
+            <div class="stats-row">
+              <div class="stat"><span class="stat-label">收</span><strong id="statIn">0</strong></div>
+              <div class="stat"><span class="stat-label">发</span><strong id="statOut">0</strong></div>
+              <div class="stat"><span class="stat-label">流量</span><strong id="statBytes">0 B</strong></div>
+              <div class="stat"><span class="stat-label">在线</span><strong id="statUptime">-</strong></div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="seg small" id="filterSeg">
+              <button type="button" class="seg-btn active" data-filter="all">全部</button>
+              <button type="button" class="seg-btn" data-filter="in">接收</button>
+              <button type="button" class="seg-btn" data-filter="out">发送</button>
+              <button type="button" class="seg-btn" data-filter="system">系统</button>
+            </div>
+            <input id="search" class="search" placeholder="搜索消息内容" />
+            <span class="muted" id="msgCount">0 条</span>
+            <button class="btn ghost small" id="clearBtn">清空</button>
+          </div>
+        </div>
+
+        <div id="messages" class="messages"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>发送</h2>
+          <div class="row">
+            <span class="muted"><span class="kbd">Ctrl</span> / <span class="kbd">⌘</span> +
+              <span class="kbd">Enter</span> 发送</span>
+            <div class="seg small" id="sendTypeSeg">
+              <button type="button" class="seg-btn active" data-type="text">文本</button>
+              <button type="button" class="seg-btn" data-type="binary">二进制</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-wrap">
+          <textarea id="sendData" class="with-btn" rows="4" placeholder='{"event":"ping"}' spellcheck="false"></textarea>
+          <button class="btn primary small" id="sendBtn" disabled>发送</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="card side-card">
       <div class="card-head">
         <h2>连接配置</h2>
         <div class="state closed" id="state">
@@ -54,12 +102,12 @@
           <label class="field proxy-only">
             <span class="label">代理地址</span>
             <input id="proxyHost" value="127.0.0.1:8884" placeholder="127.0.0.1:8884 或 wss://127.0.0.1:8884" spellcheck="false" />
-            <small class="muted" id="proxyHint">http 代理；AppApiProxy 为 https 时改填 wss:// 地址</small>
           </label>
           <label class="field proxy-only">
             <span class="label">Mock UID</span>
             <input id="uid" value="ws-lab" placeholder="在线客户端 UID" spellcheck="false" />
           </label>
+          <small class="muted wide proxy-only" id="proxyHint">http 代理；AppApiProxy 为 https 时改填 wss:// 地址</small>
           <label class="field wide">
             <span class="label">子协议（可选）</span>
             <input id="subprotocol" placeholder="如 graphql-ws" spellcheck="false" />
@@ -87,63 +135,6 @@
       <p class="hint">代理模式通过 <code>__mock_host</code> / <code>__mock_uid</code> 查询参数接入，
         服务端会把剥离后的路径与查询参数回显在 welcome 消息里，便于确认转发结果。</p>
     </section>
-
-    <div class="stack">
-      <section class="card">
-        <div class="card-head">
-          <h2>消息</h2>
-          <div class="row">
-            <span class="muted" id="msgCount">0 条</span>
-            <button class="btn ghost small" id="clearBtn">清空</button>
-          </div>
-        </div>
-
-        <div class="toolbar">
-          <div class="seg small" id="filterSeg">
-            <button type="button" class="seg-btn active" data-filter="all">全部</button>
-            <button type="button" class="seg-btn" data-filter="in">接收</button>
-            <button type="button" class="seg-btn" data-filter="out">发送</button>
-            <button type="button" class="seg-btn" data-filter="system">系统</button>
-          </div>
-          <input id="search" class="search" placeholder="搜索消息内容" />
-        </div>
-
-        <div id="messages" class="messages"></div>
-
-        <div class="stats-row">
-          <div class="stat"><span class="stat-label">收</span><strong id="statIn">0</strong></div>
-          <div class="stat"><span class="stat-label">发</span><strong id="statOut">0</strong></div>
-          <div class="stat"><span class="stat-label">流量</span><strong id="statBytes">0 B</strong></div>
-          <div class="stat"><span class="stat-label">在线</span><strong id="statUptime">-</strong></div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-head">
-          <h2>发送</h2>
-          <span class="muted"><span class="kbd">Ctrl</span> / <span class="kbd">⌘</span> +
-            <span class="kbd">Enter</span> 发送文本</span>
-        </div>
-
-        <label class="field">
-          <span class="label">文本</span>
-          <textarea id="sendText" rows="3" placeholder='{"event":"ping"}' spellcheck="false"></textarea>
-        </label>
-        <div class="actions">
-          <button class="btn primary" id="sendTextBtn" disabled>发送文本</button>
-        </div>
-
-        <div class="grid">
-          <label class="field wide">
-            <span class="label">二进制（Base64）</span>
-            <input id="sendBinary" placeholder="AQIDBA==" spellcheck="false" />
-          </label>
-        </div>
-        <div class="actions">
-          <button class="btn" id="sendBinaryBtn" disabled>发送二进制</button>
-        </div>
-      </section>
-    </div>
   </main>
 
   <div class="toast" id="toast"></div>

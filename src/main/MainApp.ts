@@ -1,7 +1,7 @@
 import { exec } from 'child_process'
 import {
   app, BrowserWindow, BrowserWindowConstructorOptions,
-  globalShortcut, ipcMain, Menu, session, Tray
+  globalShortcut, ipcMain, Menu, nativeTheme, session, Tray
 } from 'electron'
 import fs from 'original-fs'
 import os from 'os'
@@ -121,6 +121,7 @@ export default class MainApp {
       return
     }
 
+    const isDark = nativeTheme.shouldUseDarkColors
     let winOpt: BrowserWindowConstructorOptions = {
       icon: this.trayIconPath,
       title: APP_NAME,
@@ -129,12 +130,12 @@ export default class MainApp {
       minHeight: 640,
       useContentSize: true,
       transparent: false,
-      backgroundColor: '#f2f3f5',
+      backgroundColor: isDark ? '#1a1a1a' : '#f2f3f5',
       frame: true,
       resizable: true,
       show: false,
       titleBarStyle: os.platform() === 'darwin' ? 'hidden' : 'hidden',
-      titleBarOverlay: { color: "#f8f8f800", symbolColor: "black" },
+      titleBarOverlay: { color: "#f8f8f800", symbolColor: isDark ? "white" : "black" },
       trafficLightPosition: { x: os.platform() == 'darwin' ? 1030 : 10, y: 10 },
       webPreferences: {
         offscreen: false,
@@ -299,10 +300,6 @@ export default class MainApp {
       const config = JSON.parse(configJson)
       await this.mainServer.updateBizConfig(config)
       return this.mainServer.getBizConfig()
-    })
-
-    ipcMain.handle(MAIN_API_CMD.SendServerEvent, () => {
-      // console.log('send sse')
     })
   }
 

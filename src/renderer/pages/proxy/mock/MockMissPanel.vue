@@ -8,7 +8,7 @@
         }) }}</span>
         <span v-else>{{ $t('mock.miss.noCandidate') }}</span>
       </van-row>
-      <van-button class="btn-icon-only" size="mini" plain icon="description" :title="$t('mock.miss.copy')" @click="copyDiagnosis" />
+      <van-button class="btn-icon-only" size="mini" plain icon="description" v-tip="$t('mock.miss.copy')" @click="copyDiagnosis" />
     </van-row>
 
     <div v-if="degraded" class="miss-degraded">{{ $t('mock.miss.degraded') }}</div>
@@ -22,8 +22,8 @@
       </div>
       <div v-for="(failure, idx) in miss.failures" :key="idx" class="miss-row">
         <span class="miss-dimension">{{ dimensionText(failure.dimension) }}</span>
-        <span class="miss-value mono truncate" :title="failure.expected">{{ failure.expected }}</span>
-        <span class="miss-value mono truncate" :title="failure.actual">{{ failure.actual }}</span>
+        <span class="miss-value mono truncate" v-tip="failure.expected">{{ failure.expected }}</span>
+        <span class="miss-value mono truncate" v-tip="failure.actual">{{ failure.actual }}</span>
         <van-row class="miss-action" align="center" :wrap="false">
           <van-button v-if="failure.key" size="mini" plain type="primary" @click="emit('ignore-key', failure)">
             {{ $t('mock.miss.ignoreKey') }}

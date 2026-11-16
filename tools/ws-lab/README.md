@@ -190,8 +190,13 @@ ws-lab 运行在 `127.0.0.1:8890`（`yarn ws-lab`）。
 
 ```js
 // 客户端页 DevTools 中执行
-document.querySelector('#sendText').value = 'a'.repeat(300 * 1024)
-document.querySelector('#sendTextBtn').click()
+document.querySelector('#sendData').value = 'a'.repeat(300 * 1024)
+document.querySelector('#sendBtn').click()
+
+// 二进制帧：先把发送标题右侧的档位切到「二进制」，再填入超过 128KB 的 Base64
+document.querySelector('#sendTypeSeg [data-type="binary"]').click()
+document.querySelector('#sendData').value = 'A'.repeat(200 * 1024)
+document.querySelector('#sendBtn').click()
 ```
 
 期望：App 详情中该帧带「已截断」标签，显示原始大小，内容只保留前 256KB（文本）/ 128KB（二进制）；

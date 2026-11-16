@@ -8,7 +8,7 @@
     </div>
     <div class="snap-content">
       <div class="snap-url-row">
-        <div class="snap-url truncate" :title="source.url">{{ source.url }}</div>
+        <div class="snap-url truncate" v-tip="source.url">{{ source.url }}</div>
         <div class="snap-arrow">
           <van-loading size="18" color="var(--van-primary-color)" v-if="showLoading" />
           <van-icon v-else name="arrow" size="18" color="var(--van-text-color-3)" />
@@ -17,16 +17,16 @@
       <div class="snap-meta-row">
         <template v-if="isSocket">
           <van-tag :type="socketTagType">[WS] {{ socketStatusText }}</van-tag>
-          <span class="snap-io">↑{{ formatBytes(socket.bytesSent) }} ↓{{ formatBytes(socket.bytesReceived) }}</span>
-          <span class="snap-time">{{ socketDuration }}</span>
+          <span class="snap-io num">↑{{ formatBytes(socket.bytesSent) }} ↓{{ formatBytes(socket.bytesReceived) }}</span>
+          <span class="snap-time num">{{ socketDuration }}</span>
           <van-tag v-if="socket.subprotocol" plain type="primary">{{ socket.subprotocol }}</van-tag>
-          <span v-if="socket.closeReason" class="snap-reason truncate" :title="socket.closeReason">
+          <span v-if="socket.closeReason" class="snap-reason truncate" v-tip="socket.closeReason">
             {{ socket.closeReason }}
           </span>
           <span v-if="(socket.droppedFrames ?? 0) > 0" class="snap-dropped">
             {{ $t('proxy.socket.dropped', { count: socket.droppedFrames }) }}
           </span>
-          <span v-if="socket.errorCode" class="snap-error" :title="socketErrorTitle">{{ socket.errorCode }}</span>
+          <span v-if="socket.errorCode" class="snap-error" v-tip="socketErrorTitle">{{ socket.errorCode }}</span>
         </template>
         <template v-else-if="isStat">
           <template v-for="(item, idx) in ((source as ProxyMock.ProxyStatRecord).statistics?.bps?.slice(0, 2) ?? [])"
@@ -51,7 +51,7 @@
           <van-tag v-if="source.type == 5020" type="primary">{{ $t('proxy.statTag') }}</van-tag>
           <van-tag v-if="missBadge" plain type="default">{{ missBadge }}%</van-tag>
           <van-icon v-if="source.isMock" class="iconfont icon-shuiguan mock-icon" />
-          <span class="snap-timecost" :class="{ 'is-slow': (source.time ?? 0) > 500 }">
+          <span class="snap-timecost num" :class="{ 'is-slow': (source.time ?? 0) > 500 }">
             {{ source.time != null ? source.time : '-----' }}ms
           </span>
         </template>
@@ -214,16 +214,10 @@ const recordStore = ProxyRecordStore()
 }
 
 .snap-io {
-  font-variant-numeric: tabular-nums;
   color: var(--van-text-color-2);
 }
 
-.snap-time {
-  font-variant-numeric: tabular-nums;
-}
-
 .snap-timecost {
-  font-variant-numeric: tabular-nums;
   color: var(--van-success-color);
 }
 
@@ -245,7 +239,8 @@ const recordStore = ProxyRecordStore()
 }
 
 .mock-icon {
-  font-size: 14px;
+  /* 写死 14px；1.1 档在默认字号下 14.3px，随行内其余信息一起缩放 */
+  font-size: calc(var(--van-font-size-md) * 1.1);
   color: var(--van-warning-color);
   font-weight: bold;
 }

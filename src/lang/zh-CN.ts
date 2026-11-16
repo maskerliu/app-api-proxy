@@ -57,7 +57,7 @@ export default {
       binary: '二进制',
       control: '控制帧',
       searchPlaceholder: '搜索消息内容',
-      follow: '跟随最新',
+      newFrames: '{count} 条新消息',
       noFrames: '暂无消息',
       noMatch: '无匹配消息',
       connected: '已连接',
@@ -76,7 +76,7 @@ export default {
       truncatedNote: '已截断，原始大小 {size}',
       selectFrame: '选择一条消息查看内容',
       emptyTitle: '暂无 WebSocket 连接',
-      emptyHint: '勾选上方 5030 后，通过 /_proxy 接入的长连接会实时出现在这里。',
+      emptyHint: '勾选上方长链后，通过 /_proxy 接入的长连接会实时出现在这里。',
       emptyQuery: '无匹配连接',
       live: '进行中',
       bytesTitle: '上行/下行字节',
@@ -160,7 +160,7 @@ export default {
       noTarget: '未选择规则',
       duplicate: '该接口已录制过{variants}，将更新已有记录',
       duplicateVariants: '（{count} 个变体）',
-      replaceHint: '启用后将替换当前生效规则「{rule}」',
+      replaceHint: '启用后将替换当前启用的规则「{rule}」',
       recordOnly: '仅录制',
       recordEnable: '录制并启用',
       updateOnly: '仅更新',
@@ -194,7 +194,6 @@ export default {
       noHeaders: '暂无响应头',
       body: '响应体',
       binaryTip: '二进制响应仅展示大小（{size}），本期不支持文本编辑',
-      bodySize: '体积：{size}',
       invalidJson: 'JSON 格式不合法，保存后仍按原文返回',
       bodyTooLarge: '响应体超过 2MB，请精简后保存',
       name: '名称',
@@ -219,8 +218,10 @@ export default {
       duplicateVariant: '复制',
       noVariants: '暂无变体，新增后可一键切换',
       variantName: '变体名称',
-      active: '启用中',
-      activeHint: '生效',
+      servesVariant: '变体应答',
+      servesVariantName: '应答：{name}',
+      servesVariantHint: '命中此记录时返回变体「{name}」的响应；未指定应答变体时按『响应』页内容返回',
+      setServing: '设为应答变体',
       deleteVariant: '删除变体',
       selectVariant: '选择一个变体进行编辑',
       copySuffix: '副本',
@@ -491,13 +492,11 @@ export default {
       manage: '静态资源'
     }
   },
-  // 开发者面板：面板内 Event Source / HLS / Camera 等分组标题仍是组件里硬编码的技术名，未走 i18n
+  // 开发者面板：面板内 Event Source / HLS 等分组标题仍是组件里硬编码的技术名，未走 i18n
   debug: {
     common: {
       title: '通用',
-      versionCheck: '检查版本',
-      devTools: '开发者工具',
-      goNew: '去新版'
+      devTools: '开发者工具'
     }
   },
   onboarding: {

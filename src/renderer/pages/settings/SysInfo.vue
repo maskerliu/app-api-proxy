@@ -57,7 +57,9 @@ const { t } = useI18n()
 const commonStore = CommonStore()
 const curServerIp = ref<LocalIP>(null)
 const isWeb = window.isWeb
-const showSettings = inject<Ref<boolean>>('showSettings')
+// 经 /settings 路由直达时上层是 router-view 而非 Proxy，没有 provider；
+// 此时「关闭设置」无意义，留一枚本地 ref 而不是让保存流程抛错
+const showSettings = inject<Ref<boolean>>('showSettings', ref(false))
 const protocol = ref(0)
 
 const ipOptions = computed(() =>

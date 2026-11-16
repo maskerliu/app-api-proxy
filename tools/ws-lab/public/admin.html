@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 
-<body>
+<body class="page-fill">
   <header class="topbar">
     <div class="brand">
       <span class="brand-dot"></span>
@@ -22,45 +22,58 @@
   </header>
 
   <main class="layout admin-layout">
-    <section class="card">
-      <div class="card-head">
-        <h2>在线连接</h2>
-        <div class="row">
-          <label class="check"><input type="checkbox" id="autoRefresh" checked />自动刷新</label>
-          <button class="btn small" id="refreshBtn">刷新</button>
+    <div class="stack">
+      <section class="card card-fill">
+        <div class="card-head head-wrap">
+          <div class="row">
+            <h2>在线连接</h2>
+            <div class="stats-row">
+              <div class="stat" title="在线连接"><span class="stat-label">连接</span><strong id="statClients">0</strong></div>
+              <div class="stat" title="累计接收"><span class="stat-label">接收</span><strong id="statReceived">0</strong></div>
+              <div class="stat" title="累计发送"><span class="stat-label">发送</span><strong id="statSent">0</strong></div>
+              <div class="stat" title="运行时长"><span class="stat-label">时长</span><strong id="statUptime">-</strong></div>
+            </div>
+          </div>
+          <div class="row">
+            <label class="check"><input type="checkbox" id="autoRefresh" checked />自动刷新</label>
+            <button class="btn small" id="refreshBtn">刷新</button>
+          </div>
         </div>
-      </div>
 
-      <div class="stats-grid">
-        <div class="stat-card"><span class="stat-label">在线连接</span><strong id="statClients">0</strong></div>
-        <div class="stat-card"><span class="stat-label">累计接收</span><strong id="statReceived">0</strong></div>
-        <div class="stat-card"><span class="stat-label">累计发送</span><strong id="statSent">0</strong></div>
-        <div class="stat-card"><span class="stat-label">运行时长</span><strong id="statUptime">-</strong></div>
-      </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>ID</th>
+                <th>IP</th>
+                <th>状态</th>
+                <th>收 / 发</th>
+                <th>连接时间</th>
+              </tr>
+            </thead>
+            <tbody id="clientRows">
+              <tr>
+                <td colspan="6" class="empty">正在加载…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">点击表格行选择推送目标，再点一次取消选择；未选择时推送给全部在线连接。</p>
+      </section>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>ID</th>
-              <th>IP</th>
-              <th>状态</th>
-              <th>收 / 发</th>
-              <th>连接时间</th>
-            </tr>
-          </thead>
-          <tbody id="clientRows">
-            <tr>
-              <td colspan="6" class="empty">正在加载…</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="hint">点击表格行选择推送目标，再点一次取消选择；未选择时推送给全部在线连接。</p>
-    </section>
+      <section class="card card-fill">
+        <div class="card-head">
+          <h2>服务端日志</h2>
+          <span class="muted" id="logMeta">-</span>
+        </div>
+        <div class="logs" id="logs">
+          <div class="logs-empty">暂无日志</div>
+        </div>
+      </section>
+    </div>
 
-    <section class="card">
+    <section class="card side-card">
       <div class="card-head">
         <h2>推送控制</h2>
         <span class="target-badge" id="targetBadge">全部在线连接</span>
@@ -109,16 +122,6 @@
         <button class="btn danger" id="closeBtn">关闭连接</button>
       </div>
       <p class="hint">文本推送会包一层 <code>{ kind: 'push' }</code> 信封；二进制按 Base64 解码后原样发送。</p>
-    </section>
-
-    <section class="card span-all">
-      <div class="card-head">
-        <h2>服务端日志</h2>
-        <span class="muted" id="logMeta">-</span>
-      </div>
-      <div class="logs" id="logs">
-        <div class="logs-empty">暂无日志</div>
-      </div>
     </section>
   </main>
 

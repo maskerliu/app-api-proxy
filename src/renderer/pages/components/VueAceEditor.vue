@@ -2,7 +2,7 @@
   <!-- 跳过 Vant touch 模拟：合成 touch 事件会被 Ace 的移动端处理器当成触摸，
        长按选词、拖动变滚动，导致鼠标拖选失效 -->
   <div data-no-touch-simulate class="ace-editor-wrapper" :class="maxLines || fill ? null : 'ace-editor'">
-    <van-icon v-if="searchable && !searchVisible" name="search" class="ace-search-toggle" :title="$t('common.searchTip')"
+    <van-icon v-if="searchable && !searchVisible" name="search" class="ace-search-toggle" v-tip="$t('common.searchTip')"
       @click="openSearch" />
     <!-- ace.edit 会清空容器子节点，悬浮控件必须放在编辑器容器外层 -->
     <div ref="aceEditor" class="ace-editor-inner"></div>
@@ -65,9 +65,8 @@ let link: string = null
 let settingFromModel = false
 
 let _editor: Ace.Editor = null
-let _defOpts: Partial<Ace.EditorOptions> = {
-  // maxLines: 22,
-  // minLines: 1,
+// 默认选项模板：只读，挂载时按实例复制一份再覆盖，避免跨实例串味
+const _defOpts: Partial<Ace.EditorOptions> = {
   theme: 'ace/theme/cloud_editor_dark',
   displayIndentGuides: true,
   cursorStyle: 'wide',
@@ -128,6 +127,7 @@ const FILL_MIN_LINES = 3
 const FILL_BOTTOM_GAP = 5
 
 let fillObserver: ResizeObserver
+let boxObserver: ResizeObserver
 let fillLines = 0
 
 function scrollParentOf(el: HTMLElement): HTMLElement {
@@ -169,6 +169,23 @@ function onWindowResize() {
   syncFillHeight()
 }
 
+// 盒子被布局改变（窗口缩放、折叠区展开、切换记录）后 Ace 不会自己重测：它只在构造和显式
+// resize() 时读一次容器尺寸，layerConfig 停在旧高度就只画得下几行，剩下的空白看起来像显示不全。
+// fill 实例已有 fillObserver 按滚动容器算行数，这里只管靠 CSS 填充与 maxLines 定高的实例。
+function observeEditorBox() {
+  if (props.fill) return
+  const box = aceEditor.value?.parentElement
+  if (box == null) return
+  let lastSize = `${box.clientWidth}x${box.clientHeight}`
+  boxObserver = new ResizeObserver(() => {
+    const size = `${box.clientWidth}x${box.clientHeight}`
+    if (size === lastSize) return
+    lastSize = size
+    _editor?.resize()
+  })
+  boxObserver.observe(box)
+}
+
 function syncSearchVisible() {
   const box = _editor.renderer.scroller.querySelector('.ace_search') as HTMLElement
   searchVisible.value = box != null && box.style.display != 'none'
@@ -187,18 +204,23 @@ function aceTheme(): string {
 }
 
 onMounted(() => {
-  _defOpts.readOnly = props.readOnly ? props.readOnly : false
-  _defOpts.fontSize = commonStore.fontSize + FONT_SIZE_MD_OFFSET
-  _defOpts.theme = aceTheme()
-  _defOpts.showGutter = props.gutter
+  // 每个实例一份选项：_defOpts 是模块级对象，原先直接改写它并交给 ace.edit，
+  // 于是带 maxLines 的编辑器（HTTP 请求体 22 / Mock 响应体 16）之后挂起来的编辑器也继承 maxLines，
+  // Ace 改按内容算高并给容器写死 inline height，靠 CSS 填充的详情区因此只画得下一半
+  const opts: Partial<Ace.EditorOptions> = Object.assign({}, _defOpts, {
+    readOnly: props.readOnly ? props.readOnly : false,
+    fontSize: commonStore.fontSize + FONT_SIZE_MD_OFFSET,
+    theme: aceTheme(),
+    showGutter: props.gutter,
+  }, props.options)
   if (props.maxLines) {
-    _defOpts.maxLines = props.maxLines
+    opts.maxLines = props.maxLines
   }
-  _editor = ace.edit(aceEditor.value, Object.assign(_defOpts, props.options))
+  _editor = ace.edit(aceEditor.value, opts)
   _editor.session.setOptions({
     mode: `ace/mode/${props.lang}`,
-    tabSize: _defOpts.tabSize,
-    foldStyle: _defOpts.foldStyle
+    tabSize: opts.tabSize,
+    foldStyle: opts.foldStyle
   })
 
   if (data.value) {
@@ -223,6 +245,8 @@ onMounted(() => {
     fillObserver = new ResizeObserver(() => syncFillHeight())
     fillObserver.observe(scrollParentOf(aceEditor.value) ?? document.body)
     window.addEventListener('resize', onWindowResize)
+  } else {
+    observeEditorBox()
   }
 
   if (props.searchable) {
@@ -241,6 +265,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', onWindowResize)
   fillObserver?.disconnect()
   fillObserver = null
+  boxObserver?.disconnect()
+  boxObserver = null
   searchObserver?.disconnect()
   searchObserver = null
 })
@@ -670,6 +696,10 @@ defineExpose({ syncFillHeight })
   opacity: 30%;
 }
 
+.ace_editor.ace-cloud_editor_dark .ace-link-marker {
+  background: #f9ac2f50;
+}
+
 /* 搜索收起后的悬浮入口，不占据正文空间 */
 .ace-search-toggle {
   position: absolute;
@@ -683,10 +713,14 @@ defineExpose({ syncFillHeight })
   border: 1px solid var(--van-border-color);
   border-radius: 4px;
   background: var(--van-background-2);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
   cursor: pointer;
+}
+
+.ace_editor.ace-cloud_editor_dark .ace-search-toggle {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .ace-search-toggle:hover {

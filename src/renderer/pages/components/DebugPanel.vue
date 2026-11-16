@@ -1,12 +1,33 @@
 <template>
   <van-cell-group class="debug-panel" label-align="right" colon>
     <van-cell-group inset :title="$t('debug.common.title')">
-      <van-cell :title="$t('debug.common.versionCheck')" clickable @click="toNew"></van-cell>
       <van-cell :title="$t('debug.common.devTools')" clickable @click="openDevTools"></van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="Event Source">
-      <van-cell title="trigger server notification" :label="sseLabel" is-link @click="onSSE"></van-cell>
+      <van-cell title="stream" :label="sseDetail">
+        <template #value>
+          <van-tag :type="sseTagType">{{ sseStatus }}</van-tag>
+        </template>
+      </van-cell>
+
+      <van-cell center title="demo push" :label="sseReply">
+        <template #right-icon>
+          <div class="sse-actions">
+            <van-button size="mini" plain type="primary" :disabled="!sseConnected" @click="runSse(ssePush)">
+              direct
+            </van-button>
+            <van-button size="mini" plain type="primary" :disabled="!sseConnected"
+              @click="runSse(sseBroadcast)">broadcast</van-button>
+          </div>
+        </template>
+      </van-cell>
+
+      <van-cell title="last event" :value="sseEventHead">
+        <template #label>
+          <div class="sse-payload">{{ sseData }}</div>
+        </template>
+      </van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="HLS">
@@ -29,21 +50,6 @@
       </van-field>
       <video ref="hlsPlayer" width="100%" height="100px" controls></video>
     </van-cell-group>
-
-    <van-cell-group inset title="Camera" style="text-align: center;">
-      <van-cell title="OpenCV">
-        <template #right-icon>
-          <van-button class="btn-icon-only" plain size="small" type="primary" @click="openCamera">
-            <template #icon>
-              <van-icon class="iconfont icon-camera" style="color: var(--van-gray-8)" />
-            </template>
-          </van-button>
-        </template>
-      </van-cell>
-      <canvas ref="preview"></canvas>
-      <canvas ref="offscreen" style="display: none;"></canvas>
-      <video ref="preVideo" autoplay style="display: none;"></video>
-    </van-cell-group>
   </van-cell-group>
 </template>
 
@@ -51,55 +57,53 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import Hls from 'hls.js'
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { baseDomain, broadcast } from '@shared'
+import { baseDomain, sseBroadcast, ssePush } from '@shared'
 import { API_URL } from '@shared/api.const'
 import { MOCK_UID_HEADER } from '@shared/http-header'
 import { CommonStore } from '../../store'
 
-const { t } = useI18n()
 const commonStore = CommonStore()
 const sseData = ref<string>('')
 const sseStatus = ref<string>('idle')
-const sseLabel = computed(() => sseData.value ? `${sseStatus.value} | ${sseData.value}` : sseStatus.value)
+const sseReply = ref<string>('')
+const sseEvents = ref<number>(0)
+const sseOpens = ref<number>(0)
+const sseEventId = ref<string>('')
+const sseEventName = ref<string>('')
+const sseConnected = computed(() => sseStatus.value === 'connected')
+const sseDetail = computed(() => `uid ${commonStore.uid || '-'} · events ${sseEvents.value} · conns ${sseOpens.value}`)
+const sseEventHead = computed(() => sseEventName.value
+  ? `${sseEventId.value ? `#${sseEventId.value} ` : ''}${sseEventName.value}`
+  : '')
+const sseTagType = computed<'default' | 'primary' | 'success' | 'warning' | 'danger'>(() => {
+  switch (sseStatus.value) {
+    case 'connected': return 'success'
+    case 'connecting':
+    case 'reconnecting': return 'warning'
+    case 'error': return 'danger'
+    default: return 'default'
+  }
+})
 const playerStatus = ref<boolean>(false)
 const playerLoading = ref<boolean>(false)
 const streamUrl = ref<string>('https://iovliveplay.radio.cn/fm/1600000001173.m3u8')
 const bandwidth = ref<string>('0')
 
 const hlsPlayer = useTemplateRef<HTMLMediaElement>('hlsPlayer')
-const preVideo = useTemplateRef<HTMLVideoElement>('preVideo')
-const preview = useTemplateRef<HTMLCanvasElement>('preview')
-const offscreen = useTemplateRef<HTMLCanvasElement>('offscreen')
 
 let hls: Hls
 let timer: any
-let animationId: number
 let sseAbort: AbortController | null = null
-let previewCtx: CanvasRenderingContext2D
-let offscreenCtx: CanvasRenderingContext2D
-let frames = 0
 
 onMounted(async () => {
-
-  window.addEventListener('beforeunload', closeCamera)
-
-  previewCtx = preview.value.getContext('2d', { willReadFrequently: true })
-  offscreenCtx = offscreen.value.getContext('2d', { willReadFrequently: true })
-
-  previewCtx.imageSmoothingEnabled = true
-  previewCtx.imageSmoothingQuality = 'high'
-
   if (!commonStore.showDebugPanel) return
   initHls()
   await registerSSE()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', closeCamera)
   stopSSE()
   stopHls()
-  closeCamera()
 })
 
 watch(() => commonStore.showDebugPanel, (val) => {
@@ -191,6 +195,13 @@ async function registerSSE() {
   const controller = new AbortController()
   sseAbort = controller
   sseStatus.value = 'connecting'
+  // 计数描述的是本次订阅：重新订阅清零，库内部的自动重连才会累加到 conns
+  sseReply.value = ''
+  sseEvents.value = 0
+  sseOpens.value = 0
+  sseEventId.value = ''
+  sseEventName.value = ''
+  sseData.value = ''
 
   try {
     await fetchEventSource(`${baseDomain()}${API_URL.Sse}/${uid}`, {
@@ -206,6 +217,7 @@ async function registerSSE() {
         const contentType = resp.headers.get('content-type') ?? ''
         if (resp.ok && contentType.startsWith(EventStreamContentType)) {
           sseStatus.value = 'connected'
+          sseOpens.value++
           return
         }
         // 4xx（429 除外）属于客户端错误，重试也不会成功
@@ -216,7 +228,12 @@ async function registerSSE() {
       },
       onmessage(ev) {
         if (controller.signal.aborted) return
-        sseData.value = ev.event && ev.event !== 'message' ? `[${ev.event}] ${ev.data}` : ev.data
+        // 握手帧（只有 retry:）也会走 onmessage，按规范没有 data 就不该计入事件
+        if (!ev.data) return
+        sseEvents.value++
+        sseEventId.value = ev.id
+        sseEventName.value = ev.event || 'message'
+        sseData.value = ev.data
       },
       onclose() {
         // 服务端主动结束流时按断线处理，交给 onerror 触发重连
@@ -239,11 +256,6 @@ async function registerSSE() {
     if (sseAbort === controller) sseAbort = null
   }
 }
-
-function toNew() {
-  alert(t('debug.common.goNew'))
-}
-
 
 function onHlsClick() {
 
@@ -272,76 +284,19 @@ function onHlsClick() {
   }
 }
 
-
-function processFrame() {
-  if (preVideo.value == null) return
-  if (preVideo.value.readyState < HTMLMediaElement.HAVE_ENOUGH_DATA) return
-
-  offscreen.value.width = preview.value.width = preVideo.value.videoWidth * 0.5
-  offscreen.value.height = preview.value.height = preVideo.value.videoHeight * 0.5
-
-  offscreenCtx.drawImage(preVideo.value, 0, 0, offscreen.value.width, offscreen.value.height)
-
-  const imageData = offscreenCtx.getImageData(0, 0, offscreen.value.width, offscreen.value.height)
-
-  if (frames < 3) frames++
-  else {
-    frames = 0
-
-  }
-  offscreenCtx.putImageData(imageData, 0, 0)
-  previewCtx.drawImage(offscreen.value, 0, 0, imageData.width, imageData.height, 0, 0, imageData.width, imageData.height)
-
-  previewCtx.scale(-1, 1)
-}
-
-async function openCamera() {
-  if (window.isWeb) return
-
-  if (preVideo.value.srcObject) {
-    previewCtx.clearRect(0, 0, preview.value.width, preview.value.height)
-    offscreenCtx.clearRect(0, 0, offscreen.value.width, offscreen.value.height)
-    closeCamera()
-    preVideo.value.srcObject = null
-    return
-  }
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    preVideo.value.srcObject = stream
-
-    animationId = requestAnimationFrame(function loop() {
-      processFrame()
-      animationId = requestAnimationFrame(loop)
-    })
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-async function closeCamera() {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
-  }
-  if (preVideo.value?.srcObject) {
-    (preVideo.value.srcObject as MediaStream).getTracks().forEach(track => track.stop())
-    preVideo.value.srcObject = null
-  }
-}
-
 function openDevTools() {
   window.mainApi?.openDevTools()
   commonStore.showDebugPanel = false
 }
 
-async function onSSE() {
-  if (!commonStore.uid) return
-  window.mainApi?.sendServerEvent()
+// 演示动作只回显服务端的判断，效果本身在流上看得见
+async function runSse(action: (uid: string) => Promise<string>) {
+  const uid = commonStore.uid
+  if (!uid) return
   try {
-    await broadcast(commonStore.uid)
-  } catch (err) {
-    console.warn('broadcast failed:', err)
+    sseReply.value = await action(uid)
+  } catch (err: any) {
+    sseReply.value = String(err?.message ?? err)
   }
 }
 
@@ -349,15 +304,25 @@ async function onSSE() {
 
 <style scoped>
 .debug-panel {
+  box-sizing: border-box;
   width: 100%;
   min-width: min(375px, 100vw);
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   padding: var(--app-sp-xl) 0;
   background-color: var(--van-gray-1);
 }
 
-.debug-panel canvas {
-  max-width: 100%;
-  height: auto;
+.sse-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--app-sp-md);
+  white-space: nowrap;
+}
+
+.sse-payload {
+  font-family: var(--app-mono-font);
+  word-break: break-all;
 }
 </style>

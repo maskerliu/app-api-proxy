@@ -425,9 +425,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         if (current == null || current.type !== RECORD_TYPE) throw new MockError('recordMissing')
         if (current.ruleId !== ruleId) throw new MockError('ruleMissing')
         if (expectedUpdatedAt != null && current.updatedAt !== expectedUpdatedAt) {
-          const conflict: any = new Error('记录已被其他人修改，请刷新后重试')
-          conflict.status = 409
-          throw conflict
+          throw new MockError('saveConflict')
         }
 
         const doc: MockRecordDoc = {

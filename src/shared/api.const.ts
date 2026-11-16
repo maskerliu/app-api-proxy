@@ -28,7 +28,8 @@ export const API_URL = {
     Diagnose: `${APPMOCK}/diagnose`,
     MockRegister: `${APPMOCK}/register`,
     Sse: `${APPMOCK}/sse`,
-    Broadcast: `${APPMOCK}/sse/broadcast`,
+    SsePush: `${APPMOCK}/sse/push`,
+    SseBroadcast: `${APPMOCK}/sse/broadcast`,
 
     Proxy: '/_proxy',
     CorsMediaProxy: '/corsMediaProxy'

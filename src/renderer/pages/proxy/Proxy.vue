@@ -31,10 +31,10 @@
       </van-row>
       <van-row class="proxy-delay-bar" align="center" :wrap="false">
         <mini-select class="client-picker" :model-value="targetUid ?? ''" :options="clientOptions" font-size="sm"
-          :placeholder="$t('proxy.clientUnset')" :title="$t('proxy.clientScopeHint')" @open="loadClients"
+          :placeholder="$t('proxy.clientUnset')" v-tip="$t('proxy.clientScopeHint')" @open="loadClients"
           @change="onClientChange" />
         <mini-select v-model="delayPreset" class="delay-preset" :options="delayOptions" font-size="sm" align="end"
-          :title="delayHint" @change="onPresetChange" />
+          v-tip="delayHint" @change="onPresetChange" />
       </van-row>
       <van-row v-if="showCustomDelay" class="proxy-delay-custom" align="center" :wrap="false">
         <span class="delay-label">{{ $t('proxy.delay') }}</span>
@@ -42,10 +42,11 @@
           :placeholder="$t('proxy.delayPlaceholder')" @keyup.enter="applyDelay">
           <template #extra><span class="delay-unit">ms</span></template>
         </van-field>
-        <span v-if="delayDirty" class="delay-dirty" :title="$t('proxy.delayPending')"></span>
+        <span v-if="delayDirty" class="delay-dirty" v-tip="$t('proxy.delayPending')"></span>
         <van-button class="delay-apply" size="mini" :loading="delaySaving" :disabled="!delayDirty"
-          @click="applyDelay">{{ $t('proxy.delayApply') }}</van-button>
-        <van-button class="btn-icon-only delay-close" size="mini" plain :title="$t('proxy.delayClose')"
+          @click="applyDelay">{{
+            $t('proxy.delayApply') }}</van-button>
+        <van-button class="btn-icon-only delay-close" size="mini" plain v-tip="$t('proxy.delayClose')"
           @click="closeCustomDelay">
           <van-icon name="cross" />
         </van-button>
@@ -107,8 +108,8 @@ import {
 } from '@shared'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import QrcodeVue from 'qrcode.vue'
-import { showNotify } from 'vant'
 import type { FieldInstance } from 'vant'
+import { showNotify } from 'vant'
 import { computed, defineAsyncComponent, nextTick, onMounted, provide, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -461,7 +462,8 @@ async function copyRegisterUrl() {
 }
 
 .left-panel-icon {
-  font-size: 1.4rem;
+  /* rem 基准恒 16px，字号设置调不动它；1.7 档对应原先的 1.4rem≈22.4px */
+  font-size: calc(var(--van-font-size-md) * 1.7);
   margin: var(--app-sp-xs) var(--app-sp-md);
   color: var(--van-gray-8)
 }
@@ -477,7 +479,8 @@ async function copyRegisterUrl() {
 }
 
 .left-panel .van-checkbox__label .proxy-type-icon {
-  font-size: 14px;
+  /* 写死 14px；1.1 档在默认字号下 14.3px */
+  font-size: calc(var(--van-font-size-md) * 1.1);
   font-weight: bold;
 }
 
@@ -498,16 +501,31 @@ async function copyRegisterUrl() {
 
 .socket-empty-state {
   padding: 24px 12px;
+  /* 默认 24px；副文案要跟说明贴在一起，只留一行文字级的间隙 */
+  --van-empty-bottom-margin-top: var(--app-sp-sm);
 }
 
 .socket-empty-hint {
   display: flex;
   flex-direction: column;
   gap: var(--app-sp-md);
-  margin-top: var(--app-sp-sm);
   color: var(--van-text-color-3);
   font-size: var(--van-font-size-xs);
   text-align: left;
+}
+
+/* 暗色下 vant 把整个 van-empty 压到 50% 透明度，叠加 --van-text-color-3(#4d4d4d) 后副文案不可读；
+   文字恢复满不透明并升一档，插画仍按 vant 的意图压暗 */
+.van-theme-dark .socket-empty-state .van-empty {
+  opacity: 1;
+}
+
+.van-theme-dark .socket-empty-state .van-empty__image {
+  opacity: .5;
+}
+
+.van-theme-dark .socket-empty-state .socket-empty-hint {
+  color: var(--van-text-color-2);
 }
 
 /* 设备作用域 chip：与右侧档位下拉同一个 MiniSelect，描边/圆角/箭头与字号都由组件与所在行提供；

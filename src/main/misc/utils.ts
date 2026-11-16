@@ -121,16 +121,13 @@ export function parseJsonBody(req: Request) {
 }
 
 export function fetchFormFile(file: File) {
-  let data = readFileSync(file.filepath, 'utf-8')
+  const data = readFileSync(file.filepath, 'utf-8')
   switch (file.mimetype) {
     case BizNetwork.MIME_JSON:
-      data = readFileSync(file.filepath, 'utf-8')
       return JSON.parse(data)
     case BizNetwork.MIME_TEXT:
-      return readFileSync(file.filepath, 'utf-8')
-      break
     case BizNetwork.MIME_IMAGE:
-      return readFileSync(file.filepath, 'utf-8')
+      return data
   }
 }
 

@@ -65,7 +65,7 @@
     <van-popup round v-model:show="showDownload" :closeable="!showRestart" :close-on-click-overlay="false"
       teleport="#app" @close="onPopupClose">
       <van-row class="version-popup" justify="center">
-        <van-icon class="iconfont icon-version-update" style="color: var(--van-success-color); font-size: 2rem;" />
+        <van-icon class="iconfont icon-version-update version-update-icon" />
         <OverlayScrollbarsComponent class="update-message" :options="scrollOptions" defer>
           <pre class="update-message-text">{{ newVersion.message }}</pre>
         </OverlayScrollbarsComponent>
@@ -191,10 +191,6 @@ function restart() {
 
 </script>
 <style lang="css" scoped>
-.setting-cell-icon {
-  margin-left: var(--app-sp-3xl);
-}
-
 /* 版本号：跟随所在 van-field 行高，字号缩放时不再脱节 */
 .version-value {
   width: 100%;
@@ -203,7 +199,14 @@ function restart() {
 }
 
 .theme-icon {
-  font-size: 1.2rem;
+  /* rem 基准恒 16px，字号设置调不动它；1.5 档对应原先的 1.2rem≈19.2px */
+  font-size: calc(var(--van-font-size-md) * 1.5);
+}
+
+.version-update-icon {
+  color: var(--van-success-color);
+  /* 同上，2.5 档对应原先内联写死的 2rem=32px */
+  font-size: calc(var(--van-font-size-md) * 2.5);
 }
 
 /* 弹层高度随说明条数走，正文区只封顶不占死：原先 min-height:300 + 正文固定 190 让三条说明

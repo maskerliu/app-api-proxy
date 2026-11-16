@@ -33,11 +33,12 @@
   --app-card-gutter: 5px;
 
   /* 方法色块（HTTP 方法首字母方块）：ProxyRecordSnap 的记录行与 MockRuleMgr 的记录条目共用这一对取值，
-     原先两处各写死 22px/11px 并靠注释互相提醒同步。方块本身的排版见下方 .method-square，也只有一条。地板取原来的写死值：字号 7 由地板接管（仍是 22/11），
-     字号 9 为 22.1/11.05（与写死值差 0.1px，不可辨），字号 10 放大到 23.8/11.9，让小方块与 14px 标题行盒重新拉开距离。
-     乘数写 2 位小数是刻意的：1 位小数的邻值里 0.8 在字号 10 只有 11.2（几乎不放大），0.9 在字号 9 就到 11.7（超出 0.6px 容差）。 */
-  --app-method-square: max(22px, calc(var(--van-font-size-md) * 1.7));
-  --app-method-square-font: max(11px, calc(var(--van-font-size-md) * 0.85));
+     原先两处各写死 22px/11px 并靠注释互相提醒同步；方块本身的排版见下方 .method-square，也只有一条。
+     乘数由「字号 9（md=13）仍取那对写死值」反推：22.1 / 11.05，与写死值差 0.1px 不可辨；两者恒定 2:1，
+     方块再怎么缩放，字形都占一半。原先外面还套了一道 max(22px)/max(11px) 地板，把字号 7、8 钉回旧值，
+     现按「整站尺寸一律跟随 --van-font-size-md」撤掉：字号 7 收到 18.7/9.35，字号 10 放到 23.8/11.9。 */
+  --app-method-square: calc(var(--van-font-size-md) * 1.7);
+  --app-method-square-font: calc(var(--van-font-size-md) * 0.85);
 
   /* 控件基准高度：纯图标按钮按它取方边长，需要与这枚按钮等高的控件（下拉触发条、行高、版本号格子）
      和 Vant 的 tabsLineHeight / dialogButtonHeight 都读这一个值，不再各处重抄 md*2.2。 */
@@ -150,13 +151,27 @@
   background: color-mix(in srgb, var(--van-warning-color) 8%, transparent);
 }
 
+/* ---- 分区标题：卡片上方那一行名字 ---- */
+
+/* Mock 匹配 tab 与响应表单两份逐字相同的「颜色 + 字号 + 字重」并到这一条；
+   两处各自的布局需求（van-row 的 gap 与 margin-bottom、span 的 flex: none）留在站点，
+   因为那属于这一行怎么排，不属于这一行长什么样。 */
+.section-title {
+  color: var(--van-text-color);
+  font-size: var(--van-font-size-md);
+  font-weight: 500;
+}
+
 /* ---- 键值对网格：请求头 / 响应头 / 参数等 key-value 展示区共用 ---- */
 
 .header-list {
   display: grid;
   grid-template-columns: var(--app-header-key-width) minmax(0, 1fr);
   column-gap: var(--app-sp-3xl);
-  row-gap: var(--app-sp-md);
+  /* 行距收到最密档：一屏要看完的键值对里，行间那点空气换给条数。
+     四个只读展示区（请求头 / 响应头 / 参数 / WS 握手头）与表单视图共用这一档，没有站点覆盖。
+     值换行时行盒本身还带 ~2px 前导，2.6px 的沟不会把上下行粘连。 */
+  row-gap: var(--app-sp-xs);
   padding: var(--app-sp-tight) var(--app-sp-3xl);
   font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
@@ -254,8 +269,58 @@
   line-height: 1;
 }
 
-/* ---- 单元格分割线：左右缩进跟着单元格自己的横向内边距 ---- */
+/* ---- 行内输入控件：与 .btn-icon-only 同一档高度的下划线输入框 ---- */
 
+/* Mock 匹配 tab 里六格 van-field（Host / Path、待忽略参数、条件表的键列与值列、试匹配 URL，分属四条规则）
+   外加 WebSocket 详情页的消息搜索框，共七格，原先各抄了一遍这六条声明，外加压掉发丝线、把高度交进 Field 内部三层的适配。
+   外观与适配在此单源；
+   各站点自己的 flex / width / min-width 留下——那是这一格在行里占多宽，不属于这一格长什么样。
+   口径从四边描边的盒子收成一枚下划线：留定高与左右内边距（行高不变，和同行的下拉仍然等高），
+   去掉上/左/右三条边、圆角与底色。底色撤掉不影响观感——十五个落点全在卡片面上（匹配 tab 的 .section-card、
+   编辑器头部所在的弹窗 .card-container、消息列表所在的 .socket-messages、记录列表的筛选行、变体编辑行、
+   响应表单的状态码/延迟行），那层 background 本来就没画出东西。
+   两处刻意没进来：.priority-input 走的是 Vant 默认的下划线（自己的 cell 发丝线）；
+   Proxy 的 .delay-input 内边距更紧、要用 flex 排 label 与单位后缀，而且今天没压 Vant 的发丝线。 */
+.control-field {
+  box-sizing: border-box;
+  height: var(--app-control-height);
+  /* Vant 把 :label 渲染成根节点下的 flex 兄弟（不是 body 里），根默认 align-items:stretch。
+     这条等于把编辑器头部那两格原先各带的 Vant center 属性上提到类里（.van-cell--center 就是这一句），
+     落点不用再各带一遍。实测在当前字号档（md13 + --van-cell-line-height 1.9md）中线差只有 0.35px，
+     补与不补看不出差别；但一旦某处把行高压回 Vant 默认的 24px 定值，stretch 会让标签比值高 3.4px，
+     这一句是那道防线。 */
+  align-items: center;
+  padding: 0 var(--app-sp-lg);
+  border-bottom: 1px solid var(--van-border-color);
+}
+
+/* 这条下划线用根上的 1px 实线，而不是把 Vant cell 的发丝线放回来，两件事决定的：
+   1) 权重——同一行右侧的 MiniSelect 下拉、外面那圈 .section-card 都是 1px solid --van-border-color，
+      发丝线是 scaleY(0.5)，摆在旁边会轻一档；下拉这批改不了（影响六个页面），就输入框这边对齐。
+   2) 位置——发丝线的左右缩进读 --van-cell-horizontal-padding（md*1.2），和本类的 sp-lg（md*0.6）不是一档，
+      线会比文字两头各晚起笔 7.8px；自己画线才能和控件自己的内边距同一个来源。
+   条件表值列的禁用态还靠改这条 border-style 出虚线（见 MockMatchTab 的 .condition-value），所以留着实线机制。
+   与 .van-cell:after 同为 (0,1,1)，压掉它靠的还是注入顺序。 */
+.control-field::after {
+  display: none;
+}
+
+/* Field 在里面还套了 value / body / control 三层：只定外框的高会让文字贴顶、光标比框矮一截。
+   这三条是这枚控件成立所需的机械条件，不是各行的排版选择，所以跟着外观一起上提。
+   global.css 不参与 scoped 编译，后代选择器直接写；(0,2,0) 高于 Vant 碰这三层的 (0,1,0)。 */
+.control-field .van-field__value {
+  padding: 0;
+}
+
+.control-field .van-field__body {
+  height: 100%;
+}
+
+.control-field .van-field__control {
+  height: var(--app-control-height);
+}
+
+/* ---- 单元格分割线：左右缩进跟着单元格自己的横向内边距 ---- */
 /* Vant 把这条线钉在恒定的 --van-padding-md（16px）上，内容的缩进却是 --van-cell-horizontal-padding
    （store 里 = md*1.2，随字号在 13.2~16.8px 之间）：字号两头本来就错开 0.8~2.8px，组件一旦自定义内边距
    差得更明显（Mock 编辑器变体行的元信息列，线比标签文字晚起笔 9.5px）。改读同一个来源后缩进只剩一处定义、
@@ -264,6 +329,19 @@
 .van-cell:after {
   left: var(--van-cell-horizontal-padding);
   right: var(--van-cell-horizontal-padding);
+}
+
+/* ---- 表单字段标签：与行标签同一档置灰 ---- */
+
+/* Vant 这一版把 --van-field-label-color 默认成了 --van-text-color（主文本色），而全站自排的行标签
+   （.row-label / .sub-title / .bar-label / .field-unit）一律是 text-2：同一屏里 field 的标签比邻居黑一档。
+   这条把口径收到一处，各页原先自写的 color 覆盖随之删除。与 Vant 的 .van-field__label 同为 (0,1,0)，
+   取胜方式和上面 .van-cell:after 一样靠 vant.js 先于 renderer.js 注入。
+   禁用态不受影响：Vant 那条是 .van-field--disabled .van-field__label（0,2,0），权重更高。
+   影响面是所有带 label 的 van-field——除 Mock 编辑器/响应表单外，Settings、SysInfo、ClientMgr、
+   VersionTheme、LocalResourceMgr、Onboarding、Diagnostic、DebugPanel、MockRuleMgr 里的表单标签一起转灰。 */
+.van-field__label {
+  color: var(--van-text-color-2);
 }
 
 /* ---- 列表行：点一条、另一侧出详情 ---- */
@@ -315,6 +393,12 @@
   font-family: var(--app-mono-font);
 }
 
+/* 数字列对齐：让上下行的「1.2 KB / 12.3 KB」「100ms / 1000ms」位数不错位。
+   与 .mono 的分工是刻意的：.mono 换掉整张字形表，.num 只把数字调成等宽，正文仍是比例字体。 */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
 /* 各处叫 .poll-tip / .empty-tip / .row-hint / .panel-stamp / .key-reason / .raw-hint，取的是同一档次要说明。
    站点自己决定 padding、对齐、换行，颜色和字号只读这一条。 */
 .hint {
@@ -335,6 +419,33 @@
 
 .tag-list .van-tag {
   font-family: var(--app-mono-font);
+}
+
+/* 暗色模式下 default 标签的描边款底色与文字对比度不足：
+   Vant 的 --van-tag-default-color 在暗色下仍是深灰文字配浅灰描边，叠加 --van-gray-1 深底后文字发糊。
+   描边款底色改读 --van-gray-2（暗色下更浅一档），文字升为 --van-text-color 保证可读。 */
+.van-theme-dark .van-tag--plain.van-tag--default {
+  color: var(--van-text-color);
+  border-color: var(--van-gray-4);
+}
+
+/* 暗色模式下 default 实心标签的背景色过深，与深色背景融合导致轮廓不清。
+   提升一档灰度让标签在暗底上仍可辨识。 */
+.van-theme-dark .van-tag--default:not(.van-tag--plain) {
+  background: var(--van-gray-6);
+  color: var(--van-gray-1);
+}
+
+/* 暗色模式下 default 按钮的描边款同样存在对比度问题：
+   边框色过浅导致按钮轮廓模糊，文字色偏暗导致可读性下降。 */
+.van-theme-dark .van-button--plain.van-button--default {
+  color: var(--van-text-color);
+  border-color: var(--van-gray-4);
+}
+
+.van-theme-dark .van-button--plain.van-button--default:hover {
+  color: var(--van-text-color);
+  border-color: var(--van-gray-5);
 }
 
 /* ---- 弹窗（van-dialog / showConfirmDialog）：Vant 默认是移动端排版，统一到桌面口径 ---- */
@@ -423,4 +534,19 @@
 
 .actions-bar {
   gap: var(--app-sp-lg);
+}
+
+/* 面板头部的动作行（诊断页 / Mock 记录编辑器）：间距与底部按钮行同一档，
+   另外要求它在定高的列里不许被兄弟节点压扁。与 .actions-bar 只差 flex: none 这一条，
+   底部那两处目前没有被压缩的需求，所以不并成一条、也不往 .actions-bar 里加。 */
+.head-actions {
+  flex: none;
+  gap: var(--app-sp-lg);
+}
+
+/* ---- 设置页单元格图标 ---- */
+
+/* Settings 与 VersionTheme 两个页面各写了一份相同的左缩进，Settings 那条还单独占了一个 style 块。 */
+.setting-cell-icon {
+  margin-left: var(--app-sp-3xl);
 }

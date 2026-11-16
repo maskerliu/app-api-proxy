@@ -113,6 +113,11 @@ export function mockRegister(uid: string) {
   return get<ProxyMock.RegisterResult>(`${API_URL.MockRegister}/${uid}`)
 }
 
-export function broadcast(uid: string) {
-  return get<string>(`${API_URL.Broadcast}/${uid}`)
+// SSE 演示通道：帧的 data 与 /echo 共用同一套 PushMsg 信封，见 AppMockRouter
+export function ssePush(uid: string) {
+  return get<string>(`${API_URL.SsePush}/${uid}`)
+}
+
+export function sseBroadcast(uid: string) {
+  return get<string>(`${API_URL.SseBroadcast}/${uid}`)
 }
