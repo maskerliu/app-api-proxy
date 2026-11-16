@@ -226,11 +226,6 @@ function goBack() {
   font-size: var(--van-font-size-md);
 }
 
-.head-actions {
-  flex: none;
-  gap: var(--app-sp-lg);
-}
-
 .head-title {
   font-size: var(--van-font-size-lg);
   font-weight: 600;

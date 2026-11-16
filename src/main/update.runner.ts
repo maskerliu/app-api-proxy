@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { spawn, SpawnOptions, StdioOptions } from 'child_process'
 import crypto from 'crypto'
-import { app, autoUpdater, BrowserWindow } from 'electron'
+import { app, autoUpdater, BrowserWindow, shell } from 'electron'
 import fs, { createReadStream, createWriteStream } from 'fs'
 import os from 'os'
 import path from 'path'
@@ -51,7 +51,7 @@ function throwIfAborted(signal?: AbortSignal) {
   throw err
 }
 
-export async function incrementUpdate(version: Version, signal?: AbortSignal) {
+async function incrementUpdate(version: Version, signal?: AbortSignal) {
   const updateDir = path.join(USER_DATA_DIR, 'update')
   const sourceFile = path.join(updateDir, `app-${version.version}.gz`)
   // 先解压到用户目录（始终可写），安装目录不可写时由重启 helper 提权替换
@@ -130,7 +130,7 @@ function configureMacAutoUpdater() {
   })
 }
 
-export async function fullUpdate(version: Version, signal?: AbortSignal) {
+async function fullUpdate(version: Version, signal?: AbortSignal) {
   const platform = os.platform()
   if (platform == 'linux') {
     notifyDownloadFailed('当前平台暂不支持全量更新，请使用增量更新或手动安装')
@@ -271,8 +271,7 @@ async function doWinInstall(options: InstallOptions) {
     if (errorCode === "UNKNOWN" || errorCode === "EACCES") {
       callUsingElevation()
     } else if (errorCode === "ENOENT") {
-      require("electron")
-        .shell.openPath(options.installerPath)
+      shell.openPath(options.installerPath)
         .catch(err => console.log(err))
 
       app.quit()

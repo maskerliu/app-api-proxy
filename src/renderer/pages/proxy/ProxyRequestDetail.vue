@@ -59,7 +59,7 @@
       <van-collapse-item name="requestHeader" :title="$t('proxy.requestHeader')">
         <div class="header-list">
           <div v-for="(item, idx) in requestHeaders" :key="`${item.key}-${idx}`" class="header-row">
-            <span class="header-key" :title="item.key"><bdi>{{ item.key }}</bdi></span>
+            <span class="header-key" v-tip="item.key"><bdi>{{ item.key }}</bdi></span>
             <span class="header-value">{{ item.value }}</span>
           </div>
         </div>
@@ -67,7 +67,7 @@
       <van-collapse-item name="responseHeader" :title="$t('proxy.responseHeader')">
         <div class="header-list">
           <div v-for="(item, idx) in responseHeaders" :key="`${item.key}-${idx}`" class="header-row">
-            <span class="header-key" :title="item.key"><bdi>{{ item.key }}</bdi></span>
+            <span class="header-key" v-tip="item.key"><bdi>{{ item.key }}</bdi></span>
             <span class="header-value">{{ item.value }}</span>
           </div>
         </div>
@@ -75,7 +75,7 @@
       <van-collapse-item v-if="requestParams.length > 0" name="requestParams" :title="$t('proxy.requestParams')">
         <div class="header-list">
           <div v-for="(item, idx) in requestParams" :key="`${item.key}-${idx}`" class="header-row">
-            <span class="header-key" :title="item.key"><bdi>{{ item.key }}</bdi></span>
+            <span class="header-key" v-tip="item.key"><bdi>{{ item.key }}</bdi></span>
             <span class="header-value">{{ item.value }}</span>
           </div>
         </div>

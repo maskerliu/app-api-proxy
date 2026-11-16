@@ -2,9 +2,9 @@
   <div class="record-editor">
     <van-row class="editor-head" align="center" :wrap="false">
       <div class="head-fields">
-        <van-field class="name-field" label-width="3.1em" center v-model="record.name" :label="$t('mock.editor.name')"
-          :placeholder="$t('mock.editor.namePlaceholder')" />
-        <van-field ref="pathField" class="path-field" label-width="3.1em" v-model="record.url"
+        <van-field class="control-field name-field" label-width="3.1em" v-model="record.name"
+          :label="$t('mock.editor.name')" :placeholder="$t('mock.editor.namePlaceholder')" />
+        <van-field ref="pathField" class="control-field path-field" label-width="3.1em" v-model="record.url"
           :label="$t('mock.editor.path')" :placeholder="$t('mock.editor.pathPlaceholder')" />
       </div>
       <van-row class="head-actions" align="center" :wrap="false">
@@ -22,10 +22,12 @@
         </div>
       </van-tab>
 
-      <van-tab :title="$t('mock.editor.tab.match')" name="match">
-        <div class="tab-body match-tab">
-          <mock-match-tab ref="matchForm" :record="record" />
-        </div>
+      <van-tab :title="$t('mock.editor.tab.match')" name="match" class="match-panel">
+        <OverlayScrollbarsComponent class="tab-scroll" :options="scrollOptions" defer>
+          <div class="tab-body match-tab">
+            <mock-match-tab ref="matchForm" :record="record" />
+          </div>
+        </OverlayScrollbarsComponent>
       </van-tab>
 
       <van-tab :title="$t('mock.editor.tab.variants')" name="variants">
@@ -34,12 +36,12 @@
             <div ref="variantStrip" class="variant-strip" @wheel="onStripWheel">
               <van-button v-for="variant in record.variants" :key="variant.id" size="mini" class="variant-chip"
                 :type="variant.id === selectedVariantId ? 'primary' : 'default'"
-                :plain="variant.id !== selectedVariantId" :title="variant.name" @click="selectVariant(variant)">
+                :plain="variant.id !== selectedVariantId" v-tip="variant.name" @click="selectVariant(variant)">
                 <span class="variant-chip-name truncate">{{ variant.name || $t('mock.editor.variantName') }}</span>
-                <span class="variant-chip-status" :class="statusTone(variant.statusCode)">{{ variant.statusCode
+                <span class="variant-chip-status num" :class="statusTone(variant.statusCode)">{{ variant.statusCode
                   }}</span>
                 <van-icon v-if="record.activeVariantId === variant.id" name="success" class="variant-chip-check"
-                  :title="$t('mock.editor.active')" />
+                  v-tip="$t('mock.editor.servesVariantHint', { name: variant.name || $t('mock.editor.variantName') })" />
               </van-button>
             </div>
             <van-tag type="primary" plain>
@@ -56,12 +58,12 @@
 
           <div v-else class="variant-editor">
             <van-row v-if="selectedVariant != null" class="variant-editor-bar" align="center" :wrap="false">
-              <van-field class="variant-name-field" v-model="selectedVariant.name"
+              <van-field class="control-field variant-name-field" v-model="selectedVariant.name"
                 :placeholder="$t('mock.editor.variantName')" />
-              <van-field class="variant-meta-field" type="digit"
+              <van-field class="control-field variant-meta-field" type="digit"
                 :label="$t('mock.editor.statusCode')" :placeholder="$t('mock.editor.statusCode')"
                 v-model="variantStatusText" />
-              <van-field class="variant-meta-field" type="digit" :label="$t('mock.editor.delay')"
+              <van-field class="control-field variant-meta-field" type="digit" :label="$t('mock.editor.delay')"
                 :placeholder="$t('mock.editor.delay')" v-model="variantDelayText">
                 <template #extra>
                   <span class="meta-unit">ms</span>
@@ -69,15 +71,16 @@
               </van-field>
               <van-row class="variant-active" align="center" :wrap="false">
                 <van-switch :model-value="record.activeVariantId === selectedVariant.id"
+                  v-tip="record.activeVariantId === selectedVariant.id ? $t('mock.editor.servesVariant') : $t('mock.editor.setServing')"
                   @update:model-value="toggleActive(selectedVariant)" />
               </van-row>
               <van-button class="btn-icon-only" size="mini" plain type="success" :disabled="atVariantLimit"
-                :title="$t('mock.editor.duplicateVariant')" @click="duplicateVariant">
+                v-tip="$t('mock.editor.duplicateVariant')" @click="duplicateVariant">
                 <template #icon>
                   <van-icon class="iconfont icon-copy" style="padding: 0;" />
                 </template>
               </van-button>
-              <van-button class="btn-icon-only" size="mini" plain type="danger" :title="$t('mock.editor.deleteVariant')"
+              <van-button class="btn-icon-only" size="mini" plain type="danger" v-tip="$t('mock.editor.deleteVariant')"
                 @click="removeVariant(selectedVariant)">
                 <template #icon>
                   <van-icon class="iconfont icon-delete" />
@@ -100,7 +103,7 @@
           <van-notice-bar v-if="rawError" :text="rawError" mode="closeable" color="var(--van-danger-color)"
             background="color-mix(in srgb, var(--van-danger-color) 8%, transparent)" />
           <div class="raw-editor">
-            <vue-ace-editor v-model:data="rawText" lang="json" :fold="false" searchable />
+            <vue-ace-editor v-model:data="rawText" lang="json" :fold="false" :gutter="false" searchable />
           </div>
         </div>
       </van-tab>
@@ -110,9 +113,11 @@
 
 <script lang="ts" setup>
 import { MOCK_MAX_VARIANTS, ProxyMock } from '@shared'
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import type { FieldInstance } from 'vant'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { scrollOptions } from '../../../common/scroll'
 import VueAceEditor from '../../components/VueAceEditor.vue'
 import MockMatchTab from './MockMatchTab.vue'
 import MockResponseForm from './MockResponseForm.vue'
@@ -341,17 +346,13 @@ function applyRaw() {
   min-width: 0;
 }
 
-/* 名称与路径各占一行，长路径可以完整看到 */
+/* 名称与路径各占一行，长路径可以完整看到。
+   控件外观（高 / 左右内边距 / 下边那条线）、Vant 发丝线的隐藏与 Field 内部三层的适配全部读 global.css 的 .control-field，
+   与匹配 tab 的输入框、右侧的纯图标按钮同一档；标签颜色见 global.css 的 .van-field__label，
+   垂直居中走 .control-field 里的 align-items:center（原先是这两格各带一个 Vant center 属性，效果同一条声明）。
+   这里只剩本地的一条：定高控件不许被容器压扁。 */
 .name-field,
 .path-field {
-  flex: none;
-  width: 100%;
-  padding: var(--app-sp-md) var(--app-sp-lg);
-  border-radius: var(--van-radius-md);
-}
-
-.head-actions {
-  gap: var(--app-sp-lg);
   flex: none;
 }
 
@@ -380,6 +381,18 @@ function applyRaw() {
   padding: 0 var(--app-sp-sm);
   /* 预留滚动条宽度：展开响应头等操作触发溢出时，内容不会左右跳动 */
   scrollbar-gutter: stable;
+}
+
+/* 匹配面板的滚动交给 OverlayScrollbars（浮层手柄，不占内容宽度）。
+   原生 overflow 和为它预留的 gutter 一起撤掉：这一页不再给不存在的滚动条让位，
+   与 Settings / 右侧详情等 OS 页面同一口径。代价是切到其余三页时右缘要退回一条滚动条宽。 */
+.editor-tabs :deep(.match-panel) {
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.tab-scroll {
+  height: 100%;
 }
 
 .tab-body {
@@ -469,7 +482,6 @@ function applyRaw() {
 .variant-chip-status {
   flex: none;
   font-size: var(--van-font-size-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 .variant-chip-status.is-success {
@@ -508,9 +520,10 @@ function applyRaw() {
 }
 
 /* 名称编辑与变体级操作合并到一行，替代原来单独的”编辑变体：xxx”标题。
-   这一行是右侧编辑列里地板最宽的一行（各子项 min-width 之和 27.9md，再加 Vant 相邻 mini按钮写死的 4px margin；
-   匹配 tab 与响应头的行都把 min-width 放到了 0，收缩得到更狠），MockRuleMgr 的 @container mgr (max-width: 50em)
-   就是从它反推的：动这里的 min-width / gap / 按钮个数，要回去把那个 em 阈值重算一遍，
+   这一行的地板（各子项 min-width 之和 27.9md + Vant 相邻 mini 按钮写死的 4px margin）曾是右侧编辑列里最宽的一行，
+   MockRuleMgr 的 @container mgr 阈值当时就从它反推（取 50em）。现在更宽的是响应表单的响应体头部行
+   （整行固有宽 335.7~481.9px，随语言与字号变），阈值已按它重算到 63em，这一行自然仍在覆盖范围内：
+   动这里的 min-width / gap / 按钮个数，还是要回 MockRuleMgr 那段注释核对阈值要不要再抬，
    否则窄窗口又会回到「断点还没到、行已经放不下」的那段。 */
 .variant-editor-bar {
   gap: var(--app-sp-md);
@@ -518,16 +531,11 @@ function applyRaw() {
   min-width: 0;
 }
 
-/* 基准宽度取 0，收缩判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作。
-   内边距走 Vant 自己的 --van-cell-*-padding 而不是 padding：global.css 那条分割线读的就是横向这一档，
-   只有从这里声明，底线才会和标签同列起笔（padding 写死在组件里，线仍会停在 Vant 的那一档）。 */
+/* 外观（下划线、定高、左右内边距）走 global.css 的 .control-field，与匹配 tab 的 host、记录列表搜索框同一口径。
+   基准宽度取 0，收缩判定只按最小宽计算，让名称占满剩余空间而不是先挤掉右侧操作。 */
 .variant-name-field {
-  --van-cell-vertical-padding: var(--app-sp-sm);
-  --van-cell-horizontal-padding: var(--app-sp-sm);
-
   flex: 1 1 0;
   min-width: calc(var(--van-font-size-md) * 5.5);
-  border-radius: var(--van-radius-md);
 }
 
 .variant-name-field :deep(.van-field__control) {
@@ -541,15 +549,11 @@ function applyRaw() {
    两列合并成同一档（基准 10em / 地板 7em）：与原先分开的 10.5+9.5、7.5+6.5 之和相等，
    所以统一宽度不会把这一行的最小宽之和推回撑破面板的那条线。
    基准按英文全称 “Status Code” + 数值预留，地板只保证标签与两三位数字，压到地板时由输入框自身裁切。
-   内边距同样走 --van-cell-*-padding，理由见 .variant-name-field。 */
+   外观同样走 .control-field，这里只剩这一行的宽度分配与字号。 */
 .variant-meta-field {
-  --van-cell-vertical-padding: var(--app-sp-sm);
-  --van-cell-horizontal-padding: var(--app-sp-md);
-
   flex: 0 1 auto;
   width: calc(var(--van-font-size-md) * 10);
   min-width: calc(var(--van-font-size-md) * 7);
-  border-radius: var(--van-radius-md);
   font-size: var(--van-font-size-md);
 }
 
@@ -557,7 +561,6 @@ function applyRaw() {
   flex: none;
   margin-right: var(--app-sp-sm);
   width: auto;
-  color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
 }
 

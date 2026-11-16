@@ -357,7 +357,8 @@ async function finish() {
 }
 
 .onboarding-logo {
-  font-size: 22px;
+  /* 写死 22px 不随字号缩放；1.7 档在默认字号（md=13px）下即 22.1px */
+  font-size: calc(var(--van-font-size-md) * 1.7);
   color: var(--van-primary-color);
 }
 
@@ -391,7 +392,8 @@ async function finish() {
 }
 
 .step-icon {
-  font-size: 20px;
+  /* 写死 20px；1.5 档在默认字号下 19.5px */
+  font-size: calc(var(--van-font-size-md) * 1.5);
   line-height: 1;
 }
 

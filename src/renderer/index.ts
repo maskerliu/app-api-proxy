@@ -8,6 +8,7 @@ import './styles/global.css'
 import { createApp } from 'vue'
 import i18n from '../lang'
 import App from './App.vue'
+import { vTip } from './common/tooltip'
 import router from './router'
 
 OverlayScrollbars.plugin(ClickScrollPlugin)
@@ -20,4 +21,5 @@ app.use(i18n)
 app.use(router)
 app.use(pinia)
 app.use(vant)
+app.directive('tip', vTip)
 app.mount('#app')

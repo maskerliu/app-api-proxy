@@ -18,34 +18,31 @@ function variant(id: string, statusCode: number): ProxyMock.MockVariant {
 }
 
 describe('recordRowOf · 记录行视图模型', () => {
-  it('录制自动名换成 path 作标题，第二行只补 host', () => {
+  it('录制自动名换成 path 作标题，完整 URL 交给 title 悬浮', () => {
     const row = recordRowOf(matched(
       { host: 'api.example.com', conditions: [condition('ts', '1')] },
       { url: '/v1/users?ts=1', name: 'GET /v1/users?ts=1' },
     ))
 
     assert.equal(row.title, '/v1/users')
-    assert.equal(row.subPath, 'api.example.com')
     assert.equal(row.titleHint, '/v1/users?ts=1')
     assert.equal(row.summary.level, 'standard')
   })
 
-  it('手工命名保留为标题，第二行给完整 host + path', () => {
+  it('手工命名保留为标题，行上不重复展示路径', () => {
     const row = recordRowOf(matched(
       { host: 'api.example.com' },
       { url: '/v1/users', name: '用户列表' },
     ))
 
     assert.equal(row.title, '用户列表')
-    assert.equal(row.subPath, 'api.example.com/v1/users')
     assert.equal(row.titleHint, '/v1/users')
   })
 
-  it('无匹配条件时回落到 url，第二行为空', () => {
+  it('无匹配条件时标题回落到 url', () => {
     const named = recordRowOf(makeRecord({ url: '/v1/legacy', name: '旧记录' }))
     assert.equal(named.summary, null)
     assert.equal(named.title, '旧记录')
-    assert.equal(named.subPath, '')
     assert.equal(named.titleHint, '/v1/legacy')
 
     const anonymous = recordRowOf(makeRecord({ url: '/v1/legacy', name: '' }))
@@ -53,7 +50,7 @@ describe('recordRowOf · 记录行视图模型', () => {
     assert.equal(anonymous.titleHint, '/v1/legacy')
   })
 
-  it('状态码取生效响应，启用的变体优先于主响应', () => {
+  it('状态码取有效响应，指定了应答变体时优先于主响应', () => {
     const record = matched({}, { url: '/v1/users' })
     record.response.statusCode = 200
     assert.equal(recordRowOf(record).statusOk, true)
@@ -64,7 +61,20 @@ describe('recordRowOf · 记录行视图模型', () => {
     assert.equal(row.statusCode, 500)
     assert.equal(row.statusOk, false)
     assert.equal(row.variantCount, 2)
-    assert.equal(row.active, true)
+    assert.equal(row.servesVariant, true)
+    assert.equal(row.servingVariantName, '变体 v2')
+    assert.equal(row.servingLabelKey, 'mock.editor.servesVariantName')
+  })
+
+  it('应答变体指向不存在的变体时只说「有」，名称留空交给文案兜底', () => {
+    const record = matched({}, { url: '/v1/users' })
+    record.variants = [variant('v1', 201)]
+    record.activeVariantId = 'gone'
+    const row = recordRowOf(record)
+
+    assert.equal(row.servesVariant, true)
+    assert.equal(row.servingVariantName, '')
+    assert.equal(row.servingLabelKey, 'mock.editor.servesVariant')
   })
 
   it('告警只展示首条，其余折算成 +N，忽略键取自条件', () => {
@@ -79,7 +89,8 @@ describe('recordRowOf · 记录行视图模型', () => {
     assert.equal(row.warning.type, 'duplicate')
     assert.equal(row.warningExtra, 2)
     assert.deepEqual(row.ignoreKeys, ['ts', 'sign'])
-    assert.equal(row.active, false)
+    assert.equal(row.servesVariant, false)
+    assert.equal(row.servingVariantName, '')
   })
 })
 

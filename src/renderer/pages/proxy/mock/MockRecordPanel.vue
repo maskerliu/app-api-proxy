@@ -8,7 +8,7 @@
           {{ $t('mock.recordPanel.activeRule', { rule: activeRuleName }) }}
         </span>
       </van-row>
-      <div class="record-panel-url mono truncate" :title="record?.url">{{ record?.method }} {{ record?.url }}</div>
+      <div class="record-panel-url mono truncate" v-tip="record?.url">{{ record?.method }} {{ record?.url }}</div>
 
       <van-search v-model="ruleKeyword" class="record-rule-search"
         :placeholder="$t('mock.recordPanel.searchPlaceholder')" />
@@ -19,12 +19,13 @@
             :class="{ 'is-selected': selectedRule?._id === rule._id }" @click="selectRule(rule)">
             <template #title>
               <div class="record-rule-title">
-                <span class="record-rule-name truncate" :title="rule.name">{{ rule.name }}</span>
-                <span v-if="rule.desc" class="record-rule-desc truncate" :title="rule.desc">{{ rule.desc }}</span>
+                <span class="record-rule-name truncate" v-tip="rule.name">{{ rule.name }}</span>
+                <span v-if="rule.desc" class="record-rule-desc truncate" v-tip="rule.desc">{{ rule.desc }}</span>
               </div>
             </template>
             <template v-if="rule._id === activeRuleId" #value>
-              <van-tag type="success" plain>{{ $t('mock.editor.activeHint') }}</van-tag>
+              <!-- 直接复用规则层的启用文案，绿色标签在这一页只代表「接管请求」，不再是第二个「生效」 -->
+              <van-tag type="success" plain>{{ $t('mock.rule.enabled') }}</van-tag>
             </template>
           </van-cell>
           <van-cell v-if="showCreateRow" clickable class="record-rule-create" icon="plus"
@@ -64,7 +65,7 @@
         <van-row v-for="entry in recentHistory" :key="entry.id" class="record-history-row" align="center"
           :wrap="false">
           <div class="record-history-info">
-            <span class="record-history-name truncate" :title="entry.recordName || entry.url">
+            <span class="record-history-name truncate" v-tip="entry.recordName || entry.url">
               {{ entry.recordName || entry.url }}
             </span>
             <span class="record-history-meta truncate hint">
@@ -82,7 +83,7 @@
     </div>
     <template #reference>
       <van-button class="btn-icon-only" plain size="small" type="primary" icon="bookmark-o"
-        :title="$t('mock.recordPanel.entry')">
+        v-tip="$t('mock.recordPanel.entry')">
       </van-button>
     </template>
   </van-popover>

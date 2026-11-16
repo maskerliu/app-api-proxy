@@ -129,14 +129,17 @@ ipcMain.handle(MAIN_API_CMD.OpenDevTools, (_, args?: any) => {
 
 ipcMain.handle(MAIN_API_CMD.SetAppTheme, (_, theme: ('system' | 'light' | 'dark')) => {
   nativeTheme.themeSource = theme
+  const win = getAppWindow()
+  if (!win) return
   if (os.platform() == 'darwin') {
     // console.log(this.mainWindow.setTitleBarOverlay)
   } else {
-    getAppWindow()?.setTitleBarOverlay({
+    win.setTitleBarOverlay({
       color: '#f8f8f800',
       symbolColor: nativeTheme.shouldUseDarkColors ? 'white' : 'black'
     })
   }
+  win.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#1a1a1a' : '#f2f3f5')
 })
 
 ipcMain.handle(MAIN_API_CMD.DownloadUpdate, async (_, newVersion: Version) => {

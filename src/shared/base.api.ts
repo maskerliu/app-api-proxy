@@ -12,8 +12,6 @@ let clientUID: string = null
 let BASE_DOMAIN: string = null
 let UPDATE_SERVER: string = null
 
-const ContentType_Multipar = 'multipart/form-data;charset=UTF-8;'
-
 export interface RequestOptions {
   // 调用方自行处理失败提示时关闭全局 notify，避免同一错误弹两次
   silentError?: boolean

@@ -34,17 +34,14 @@
         <span class="row-label">{{ $t('mock.match.method') }}</span>
         <mini-select v-model="match.method" class="match-select method-select" :options="methodOptions" font-size="md"
           @change="touch" />
-      </van-row>
-      <van-row class="field-row identity-row" align="center" :wrap="false">
-        <span class="row-label">{{ $t('mock.match.host') }}</span>
-        <van-field ref="hostField" class="match-field" v-model="match.host"
+        <van-field ref="hostField" class="control-field match-field" :label="$t('mock.match.host')" v-model="match.host"
           :placeholder="$t('mock.match.hostPlaceholder')" @update:model-value="touch" />
       </van-row>
       <van-row class="field-row identity-row path-row" align="center">
         <span class="row-label">{{ $t('mock.match.path') }}</span>
         <mini-select v-model="match.pathType" class="match-select path-type-select" :options="pathTypeOptions"
           font-size="md" @change="touch" />
-        <van-field ref="pathField" class="path-input" v-model="match.path"
+        <van-field ref="pathField" class="control-field path-input" v-model="match.path"
           :placeholder="$t('mock.match.pathPlaceholder')" @update:model-value="touch" />
       </van-row>
       <van-row v-if="match.pathOriginal && match.pathOriginal !== match.path" class="path-original hint" align="center"
@@ -70,7 +67,7 @@
         <van-row class="sub-head" align="center" :wrap="false">
           <span class="sub-title">{{ $t('mock.match.queryIgnoreKeys') }}</span>
           <van-tag round>{{ match.query.ignoreKeys.length }}</van-tag>
-          <van-field v-model="newIgnoreKey" class="add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
+          <van-field v-model="newIgnoreKey" class="control-field add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
             @keyup.enter="addIgnoreKey" />
           <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
             :disabled="newIgnoreKey.trim() === ''" @click="addIgnoreKey" />
@@ -79,7 +76,7 @@
         <van-row class="tag-list" align="center">
           <van-tag v-for="key in match.query.ignoreKeys" :key="key" closeable
             :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" plain
-            :title="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
+            v-tip="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
             {{ key }}
           </van-tag>
           <span v-if="match.query.ignoreKeys.length === 0" class="empty-tip hint">
@@ -113,25 +110,25 @@
               <span class="sub-title">{{ $t('mock.match.conditions') }}</span>
               <van-tag round type="primary">{{ conditionRows.length }}</van-tag>
               <!-- 置灰必须自己说明自己，否则看上去像控件坏了；折叠态也要看得到，所以写在标题行而不是面板内 -->
-              <span v-if="inertCount > 0" class="inert-hint hint truncate" :title="inertHintText">{{ inertHintText }}</span>
+              <span v-if="inertCount > 0" class="inert-hint hint truncate" v-tip="inertHintText">{{ inertHintText }}</span>
             </van-row>
           </template>
           <template #right-icon>
             <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
-              :title="$t('mock.match.addCondition')" @click.stop="onAddCondition" />
+              v-tip="$t('mock.match.addCondition')" @click.stop="onAddCondition" />
           </template>
           <div v-if="conditionRows.length === 0" class="empty-tip hint">{{ $t('mock.match.conditionEmpty') }}</div>
           <van-row v-for="(row, idx) in conditionRows" :key="idx" class="condition-row"
             :class="{ 'is-inert': row.inert }" align="center" :wrap="false">
             <mini-select :model-value="row.location" class="match-select location-select" :options="locationOptions"
               font-size="md" @change="onLocationChange(row, $event)" />
-            <van-field :model-value="conditionName(row)" class="condition-key"
+            <van-field :model-value="conditionName(row)" class="control-field condition-key"
               :placeholder="$t(row.location === 'header' ? 'mock.match.headerName' : 'mock.match.conditionKey')"
               @update:model-value="onRowName(row, $event)" />
             <mini-select v-model="row.condition.op" class="match-select op-select" :options="operatorOptions"
               font-size="md" @change="touch" />
             <!-- 值列常驻：随运算符拆掉整列会把行末宽度腾出来，键名列与删除钮都跟着平移 -->
-            <van-field v-model="row.condition.value" class="condition-value" :disabled="!needsValue(row)"
+            <van-field v-model="row.condition.value" class="control-field condition-value" :disabled="!needsValue(row)"
               :placeholder="$t(needsValue(row) ? 'mock.match.conditionValue' : 'mock.match.conditionValueSkip')"
               @update:model-value="touch" />
             <van-icon name="cross" class="icon-action row-delete" @click="removeRow(row)" />
@@ -139,7 +136,7 @@
           <van-row v-if="querySuggestions.length > 0" class="suggest-row" align="center">
             <span class="hint">{{ $t('mock.match.querySuggest') }}</span>
             <van-tag v-for="item in querySuggestions" :key="item.key" type="primary" class="suggest-tag query-suggest truncate"
-              :title="`${item.key}=${item.value}`" @click="addQuerySuggestion(item)">
+              v-tip="`${item.key}=${item.value}`" @click="addQuerySuggestion(item)">
               {{ item.key }}={{ item.value }}
             </van-tag>
           </van-row>
@@ -172,12 +169,12 @@
       </van-row>
       <van-row class="test-row" align="center">
         <mini-select v-model="testMethod" class="match-select method-select" :options="methodOptions" font-size="md"
-          :title="$t('mock.match.method')" />
-        <van-field v-model="testUrl" class="test-url" :placeholder="$t('mock.match.testUrlPlaceholder')" />
+          v-tip="$t('mock.match.method')" />
+        <van-field v-model="testUrl" class="control-field test-url" :placeholder="$t('mock.match.testUrlPlaceholder')" />
         <van-button size="mini" type="primary" :loading="testing" @click="runTest">
           {{ $t('mock.match.testRun') }}
         </van-button>
-        <van-button class="btn-icon-only" size="mini" plain icon="replay" :title="$t('mock.match.testSeed')"
+        <van-button class="btn-icon-only" size="mini" plain icon="replay" v-tip="$t('mock.match.testSeed')"
           @click="seedTest" />
       </van-row>
       <div v-if="testError" class="test-error">{{ testError }}</div>
@@ -625,11 +622,9 @@ defineExpose({ focusField })
 }
 
 .section-title {
+  /* 颜色/字号/字重见 global.css 的 .section-title，这里只留这一行自己的排布 */
   gap: var(--app-sp-lg);
   margin-bottom: var(--app-sp-md);
-  color: var(--van-text-color);
-  font-size: var(--van-font-size-md);
-  font-weight: 500;
 }
 
 .field-row {
@@ -642,24 +637,31 @@ defineExpose({ focusField })
   min-width: calc(var(--van-font-size-md) * 3.7);
 }
 
-/* 请求标识三行统一：标签固定列宽、置灰、右对齐，控件同宽描边 */
+/* 请求标识两行统一：首列标签固定列宽、置灰、右对齐，控件同宽描边 */
 .identity-row .row-label {
   width: calc(var(--van-font-size-md) * 4.8);
   min-width: calc(var(--van-font-size-md) * 4.8);
   text-align: right;
 }
 
+/* Host 与变体行 / 响应行的「状态码」对齐到同一个样子：标签收进框内，下划线连着标签一起压住。
+   行外标签只能贴在家门口（定宽右对齐会在方法下拉和它之间留一截没有归属的空档），但线就断在输入框左缘。
+   标签排法照 MockRecordEditor 的 .variant-meta-field 与 MockResponseForm 的 .status-field 那一档：
+   不吃 Vant 默认的 6.2em 标签列，随文字收缩。这三处同规格，等编辑器头部那两格的标签间距定了再一起上提。 */
+.match-field :deep(.van-field__label) {
+  flex: none;
+  width: auto;
+  margin-right: var(--app-sp-sm);
+  font-size: var(--van-font-size-md);
+}
+
+/* 下划线控件的外观（高 / 左右内边距 / 下边那条约 1px 的线）与 Field 内部适配见 global.css 的 .control-field，
+   这里只留每一格在行里占多宽 */
 .match-field,
 .path-input,
 .add-input {
   flex: 1 1 auto;
   min-width: 0;
-  height: var(--app-control-height);
-  padding: 0 var(--app-sp-lg);
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-md);
-  background: var(--van-background-2);
-  box-sizing: border-box;
 }
 
 /* 忽略参数的输入框不再吃满整行：宽度取下方条件表「参数名」列那一档（26% 列宽在 md*11 上下），
@@ -672,40 +674,15 @@ defineExpose({ focusField })
   margin-left: auto;
 }
 
-.match-field::after,
-.path-input::after,
-.add-input::after {
-  display: none;
-}
-
-.match-field :deep(.van-field__body),
-.path-input :deep(.van-field__body),
-.add-input :deep(.van-field__body) {
-  height: 100%;
-}
-
-.match-field :deep(.van-field__value),
-.path-input :deep(.van-field__value),
-.add-input :deep(.van-field__value) {
-  padding: 0;
-}
-
-.match-field :deep(.van-field__control),
-.path-input :deep(.van-field__control),
-.add-input :deep(.van-field__control) {
-  height: var(--app-control-height);
-}
-
 .match-select {
   flex: none;
 }
 
-.method-select {
-  width: calc(var(--van-font-size-md) * 6.8);
-}
-
+/* Method / Path 两枚下拉同宽（两行标签已经都是 4.8 档对齐左缘，只差右缘）：按 Method 那一档，
+   它要装最长的 OPTIONS，往下收到 Path 原先的 6.3 档会让两个使用点（这里 + 试匹配行）一起变窄。 */
+.method-select,
 .path-type-select {
-  width: calc(var(--van-font-size-md) * 6.3);
+  width: calc(var(--van-font-size-md) * 6.8);
 }
 
 .path-input {
@@ -785,28 +762,6 @@ defineExpose({ focusField })
   /* 多了一列位置，键名列要能让位：地板按「参数名」三个字留，压到地板由输入自身裁切 */
   flex: 0 1 26%;
   min-width: calc(var(--van-font-size-md) * 5);
-  height: var(--app-control-height);
-  padding: 0 var(--app-sp-lg);
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-md);
-  background: var(--van-background-2);
-  box-sizing: border-box;
-}
-
-.condition-key::after {
-  display: none;
-}
-
-.condition-key :deep(.van-field__body) {
-  height: 100%;
-}
-
-.condition-key :deep(.van-field__value) {
-  padding: 0;
-}
-
-.condition-key :deep(.van-field__control) {
-  height: var(--app-control-height);
 }
 
 /* 位置列只装 Query / Header 两个词，宽度按较长的那个留 */
@@ -824,34 +779,13 @@ defineExpose({ focusField })
      把同行的键名列（0 1 26%）压掉一半。0 基准＝只吃余量，键名列才拿得到设计里那 26%。 */
   flex: 1 1 0;
   min-width: 0;
-  height: var(--app-control-height);
-  padding: 0 var(--app-sp-lg);
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-md);
-  background: var(--van-background-2);
-  box-sizing: border-box;
 }
 
-.condition-value::after {
-  display: none;
-}
-
-.condition-value :deep(.van-field__body) {
-  height: 100%;
-}
-
-.condition-value :deep(.van-field__value) {
-  padding: 0;
-}
-
-.condition-value :deep(.van-field__control) {
-  height: var(--app-control-height);
-}
-
-/* 无值运算符（存在/不存在）下值列整格改虚线：Vant 的禁用只灰文本（--van-field-input-disabled-text-color），
-   描边照旧会看着像待填。不用 opacity 收——.is-inert 行已经压了 0.55，再乘一次这格就没了。 */
+/* 无值运算符（存在/不存在）下值列的下划线改虚线：Vant 的禁用只灰文本（--van-field-input-disabled-text-color），
+   线照旧会看着像待填。只改下边那一条——其余三边没画线，写 border-style 会把它们按默认 medium 长出 3px 虚框。
+   不用 opacity 收——.is-inert 行已经压了 0.55，再乘一次这格就没了。 */
 .condition-value.van-field--disabled {
-  border-style: dashed;
+  border-bottom-style: dashed;
 }
 
 /* 删除格与同行控件等高：定边长留在站点，圆角与 hover 底色读 global.css 的 .icon-action。
@@ -944,28 +878,6 @@ defineExpose({ focusField })
 .test-url {
   flex: 1 1 calc(var(--van-font-size-md) * 15.4);
   min-width: 0;
-  height: var(--app-control-height);
-  padding: 0 var(--app-sp-lg);
-  border: 1px solid var(--van-border-color);
-  border-radius: var(--van-radius-md);
-  background: var(--van-background-2);
-  box-sizing: border-box;
-}
-
-.test-url::after {
-  display: none;
-}
-
-.test-url :deep(.van-field__body) {
-  height: 100%;
-}
-
-.test-url :deep(.van-field__value) {
-  padding: 0;
-}
-
-.test-url :deep(.van-field__control) {
-  height: var(--app-control-height);
 }
 
 .test-error {

@@ -38,11 +38,6 @@ function open(path: string) {
 </script>
 
 <style scoped>
-.setting-cell-icon {
-  margin-left: var(--app-sp-3xl);
-}
-</style>
-<style scoped>
 .settings {
   width: var(--app-popup-w-md);
   min-width: min(375px, 100vw);

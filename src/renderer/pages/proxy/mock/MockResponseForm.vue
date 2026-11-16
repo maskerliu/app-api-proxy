@@ -1,9 +1,9 @@
 <template>
   <div class="response-form" :class="{ 'fill-body': fillBody, 'no-meta': !showMeta }">
     <van-row v-if="showMeta" class="form-row" :wrap="false">
-      <van-field ref="statusField" class="status-field" type="digit" :label="$t('mock.editor.statusCode')"
+      <van-field ref="statusField" class="control-field status-field" type="digit" :label="$t('mock.editor.statusCode')"
         :placeholder="$t('mock.editor.statusCode')" v-model="statusText" />
-      <van-field ref="delayField" class="delay-field" type="digit" :label="$t('mock.editor.delay')"
+      <van-field ref="delayField" class="control-field delay-field" type="digit" :label="$t('mock.editor.delay')"
         :placeholder="$t('mock.editor.delay')" v-model="delayText">
         <template #extra>
           <span class="field-unit">ms</span>
@@ -32,13 +32,16 @@
 
     <div ref="bodySection" class="section-card form-section body-section"
       :style="fillBody ? { paddingBottom: `${sectionPadBottom}px` } : null">
-      <van-row class="section-head body-head" align="center">
+      <!-- 一行到底：标题、类型单选、体积与两个动作按钮同排，断点触发后也不把工具挤到第二行。
+           单选组内部同样不许折行（见下方 .body-type），这一行里唯一会主动让位的是体积数字；
+           排得开排不开由 MockRuleMgr 的 @container mgr 分栏阈值保证，那一档就是按这一行反推的。 -->
+      <van-row class="section-head" align="center" :wrap="false">
         <span class="section-title">{{ $t('mock.editor.body') }}</span>
         <van-radio-group v-model="bodyTypeValue" direction="horizontal" class="body-type">
           <van-radio v-for="type in bodyTypes" :key="type" :name="type">{{ type.toUpperCase() }}</van-radio>
         </van-radio-group>
         <van-row class="body-tools" align="center" :wrap="false">
-          <span class="body-size hint">{{ $t('mock.editor.bodySize', { size: bodySizeText }) }}</span>
+          <span class="body-size hint" v-tip="bodySizeText">{{ bodySizeText }}</span>
           <van-row class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }" :wrap="false">
             <van-button size="mini" plain class="btn-icon-only tool-btn" @click="formatBody">
               <template #icon>
@@ -333,6 +336,8 @@ defineExpose({ focusField })
   gap: var(--app-sp-xl);
 }
 
+/* 控件外观（下划线、定高、左右内边距、压掉 Vant 发丝线）全在 global.css 的 .control-field，
+   与匹配 tab 的 host、记录列表搜索框、变体编辑行同一口径；这里只留两格在行里的宽度分配。 */
 .status-field,
 .delay-field {
   flex: 1 1 0;
@@ -342,7 +347,6 @@ defineExpose({ focusField })
 .delay-field :deep(.van-field__label) {
   flex: none;
   width: auto;
-  color: var(--van-text-color-2);
   font-size: var(--van-font-size-md);
 }
 
@@ -384,21 +388,20 @@ defineExpose({ focusField })
 }
 
 .section-head {
-  gap: var(--app-sp-lg);
+  gap: var(--app-sp-md);
   margin-bottom: var(--app-sp-md);
 }
 
 .section-title {
+  /* 颜色/字号/字重见 global.css 的 .section-title */
   flex: none;
-  color: var(--van-text-color);
-  font-size: var(--van-font-size-md);
-  font-weight: 500;
 }
 
 .field-list {
   display: flex;
   flex-direction: column;
-  gap: var(--app-sp-sm);
+  /* 与只读键值网格（global.css 的 .header-list）同一密排档 */
+  gap: var(--app-sp-xs);
 }
 
 .field-row {
@@ -409,14 +412,16 @@ defineExpose({ focusField })
   /* 与只读键值网格同一条 key 列宽口径，见 global.css 的 --app-header-key-width */
   flex: 0 0 var(--app-header-key-width);
   min-width: 0;
-  padding: var(--app-sp-md) var(--app-sp-lg);
+  /* 纵向收到 xs：编辑行没有显式高度，行高全靠这对内边距撑，md 档比只读网格松得多。
+     只改纵向，横向留 lg——它要和面板标题、折叠内容区的 lg 沟道对齐。 */
+  padding: var(--app-sp-xs) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
 .field-value {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--app-sp-md) var(--app-sp-lg);
+  padding: var(--app-sp-xs) var(--app-sp-lg);
   border-radius: var(--van-radius-md);
 }
 
@@ -429,16 +434,20 @@ defineExpose({ focusField })
   padding: var(--app-sp-sm) var(--app-sp-xs);
 }
 
-.body-head {
-  flex-wrap: wrap;
-}
-
+/* Vant 的 .van-radio-group--horizontal 默认 flex-wrap: wrap，窄一点就把 JSON / XML 摊成两行，
+   这一行的观感就散了。组收成 nowrap、每枚单选不许收缩，整组的固有宽就是它的全部家当，让位次序交给下面的体积数字。
+   min-width: 0 + overflow: hidden 只服务一种情形：窗口压到弹窗地板（375px）时单选组才可能被裁掉最右一枚，
+   有它比没有它好——没有它整行会顶穿卡片描边，按钮跟着点不着。 */
 .body-type {
   flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .body-type :deep(.van-radio) {
-  margin-right: var(--app-sp-xl);
+  flex: none;
+  margin-right: var(--app-sp-md);
 }
 
 .body-type :deep(.van-radio__label) {
@@ -459,16 +468,28 @@ defineExpose({ focusField })
   visibility: hidden;
 }
 
-/* 体积紧贴格式化按钮左侧，不参与按钮等宽 */
+/* 体积紧贴格式化按钮左侧，是这一行里唯一主动让位的一段。让位的先后看「收缩分配 ≈ shrink × 基准宽」，
+   所以 shrink 得跟着基准宽一起改：这一段现在只剩一个数（'1.2 KB' 实测 = 3.0sm），单选组连标签带边距约 18.6md（实测 241.2px / md 13），
+   原先那个 5 是配着「体积：」前缀（约 5.5sm）定的，前缀去掉后 5×3.0sm 压不过 1×18.6md，缺口会先摊到单选组头上
+   把它裁掉。抬到 20 后各档字号约是 3:1——数字先省略号，单选组最多吃掉自己那 0.5md 的尾边距（看不出来），按钮始终在框内。
+   宁可少看一个数字，也不把行拆开或把按钮顶出去。 */
 .body-size {
-  flex: none;
+  flex: 0 20 auto;
+  min-width: 0;
   margin-right: var(--app-sp-xs);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 盒型与字形尺寸都交给 .btn-icon-only，这里只保证按钮在窄行里不被压缩 */
+/* 盒型与字形尺寸仍交给 global.css 的 .btn-icon-only（含 flex: none，按钮不会被挤成竖椭圆），
+   这里只把方格边长从行内控件档降到这一行自己的文字行高：
+   Vant 里单选与单元格都按 --van-cell-line-height（md*1.9）排行，按钮留在 --app-control-height（md*2.2）
+   那一档，定这一行高度的就是按钮而不是文字。字号 9 时 24.7px、字号 10 时 26.6px、字号 7 时 20.9px。
+   站点 scoped 选择器是 (0,2,0)，压过全局那条 (0,1,0)，机制同 MockMatchTab 的 .row-delete。 */
 .tool-btn {
-  flex: none;
+  width: var(--van-cell-line-height);
+  height: var(--van-cell-line-height);
 }
 
 .body-editor {

@@ -15,7 +15,6 @@ export const MAIN_API_CMD = {
   SetAppTheme: 'setAppTheme',
   DownloadUpdate: 'downloadUpdate',
   CancelUpdate: 'cancelUpdate',
-  SendServerEvent: 'sendServerEvent',
   WriteClipboard: 'writeClipboard'
 }
 
@@ -34,8 +33,6 @@ export interface IMainAPI {
   openDevTools(...args: any): void
 
   updateBizConfig(...args: any): Promise<LocalServerConfig>
-
-  sendServerEvent(): void
 
   writeClipboard(text: string): Promise<void>
 

@@ -13,10 +13,11 @@ export interface RecordRow {
   summary: MatchSummary | null
   title: string
   titleHint: string
-  subPath: string
   ignoreKeys: string[]
   variantCount: number
-  active: boolean
+  servesVariant: boolean
+  servingVariantName: string
+  servingLabelKey: string
   warning: MockMatchWarning | null
   statusCode: number
   statusOk: boolean
@@ -32,15 +33,20 @@ export function recordRowOf(record: ProxyMock.MockRecord): RecordRow {
   // 录制自动生成的名称就是「方法 + URL」，展示时改用干净的 path，避免和方法色块重复
   const autoName = summary != null && name.startsWith(`${summary.method} `)
   const title = autoName || name === '' ? (path || record.url || name) : name
-  // 标题已经是 path 时，第二行只补 host，避免同一路径出现两次
-  const subPath = summary == null ? '' : title === path ? summary.host : `${summary.host}${summary.path}`
+  const serving = record.variants?.find(it => it?.id === record.activeVariantId)
+  const servingName = serving?.name ?? ''
   return {
     record,
     summary,
-    subPath,
     ignoreKeys: summary?.ignoredKeys ?? [],
     variantCount: record.variants?.length ?? 0,
-    active: record.activeVariantId != null,
+    // 「变体应答」不是开关：activeVariantId 命中时用该变体应答，否则回退『响应』页基础响应。
+    // 徽标直接带变体名，名字过长由样式层截断，完整说明在 tooltip 里。
+    servesVariant: record.activeVariantId != null,
+    servingVariantName: servingName,
+    // 没命名（或 activeVariantId 指向已删变体）时退回不带名字的标签，
+    // 免得徽标写成「应答：变体名称」这种像占位符的句子
+    servingLabelKey: servingName === '' ? 'mock.editor.servesVariant' : 'mock.editor.servesVariantName',
     warning: warnings[0] ?? null,
     title,
     titleHint: record.url || name || path,

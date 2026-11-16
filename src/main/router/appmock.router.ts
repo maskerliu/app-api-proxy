@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
+import { ProxyMock } from '@shared/proxy.models'
 import { IOC_TYPES } from '../constants'
 import { BizNetwork } from '../misc/utils'
 import {
@@ -12,6 +13,7 @@ import { BaseRouter, ParamType } from './base.router'
 interface ReqResp {
   req: Request
   resp: Response
+  connId: string
 }
 
 @injectable()
@@ -32,33 +34,15 @@ export class AppMockRouter extends BaseRouter {
 
   private _clients: Map<string, ReqResp> = new Map()
   private _heartbeat: ReturnType<typeof setInterval> = null
+  // 连接号与事件号只在 SSE 演示通道内自增，用于演示里的 Last-Event-ID 与在线连接标识
+  private _connSeq = 0
+  private _eventSeq = 0
 
   private static readonly HEARTBEAT_INTERVAL = 15000
   private static readonly RETRY_INTERVAL = 3000
 
   constructor() {
     super()
-
-    this.router.get(`${API_URL.Broadcast}/:uid`, (req, resp) => {
-      const from = req.params['uid']
-      const chunk = `event: warning\nid: ${Date.now()}\ndata: hello[${Math.random()} from ${from}]\n\n`
-
-      this._clients.forEach((it, uid) => {
-        if (it.resp.writableEnded || it.resp.destroyed) {
-          this._clients.delete(uid)
-          return
-        }
-        try {
-          it.resp.write(chunk)
-        } catch (err) {
-          console.warn(`sse broadcast failed: ${uid}`, err)
-          this._clients.delete(uid)
-        }
-      })
-      this.stopHeartbeatIfIdle()
-
-      resp.send(`broadcast success from ${from}`)
-    })
 
     this.router.get(`${API_URL.Sse}/:uid`, (req, resp) => {
       const uid = emptyToNull(pickHeader(req.headers, MOCK_UID_HEADER)) ?? req.params['uid']
@@ -78,7 +62,7 @@ export class AppMockRouter extends BaseRouter {
 
       const previous = this._clients.get(uid)
       if (previous != null && previous.resp !== resp) this.closeClient(previous.resp)
-      this._clients.set(uid, { req, resp })
+      this._clients.set(uid, { req, resp, connId: `sse-${++this._connSeq}` })
       this.startHeartbeat()
 
       const cleanup = () => {
@@ -102,6 +86,69 @@ export class AppMockRouter extends BaseRouter {
       }
     })
 
+  }
+
+  // 定向：与 PushService.sendMessage 同构——IM 带 to，只投给这一条连接
+  private pushDemoDirect(uid: string): string {
+    const msg: ProxyMock.PushMsg<string> = {
+      type: ProxyMock.PushMsgType.TXT,
+      from: 'appmock',
+      to: uid,
+      payload: {
+        type: ProxyMock.BizType.IM,
+        content: `direct message at ${new Date().toISOString()}`
+      }
+    }
+    return this.pushEvent(uid, 'im', msg) ? `pushed to ${uid}` : `no sse client for ${uid}`
+  }
+
+  // 广播：与 PushService.broadcastClientInfos 同构——在线连接清单发给每一条连接
+  private broadcastDemoClients(from: string): string {
+    const clients: ProxyMock.ClientInfo[] = []
+    this._clients.forEach((it, uid) => {
+      clients.push({
+        connId: it.connId,
+        uid,
+        ip: it.req.socket?.remoteAddress ?? '-',
+        port: it.req.socket?.remotePort ?? 0,
+        kind: 'viewer'
+      })
+    })
+
+    const msg: ProxyMock.PushMsg<ProxyMock.ClientInfo[]> = {
+      type: ProxyMock.PushMsgType.TXT,
+      from,
+      payload: { type: ProxyMock.BizType.ClientInfos, content: clients }
+    }
+    return `broadcast ${clients.length} client(s) to ${this.pushToAll('client_infos', msg)} connection(s)`
+  }
+
+  // data 用与 /echo 完全相同的 PushMsg 信封，接收方按同一套 type/payload 解析即可
+  private pushEvent(uid: string, event: string, msg: ProxyMock.PushMsg<any>): boolean {
+    const client = this._clients.get(uid)
+    if (client == null) return false
+    if (client.resp.writableEnded || client.resp.destroyed) {
+      this._clients.delete(uid)
+      return false
+    }
+    try {
+      client.resp.write(`event: ${event}\nid: ${++this._eventSeq}\ndata: ${JSON.stringify(msg)}\n\n`)
+      return true
+    } catch (err) {
+      console.warn(`sse push failed: ${uid}`, err)
+      this._clients.delete(uid)
+      return false
+    }
+  }
+
+  private pushToAll(event: string, msg: ProxyMock.PushMsg<any>): number {
+    let delivered = 0
+    // 写失败的连接在 pushEvent 里删掉；Map 遍历中删除当前键不会跳过后续键
+    this._clients.forEach((_, uid) => {
+      if (this.pushEvent(uid, event, msg)) delivered++
+    })
+    this.stopHeartbeatIfIdle()
+    return delivered
   }
 
   private closeClient(resp: Response) {
@@ -159,6 +206,19 @@ export class AppMockRouter extends BaseRouter {
       method: BizNetwork.Method_Get,
       path: API_URL.GetAllPushClients,
       handler: () => this.pushService.getAllPushClients()
+    })
+    // SSE 演示通道的两个动作端点；流本身要裸写 resp，留在构造函数里注册
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: `${API_URL.SsePush}/:uid`,
+      params: [{ key: 'uid', type: ParamType.Path }],
+      handler: (uid) => this.pushDemoDirect(uid)
+    })
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: `${API_URL.SseBroadcast}/:uid`,
+      params: [{ key: 'uid', type: ParamType.Path }],
+      handler: (uid) => this.broadcastDemoClients(uid)
     })
     this.addApiInfo({
       method: BizNetwork.Method_Get,

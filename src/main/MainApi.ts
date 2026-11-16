@@ -39,10 +39,6 @@ const mainApi: IMainAPI = {
     ipcRenderer.invoke(MAIN_API_CMD.CancelUpdate)
   },
 
-  sendServerEvent: function (): void {
-    ipcRenderer.invoke(MAIN_API_CMD.SendServerEvent)
-  },
-
   writeClipboard(text: string): Promise<void> {
     return ipcRenderer.invoke(MAIN_API_CMD.WriteClipboard, text)
   },

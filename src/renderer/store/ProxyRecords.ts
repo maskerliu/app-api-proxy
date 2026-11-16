@@ -60,7 +60,6 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       records: new Map() as Map<number, RecordItem>,
       // 记录插入顺序，淘汰时按队列头部清理
       order: [] as number[],
-      isChanged: 0, // is a random number to identify the records change,
     }
   },
   getters: {
@@ -96,7 +95,6 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
         if (this.records.has(record.id)) continue
         this.insertRecord(record)
       }
-      this.isChanged = new Date().getTime()
     },
     insertRecord(record: RecordItem) {
       record.timelineColor = COLORS[record.id % COLORS.length]
@@ -136,7 +134,6 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
 
       // 淘汰逻辑会跳过当前选中项，这里仅做兜底
       if (this.curRecordId != -1 && !this.records.has(this.curRecordId)) this.curRecordId = -1
-      this.isChanged = new Date().getTime()
     },
     updateSocketRecord(record: ProxyMock.SocketRecord) {
       const existing = this.records.get(record.id) as ProxyMock.SocketRecord

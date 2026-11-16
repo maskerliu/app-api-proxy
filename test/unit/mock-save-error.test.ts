@@ -12,10 +12,11 @@ describe('mock 保存失败分型', () => {
     assert.deepEqual([...MOCK_ERROR_CODES].sort(), groups.sort())
   })
 
-  it('乐观锁冲突文案优先于错误码', () => {
-    const info = describeMockSaveError(new Error('Error: 记录已被其他人修改，请刷新后重试'))
+  it('乐观锁冲突按错误码分型', () => {
+    const info = describeMockSaveError({ errorCode: 'saveConflict' })
     assert.equal(info.kind, 'conflict')
-    assert.ok(info.message.includes('已被其他人修改'))
+    assert.equal(info.code, 'saveConflict')
+    assert.equal(describeMockSaveError(new MockError('saveConflict')).kind, 'conflict')
   })
 
   it('指纹冲突归为重复并带回已存在记录号', () => {
@@ -25,10 +26,9 @@ describe('mock 保存失败分型', () => {
     assert.equal(info.existingRecordId, 'r-1')
   })
 
-  it('旧版 url 重复文案仍可识别', () => {
-    const info = describeMockSaveError(new Error('url [http://a/b] 已存在'))
-    assert.equal(info.kind, 'duplicateUrl')
-    assert.equal(info.url, 'http://a/b')
+  it('服务端文案不参与分型', () => {
+    assert.equal(describeMockSaveError(new Error('url [http://a/b] 已存在')).kind, 'unknown')
+    assert.equal(describeMockSaveError(new Error('记录已被其他人修改，请刷新后重试')).kind, 'unknown')
   })
 
   it('校验码与服务端拒绝码都归为 validation', () => {
@@ -39,9 +39,9 @@ describe('mock 保存失败分型', () => {
     }
   })
 
-  it('冲突与未实现不混进校验提示', () => {
+  it('未实现不混进校验提示', () => {
     for (const code of MOCK_CONFLICT_CODES) {
-      if (code === 'matchDuplicate') continue
+      if (code === 'matchDuplicate' || code === 'saveConflict') continue
       assert.equal(describeMockSaveError({ code }).kind, 'unknown')
     }
   })
