@@ -1,7 +1,7 @@
 <template>
   <van-row class="mgr-content">
     <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - var(--app-card-gutter) * 2);"
-      :style="{ paddingTop: isWeb ? '0' : 'calc(var(--van-font-size-md) * 0.8)' }">
+      :style="{ paddingTop: isWeb ? '0' : 'calc(var(--van-font-size-md) * 0.5)' }">
       <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
           placement="bottom-start" :show-arrow="false" :offset="[0, 2]">
@@ -20,8 +20,13 @@
           <OverlayScrollbarsComponent class="search-result"
             :style="searchWidth > 0 ? { width: searchWidth + 'px' } : null" :options="scrollOptions" defer>
             <van-list :error="rules?.length == 0" :error-text="$t('common.searchNoMatch')">
-              <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" :title="rule.name"
-                :label="rule.desc" @click="onRuleSelect(rule)">
+              <van-cell center class="rule-snap-item" is-link v-for="(rule, idx) in rules" @click="onRuleSelect(rule)">
+                <template #title>
+                  <van-row class="result-title-row" align="center" :wrap="false">
+                    <span class="result-name truncate" v-tip="rule.name">{{ rule.name }}</span>
+                    <span class="result-desc truncate" v-tip="rule.desc">{{ rule.desc }}</span>
+                  </van-row>
+                </template>
                 <template #value>
                   <div>
                     <van-icon class="iconfont icon-edit icon-action result-action-icon result-action-icon--primary"
@@ -46,17 +51,13 @@
           </template>
           <template #title>
             <van-row class="rule-head-title" align="center" :wrap="false">
-              <span class="rule-head-name truncate">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
+              <span class="rule-head-name truncate" v-tip="curRule?.name">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
               <van-tag v-if="curRule._id != null" class="rule-state-tag" plain
                 :type="curRule.isMock ? 'success' : 'warning'" v-tip="mockStateTip">
                 {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
               </van-tag>
+              <span class="rule-head-desc truncate" v-tip="curRule?.desc">{{ curRule?.desc || $t('mock.rule.desc') }}</span>
             </van-row>
-          </template>
-          <template #label>
-            <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              {{ curRule?.desc || $t('mock.rule.desc') }}
-            </span>
           </template>
           <template #value>
             <div class="rule-head-actions">
@@ -1106,11 +1107,20 @@ async function onRecordDeleteConfirm() {
 }
 
 .rule-head-name {
+  flex: none;
+  max-width: calc(var(--van-font-size-md) * 12);
   min-width: 0;
 }
 
 .rule-state-tag {
   flex: none;
+}
+
+.rule-head-desc {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-sm);
 }
 
 .rule-mock-switch {
@@ -1253,6 +1263,37 @@ async function onRecordDeleteConfirm() {
 
 .rule-snap-item {
   width: 100%;
+}
+
+/* Vant 把 __title 与 __value 都设成 flex:1（均分），__title 的 min-width 默认 auto 又按内容撑开，
+   名称+描述一长就把放编辑/删除图标的 __value 顶出可见区。这里让标题可缩、值只占自身宽：
+   截断交还给标题里的 .result-desc，按钮恒在右侧。 */
+.rule-snap-item :deep(.van-cell__title) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.rule-snap-item :deep(.van-cell__value) {
+  flex: none;
+}
+
+/* 名称与描述单行并排（与顶部规则头部同款口径）：名称封顶一档、可缩，描述吃剩余并截断。 */
+.result-title-row {
+  gap: var(--app-sp-md);
+  min-width: 0;
+}
+
+.result-name {
+  flex: 0 1 auto;
+  max-width: calc(var(--van-font-size-md) * 12);
+  min-width: 0;
+}
+
+.result-desc {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-sm);
 }
 
 /* 阈值由右侧编辑区最宽的那一行反推，不是拍的。今天这一行是响应表单的响应体头部：

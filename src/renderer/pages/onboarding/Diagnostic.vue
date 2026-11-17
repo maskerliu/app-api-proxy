@@ -43,8 +43,11 @@
 
         <van-cell-group inset :title="$t('diagnostic.unknownUid')">
           <van-cell v-for="item in unknownRequests" :key="`${item.sessionId}-${item.at}`"
-            :title="`${item.method} ${item.url}`"
+            class="diagnostic-cell"
             :label="`UID: ${item.uid || '(empty)'} | ${item.host || '--'} | ${formatTime(item.at)}`">
+            <template #title>
+              <span class="truncate" v-tip="`${item.method} ${item.url}`">{{ item.method }} {{ item.url }}</span>
+            </template>
             <template #value>
               <van-tag type="danger">{{ $t('diagnostic.uidUnknown') }}</van-tag>
             </template>
@@ -53,15 +56,23 @@
         </van-cell-group>
 
         <van-cell-group inset :title="$t('diagnostic.errors')">
-          <van-cell v-for="(item, index) in recentErrors" :key="`${item.at}-${index}`" :title="item.error"
-            :label="`UID: ${item.uid || '(empty)'} | ${item.url || '--'} | ${formatTime(item.at)}`" />
+          <van-cell v-for="(item, index) in recentErrors" :key="`${item.at}-${index}`"
+            class="diagnostic-cell"
+            :label="`UID: ${item.uid || '(empty)'} | ${item.url || '--'} | ${formatTime(item.at)}`">
+            <template #title>
+              <span class="truncate" v-tip="item.error">{{ item.error }}</span>
+            </template>
+          </van-cell>
           <van-cell v-if="recentErrors.length === 0" :title="$t('diagnostic.errorsEmpty')" />
         </van-cell-group>
 
         <van-cell-group inset :title="$t('diagnostic.requests')">
           <van-cell v-for="item in recentRequests" :key="`${item.sessionId}-${item.at}`"
-            :title="`${item.method} ${item.url}`"
+            class="diagnostic-cell"
             :label="`UID: ${item.uid || '(empty)'} | ${item.host || '--'} | ${formatTime(item.at)}`">
+            <template #title>
+              <span class="truncate" v-tip="`${item.method} ${item.url}`">{{ item.method }} {{ item.url }}</span>
+            </template>
             <template #value>
               <van-tag v-if="item.mockHit" type="success" style="margin-right: 4px;">{{ $t('diagnostic.mockHit') }}</van-tag>
               <van-tag :type="item.uidKnown ? 'primary' : 'danger'">
@@ -235,6 +246,12 @@ function goBack() {
   margin-top: var(--app-sp-sm);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
+}
+
+/* 长内容单元格（URL / 错误信息）：标题可缩，避免不可断的 URL 横向溢出压到右侧 tag */
+.diagnostic-cell :deep(.van-cell__title) {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .diagnose-result {

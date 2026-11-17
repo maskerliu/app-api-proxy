@@ -68,7 +68,7 @@
             <span class="record-history-name truncate" v-tip="entry.recordName || entry.url">
               {{ entry.recordName || entry.url }}
             </span>
-            <span class="record-history-meta truncate hint">
+            <span class="record-history-meta truncate hint" v-tip="`${entry.ruleName} · ${entry.created ? $t('mock.recordPanel.actionCreated') : $t('mock.recordPanel.actionUpdated')}`">
               {{ entry.ruleName }} ·
               {{ entry.created ? $t('mock.recordPanel.actionCreated') : $t('mock.recordPanel.actionUpdated')
               }}

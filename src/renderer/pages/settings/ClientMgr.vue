@@ -12,7 +12,7 @@
       <van-grid :column-num="3" clickable>
         <van-grid-item v-for="item in clients" :key="item.uid" class="client-item" @click="showOpMenu(item)">
           <template #text>
-            <span class="single-line truncate">{{ item.uid }}</span>
+            <span class="single-line truncate" v-tip="item.uid">{{ item.uid }}</span>
           </template>
           <template #icon>
             <van-icon class="iconfont icon-network-data"

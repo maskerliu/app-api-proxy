@@ -4,7 +4,7 @@
       <van-cell-group inset title="">
         <van-cell center>
           <template #title>
-            <div class="van-ellipsis">{{ record.url }}</div>
+            <div class="van-ellipsis" v-tip="record.url">{{ record.url }}</div>
           </template>
           <template #right-icon>
             <van-button class="btn-icon-only" style="margin: 0 10px;" plain size="small" type="success"
@@ -30,16 +30,16 @@
       </van-row>
       <van-row class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.record') }}</span>
-        <span class="hit-value truncate">{{ hitRecord?.name || hitRecord?.url || mockMeta.recordId }}</span>
+        <span class="hit-value truncate" v-tip="hitRecord?.name || hitRecord?.url || mockMeta.recordId">{{ hitRecord?.name || hitRecord?.url || mockMeta.recordId }}</span>
         <van-button size="mini" plain type="primary" @click="openHitRecord">{{ $t('mock.hit.open') }}</van-button>
       </van-row>
       <van-row v-if="hitRecord" class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.conditions') }}</span>
-        <span class="hit-value truncate">{{ summaryText(hitRecord, $t) }}</span>
+        <span class="hit-value truncate" v-tip="summaryText(hitRecord, $t)">{{ summaryText(hitRecord, $t) }}</span>
       </van-row>
       <van-row v-if="mockMeta.ignoredKeys?.length" class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.ignored', { count: mockMeta.ignoredKeys.length }) }}</span>
-        <span class="hit-value mono truncate">{{ mockMeta.ignoredKeys.join(',') }}</span>
+        <span class="hit-value mono truncate" v-tip="mockMeta.ignoredKeys.join(',')">{{ mockMeta.ignoredKeys.join(',') }}</span>
         <van-button size="mini" plain type="warning" @click="openHitRecord">{{ $t('mock.hit.tighten') }}</van-button>
       </van-row>
       <van-row class="hit-line hit-meta" align="center" :wrap="false">

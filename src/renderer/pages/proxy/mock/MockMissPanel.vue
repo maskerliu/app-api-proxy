@@ -3,7 +3,7 @@
     <van-row tag="header" class="miss-head" align="center" :wrap="false">
       <van-row class="miss-title" align="center" :wrap="false">
         <van-icon name="warning-o" class="miss-icon" />
-        <span v-if="miss.recordName">{{ $t('mock.miss.title', {
+        <span v-if="miss.recordName" class="truncate" v-tip="$t('mock.miss.title', { record: miss.recordName, score: scorePercent })">{{ $t('mock.miss.title', {
           record: miss.recordName, score: scorePercent
         }) }}</span>
         <span v-else>{{ $t('mock.miss.noCandidate') }}</span>

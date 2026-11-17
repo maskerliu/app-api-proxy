@@ -25,7 +25,7 @@
       <van-row class="mock-global-bar" :class="{ 'is-on': mockEnabled }" align="center" :wrap="false"
         @click="toggleMock">
         <i class="iconfont icon-rule mock-global-icon"></i>
-        <span class="mock-global-text truncate">{{ mockLabel }}</span>
+        <span class="mock-global-text truncate" v-tip="mockLabel">{{ mockLabel }}</span>
         <van-switch :model-value="mockEnabled" :loading="mockToggling" class="mock-global-switch"
           @click.stop="toggleMock" />
       </van-row>
