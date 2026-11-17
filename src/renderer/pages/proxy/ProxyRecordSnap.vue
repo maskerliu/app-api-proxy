@@ -186,6 +186,7 @@ const recordStore = ProxyRecordStore()
   min-width: 0;
   font-size: var(--van-font-size-md);
   font-weight: 500;
+  color: var(--van-text-color);
   direction: ltr;
   text-align: left;
 }

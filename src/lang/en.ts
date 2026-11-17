@@ -14,6 +14,9 @@ export default {
     searchTip: 'Search (Ctrl+F)',
     previewFailed: 'Resource preview failed',
     previewUnsupported: 'Unsupported preview type',
+    previewMono: 'Mono',
+    previewStereo: 'Stereo',
+    previewChannels: '{count} channels',
     saveOnboardFailed: 'Failed to save the access state'
   },
   proxy: {
@@ -49,6 +52,7 @@ export default {
     clientDevice: '(device)',
     noClients: 'No online clients',
     clientScopeHint: 'The delay applies to the selected client only; it does not filter the records below',
+    densityWarning: 'Requests too dense, consider optimization',
     socket: {
       dropped: '{count} dropped',
       all: 'All',

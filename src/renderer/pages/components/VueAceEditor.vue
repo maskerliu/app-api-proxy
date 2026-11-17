@@ -9,16 +9,20 @@
     <van-popup v-model:show="showPreview" class="preview-container" closeable round teleport="#app" @close="preClose">
       <van-loading v-show="previewType == 4" type="spinner" size="24" />
 
-      <audio v-show="previewType == 0" controls preload="metadata" :src="audioSrc" @error="onPreviewError"></audio>
+      <audio v-show="previewType == 0" controls preload="metadata" :src="audioSrc" @error="onPreviewError"
+        @loadedmetadata="onMediaMetadata" @durationchange="onMediaMetadata"></audio>
 
-      <van-image v-show="previewType == 1" :src="imgSrc" fit="contain" show-loading>
+      <van-image v-show="previewType == 1" :src="imgSrc" fit="contain" show-loading @load="onImageLoad">
         <template v-slot:loading>
           <van-loading type="spinner" size="20" />
         </template>
       </van-image>
 
       <video ref="videoEl" v-show="previewType == 2" controls preload="metadata" :src="videoSrc"
-        @error="onPreviewError"></video>
+        @error="onPreviewError" @loadedmetadata="onMediaMetadata" @durationchange="onMediaMetadata"></video>
+
+      <!-- 元信息悬浮在弹层顶部：格式 / 尺寸 / 采样率 / 声道 / 码率 / 时长 / 大小，取到什么显什么 -->
+      <div v-if="previewInfo != ''" class="preview-meta mono truncate" v-tip="previewInfo">{{ previewInfo }}</div>
     </van-popup>
   </div>
 </template>
@@ -37,8 +41,10 @@ import 'ace-builds/src-min-noconflict/theme-cloud_editor_dark'
 import axios from 'axios'
 import Hls from 'hls.js'
 import { showToast } from 'vant'
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatBitrate, formatBytes, formatDuration, formatSampleRate } from '../../common/format'
+import { mediaKindByUrl, resolveMediaKind, sniffMediaFormat } from '../../common/mediaFormat'
 import { CommonStore, FONT_SIZE_MD_OFFSET } from '../../store'
 
 const { t } = useI18n()
@@ -117,6 +123,42 @@ const videoSrc = ref<string>()
 let hls: Hls
 // 每次预览递增，用于丢弃上一个预览仍在进行的异步结果
 let previewSeq = 0
+
+interface PreviewMeta {
+  dims?: string
+  duration?: number
+  sampleRate?: number
+  channels?: number
+  size?: number
+}
+
+// 采样率与声道数只能解码拿到，超过这个体积就退回流式播放、只报时长
+const AUDIO_DECODE_MAX_BYTES = 20 * 1024 * 1024
+
+const previewFormat = ref<string>('')
+const previewMeta = ref<PreviewMeta>({})
+
+function channelText(channels: number) {
+  if (channels == 1) return t('common.previewMono')
+  if (channels == 2) return t('common.previewStereo')
+  return t('common.previewChannels', { count: channels })
+}
+
+// 悬浮在弹层顶部的元信息一行，字段按可得情况拼，缺的不占位
+const previewInfo = computed(() => {
+  const meta = previewMeta.value
+  const items: string[] = []
+  if (previewFormat.value != '') items.push(previewFormat.value)
+  if (meta.dims) items.push(meta.dims)
+  if (meta.sampleRate) items.push(formatSampleRate(meta.sampleRate))
+  if (meta.channels) items.push(channelText(meta.channels))
+  // 码率按体积除时长估，容器头的误差在展示精度内可忽略
+  if (meta.size && meta.duration) items.push(formatBitrate(meta.size * 8 / meta.duration))
+  const duration = formatDuration(meta.duration)
+  if (duration != '') items.push(duration)
+  if (meta.size) items.push(formatBytes(meta.size, 2))
+  return items.join('  ·  ')
+})
 
 // setValue 会重置折叠状态，折叠必须在赋值之后执行
 function applyFold() {
@@ -317,6 +359,59 @@ function releasePreviewUrls() {
   videoSrc.value = null
 }
 
+function resetPreviewMeta() {
+  previewFormat.value = ''
+  previewMeta.value = {}
+}
+
+// 上一个预览的异步结果可能晚于新预览到达，回填前先确认还是同一次
+function isCurrentPreview(seq: number) {
+  return seq == previewSeq && showPreview.value
+}
+
+async function probeMedia(url: string): Promise<{ size?: number, contentType?: string }> {
+  try {
+    let resp = await axios.head(proxyMediaUrl(url), { withCredentials: false, timeout: 10000 })
+    return {
+      size: Number(resp.headers['content-length']) || undefined,
+      contentType: resp.headers['content-type'] as string,
+    }
+  } catch (err) {
+    // 源站不认 HEAD 时只是少了体积与格式，播放不受影响
+    return {}
+  }
+}
+
+async function decodeAudioMeta(data: ArrayBuffer, seq: number) {
+  // 用完即关：一个 AudioContext 就占一路音频线程，预览次数多了会到浏览器的上限
+  let ctx = new AudioContext()
+  try {
+    // decodeAudioData 会占用传入的 buffer，给它的是一份副本
+    let buffer = await ctx.decodeAudioData(data.slice(0))
+    if (!isCurrentPreview(seq)) return
+    previewMeta.value.duration = buffer.duration
+    previewMeta.value.sampleRate = buffer.sampleRate
+    previewMeta.value.channels = buffer.numberOfChannels
+  } catch (err) {
+    // 解码器不认（如 opus/alaw）只是少了采样率与声道，播放与其余元信息不受影响
+    console.log(err)
+  } finally {
+    ctx.close().catch(() => { })
+  }
+}
+
+function onMediaMetadata(e: Event) {
+  const el = e.target as HTMLMediaElement
+  if (Number.isFinite(el.duration) && el.duration > 0) previewMeta.value.duration = el.duration
+  const video = el as HTMLVideoElement
+  if (video.videoWidth > 0) previewMeta.value.dims = `${video.videoWidth} × ${video.videoHeight}`
+}
+
+function onImageLoad(e: Event) {
+  const img = e.target as HTMLImageElement
+  if (img?.naturalWidth > 0) previewMeta.value.dims = `${img.naturalWidth} × ${img.naturalHeight}`
+}
+
 function proxyMediaUrl(url: string) {
   return `${baseDomain()}${API_URL.CorsMediaProxy}?target=${encodeURIComponent(url)}`
 }
@@ -336,6 +431,8 @@ function destroyHls() {
 function previewHls(url: string) {
   releasePreviewUrls()
   destroyHls()
+  resetPreviewMeta()
+  previewFormat.value = 'HLS'
   previewType.value = 2
   showPreview.value = true
 
@@ -434,41 +531,6 @@ async function preClose() {
   releasePreviewUrls()
 }
 
-const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|avif|ico)$/i
-const AUDIO_EXT = /\.(mp3|wav|ogg|m4a|m4b|aac|flac|opus)$/i
-const VIDEO_EXT = /\.(mp4|m4v|mov|webm|mkv|flv)$/i
-
-function mediaKindByUrl(url: string): string {
-  let path = url.split(/[?#]/)[0]
-  if (IMAGE_EXT.test(path)) return 'image'
-  if (AUDIO_EXT.test(path)) return 'audio'
-  if (VIDEO_EXT.test(path)) return 'video'
-  return ''
-}
-
-// 部分 CDN/对象存储会把媒体文件的 content-type 返回成 application/octet-stream，
-// 此时按文件头、再按 URL 后缀兜底判断
-function resolveMediaKind(contentType: string, data: ArrayBuffer, url: string): string {
-  let type = (contentType ?? '').split(';')[0].trim().toLowerCase()
-  if (type.startsWith('image/')) return 'image'
-  if (type.startsWith('audio/')) return 'audio'
-  if (type.startsWith('video/')) return 'video'
-
-  let head = new Uint8Array(data.slice(0, 12))
-  if (head.length >= 3 && head[0] == 0xFF && head[1] == 0xD8 && head[2] == 0xFF) return 'image' // jpeg
-  if (head.length >= 8 && head[0] == 0x89 && head[1] == 0x50 && head[2] == 0x4E && head[3] == 0x47) return 'image' // png
-  if (head.length >= 3 && head[0] == 0x47 && head[1] == 0x49 && head[2] == 0x46) return 'image' // gif
-  if (head.length >= 12 && head[8] == 0x57 && head[9] == 0x45 && head[10] == 0x42 && head[11] == 0x50) return 'image' // webp
-  if (head.length >= 2 && head[0] == 0x42 && head[1] == 0x4D) return 'image' // bmp
-  if (head.length >= 8 && head[4] == 0x66 && head[5] == 0x74 && head[6] == 0x79 && head[7] == 0x70) return 'video' // mp4/mov(ftyp)
-
-  let path = url.split(/[?#]/)[0]
-  if (IMAGE_EXT.test(path)) return 'image'
-  if (AUDIO_EXT.test(path)) return 'audio'
-  if (VIDEO_EXT.test(path)) return 'video'
-  return ''
-}
-
 async function onClick(e: MouseEvent) {
   // 拖选文字松手也会触发 click，位移较大时不算点击，避免选完文字弹出预览
   if (Math.abs(e.clientX - pressX) + Math.abs(e.clientY - pressY) > 5) return
@@ -487,23 +549,41 @@ async function onClick(e: MouseEvent) {
     return
   }
 
-  // 音视频交给播放器流式加载（代理已支持 Range），避免整文件读入内存
-  let kind = mediaKindByUrl(link)
-  if (kind == 'audio' || kind == 'video') {
-    releasePreviewUrls()
-    if (kind == 'audio') audioSrc.value = proxyMediaUrl(link)
-    else videoSrc.value = proxyMediaUrl(link)
-    previewType.value = kind == 'audio' ? 0 : 2
-    showPreview.value = true
-    return
-  }
+  // 音视频按后缀定类后交给播放器流式加载，图片与后缀不明的资源整包取回
+  const kind = mediaKindByUrl(link)
+  return kind == 'audio' || kind == 'video' ? previewStreamed(kind, link, seq) : previewDownloaded(link, seq)
+}
 
+// 流式这条路不下载正文（代理已支持 Range），元信息靠 HEAD 与播放器报出的 metadata
+async function previewStreamed(kind: string, url: string, seq: number) {
+  resetPreviewMeta()
+  previewFormat.value = sniffMediaFormat(null, null, url)
+  previewType.value = 4
+  showPreview.value = true
+
+  const probe = await probeMedia(url)
+  if (!isCurrentPreview(seq)) return
+  previewFormat.value = sniffMediaFormat(null, probe.contentType, url)
+  if (probe.size) previewMeta.value.size = probe.size
+
+  // 后缀认得的音频体积都不大，整包取回解码才拿得到采样率与声道；
+  // 拿不到体积（源站不认 HEAD）就按流式处理，不盲目下载
+  if (kind == 'audio' && probe.size && probe.size <= AUDIO_DECODE_MAX_BYTES) return previewDownloaded(url, seq)
+
+  releasePreviewUrls()
+  if (kind == 'audio') audioSrc.value = proxyMediaUrl(url)
+  else videoSrc.value = proxyMediaUrl(url)
+  previewType.value = kind == 'audio' ? 0 : 2
+}
+
+async function previewDownloaded(url: string, seq: number) {
+  resetPreviewMeta()
   previewType.value = 4
   showPreview.value = true
 
   try {
     // target 必须编码，否则签名 URL 中的 & + # 会破坏查询串
-    let resp = await axios.get(proxyMediaUrl(link), {
+    let resp = await axios.get(proxyMediaUrl(url), {
       withCredentials: false,
       responseType: 'arraybuffer',
       timeout: 30000
@@ -513,14 +593,17 @@ async function onClick(e: MouseEvent) {
     let contentType = resp.headers['content-type'] as string
     // 没有 .m3u8 后缀但 content-type 是 HLS 播放列表
     if (/mpegurl/i.test(contentType ?? '')) {
-      previewHls(link)
+      previewHls(url)
       return
     }
 
-    let mediaKind = resolveMediaKind(contentType, resp.data, link)
+    let mediaKind = resolveMediaKind(contentType, resp.data, url)
+    let size = (resp.data as ArrayBuffer).byteLength
     let toBlobUrl = () => URL.createObjectURL(new Blob([resp.data], { type: contentType }))
 
     releasePreviewUrls()
+    previewFormat.value = sniffMediaFormat(resp.data, contentType, url)
+    previewMeta.value.size = size
     switch (mediaKind) {
       case 'image':
         previewType.value = 1
@@ -529,6 +612,7 @@ async function onClick(e: MouseEvent) {
       case 'audio':
         previewType.value = 0
         audioSrc.value = toBlobUrl()
+        if (size <= AUDIO_DECODE_MAX_BYTES) void decodeAudioMeta(resp.data, seq)
         break
       case 'video':
         previewType.value = 2
@@ -637,6 +721,8 @@ defineExpose({ syncFillHeight })
   display: flex;
   align-items: center;
   justify-content: center;
+  /* 元信息悬浮行按弹层宽度铺开，小图不给个下限就只剩省略号了 */
+  min-width: 320px;
   max-width: 60%;
   max-height: 70%;
   overflow: hidden;
@@ -670,6 +756,27 @@ defineExpose({ syncFillHeight })
   height: auto;
   max-width: 60vw;
   max-height: 70vh;
+}
+
+/* 元信息压在画面顶部、与右上角关闭按钮同一行：用压暗渐变收尾而不是硬边色块，
+   任意底色都读得清；右端留出关闭按钮的位置，截断后靠 v-tip 看全文 */
+.preview-container .preview-meta {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  box-sizing: border-box;
+  padding: var(--van-popup-close-icon-margin) calc(var(--van-popup-close-icon-margin) * 2 + var(--van-popup-close-icon-size)) 10px var(--van-popup-close-icon-margin);
+  color: #fff;
+  font-size: var(--van-font-size-sm);
+  line-height: var(--van-popup-close-icon-size);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+  background: linear-gradient(to bottom, rgb(0 0 0 / 55%), rgb(0 0 0 / 28%) 55%, rgb(0 0 0 / 0%));
+}
+
+/* 悬浮条压暗了顶部，关闭按钮沿用灰色主题变量会糊成一片 */
+.preview-container .van-popup__close-icon {
+  color: #fff;
 }
 
 .ace-editor-wrapper {

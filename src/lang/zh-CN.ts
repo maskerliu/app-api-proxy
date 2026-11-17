@@ -13,6 +13,9 @@ export default {
     searchTip: '搜索 (Ctrl+F)',
     previewFailed: '资源预览失败',
     previewUnsupported: '不支持的预览类型',
+    previewMono: '单声道',
+    previewStereo: '立体声',
+    previewChannels: '{count} 声道',
     saveOnboardFailed: '保存接入状态失败'
   },
   proxy: {
@@ -48,6 +51,7 @@ export default {
     clientDevice: '(设备)',
     noClients: '暂无在线客户端',
     clientScopeHint: '延迟只作用于这里选中的客户端，不会筛选下方记录列表',
+    densityWarning: '请求过于密集，建议优化',
     socket: {
       dropped: '丢弃 {count}',
       all: '全部',

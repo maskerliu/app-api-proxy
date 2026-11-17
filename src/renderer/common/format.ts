@@ -43,6 +43,34 @@ export function formatFrameOffset(ms: number): string {
   return `${Math.floor(minutes / 60)}:${`${minutes % 60}`.padStart(2, '0')}:${seconds}`
 }
 
+/** 媒体时长，入参秒：m:ss，超过一小时补时位；直播流的 Infinity 与无效值返回空串。 */
+export function formatDuration(seconds?: number): string {
+  const total = Math.floor(Number(seconds) || 0)
+  if (!Number.isFinite(total) || total <= 0) return ''
+  const ss = `${total % 60}`.padStart(2, '0')
+  const minutes = Math.floor(total / 60) % 60
+  const hours = Math.floor(total / 3600)
+  if (hours > 0) return `${hours}:${`${minutes}`.padStart(2, '0')}:${ss}`
+  return `${minutes}:${ss}`
+}
+
+/** 采样率：Hz 转 kHz，整数档不带小数（8 kHz / 44.1 kHz / 48 kHz）。 */
+export function formatSampleRate(hz?: number): string {
+  const value = Number(hz) || 0
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const khz = value / 1000
+  return `${khz % 1 == 0 ? khz.toFixed(0) : khz.toFixed(1)} kHz`
+}
+
+/** 码率：入参 bps，一兆以下用 kbps 取整，以上换 Mbps 留一位小数。 */
+export function formatBitrate(bps?: number): string {
+  const value = Number(bps) || 0
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const kbps = Math.round(value / 1000)
+  if (kbps < 1000) return `${kbps} kbps`
+  return `${(kbps / 1000).toFixed(1)} Mbps`
+}
+
 /** 能解析成 JSON 才重排，非法 JSON 原样返回（编辑器里已有提示）。 */
 export function prettifyJson(text: string): string {
   try {

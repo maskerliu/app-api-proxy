@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  compactJson, formatBytes, formatElapsed, formatFrameOffset, formatUptime, prettifyJson,
+  compactJson, formatBitrate, formatBytes, formatDuration, formatElapsed, formatFrameOffset,
+  formatSampleRate, formatUptime, prettifyJson,
 } from '@renderer/common/format'
 
 describe('formatBytes 字节阶梯', () => {
@@ -55,6 +56,41 @@ describe('时长格式化', () => {
     assert.equal(formatFrameOffset(3_600_000), '1:00:00')
     assert.equal(formatFrameOffset(3_661_000), '1:01:01')
     assert.equal(formatFrameOffset(-1), '0ms')
+  })
+})
+
+describe('媒体元信息格式化', () => {
+  it('formatDuration 按 m:ss / h:mm:ss，取整秒', () => {
+    assert.equal(formatDuration(0.5), '')
+    assert.equal(formatDuration(32), '0:32')
+    assert.equal(formatDuration(65), '1:05')
+    assert.equal(formatDuration(5_999), '1:39:59')
+    assert.equal(formatDuration(3_600), '1:00:00')
+  })
+
+  it('formatDuration 对直播流的 Infinity 与无效值给空串，由调用方省略该项', () => {
+    assert.equal(formatDuration(Infinity), '')
+    assert.equal(formatDuration(NaN), '')
+    assert.equal(formatDuration(undefined), '')
+    assert.equal(formatDuration(-1), '')
+  })
+
+  it('formatSampleRate 转 kHz，整数档不带小数', () => {
+    assert.equal(formatSampleRate(8000), '8 kHz')
+    assert.equal(formatSampleRate(44100), '44.1 kHz')
+    assert.equal(formatSampleRate(48000), '48 kHz')
+    assert.equal(formatSampleRate(22050), '22.1 kHz')
+    assert.equal(formatSampleRate(0), '')
+    assert.equal(formatSampleRate(undefined), '')
+  })
+
+  it('formatBitrate 一兆以下 kbps，以上 Mbps', () => {
+    assert.equal(formatBitrate(32_000), '32 kbps')
+    assert.equal(formatBitrate(128_050), '128 kbps')
+    assert.equal(formatBitrate(999_999), '1.0 Mbps')
+    assert.equal(formatBitrate(3_300_000), '3.3 Mbps')
+    assert.equal(formatBitrate(0), '')
+    assert.equal(formatBitrate(Infinity), '')
   })
 })
 
