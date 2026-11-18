@@ -36,7 +36,6 @@ export namespace ProxyMock {
     method?: string
     url?: string
     statusCode?: number // 请求状态
-    timelineColor?: string
     time?: number // 请求耗时
     isMock?: boolean // 是否为Mock数据
     headers?: any // 请求头
@@ -113,7 +112,6 @@ export namespace ProxyMock {
   }
 
   export interface ProxyStatRecord extends ProxyRequestRecord {
-    timelineColor?: string
     statistics: {
       bps: StatisticRecord[]
     }

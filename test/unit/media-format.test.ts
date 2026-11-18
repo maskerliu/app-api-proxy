@@ -89,6 +89,40 @@ describe('sniffMediaFormat 展示用格式名', () => {
   })
 })
 
+describe('sniffMediaFormat 认 SVG 的文本头', () => {
+  const svgTag = asciiOf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8"/></svg>')
+  const decl = asciiOf('<?xml version="1.0" encoding="UTF-8"?>\n')
+  // 长 DOCTYPE 把 <svg 推到 64 字节之后，窗口不够就漏认
+  const doctype = asciiOf('<?xml version="1.0"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n')
+
+  it('根元素、xml 声明、DOCTYPE 之后的 <svg 都认得', () => {
+    assert.equal(sniffMediaFormat(bytesOf(svgTag), 'application/octet-stream', ''), 'SVG')
+    assert.equal(sniffMediaFormat(bytesOf([...decl, ...svgTag]), 'application/octet-stream', ''), 'SVG')
+    assert.equal(sniffMediaFormat(bytesOf([...doctype, ...svgTag]), 'application/octet-stream', ''), 'SVG')
+  })
+
+  it('BOM 与前导空白不影响判断，大小写也认', () => {
+    assert.equal(sniffMediaFormat(bytesOf([0xEF, 0xBB, 0xBF, ...svgTag]), '', ''), 'SVG')
+    assert.equal(sniffMediaFormat(bytesOf([...asciiOf('\n  ')]), '', ''), '')
+    assert.equal(sniffMediaFormat(bytesOf([...asciiOf('\n  '), ...svgTag]), '', ''), 'SVG')
+    assert.equal(sniffMediaFormat(bytesOf(asciiOf('<SVG xmlns="x"></SVG>')), '', ''), 'SVG')
+  })
+
+  it('文件头优先于 content-type 与后缀', () => {
+    assert.equal(sniffMediaFormat(bytesOf(svgTag), 'image/png', 'http://x/a.png'), 'SVG')
+  })
+
+  it('内嵌 <svg> 的 HTML 页面与纯文本都不当成 SVG', () => {
+    assert.equal(sniffMediaFormat(bytesOf(asciiOf('<!DOCTYPE html>\n<html><head><title>t</title></head><body><svg>')), '', ''), '')
+    assert.equal(sniffMediaFormat(bytesOf(asciiOf('{"a":1}')), '', ''), '')
+    assert.equal(sniffMediaFormat(bytesOf(asciiOf('<s'))), '')
+  })
+
+  it('后缀认得的 SVG 在没有字节时也能读出来', () => {
+    assert.equal(sniffMediaFormat(null, 'application/octet-stream', 'http://x/icon.svg?v=1'), 'SVG')
+  })
+})
+
 describe('mediaKindByUrl 按后缀定大类', () => {
   it('大小写与查询串都不影响判断', () => {
     assert.equal(mediaKindByUrl('http://x/a.MP3?token=1'), 'audio')
@@ -113,6 +147,9 @@ describe('resolveMediaKind 大类判定', () => {
     assert.equal(resolveMediaKind('application/octet-stream', ftyp('isom'), 'http://x/a'), 'video')
     // 原实现把一切 ftyp 都当视频，M4A 由此修成音频
     assert.equal(resolveMediaKind('application/octet-stream', ftyp('M4A '), 'http://x/a'), 'audio')
+    // 源站报 octet-stream 的 SVG，靠文本头定成图片
+    assert.equal(resolveMediaKind('application/octet-stream', bytesOf(asciiOf('<svg xmlns="x"></svg>')), 'http://x/a'), 'image')
+    assert.equal(resolveMediaKind('text/plain', bytesOf(asciiOf('<svg xmlns="x"></svg>')), 'http://x/a'), 'image')
     assert.equal(resolveMediaKind('application/octet-stream', MPEG_VIDEO, 'http://x/a'), '')
   })
 

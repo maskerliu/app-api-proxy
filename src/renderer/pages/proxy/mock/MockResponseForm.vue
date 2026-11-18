@@ -380,7 +380,10 @@ defineExpose({ focusField })
 }
 
 .header-collapse :deep(.van-collapse-item__content) {
-  padding: 0 var(--app-sp-lg) var(--app-sp-lg);
+  /* 横向沟道已上提到 global.css 的 .header-collapse .van-collapse-item__content，与两个详情面板同源；
+     这里只剩本面板的纵向：编辑行自带内边距，不需要内容区再垫一层 */
+  padding-top: 0;
+  padding-bottom: var(--app-sp-lg);
 }
 
 .header-add {

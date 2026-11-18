@@ -52,7 +52,13 @@ export default {
     clientDevice: '(device)',
     noClients: 'No online clients',
     clientScopeHint: 'The delay applies to the selected client only; it does not filter the records below',
+    densityBucket: 'Burst of {count} requests over {span}',
+    densityLonely: 'Single request (over {gap} from its neighbours)',
     densityWarning: 'Requests too dense, consider optimization',
+    densityFrom: 'from',
+    densityFromTip: 'This burst starts at {time}',
+    densityTo: 'to',
+    densityToTip: 'This burst ends at {time}',
     socket: {
       dropped: '{count} dropped',
       all: 'All',

@@ -68,8 +68,9 @@
           </van-empty>
         </div>
         <van-list v-else>
-          <proxy-record-snap v-for="record in recordStore.visibleRecords" :key="record.id"
-            :source="record as ProxyMock.ProxyRequestRecord" />
+          <proxy-record-snap v-for="(record, idx) in recordStore.visibleRecords" :key="record.id"
+            :source="record as ProxyMock.ProxyRequestRecord" :density="densityOf(record.id)"
+            :above-socket="isSocketRow(idx - 1)" />
         </van-list>
       </OverlayScrollbarsComponent>
     </van-col>
@@ -125,6 +126,7 @@ import SocketDetail from './SocketDetail.vue'
 import {
   DELAY_CUSTOM_KEY, DELAY_CUSTOM_LABEL_KEY, DELAY_PRESETS, presetKeyOf, presetMsOf, toDelayMs,
 } from './delay.preset'
+import { densityRows, type DensityRow } from './density'
 import { MockMgrTarget } from './mock/recording'
 import { readRecentRuleId } from './mock/rule.recent'
 
@@ -183,6 +185,25 @@ const delayHint = computed(() => `${t('proxy.delayHint')}（${DELAY_PRESETS
 const socketEmptyQuery = computed(() => String(recordStore.filterKeyword ?? '').trim() !== '')
 const showSocketEmpty = computed(() => recordStore.proxyTypes.includes(String(ProxyMock.ProxyType.SOCKET))
   && recordStore.visibleRecords.length === 0)
+
+// 波次密度：长连接不是请求突发，不参与切波；其余按渲染顺序（上=新）用相邻时间差算同组连线
+const densityById = computed(() => {
+  const items = recordStore.visibleRecords
+    .filter(it => it.type != ProxyMock.ProxyType.SOCKET)
+    .map(it => ({ source: it as ProxyMock.ProxyRequestRecord, timestamp: it.timestamp ?? it.id }))
+  const byId = new Map<number, DensityRow<ProxyMock.ProxyRequestRecord>>()
+  for (const row of densityRows(items)) byId.set(row.source.id, row)
+  return byId
+})
+
+function densityOf(id: number) {
+  return densityById.value.get(id) ?? null
+}
+
+// 长连接恒排在列表最前，所以只有「第一段 HTTP 突发」的段首会挨着它们
+function isSocketRow(idx: number) {
+  return recordStore.visibleRecords[idx]?.type == ProxyMock.ProxyType.SOCKET
+}
 
 provide('mockMgrTarget', mockMgrTarget)
 provide('showSettings', showSettings)

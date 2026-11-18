@@ -449,8 +449,8 @@ onUnmounted(() => {
   font-size: var(--van-font-size-xs);
 }
 
-/* 选中行与「新建规则」行都把规则名提到主色：淡底 + 左缘色条是 global 的 .list-row 给的，
-   这一条只是让「要点的就是它」在文字上再确认一次。 */
+/* 选中行与「新建规则」行都把规则名提到主色：选中态的淡底是 global 的 .list-row 给的，
+   这一条让「要点的就是它」在文字上再确认一次（左缘色条 2026-11-18 已去掉）。 */
 .list-row.is-selected :deep(.van-cell__title),
 .record-rule-create :deep(.van-cell__title) {
   color: var(--van-primary-color);

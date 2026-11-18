@@ -54,6 +54,15 @@ export function formatDuration(seconds?: number): string {
   return `${minutes}:${ss}`
 }
 
+/** 墙上时钟：HH:mm:ss.SSS，本地时区。密集段两端的时间戳用同一档精度，
+ *  因为同桶的两条往往只差毫秒，秒级会显示成一模一样。 */
+export function formatClock(at?: number): string {
+  if (at == null || !Number.isFinite(at)) return ''
+  const date = new Date(at)
+  const pad = (n: number, len = 2) => `${n}`.padStart(len, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`
+}
+
 /** 采样率：Hz 转 kHz，整数档不带小数（8 kHz / 44.1 kHz / 48 kHz）。 */
 export function formatSampleRate(hz?: number): string {
   const value = Number(hz) || 0

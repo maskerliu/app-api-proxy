@@ -51,7 +51,13 @@ export default {
     clientDevice: '(设备)',
     noClients: '暂无在线客户端',
     clientScopeHint: '延迟只作用于这里选中的客户端，不会筛选下方记录列表',
+    densityBucket: '一波 {count} 个请求，历时 {span}',
+    densityLonely: '单独一次请求（与相邻请求间隔 >{gap}）',
     densityWarning: '请求过于密集，建议优化',
+    densityFrom: '起',
+    densityFromTip: '这一段起于 {time}',
+    densityTo: '止',
+    densityToTip: '这一段止于 {time}',
     socket: {
       dropped: '丢弃 {count}',
       all: '全部',

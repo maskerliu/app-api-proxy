@@ -51,6 +51,12 @@ function urlPath(url: string) {
   return url.split(/[?#]/)[0]
 }
 
+/** 文本类容器头部：跳过 BOM 与空白，256 字节够长 DOCTYPE 之后还能看到根元素。 */
+function textHead(data: ArrayBuffer): string {
+  const bytes = new Uint8Array(data.byteLength < 256 ? data : data.slice(0, 256))
+  return String.fromCharCode(...bytes).replace(/^ï»¿/, '').trimStart().toLowerCase()
+}
+
 /** 文件头识别：源站常把 content-type 报成 octet-stream，此时只有字节可信。 */
 function sniffMagic(data?: ArrayBuffer | null): string {
   if (data == null || data.byteLength < 3) return ''
@@ -71,6 +77,11 @@ function sniffMagic(data?: ArrayBuffer | null): string {
     return sub == 'WEBP' ? 'WEBP' : sub == 'WAVE' ? 'WAV' : sub == 'AIFF' ? 'AIFF' : sub == 'AVI ' ? 'AVI' : ''
   }
   if (tag(4) == 'ftyp') return FTYP_BRANDS[tag(8)] ?? 'MP4'
+  // SVG 是文本，没有魔数：根元素在前直接认 <svg，带 xml 声明或 svg DOCTYPE 的再找一次 <svg，
+  // 只认这两种开头，避免把内嵌 <svg> 的 HTML 页面当成图片
+  const head = textHead(data)
+  if (head.startsWith('<svg')) return 'SVG'
+  if ((head.startsWith('<?xml') || head.startsWith('<!doctype svg')) && head.includes('<svg')) return 'SVG'
   // 帧同步 11 位之后是 2 位版本、2 位 layer：layer 01/10/11 才是 MPEG 音频，
   // 00 只有 ADTS（低 4 位固定 0/1/8/9）一种可能，0xFFE0 这类 MPEG 视频头必须排除
   if (b[0] == 0xFF && (b[1] & 0xE0) == 0xE0) {

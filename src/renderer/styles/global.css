@@ -113,7 +113,7 @@
 /* 卡片外观唯一来源：一圈描边 + cell-group 底色，与各面板里的消息区、字段区同款；
    站点只允许改 margin，加边框或换底色都会在这里改掉。 */
 .header-collapse {
-  margin: var(--van-padding-md) 0;
+  margin: var(--van-padding-md);
   box-sizing: border-box;
   overflow: hidden;
   border: 1px solid var(--van-border-color);
@@ -176,6 +176,20 @@
   font-family: var(--app-mono-font);
   font-size: var(--van-font-size-md);
   user-select: text;
+}
+
+/* 折叠卡片里的横向沟道只留一份：内容区给 lg，只读网格自身不再内缩。
+   两份内缩叠起来（Vant 默认 16px + 网格 3xl 15.6px）会把详情面板的 key 列整体推右 23.8px，
+   与 Mock 编辑器响应头行的 key 输入框右缘、值列左缘对不上（两处 key 列宽本来就同一条 token，差的只是起点）。
+   纵向不动：详情面板仍用 Vant 的 8/16 加网格的 tight，编辑行自己压成 0/lg（见 MockResponseForm）。 */
+.header-collapse .van-collapse-item__content {
+  padding-left: var(--app-sp-lg);
+  padding-right: var(--app-sp-lg);
+}
+
+.header-collapse .header-list {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .header-row {
@@ -269,6 +283,26 @@
   line-height: 1;
 }
 
+/* ---- WebSocket 方向图标：上行 / 下行 ---- */
+
+/* 方向配色只有一个来源：上行 = 主色（蓝）、下行 = success（绿）。类名由 socket.ts 的 dirIcon() 给出，
+   消费方是 SocketDetail 的统计字节 / 消息行 / 帧详情 meta，以及代理记录列表的收发字节。 */
+.dir-icon {
+  /* iconfont 基础样式写死 16px，改为跟随所在行字号，保证全局字号缩放时同步 */
+  font-size: inherit;
+  /* 行盒按 1em 收拢后以文字中线对齐：默认基线对齐会让箭头整体偏上 */
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.dir-icon.icon-upstream {
+  color: var(--van-primary-color);
+}
+
+.dir-icon.icon-downlink {
+  color: var(--van-success-color);
+}
+
 /* ---- 行内输入控件：与 .btn-icon-only 同一档高度的下划线输入框 ---- */
 
 /* Mock 匹配 tab 里六格 van-field（Host / Path、待忽略参数、条件表的键列与值列、试匹配 URL，分属四条规则）
@@ -348,11 +382,11 @@
 
 /* 同一个「选中」此前有四套面孔：淡主色底 + 左缘色条（Mock 规则管理器的记录行）、
    --van-active-color（HTTP 快照行）、实心主色反白（WebSocket 消息行，还要给 4 个子元素补色）、
-   --van-gray-2（写回规则的选择行）。收成 DevTools 那一档：淡主色底 + 左缘 2.6px 主色条，
-   文字一概不换色——反白那一套之所以要逐子元素补色，就是因为它动了整行的颜色。
-   position: relative 只为给色条定位，不改变行的布局；hover 在选中态下加深一档而不是换色。 */
+   --van-gray-2（写回规则的选择行）。收成 DevTools 那一档：只留淡主色底，文字一概不换色——
+   反白那一套之所以要逐子元素补色，就是因为它动了整行的颜色。
+   左缘主色条 2026-11-18 去掉：背景色已经把选中说清楚了，一态不再多一枚标识。
+   hover 在选中态下加深一档而不是换色。 */
 .list-row {
-  position: relative;
   cursor: pointer;
 }
 
@@ -362,16 +396,6 @@
 
 .list-row.is-selected {
   background: color-mix(in srgb, var(--van-primary-color) 8%, transparent);
-}
-
-.list-row.is-selected::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(var(--van-font-size-md) * 0.2);
-  background: var(--van-primary-color);
 }
 
 .list-row.is-selected:hover {

@@ -30,7 +30,9 @@
       </van-row>
       <van-row class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.record') }}</span>
-        <span class="hit-value truncate" v-tip="hitRecord?.name || hitRecord?.url || mockMeta.recordId">{{ hitRecord?.name || hitRecord?.url || mockMeta.recordId }}</span>
+        <span class="hit-value truncate" v-tip="hitRecord?.name || hitRecord?.url || mockMeta.recordId">{{
+          hitRecord?.name
+          || hitRecord?.url || mockMeta.recordId }}</span>
         <van-button size="mini" plain type="primary" @click="openHitRecord">{{ $t('mock.hit.open') }}</van-button>
       </van-row>
       <van-row v-if="hitRecord" class="hit-line" align="center" :wrap="false">
@@ -39,7 +41,8 @@
       </van-row>
       <van-row v-if="mockMeta.ignoredKeys?.length" class="hit-line" align="center" :wrap="false">
         <span class="hit-label">{{ $t('mock.hit.ignored', { count: mockMeta.ignoredKeys.length }) }}</span>
-        <span class="hit-value mono truncate" v-tip="mockMeta.ignoredKeys.join(',')">{{ mockMeta.ignoredKeys.join(',') }}</span>
+        <span class="hit-value mono truncate" v-tip="mockMeta.ignoredKeys.join(',')">{{ mockMeta.ignoredKeys.join(',')
+          }}</span>
         <van-button size="mini" plain type="warning" @click="openHitRecord">{{ $t('mock.hit.tighten') }}</van-button>
       </van-row>
       <van-row class="hit-line hit-meta" align="center" :wrap="false">
@@ -271,6 +274,12 @@ async function copyLink() {
 .url-bar {
   position: sticky;
   z-index: 99;
+}
+
+/* 吸顶时 URL 卡片要浮在滚动内容之上：描边与投影取全站浮层口径（居中弹窗、MiniSelect 下拉同款） */
+.url-bar :deep(.van-cell-group--inset) {
+  border: 1px solid var(--van-border-color);
+  box-shadow: var(--app-shadow-float);
 }
 
 /* 长 URL 不换行时标题项默认不收缩，会把右侧录制按钮挤出 van-cell（其 overflow:hidden 会直接裁掉） */

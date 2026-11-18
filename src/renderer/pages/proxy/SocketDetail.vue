@@ -474,7 +474,7 @@ onUnmounted(() => {
 .msg-opcode,
 .msg-size {
   flex: none;
-  color: var(--van-text-color-3);
+  color: var(--van-text-color-2);
 }
 
 .msg-time {
@@ -490,23 +490,6 @@ onUnmounted(() => {
 .msg-size {
   width: calc(var(--van-font-size-sm) * 5);
   text-align: right;
-}
-
-.dir-icon {
-  /* iconfont 基础样式写死 16px，改为跟随所在行字号，保证全局字号缩放时同步 */
-  font-size: inherit;
-  /* 行盒按 1em 收拢后以文字中线对齐：默认基线对齐会让箭头整体偏上 */
-  line-height: 1;
-  vertical-align: middle;
-}
-
-/* 方向配色单一来源：上行蓝、下行绿 */
-.dir-icon.icon-upstream {
-  color: var(--van-primary-color);
-}
-
-.dir-icon.icon-downlink {
-  color: var(--van-success-color);
 }
 
 .msg-dir {
@@ -543,7 +526,10 @@ onUnmounted(() => {
 
 .msg-detail-head {
   gap: var(--app-sp-lg);
-  padding: var(--app-sp-md) var(--app-sp-xl);
+  padding: var(--app-sp-xs) var(--app-sp-xl);
+  border-bottom: 1px solid var(--van-border-color);
+  /* 标题行高度固定：未选帧时只有标题，选帧后加 meta + 按钮，高度不能跳 */
+  height: 28px;
 }
 
 .msg-detail-head .van-button {
@@ -555,13 +541,14 @@ onUnmounted(() => {
   flex: none;
   font-size: var(--van-font-size-sm);
   font-weight: 500;
+  color: var(--van-text-color);
 }
 
 .msg-detail-meta {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  color: var(--van-text-color-3);
+  color: var(--van-text-color-2);
   font-size: var(--van-font-size-xs);
 }
 

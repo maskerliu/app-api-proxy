@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  compactJson, formatBitrate, formatBytes, formatDuration, formatElapsed, formatFrameOffset,
+  compactJson, formatBitrate, formatBytes, formatClock, formatDuration, formatElapsed, formatFrameOffset,
   formatSampleRate, formatUptime, prettifyJson,
 } from '@renderer/common/format'
 
@@ -109,5 +109,22 @@ describe('JSON 美化与压缩', () => {
     assert.equal(prettifyJson('123'), '123')
     assert.equal(prettifyJson('null'), 'null')
     assert.equal(compactJson('[1,  2]'), '[1,2]')
+  })
+})
+
+describe('formatClock 墙上时钟', () => {
+  it('按本地时分成 HH:mm:ss.SSS，各段补零', () => {
+    const at = new Date(2026, 10, 18, 9, 5, 3, 42).getTime()
+    assert.equal(formatClock(at), '09:05:03.042')
+  })
+
+  it('时分与毫秒同时到顶', () => {
+    const at = new Date(2026, 10, 18, 23, 59, 59, 999).getTime()
+    assert.equal(formatClock(at), '23:59:59.999')
+  })
+
+  it('无效值返回空串，调用方据此不渲染时间戳', () => {
+    assert.equal(formatClock(), '')
+    assert.equal(formatClock(NaN), '')
   })
 })

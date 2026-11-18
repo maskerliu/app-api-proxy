@@ -2,19 +2,6 @@ import { defineStore } from 'pinia'
 import { ProxyMock } from '@shared/proxy.models'
 
 
-const COLORS: string[] = [
-  "#F44336",
-  "#3F51B5",
-  "#2196F3",
-  "#00BCD4",
-  "#009688",
-  "#FF9800",
-  "#795548",
-  "#9C27B0",
-  "#607D8B",
-  "#673AB7"
-]
-
 // 单条响应在主进程已截断到 1MB，40 条是展示上限，避免长时间挂机内存持续增长
 const MAX_RECORDS = 40
 
@@ -97,7 +84,6 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       }
     },
     insertRecord(record: RecordItem) {
-      record.timelineColor = COLORS[record.id % COLORS.length]
       if (!this.records.has(record.id)) this.order.push(record.id)
       this.records.set(record.id, record)
       this.trimRecords()
@@ -106,11 +92,7 @@ export const ProxyRecordStore = defineStore('ProxyRecords', {
       switch (record.type) {
         case ProxyMock.ProxyType.REQUEST_START:
         case ProxyMock.ProxyType.STATISTICS:
-          record.timelineColor = COLORS[record.timestamp % COLORS.length]
-
-          if (!this.records.has(record.id)) this.order.push(record.id)
-          this.records.set(record.id, record)
-          this.trimRecords()
+          this.insertRecord(record)
           break
         case ProxyMock.ProxyType.REQUEST_END:
           if (!this.records.has(record.id)) { return }

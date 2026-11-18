@@ -599,10 +599,12 @@ async function previewDownloaded(url: string, seq: number) {
 
     let mediaKind = resolveMediaKind(contentType, resp.data, url)
     let size = (resp.data as ArrayBuffer).byteLength
-    let toBlobUrl = () => URL.createObjectURL(new Blob([resp.data], { type: contentType }))
+    previewFormat.value = sniffMediaFormat(resp.data, contentType, url)
+    // <img> 只渲染 image/svg+xml 的 SVG，源站报成 octet-stream 时按识别结果补回类型
+    let blobType = previewFormat.value == 'SVG' ? 'image/svg+xml' : contentType
+    let toBlobUrl = () => URL.createObjectURL(new Blob([resp.data], { type: blobType }))
 
     releasePreviewUrls()
-    previewFormat.value = sniffMediaFormat(resp.data, contentType, url)
     previewMeta.value.size = size
     switch (mediaKind) {
       case 'image':

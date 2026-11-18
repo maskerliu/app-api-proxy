@@ -356,7 +356,7 @@ export interface SocketRecord extends ProxyMock.ProxyRequestRecord {
 
 在 [ProxyRecords.ts](file:///D:/Repo/app-api-proxy/src/renderer/store/ProxyRecords.ts) 中扩展 `updateRecord`：
 
-- `wsPhase === 'open'`：插入新行，`frames=[]`，`timelineColor` 与 HTTP 一致。
+- `wsPhase === 'open'`：插入新行，`frames=[]`。
 - `wsPhase === 'frames'`：只合并到已有连接，连接不存在则忽略（已被淘汰）。
 - `wsPhase === 'close'`：更新 `statusCode`（关闭码）、`time`（持续时间）、字节数、丢弃数。
 - 淘汰时连同嵌套 frames 一起释放；现有“当前选中项不淘汰”的策略保留。
