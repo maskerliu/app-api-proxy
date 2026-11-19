@@ -264,7 +264,7 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     assert.equal(read.prepared[1].fingerprint, read.prepared[0].fingerprint, '同 match 不同来源要算出同一指纹（不看 id/name）')
     assert.equal(read.prepared[1].record.match.enabled, false, '导入进来的记录一律不启用')
     assert.equal(read.prepared[1].record.matchFingerprint, undefined,
-      '指纹只交出去，不写回记录：写库那一次仓库层自己会算（`mock.repo.ts:392`）')
+      '指纹只交出去，不写回记录：写库那一次仓库层自己会算（`mock.docs.ts` 的 `recordFieldsOf`）')
     assert.deepEqual(read.notes.map(it => [it.code, it.field, it.recordIndex]),
       [['packFieldDefaulted', 'id', 1], ['packFieldDefaulted', 'name', 1]])
     assert.deepEqual([...new Set(read.issues.map(it => it.recordIndex))], [2], '回落明细不许混进失败明细')

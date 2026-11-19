@@ -445,7 +445,7 @@ export interface MockPackPreparedRecord {
  * - `match.derivation.source = 'import'`：包里的来源印记讲的是导出那台机器的事，
  *   对本库而言这条记录就是导入产生的（`mock.models.ts:95` 已有该取值，不扩类型）。
  *
- * 不生成 ID：`mock.repo.ts:410` 那段「无 id 就 `rec_<uuid>`」是分配的唯一点，这里再分配一次就是第二条标准。
+ * 不生成 ID：`MockRepo.saveRecord` 里「无 id 就 `rec_<uuid>`」那次分配是唯一点，这里再分配一次就是第二条标准。
  * 但缺 id 要在 `defaulted` 里说一声——合并模式靠包内 `id` 做幂等重放，缺了它，重放同一个包就会多出副本。
  */
 export function prepareMockPackRecord(located: MockPackLocatedRecord): MockPackPreparedRecord {

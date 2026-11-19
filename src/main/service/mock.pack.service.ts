@@ -267,7 +267,7 @@ async function indexMockPackTarget(source: MockPackSource, ruleId: string) {
   const byFingerprint = new Map<string, MockRecordSummary>()
   for (const item of await source.listRecordSummaries(ruleId, PACK_EXPORT_PAGE_SIZE)) {
     byId.set(item._id, item)
-    // 同指纹在库里本该被查重挡住（`mock.repo.ts:403`），真出现（迁移遗留、历史脏数据）就记第一条：
+    // 同指纹在库里本该被 `MockRepo.saveRecord` 的指纹查重挡住，真出现（迁移遗留、历史脏数据）就记第一条：
     // 预览要说的是「会撞上谁」，不是「被撞了几次」
     if (item.matchFingerprint != null && !byFingerprint.has(item.matchFingerprint)) {
       byFingerprint.set(item.matchFingerprint, item)

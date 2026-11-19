@@ -4,14 +4,13 @@ import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
-import { normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
 import { USER_DATA_DIR } from '../constants'
 import type {
   DocMeta, MockMetaDoc, MockRecordDoc, MockRecordSummary, MockRuleDoc,
 } from './mock.docs'
 import {
   CONFLICT_RETRY, DELETE_BATCH, META_ID, RECORD_PREFIX, RECORD_SUMMARY_FIELDS, RECORD_TYPE, RULE_TYPE,
-  SCHEMA_VERSION, assertBulkOk, docToRecord, fingerprintOf, toCompatRecord,
+  SCHEMA_VERSION, assertBulkOk, docToRecord, recordFieldsOf, toRecordDoc,
 } from './mock.docs'
 import BaseRepo from './base.repo'
 
@@ -384,13 +383,9 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
   ): Promise<ProxyMock.MockRecordSaveResult> {
     if (record?.ruleId == null) throw new MockError('ruleMissing')
 
-    const normalized = normalizeMockRecord(record)
-    const url = normalized.url || normalized.source?.url || ''
-    // 只存 url 的记录由服务层写入前派生 match，仓库层只做规范化与指纹计算
-    const match = normalized.match == null ? null : normalizeMatchRule(normalized.match)
-    if (match == null && url === '') throw new MockError('matchMissing')
-    const fingerprint = match == null ? null : fingerprintOf(match)
-    const name = normalized.name || url || match?.path || ''
+    // 落库字段（url 回落、match 规范化、指纹、name 回落）只在 mock.docs 定义一次，导入路径接上后同走这里
+    const fields = recordFieldsOf(record)
+    const normalized = fields.normalized
     const ruleId = normalized.ruleId
 
     // 同一规则的查重与写入串行化，避免并发保存绕过指纹唯一校验
@@ -399,8 +394,8 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         throw new MockError('migrationFailed', 'mock migration in progress')
       }
 
-      if (fingerprint != null) {
-        const duplicate = await this.findByFingerprint(ruleId, fingerprint)
+      if (fields.fingerprint != null) {
+        const duplicate = await this.findByFingerprint(ruleId, fields.fingerprint)
         if (duplicate != null && duplicate._id !== normalized.id) {
           throw new MockError('matchDuplicate', undefined, duplicate._id)
         }
@@ -408,21 +403,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
       const now = Date.now()
       if (normalized.id == null) {
-        const doc: MockRecordDoc = {
-          _id: `${RECORD_PREFIX}${randomUUID()}`,
-          type: RECORD_TYPE,
-          ruleId,
-          url,
-          name,
-          match,
-          matchFingerprint: fingerprint,
-          response: normalized.response,
-          variants: normalized.variants,
-          activeVariantId: normalized.activeVariantId,
-          source: normalized.source,
-          createdAt: now,
-          updatedAt: now
-        }
+        const doc = toRecordDoc(fields, null, `${RECORD_PREFIX}${randomUUID()}`, now)
         await this.pouchdb.put(doc)
         this.notifyRecordChanged({ type: 'upsert', ruleId, recordId: doc._id, record: docToRecord(doc) })
         return { id: doc._id, updatedAt: now }
@@ -436,26 +417,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
           throw new MockError('saveConflict')
         }
 
-        const doc: MockRecordDoc = {
-          _id: current._id,
-          _rev: current._rev,
-          type: RECORD_TYPE,
-          ruleId,
-          url,
-          name,
-          match,
-          matchFingerprint: fingerprint,
-          response: normalized.response,
-          variants: normalized.variants,
-          activeVariantId: normalized.activeVariantId,
-          source: normalized.source,
-          createdAt: current.createdAt ?? now,
-          updatedAt: now
-        }
-        // 迁移记录保留旧结构，回滚旧版本时仍能读取
-        if (current.record != null) {
-          doc.record = toCompatRecord(normalized)
-        }
+        const doc = toRecordDoc(fields, current, current._id, now)
 
         try {
           await this.pouchdb.put(doc)

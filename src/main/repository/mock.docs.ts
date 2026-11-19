@@ -3,8 +3,9 @@ import { ProxyMock } from '@shared/proxy.models'
 import { pickHeader } from '@shared/http-header'
 import type { MigrationReport, MockMatchRule } from '@shared/mock.models'
 import {
-  canonicalMatch, inferBodyType, normalizeMockRecord, sanitizeResponseHeaders
+  canonicalMatch, inferBodyType, normalizeMatchRule, normalizeMockRecord, sanitizeResponseHeaders
 } from '@shared/mock.validation'
+import { MockError } from '@shared/mock.errors'
 
 /**
  * Mock 文档层：落库结构、schema 版本与文档↔记录映射。
@@ -227,6 +228,62 @@ export function toCompatRecord(record: ProxyMock.MockRecord): ProxyMock.ProxyReq
     responseHeaders: response.headers,
     responseData
   }
+}
+
+/**
+ * 记录 → 落库字段的组装：url 回落、match 规范化、匹配指纹、name 回落。
+ * 落库形状只能有一个定义点：批量导入（R4C-15）接上时必须走同一个函数——
+ * 两处各写一遍就是两套标准，症状与包校验开第二条标准时一样：编辑器里存得进去，导入进来的却不命中。
+ */
+export interface MockRecordFields {
+  normalized: ProxyMock.MockRecord
+  url: string
+  match: MockMatchRule | null
+  fingerprint: string | null
+  name: string
+}
+
+export function recordFieldsOf(record: ProxyMock.MockRecord): MockRecordFields {
+  const normalized = normalizeMockRecord(record)
+  const url = normalized.url || normalized.source?.url || ''
+  // 只存 url 的记录由服务层写入前派生 match，这里只做规范化与指纹计算
+  const match = normalized.match == null ? null : normalizeMatchRule(normalized.match)
+  if (match == null && url === '') throw new MockError('matchMissing')
+  return {
+    normalized,
+    url,
+    match,
+    fingerprint: match == null ? null : fingerprintOf(match),
+    name: normalized.name || url || match?.path || ''
+  }
+}
+
+/**
+ * 落库 doc 的唯一组装点。`existing` 是库里那条（更新分支），新建传 `null`：
+ * 保留 `_rev`、保留 `createdAt`、以及「只有 v2 迁移来的记录才继续维护兼容快照」三条差别都在这里判定。
+ * ID 与时间戳由调用方给：怎么分配（`rec_<uuid>` / 包内 id / 复制为新记录）与是否沿用包里的时间
+ * 都是调用方所在路径的决定，写进这个函数就等于把同一个决定做两次。
+ */
+export function toRecordDoc(fields: MockRecordFields, existing: MockRecordDoc | null,
+  id: string, now: number): MockRecordDoc {
+  const doc: MockRecordDoc = {
+    _id: id,
+    type: RECORD_TYPE,
+    ruleId: fields.normalized.ruleId,
+    url: fields.url,
+    name: fields.name,
+    match: fields.match,
+    matchFingerprint: fields.fingerprint,
+    response: fields.normalized.response,
+    variants: fields.normalized.variants,
+    activeVariantId: fields.normalized.activeVariantId,
+    source: fields.normalized.source,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now
+  }
+  if (existing?._rev != null) doc._rev = existing._rev
+  if (existing?.record != null) doc.record = toCompatRecord(fields.normalized)
+  return doc
 }
 
 export function legacyRecordsOf(doc: LegacyRuleDoc): Record<string, ProxyMock.ProxyRequestRecord> {
