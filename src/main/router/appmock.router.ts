@@ -3,14 +3,15 @@ import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
 import {
-  MOCK_PACK_FORMAT, MOCK_PACK_VERSION, MockPackIssue, emptyMockPackImportResult,
-  emptyMockPackPreviewResult, toMockPackImportMode,
+  MockPackIssue, emptyMockPackImportResult, emptyMockPackPreviewResult,
+  toMockPackFlag, toMockPackImportMode,
 } from '@shared/mock.pack'
 import { ProxyMock } from '@shared/proxy.models'
 import { IOC_TYPES } from '../constants'
 import { BizNetwork } from '../misc/utils'
 import {
-  CommonService, DiagnosticService, MockService, ProxyService, PushService, SocketProxyService,
+  CommonService, DiagnosticService, MockPackService, MockService, ProxyService, PushService,
+  SocketProxyService,
 } from '../service'
 import { BaseRouter, ParamType } from './base.router'
 
@@ -29,6 +30,8 @@ export class AppMockRouter extends BaseRouter {
   private pushService: PushService
   @inject(IOC_TYPES.MocksService)
   private mockService: MockService
+  @inject(IOC_TYPES.MockPackService)
+  private mockPackService: MockPackService
   @inject(IOC_TYPES.ProxyService)
   private proxyService: ProxyService
   @inject(IOC_TYPES.SocketProxyService)
@@ -398,16 +401,27 @@ export class AppMockRouter extends BaseRouter {
     })
 
     // R4 规则导入/导出的桩端点（R4C-03）：先把参数表与响应形状钉死，渲染层得以并行开发；
-    // 导出组装在 N1、包校验在 N2、写入与生效在 N3 逐张卡替换实现。
+    // 导出组装已在 R4C-06 落地，包校验在 N2、写入与生效在 N3 逐张卡替换实现。
     // 桩不解释文件内容：上传通道本身由 test/unit/form-file.test.ts 守住。
+    // 导出组装（R4C-06）：回的是包文本，不是包对象。桌面端拿它直接写盘、Web 端包成 Blob，
+    // 若在这里回对象，主进程流式拼好的字符串还要再解析 + 序列化一遍，省下的内存等于还回去了。
     this.addApiInfo({
       method: BizNetwork.Method_Get,
       path: API_URL.EXPORT_MOCK_PACK,
       params: [
         { key: 'scope', type: ParamType.Query },
-        { key: 'ruleId', type: ParamType.Query }
+        { key: 'ruleId', type: ParamType.Query },
+        { key: 'includeSource', type: ParamType.Query },
+        { key: 'redact', type: ParamType.Query },
+        { key: 'includeVariants', type: ParamType.Query }
       ],
-      handler: () => ({ format: MOCK_PACK_FORMAT, version: MOCK_PACK_VERSION, rules: [] })
+      handler: (scope, ruleId, includeSource, redact, includeVariants) => this.mockPackService.export({
+        scope: scope === 'all' ? 'all' : 'rule',
+        ruleId: emptyToNull(ruleId),
+        includeSource: toMockPackFlag(includeSource, true),
+        redact: toMockPackFlag(redact, true),
+        includeVariants: toMockPackFlag(includeVariants, true),
+      })
     })
 
     this.addApiInfo({

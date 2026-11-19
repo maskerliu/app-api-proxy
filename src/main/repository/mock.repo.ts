@@ -141,12 +141,20 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     return this.migrationPending && this.migrationRuleIds.has(ruleId) && !this.migratedRules.has(ruleId)
   }
 
-  public async search(field?: string, query?: string, returnFields?: Array<string>) {
+  /**
+   * 规则元信息全量遍历。导出与统计只能用它：`search` 的 RULE_SEARCH_LIMIT 是列表 UI 的
+   * 命中上限，拿它导全场景会静默漏掉第 16 个之后的场景。
+   */
+  public async listRules(): Promise<ProxyMock.MockRule[]> {
     // 规则数量远小于记录数量，先按 type 取规则文档再在内存中过滤，避免 regex 扫描全库
-    const rules = await this.find({
+    return this.find({
       selector: { type: RULE_TYPE },
       limit: RULE_SCAN_LIMIT
-    } as any) as unknown as MockRuleDoc[]
+    } as any) as unknown as ProxyMock.MockRule[]
+  }
+
+  public async search(field?: string, query?: string, returnFields?: Array<string>) {
+    const rules = await this.listRules()
 
     const keyword = query == null ? '' : String(query).toLowerCase()
     const key = field ?? 'name'

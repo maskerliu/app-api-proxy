@@ -9,7 +9,7 @@ import { formPost, get, post, RequestOptions } from './base.api'
 import { API_URL } from './api.const'
 import type {
   MockPackExportOptions, MockPackImportOptions, MockPackImportResult, MockPackPreviewOptions,
-  MockPackPreviewResult, MockPackV1,
+  MockPackPreviewResult,
 } from './mock.pack'
 // 客户端 HTTP API：依赖 axios / vant，仅限渲染进程使用；
 // 主进程请从 './proxy.models' 引入纯模型。
@@ -103,9 +103,10 @@ function withFallbackMimeType(file: File | Blob): File | Blob {
   return name && !file.type ? new File([file], name, { type: 'application/octet-stream' }) : file
 }
 
-// 桌面端导出由主进程组装后弹保存框落盘，只有 Web 分支请求这个端点拿包文本
+// 桌面端导出由主进程组装后弹保存框落盘，只有 Web 分支请求这个端点拿包文本。
+// 回的是字符串而不是包对象：主进程是流式拼出来的，再解析一次等于把省下的内存还回去。
 export function exportMockPack(options: MockPackExportOptions) {
-  return get<MockPackV1>(API_URL.EXPORT_MOCK_PACK, undefined, {
+  return get<string>(API_URL.EXPORT_MOCK_PACK, undefined, {
     scope: options.scope,
     ruleId: options.ruleId ?? undefined,
     includeSource: options.includeSource,

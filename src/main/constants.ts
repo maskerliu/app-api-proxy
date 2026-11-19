@@ -16,5 +16,6 @@ export const IOC_TYPES = {
   DiagnosticService: Symbol.for('DiagnosticService'),
   MockRepo: Symbol.for('MockRepo'),
   MockCache: Symbol.for('MockCache'),
+  MockPackService: Symbol.for('MockPackService'),
   MockMigration: Symbol.for('MockMigration')
 }

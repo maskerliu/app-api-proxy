@@ -27,13 +27,14 @@ describe('规则包脱敏', () => {
   })
 
   it('大小写混写与首尾空格同样命中，但输出保留原写法', () => {
-    const out = redactPackHeaders({ 'Authorization': 'a', 'COOKIE': 'b', 'X-Auth-Token': 'c', 'Set-Cookie': 'd' })
+    const out = redactPackHeaders({ 'Authorization': 'a', 'COOKIE': 'b', 'X-Auth-Token': 'c', 'Set-Cookie': 'd', ' authorization ': 'e' })
     assert.deepEqual(out, {
       Authorization: MOCK_PACK_REDACTED_VALUE,
       COOKIE: MOCK_PACK_REDACTED_VALUE,
       'X-Auth-Token': MOCK_PACK_REDACTED_VALUE,
       'Set-Cookie': MOCK_PACK_REDACTED_VALUE,
-    }, '键名大小写是用户配置的一部分，脱敏不得顺手把它们规范化')
+      ' authorization ': MOCK_PACK_REDACTED_VALUE,
+    }, '键名大小写与空格是用户配置的一部分，脱敏不得顺手把它们规范化')
   })
 
   it('同名多值脱敏后仍是等长数组，不被压成字符串', () => {
@@ -152,7 +153,7 @@ describe('规则包脱敏', () => {
   it('redact=false 时原样返回同一条记录', () => {
     const record = sampleRecord()
     assert.equal(redactPackRecord(record, false), record, '关闭脱敏要走 -raw 分支，不能悄悄做半截替换')
-    assert.equal(JSON.stringify(redactPackRecord(record, false)).includes('real-token'), true)
+    assert.equal(JSON.stringify(redactPackRecord(record, false)).includes('variant-secret'), true, 'raw 包必须真的带原值，只改文件名等于骗用户')
   })
 
   it('缺 response 或缺头集合的记录不因脱敏而崩', () => {

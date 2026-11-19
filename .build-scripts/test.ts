@@ -12,7 +12,7 @@ const TSX_ARGS = ['--import', 'tsx']
 const targets: Record<string, string> = {
   clean: '常规单测（默认）',
   unit: '常规单测',
-  bench: '匹配性能基准',
+  bench: '性能基准',
   migration: 'v3 迁移回归',
   all: '单测 + 迁移 + 基准',
 }
@@ -49,10 +49,17 @@ function runMigration(): number {
   return runNode([...TSX_ARGS, '--test', ...files], `迁移回归 ${files.length} 个文件`)
 }
 
-// 基准单独起进程：--expose-gc 必须在启动时生效
+// 基准单独起进程：--expose-gc 必须在启动时生效；node 一次只执行一个入口文件，故逐个跑
 function runBench(): number {
-  const file = path.resolve(ROOT, 'test/bench/matcher.bench.ts')
-  return runNode(['--expose-gc', ...TSX_ARGS, file], '匹配基准')
+  const files = testFiles('test/bench/**/*.bench.ts')
+  if (files.length === 0) {
+    console.error('[test] 未找到 test/bench/**/*.bench.ts')
+    return 1
+  }
+  for (const file of files) {
+    if (runNode(['--expose-gc', ...TSX_ARGS, file], `基准 ${path.relative(ROOT, file)}`) !== 0) return 1
+  }
+  return 0
 }
 
 function main() {

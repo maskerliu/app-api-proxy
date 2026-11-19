@@ -10,6 +10,14 @@ export const HOP_BY_HOP_HEADERS = [
   'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade',
 ]
 
+/**
+ * 导出脱敏清单（PRD 附录 B.2 是唯一真源，别再在选项说明里重列一份）。
+ * 与逐跳头同处维护：两者都是「头名单」而非「头值处理」，比较一律先小写归一。
+ */
+export const MOCK_SENSITIVE_HEADERS = [
+  'authorization', 'cookie', 'set-cookie', 'proxy-authorization', 'x-token', 'x-access-token', 'x-auth-token',
+] as const
+
 export type HeaderValue = string | string[] | undefined
 export type HeaderMap = Record<string, HeaderValue>
 

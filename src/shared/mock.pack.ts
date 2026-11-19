@@ -1,6 +1,7 @@
 import type { MockErrorCode } from './mock.errors'
 import type { MockMatchRule } from './mock.models'
 import type { ProxyMock } from './proxy.models'
+import { MOCK_SENSITIVE_HEADERS } from './http-header'
 
 /**
  * 规则包（导入/导出）契约的唯一真源：包格式、上限常量与端点请求/响应类型。
@@ -163,9 +164,62 @@ export interface MockPackImportResult {
   suggestions?: MockPackIssue[]
 }
 
+/** 脱敏后的固定掩码：不写成空串，空串会让导入侧把「头不存在」和「头被脱敏」混为一谈 */
+export const MOCK_PACK_REDACTED_VALUE = '***'
+
+type PackHeaders = Record<string, unknown> | null | undefined
+
+/**
+ * 敏感头替换为掩码：键名原样保留（大小写是用户配置的一部分），数组值保持等长数组
+ * （`set-cookie` 压成字符串会让导入后的结构漂移），null/undefined 不伪造值。
+ * 返回新对象——就地改会污染调用方手里的库内记录。
+ */
+export function redactPackHeaders<T extends PackHeaders>(headers: T): T {
+  if (headers == null) return headers
+  const out: Record<string, unknown> = {}
+  for (const name of Object.keys(headers)) {
+    const value = headers[name]
+    const sensitive = MOCK_SENSITIVE_HEADERS.includes(String(name).trim().toLowerCase() as typeof MOCK_SENSITIVE_HEADERS[number])
+    out[name] = !sensitive ? value
+      : Array.isArray(value) ? value.map(() => MOCK_PACK_REDACTED_VALUE)
+      : typeof value === 'string' ? MOCK_PACK_REDACTED_VALUE
+      : value
+  }
+  return out as T
+}
+
+/**
+ * 记录级脱敏，覆盖三处头：`source.headers`、`response.headers` 与**每个变体**的 headers
+ * （变体本身也是一份完整响应，只脱敏前两处等于漏一半）。
+ * `redact=false` 原样返回同一条记录——关闭脱敏走 `-raw` 分支，不能悄悄做半截替换。
+ */
+export function redactPackRecord<T extends MockPackRecord>(record: T, redact: boolean): T {
+  if (!redact) return record
+  const out: T = { ...record }
+  if (out.response != null) {
+    out.response = { ...out.response, headers: redactPackHeaders(out.response.headers) }
+  }
+  if (out.variants != null) {
+    out.variants = out.variants.map(variant => ({ ...variant, headers: redactPackHeaders(variant.headers) }))
+  }
+  if (out.source != null) {
+    out.source = { ...out.source, headers: redactPackHeaders(out.source.headers) }
+  }
+  return out
+}
+
 /** query 传进来的模式收敛到受支持取值：默认新建，合并必须显式声明 */
 export function toMockPackImportMode(value: unknown): MockPackImportMode {
   return value === 'merge' ? 'merge' : 'new'
+}
+
+/**
+ * query 里的开关只有字符串：缺省按默认值（导出默认带全量信息、默认脱敏），
+ * 显式写 `false` 才是关。渲染层传布尔，axios 会序列化成 `'false'`。
+ */
+export function toMockPackFlag(value: unknown, fallback: boolean): boolean {
+  if (value == null || value === '') return fallback
+  return String(value) !== 'false'
 }
 
 /** 路由 handler 返回 undefined 会被 base.router 转成「biz inner error」，空结果必须显式回对象 */
