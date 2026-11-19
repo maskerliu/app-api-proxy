@@ -144,6 +144,10 @@ interface Measurement {
   liveMb: number
   /** 每页交接时不 GC 的堆高水位：与活堆之差就是这段的分配垃圾 */
   handoffMb: number
+  /** 组装完成、结果交还并释放引用之前的活堆。
+   * 只靠每页采样量不到字符串档的真正高点：join / stringify 发生在最后一页之后，
+   * 那一份完整副本从未被任何一次交接采样到。 */
+  endMb: number
   /** 收尾 RSS−起点：含分配抖动，只作参考 */
   rssGrowthMb: number
   /** 结果交还并强制 GC 之后仍读到的堆差值：字符串档留着整个包，落盘档应当接近零 */
@@ -207,6 +211,8 @@ async function measure(mode: string): Promise<Measurement> {
     text = await aggregatePackText(source)
   }
   const ms = performance.now() - startedAt
+  // 组装刚完成、引用还没释放：这一档才是字符串出口真正的高水位
+  const endMb = gcMb() - before
   // 先取 RSS 再读回文件：读回那一份副本不该记进导出自己的高水位
   const rssGrowthMb = mb(process.memoryUsage().rss - rssBefore)
   const visited = source.visited
@@ -218,7 +224,7 @@ async function measure(mode: string): Promise<Measurement> {
   text = null
   if (dir != null) rmSync(dir, { recursive: true, force: true })
   return {
-    packBytes, head, checksum, liveMb: live - before, handoffMb: handoff - before,
+    packBytes, head, checksum, liveMb: live - before, handoffMb: handoff - before, endMb,
     rssGrowthMb, residualMb: Math.max(0, gcMb() - before), ms, visited,
   }
 }
@@ -237,7 +243,8 @@ function spawn(mode: string): Measurement {
 
 function report(label: string, row: Measurement): string {
   return `${label} 包 ${(mb(row.packBytes)).toFixed(1)}MB · 耗时 ${row.ms.toFixed(0)}ms · ` +
-    `活堆峰值 +${row.liveMb.toFixed(1)}MB（每页 GC 之后） · 不 GC 堆峰值 +${row.handoffMb.toFixed(1)}MB · ` +
+    `每页活堆峰值 +${row.liveMb.toFixed(1)}MB · 收尾活堆高水位 +${row.endMb.toFixed(1)}MB（含最后一次 join/stringify） · ` +
+    `不 GC 堆峰值 +${row.handoffMb.toFixed(1)}MB · ` +
     `RSS +${row.rssGrowthMb.toFixed(1)}MB（含每页现造记录的分配抖动） · 交还后残留 +${row.residualMb.toFixed(1)}MB`
 }
 
@@ -269,11 +276,11 @@ async function runParent(): Promise<void> {
   const aggregate = legs[1][1]
   // 一致性：流式实现若漏字段/多逗号，与对照组立刻对不上
   samePack('stream', stream, aggregate)
-  // 字符串档的活堆峰值本就是包体积的两倍（分片数组 + 最后一次 join 的完整副本），
+  // 字符串档的收尾高水位本就是包体积的两倍上下（分片缓冲 + 最后一次 join 的完整副本），
   // 这条闸门只用来抓真正的失控累积，不用来宣称流式拼接省了内存——它省不下那一份副本。
   const budget = mb(stream.packBytes)
-  if (stream.liveMb > budget * 2.5) {
-    console.error(`\n流式拼接的活堆峰值 ${stream.liveMb.toFixed(1)}MB 高于包体积 ${budget.toFixed(1)}MB——` +
+  if (stream.endMb > budget * 2.5) {
+    console.error(`\n流式拼接的收尾活堆 ${stream.endMb.toFixed(1)}MB 高于包体积 ${budget.toFixed(1)}MB 的 2.5 倍——` +
       '序列化过程中攒了不该攒的东西')
     process.exit(1)
   }
@@ -281,14 +288,16 @@ async function runParent(): Promise<void> {
   if (legs.length > 2) {
     const file = legs[2][1]
     samePack('file', file, stream)
-    console.log(`\n实测：同样 ${budget.toFixed(1)}MB 的包，活堆峰值 ` +
-      `流式拼接返字符串 +${stream.liveMb.toFixed(1)}MB · 聚合成对象 +${aggregate.liveMb.toFixed(1)}MB · ` +
-      `流式直接落盘 +${file.liveMb.toFixed(1)}MB`)
+    console.log(`\n实测：同样 ${budget.toFixed(1)}MB 的包，收尾活堆高水位 ` +
+      `流式拼接返字符串 +${stream.endMb.toFixed(1)}MB · 聚合成对象 +${aggregate.endMb.toFixed(1)}MB · ` +
+      `流式直接落盘 +${file.endMb.toFixed(1)}MB`)
+    console.log('每页采样的活堆高水位（字符串档不含最后一次 join）：' +
+      `串档 +${stream.liveMb.toFixed(1)}MB / 聚合档 +${aggregate.liveMb.toFixed(1)}MB / 落盘档 +${file.liveMb.toFixed(1)}MB`)
     console.log(`交还后残留：字符串档 +${stream.residualMb.toFixed(1)}MB（留住整个包） / ` +
       `落盘档 +${file.residualMb.toFixed(1)}MB`)
     // 裁决「改成边拼边写盘」要证明的两件事：峰值不再随包大小走，且结果不再被调用方持有
-    if (file.liveMb * 4 > stream.liveMb) {
-      console.error(`\n落盘档活堆峰值 ${file.liveMb.toFixed(1)}MB 相对字符串档 ${stream.liveMb.toFixed(1)}MB ` +
+    if (file.endMb * 4 > stream.endMb) {
+      console.error(`\n落盘档收尾活堆 ${file.endMb.toFixed(1)}MB 相对字符串档 ${stream.endMb.toFixed(1)}MB ` +
         '没有降到一个量级——峰值仍在随包大小走')
       process.exit(1)
     }
