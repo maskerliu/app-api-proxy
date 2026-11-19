@@ -30,6 +30,7 @@ registerHooks({
 
 const { AppMockRouter } = await import('@main/router/appmock.router')
 const { MockPackService, readMockPack } = await import('@main/service/mock.pack.service')
+const { fingerprintOf } = await import('@main/repository/mock.docs')
 const { API_URL } = await import('@shared/api.const')
 
 /**
@@ -231,6 +232,28 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     assert.equal(read.invalidCount, 1)
     assert.equal(read.issues[0].code, 'matchMissing', `明细要能指出为什么跳，实际 ${JSON.stringify(read.issues)}`)
     assert.deepEqual(repo.calls, [], '条目级失败同样不该出现库原语')
+  })
+
+  it('服务侧接上归一化：指纹与库内同源，回落字段成 notes', () => {
+    const repo = newFakeRepo()
+    const service = new MockPackService()
+    ;(service as any).mockRepo = repo
+    const ok = { statusCode: 200, headers: {}, body: '{}', bodyType: 'json', delayMs: 0 }
+    const noId = { response: ok, match: makeMatch({ path: '/v1/orders/0' }) }
+    const read = service.readPack(packText([{ id: 'rule_1', name: '订单中心', records: [validRecordAt(0), noId, recordAt(2)] }]))
+
+    assert.equal(read.prepared.length, 2, '坏条目不进 prepared：包里有 3 条，只有 2 条走得到归一化')
+    assert.deepEqual(read.prepared.map(it => [it.ruleIndex, it.recordIndex]), [[0, 0], [0, 1]])
+    // 指纹必须是同一把：合并模式的查重拿它跟库内记录比，算法不同就等于查不出重复
+    assert.equal(read.prepared[0].fingerprint, fingerprintOf(makeMatch({ path: '/v1/orders/0' })))
+    assert.equal(read.prepared[1].fingerprint, read.prepared[0].fingerprint, '同 match 不同来源要算出同一指纹（不看 id/name）')
+    assert.equal(read.prepared[1].record.match.enabled, false, '导入进来的记录一律不启用')
+    assert.equal(read.prepared[1].record.matchFingerprint, undefined,
+      '指纹只交出去，不写回记录：写库那一次仓库层自己会算（`mock.repo.ts:392`）')
+    assert.deepEqual(read.notes.map(it => [it.code, it.field, it.recordIndex]),
+      [['packFieldDefaulted', 'id', 1], ['packFieldDefaulted', 'name', 1]])
+    assert.deepEqual([...new Set(read.issues.map(it => it.recordIndex))], [2], '回落明细不许混进失败明细')
+    assert.deepEqual(repo.calls, [], '归一化同样不碰仓库')
   })
 
   // 真实由 + 真实 multipart 通道：坏包拿到的是错误码，不是一个「成功的空结果」

@@ -4,11 +4,13 @@ import { app } from 'electron'
 import { inject, injectable } from 'inversify'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
+import type { MockMatchRule } from '@shared/mock.models'
 import {
   MOCK_PACK_FORMAT, MOCK_PACK_MAX_RECORDS, MOCK_PACK_VERSION,
-  MockPackExportOptions, MockPackRecord, MockPackRecordCheck, MockPackV1,
-  readMockPackText, redactPackRecord, validateMockPackRecords,
+  MockPackExportOptions, MockPackIssue, MockPackPreparedRecord, MockPackRecord, MockPackRecordCheck, MockPackV1,
+  prepareMockPackRecord, readMockPackText, redactPackRecord, validateMockPackRecords,
 } from '@shared/mock.pack'
+import { fingerprintOf } from '../repository/mock.docs'
 import { IOC_TYPES } from '../constants'
 
 /**
@@ -207,23 +209,50 @@ export async function estimateMockPack(source: MockPackSource,
   return { ruleCount: rules.length, recordCount, oversized: recordCount > MOCK_PACK_MAX_RECORDS }
 }
 
+/** 归一化之后的记录，外加它的匹配指纹 */
+export interface MockPackPrepared extends MockPackPreparedRecord {
+  /** 冲突比对（R4C-13/18）要用指纹，而指纹是 `canonicalMatch` 单向导出的派生值：在这里算一次，别到写库那段再算一遍 */
+  fingerprint: string
+}
+
 /**
- * 两阶段读完一个包的交付物（技术设计 D8）：阶段一不过整包拒绝，阶段二不过只跳那一条。
+ * 三阶段读完一个包的交付物（技术设计 D8）：包级不过整包拒绝，条目级不过只跳那一条，
+ * 跳剩的那些再归一化成「库里那种形状」。
  * 定义在主进程侧而不是共享层：它是「编排的产物」，不是包契约的一部分——预览与导入各自只取其中几项。
  */
 export interface MockPackRead extends MockPackRecordCheck {
   pack: MockPackV1
+  /** 与 `valid` 同序：坐标一致，明细要能指回包里第几个场景的第几条 */
+  prepared: MockPackPrepared[]
+  /** 归一化替包补了哪些字段（`packFieldDefaulted`）——是提示不是失败，不与 `issues` 混计数 */
+  notes: MockPackIssue[]
 }
 
 /**
- * 阶段一入口（技术设计 D8）：预览与写入都要先过这一步，包级不过就连一个字符都不往下带。
+ * 校验 + 归一化的唯一入口（D8 阶段一～R4C-12）：预览与写入都从这里拿数，包级不过就连一个字符都不往下带。
  * 字节数在这一侧算——`Buffer.byteLength` 只扫不分配，换成 `mock.validation.utf8ByteLength`（它真的
  * 编码一次）就要为 50MB 的包多备一份副本；那个 helper 的量级是 2MB 响应体，不是整包。
  * 上传通道的上限只比这里多 1MB 余量，所以越过 50MB 的包确实能走到这一步，而不是先在传输层断掉。
  */
 export function readMockPack(text: string | undefined): MockPackRead {
   const pack = readMockPackText(text, Buffer.byteLength(text ?? '', 'utf8'))
-  return { pack, ...validateMockPackRecords(pack) }
+  const check = validateMockPackRecords(pack)
+  const prepared = check.valid.map(located => {
+    const item = prepareMockPackRecord(located)
+    // 阶段二保证了 match 存在（缺它就拿 matchMissing 跳过），所以指纹不必判空
+    const match = item.record.match as MockMatchRule
+    return { ...item, fingerprint: fingerprintOf(match) }
+  })
+  const notes: MockPackIssue[] = []
+  for (const item of prepared) {
+    for (const field of item.defaulted) {
+      notes.push({
+        code: 'packFieldDefaulted', field,
+        ruleIndex: item.ruleIndex, recordIndex: item.recordIndex, recordId: item.record.id ?? undefined,
+      })
+    }
+  }
+  return { pack, ...check, prepared, notes }
 }
 
 @injectable()
@@ -248,7 +277,7 @@ export class MockPackService {
   }
 
   /**
-   * 两阶段校验（D8）：包级不过整包拒绝，条目级不过只跳过那一条、其余继续。
+   * 三阶段（D8）：包级不过整包拒绝，条目级不过只跳过那一条、其余继续，剩下的归一化成库内形状。
    * 这里没有 `this.mockRepo` 是刻意的——坏包在碰到任何库原语之前就该被拒，「零写入」由这一步的位置保证，
    * 不靠后面的写库代码自觉。「库内已有 + 待写入」的上限复核要读库，属 R4C-14 写库前的那一步。
    */

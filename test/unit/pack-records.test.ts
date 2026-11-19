@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { MOCK_PACK_CODES, MOCK_VALIDATION_CODES } from '@shared/mock.errors'
-import { MOCK_PACK_FORMAT, MOCK_PACK_VERSION, MockPackRecord, MockPackV1, validateMockPackRecords } from '@shared/mock.pack'
-import { MOCK_MAX_BODY_BYTES, MOCK_MAX_VARIANTS } from '@shared/mock.validation'
+import { MOCK_PACK_FORMAT, MOCK_PACK_VERSION, MockPackRecord, MockPackV1, prepareMockPackRecord, validateMockPackRecords } from '@shared/mock.pack'
+import { MOCK_MAX_BODY_BYTES, MOCK_MAX_VARIANTS, canonicalMatch, normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
 import { makeMatch } from './fixtures'
 
 // 阶段二（条目级）是纯函数，不需要 electron 替身：与 pack-validate.test.ts 的分工是
@@ -125,5 +125,85 @@ describe('R4C-11 条目级校验：单条不过只跳那一条', () => {
       assert.equal(packCodes.has(code), false, `${code} 属包级码族，不该出现在条目级明细里`)
     }
     assert.equal(check.invalidCount, 3)
+  })
+})
+
+describe('R4C-12 归一化：把包里的记录变成库里那种形状', () => {
+  const locate = (record: MockPackRecord, ruleIndex = 0, recordIndex = 0) => ({ ruleIndex, recordIndex, record })
+
+  it('match 归一化到库内形状，且不污染包里那条', () => {
+    const packed = goodRecord(1)
+    const prepared = prepareMockPackRecord(locate(packed)).record
+    // 与保存路径同源：同一条记录交给 normalizeMockRecord 会得到同一个形状
+    const reference = normalizeMatchRule(packed.match)
+    for (const field of ['level', 'pathType', 'path', 'method', 'host', 'query', 'headers', 'body', 'priority'] as const) {
+      assert.deepEqual(prepared.match[field], reference[field], `${field} 应与保存路径的归一化结果一致`)
+    }
+    assert.equal(prepared.match.enabled, false)
+    assert.equal(prepared.url, '', '库内形状有 url 这个键（包契约里没有），R4C-15 写库时靠它兜底名称')
+    // 阶段二交出的 `valid[].record` 是包对象本身（写库与冲突明细要回指坐标），归一化不许就地改它
+    assert.equal(packed.match.enabled, true, '不许写回包对象')
+    assert.equal(packed.match.derivation.source, 'manual', '导出那台机器的来源印记要留在包对象上')
+  })
+
+  it('pathOriginal 原样带进库内形状，但不进指纹', () => {
+    // 参数化建议会把原始路径留在 pathOriginal 上（`mock.derive.ts:316`），手改的包可能带也可能不带。
+    // 指纹是合并模式查重的那把钥匙（R4C-13）：它若看见这个字段，同一条规则会因「有没有这行注释」变成两条。
+    const plain = prepareMockPackRecord(locate(goodRecord(1))).record
+    const original = prepareMockPackRecord(locate({
+      ...goodRecord(1),
+      match: { ...makeMatch({ path: '/v1/orders/{id}' }), pathOriginal: '/v1/orders/12345' },
+    } as unknown as MockPackRecord)).record
+    assert.equal(plain.match.pathOriginal, undefined)
+    assert.equal(original.match.pathOriginal, '/v1/orders/12345')
+    assert.equal(canonicalMatch(original.match), canonicalMatch(makeMatch({ path: '/v1/orders/{id}' })),
+      '同一把 path 带不带 pathOriginal 都要算出同一个规范串')
+    assert.notEqual(canonicalMatch(plain.match), canonicalMatch(original.match), 'path 本身要进指纹')
+  })
+
+  it('归一化是幂等的：仓库层再规范化一次不会改变形状', () => {
+    const once = prepareMockPackRecord(locate(goodRecord(7))).record
+    assert.deepEqual(normalizeMockRecord(once), once)
+  })
+
+  it('一律置为未启用，来源改写成 import 但保留其余派生信息', () => {
+    const packed = {
+      ...goodRecord(2),
+      match: {
+        ...makeMatch(),
+        derivation: { source: 'recording', autoIgnoredKeys: ['ts', 'ts'], suggestions: [{ key: 'uid', reason: '每次不同' }], pathParameterized: true, analyzedAt: 5 },
+      },
+    } as unknown as MockPackRecord
+    const match = prepareMockPackRecord(locate(packed)).record.match
+    assert.equal(match.enabled, false, '导入不许劫持真实请求（风险表 RK6）')
+    assert.equal(match.derivation.source, 'import')
+    assert.deepEqual(match.derivation.autoIgnoredKeys, ['ts'], '去重排序是既有规范化的活，不该被 import 印记抹掉')
+    assert.equal(match.derivation.pathParameterized, true)
+    assert.equal(match.derivation.analyzedAt, 5)
+  })
+
+  it('缺 id / 缺名称只报「回落」，ID 仍由仓库层分配', () => {
+    const bare = { response: OK_RESPONSE, match: makeMatch() } as unknown as MockPackRecord
+    const prepared = prepareMockPackRecord(locate(bare, 1, 3))
+    assert.deepEqual(prepared.defaulted, ['id', 'name'])
+    assert.equal(prepared.record.id, null, '在这里造 ID 就是第二条分配标准（`mock.repo.ts:410` 才是那一点）')
+    assert.deepEqual([prepared.ruleIndex, prepared.recordIndex], [1, 3])
+    assert.deepEqual(prepareMockPackRecord(locate(goodRecord(4))).defaulted, [])
+  })
+
+  it('变体、录制来源与时间戳原样带进库内形状', () => {
+    const packed = {
+      ...goodRecord(6),
+      variants: [{ id: 'v1', name: '变体一', ...OK_RESPONSE }],
+      activeVariantId: 'v1',
+      source: { url: 'https://api.demo/v1/orders/6', method: 'GET' },
+      createdAt: 111, updatedAt: 222,
+    } as unknown as MockPackRecord
+    const record = prepareMockPackRecord(locate(packed)).record
+    assert.deepEqual(record.variants.map(it => it.id), ['v1'])
+    assert.equal(record.activeVariantId, 'v1')
+    assert.equal(record.source?.url, 'https://api.demo/v1/orders/6')
+    assert.deepEqual([record.createdAt, record.updatedAt], [111, 222])
+    assert.equal(record.url, '', 'url 不落包：导入侧保持空串，不拿 match 反推一个出来冒充录制地址')
   })
 })

@@ -432,8 +432,8 @@ export class AppMockRouter extends BaseRouter {
         { key: 'pack', type: ParamType.FormFileText },
         { key: 'mode', type: ParamType.Query }
       ],
-      // 两阶段校验已接线（R4C-10 包级 + R4C-11 条目级）：包级不过整包拒绝，条目级不过只跳那一条。
-      // 坏包不再被当成「预览成功、0 条」；跳过的明细现在算出来就丢掉——回传是 R4C-13 预览统计的事，
+      // 校验与归一化已接线（R4C-10 包级 / R4C-11 条目级 / R4C-12 归一化）：包级不过整包拒绝，条目级不过只跳那一条。
+      // 坏包不再被当成「预览成功、0 条」；算出的明细与归一化结果现在就地丢掉——回传是 R4C-13 预览统计的事，
       // 这里不假装已经在报明细。
       handler: (pack) => {
         this.mockPackService.readPack(pack)

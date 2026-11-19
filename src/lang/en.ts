@@ -281,6 +281,7 @@ export default {
       harEntryLimit: 'More than 1000 HAR entries; export in batches',
       harNoResponse: 'No response recorded; entry skipped',
       harBodyUnreadable: 'Response body missing or undecodable; entry skipped',
+      packFieldDefaulted: 'Not provided in the pack; a default value was applied',
       packNameCollision: 'Scenario name already exists; a suffix was added',
       packWriteAborted: 'Import canceled'
     },

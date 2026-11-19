@@ -1,7 +1,7 @@
 import { MockError } from './mock.errors'
 import type { MockErrorCode } from './mock.errors'
 import type { MockMatchRule } from './mock.models'
-import { validateMockRecord } from './mock.validation'
+import { normalizeMockRecord, validateMockRecord } from './mock.validation'
 import type { ProxyMock } from './proxy.models'
 import { MOCK_SENSITIVE_HEADERS } from './http-header'
 
@@ -337,7 +337,6 @@ export interface MockPackRecordCheck {
   /** 被整条跳过的记录数：一条记录可以同时有几项问题，所以它不等于 `issues.length` */
   invalidCount: number
 }
-
 /**
  * 阶段二（技术设计 D8）：逐条复用保存路径的同一套判定，单条不过就跳过它、其余继续（PRD 4.4.7）。
  *
@@ -392,4 +391,59 @@ export function validateMockPackRecords(pack: MockPackV1): MockPackRecordCheck {
     }
   }
   return { valid, issues, invalidCount }
+}
+
+/** 归一化之后的记录 + 「包没写、由我们补齐」的字段名 */
+export interface MockPackPreparedRecord {
+  ruleIndex: number
+  recordIndex: number
+  /** 不含 `ruleId`：它是「导到哪个场景」的答案，属预览与写入阶段（R4C-13/R4C-18），包里也没有这个字段 */
+  record: ProxyMock.MockRecord
+  /** 回落了哪些字段（`id` / `name`），由调用方折算成 `packFieldDefaulted` 明细 */
+  defaulted: string[]
+}
+
+/**
+ * 阶段二之后的归一化（R4C-12）：把「包里的记录」变成「与编辑器保存后同一种形状的记录」。
+ * 用 `normalizeMockRecord` 而不是自己逐字段补——派生 match 之外的那套默认值有一份就够了，
+ * 补两次就会漂移（读库路径 `docToRecord` 用的也是它）。
+ *
+ * 只有两处是归一化管不到、又必须强制的：
+ * - `match.enabled = false`：导入不许劫持真实请求（风险表 RK6），启不启用是用户之后的决定；
+ * - `match.derivation.source = 'import'`：包里的来源印记讲的是导出那台机器的事，
+ *   对本库而言这条记录就是导入产生的（`mock.models.ts:95` 已有该取值，不扩类型）。
+ *
+ * 不生成 ID：`mock.repo.ts:410` 那段「无 id 就 `rec_<uuid>`」是分配的唯一点，这里再分配一次就是第二条标准。
+ * 但缺 id 要在 `defaulted` 里说一声——合并模式靠包内 `id` 做幂等重放，缺了它，重放同一个包就会多出副本。
+ */
+export function prepareMockPackRecord(located: MockPackLocatedRecord): MockPackPreparedRecord {
+  const packed = located.record
+  const record = normalizeMockRecord({
+    id: packed?.id ?? undefined,
+    name: packed?.name,
+    match: packed?.match,
+    response: packed?.response,
+    variants: packed?.variants,
+    activeVariantId: packed?.activeVariantId,
+    source: packed?.source,
+    createdAt: packed?.createdAt,
+    updatedAt: packed?.updatedAt,
+  })
+  const defaulted: string[] = []
+  if (record.id == null) defaulted.push('id')
+  // 名称回落发生在仓库层（url → match.path），包内记录没有 url，所以这里只能说「名称是补的」
+  if (record.name === '') defaulted.push('name')
+  const match = record.match
+  if (match != null) {
+    const derivation = match.derivation
+    match.enabled = false
+    match.derivation = {
+      source: 'import',
+      autoIgnoredKeys: derivation?.autoIgnoredKeys ?? [],
+      suggestions: derivation?.suggestions ?? [],
+      pathParameterized: !!derivation?.pathParameterized,
+      analyzedAt: derivation?.analyzedAt ?? 0,
+    }
+  }
+  return { ruleIndex: located.ruleIndex, recordIndex: located.recordIndex, record, defaulted }
 }
