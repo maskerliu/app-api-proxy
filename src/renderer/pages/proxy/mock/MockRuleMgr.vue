@@ -74,7 +74,7 @@
                 <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
               </van-button>
               <!-- 导出不依赖当前场景（可选全部场景），所以按钮不置灰；未选中场景时对话框里禁掉「仅当前场景」 -->
-              <van-button v-if="!isWeb" plain type="primary" size="small" @click="onExportOpen">
+              <van-button plain type="primary" size="small" @click="onExportOpen">
                 {{ $t('mock.export.title') }}
               </van-button>
             </div>
@@ -255,6 +255,8 @@
           <span class="export-label">{{ $t('mock.export.redact') }}</span>
           <van-switch v-model="exportRedact" />
         </van-row>
+        <!-- Web 分支没有保存框，包文本要整份进浏览器内存：风险在导出前说，不等下载完再解释 -->
+        <div v-if="isWeb" class="export-tip">{{ $t('mock.export.webTip') }}</div>
       </div>
     </van-dialog>
 
@@ -263,9 +265,9 @@
 
 <script lang="ts" setup>
 import {
-  canonicalMatch, deleteMockRecord, deleteMockRule, getActiveMockRule, getMockRecord,
-  getMockRecords, getMockRuleDetail, MOCK_RECORD_REJECT_LIMIT, ProxyMock, saveMockRecord,
-  saveMockRule, searchMockRules, validateMockRecord
+  canonicalMatch, deleteMockRecord, deleteMockRule, exportMockPack, getActiveMockRule,
+  getMockRecord, getMockRecords, getMockRuleDetail, MOCK_RECORD_REJECT_LIMIT, ProxyMock,
+  saveMockRecord, saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
 import { MOCK_PACK_MAX_RECORDS } from '@shared/mock.pack'
 import type { MockPackExportOptions, MockPackScope } from '@shared/mock.pack'
@@ -924,7 +926,19 @@ function exportOptions(): MockPackExportOptions {
   }
 }
 
-// 选路径与写盘分两次 IPC：包文本由主进程边拼边写进文件，渲染层经手的只有几十字节的回执
+// Web 分支的落盘就是浏览器的下载：文件名交给 a.download，落到哪儿由浏览器/用户决定
+function downloadPack(fileName: string, text: string) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+  a.download = fileName
+  a.click()
+  // 同步 revoke 会把浏览器还没接手的下载一起取消
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
+
+// 选路径与写盘分两次 IPC：包文本由主进程边拼边写进文件，渲染层经手的只有几十字节的回执。
+// Web 分支没有主进程可用，只能把整份包文本取进浏览器再交 Blob 下载——峰值与包大小同阶，
+// 所以风险写在对话框里（webTip），条数超限的提示也就给不出来（回执里没有条数）。
 async function startExport() {
   const options = exportOptions()
   const fileName = packFileName({
@@ -934,6 +948,13 @@ async function startExport() {
   })
   let loading: ToastWrapperInstance = null
   try {
+    if (isWeb) {
+      loading = showLoadingToast({ message: t('mock.export.saving'), forbidClick: true, duration: 0 })
+      // silentError：base.api 对 FAIL/ERROR 自己会弹一次提示，这里再由导出统一报「导出失败：原因」
+      downloadPack(fileName, await exportMockPack(options, { silentError: true }))
+      showNotify({ message: t('mock.export.savedWeb', { fileName }), type: 'success', duration: 2000 })
+      return
+    }
     const picked = await window.mainApi.selectSavePath(t('mock.export.saveTitle'), fileName)
     // 用户在系统保存框里取消不是失败，什么都不提示
     if (picked.status !== 'selected' || picked.filePath == null) return
@@ -1315,6 +1336,14 @@ async function startExport() {
    与时间戳同一口径改走 text-color-2（能看出比同行淡，但读得清） */
 .export-field :deep(.van-radio--disabled .van-radio__label) {
   color: var(--van-text-color-2);
+}
+
+/* Web 分支的说明文字没有复用全局 .hint：那一档读 --van-text-color-3，Vant 暗色把它钉成字面量 #4d4d4d
+   （store 的灰阶反转只覆盖 --van-gray-*，动不到它），压在弹窗底色上几乎读不出——与上面禁用态同一口径走 text-2。
+   .hint 全站十几处要不要整体提一档是另一件事，不在本批改。 */
+.export-tip {
+  color: var(--van-text-color-2);
+  font-size: var(--van-font-size-sm);
 }
 
 .mgr-content :deep(.van-popover__wrapper) {

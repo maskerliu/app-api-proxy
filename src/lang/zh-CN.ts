@@ -297,8 +297,10 @@ export default {
       saveTitle: '选择导出位置',
       saving: '正在导出…',
       saved: '已导出 {ruleCount} 个场景 / {recordCount} 条记录',
+      savedWeb: '已下载 {fileName}',
       failed: '导出失败：{reason}',
-      overLimit: '包内 {recordCount} 条记录已超过导入上限 {limit} 条：这份包本程序读得动，导入时会被整包拒绝'
+      overLimit: '包内 {recordCount} 条记录已超过导入上限 {limit} 条：这份包本程序读得动，导入时会被整包拒绝',
+      webTip: 'Web 端没有保存框，整份包会先读进浏览器再下载；场景多或体积大时建议改用桌面端。'
     },
     // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
     // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成

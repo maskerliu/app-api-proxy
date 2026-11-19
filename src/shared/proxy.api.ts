@@ -103,16 +103,17 @@ function withFallbackMimeType(file: File | Blob): File | Blob {
   return name && !file.type ? new File([file], name, { type: 'application/octet-stream' }) : file
 }
 
-// 桌面端导出由主进程组装后弹保存框落盘，只有 Web 分支请求这个端点拿包文本。
+// 桌面端导出由主进程组装后边拼边写目标文件，这个端点只服务 Web 分支：浏览器没有主进程可用，
+// 包文本必须整份取进渲染层再包成 Blob 下载（峰值与包大小同阶，UI 上已提示改用桌面端）。
 // 回的是字符串而不是包对象：主进程是流式拼出来的，再解析一次等于把省下的内存还回去。
-export function exportMockPack(options: MockPackExportOptions) {
+export function exportMockPack(options: MockPackExportOptions, requestOptions?: RequestOptions) {
   return get<string>(API_URL.EXPORT_MOCK_PACK, undefined, {
     scope: options.scope,
     ruleId: options.ruleId ?? undefined,
     includeSource: options.includeSource,
     redact: options.redact,
     includeVariants: options.includeVariants,
-  })
+  }, requestOptions)
 }
 
 export function previewMockPack(file: File | Blob, options: MockPackPreviewOptions,

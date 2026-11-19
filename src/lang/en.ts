@@ -298,8 +298,10 @@ export default {
       saveTitle: 'Choose export location',
       saving: 'Exporting…',
       saved: 'Exported {ruleCount} scenarios / {recordCount} records',
+      savedWeb: 'Downloaded {fileName}',
       failed: 'Export failed: {reason}',
-      overLimit: 'The pack has {recordCount} records, above the import limit of {limit}: this app can read it, but importing it is rejected as a whole'
+      overLimit: 'The pack has {recordCount} records, above the import limit of {limit}: this app can read it, but importing it is rejected as a whole',
+      webTip: 'Web has no save dialog: the whole pack is read into the browser before it downloads. Use the desktop app for large packs.'
     },
     // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
     // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成
