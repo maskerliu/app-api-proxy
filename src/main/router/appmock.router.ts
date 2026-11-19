@@ -2,6 +2,10 @@ import { Request, Response } from 'express'
 import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
+import {
+  MOCK_PACK_FORMAT, MOCK_PACK_VERSION, MockPackIssue, emptyMockPackImportResult,
+  emptyMockPackPreviewResult, toMockPackImportMode,
+} from '@shared/mock.pack'
 import { ProxyMock } from '@shared/proxy.models'
 import { IOC_TYPES } from '../constants'
 import { BizNetwork } from '../misc/utils'
@@ -391,6 +395,54 @@ export class AppMockRouter extends BaseRouter {
       path: API_URL.GET_MOCK_MATCH_WARNINGS,
       params: [{ key: 'ruleId', type: ParamType.Query }],
       handler: (ruleId) => this.mockService.getMockMatchWarnings(ruleId)
+    })
+
+    // R4 规则导入/导出的桩端点（R4C-03）：先把参数表与响应形状钉死，渲染层得以并行开发；
+    // 导出组装在 N1、包校验在 N2、写入与生效在 N3 逐张卡替换实现。
+    // 桩不解释文件内容：上传通道本身由 test/unit/form-file.test.ts 守住。
+    this.addApiInfo({
+      method: BizNetwork.Method_Get,
+      path: API_URL.EXPORT_MOCK_PACK,
+      params: [
+        { key: 'scope', type: ParamType.Query },
+        { key: 'ruleId', type: ParamType.Query }
+      ],
+      handler: () => ({ format: MOCK_PACK_FORMAT, version: MOCK_PACK_VERSION, rules: [] })
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.PREVIEW_MOCK_PACK,
+      params: [
+        { key: 'pack', type: ParamType.FormFileText },
+        { key: 'mode', type: ParamType.Query }
+      ],
+      handler: () => emptyMockPackPreviewResult()
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.IMPORT_MOCK_PACK,
+      params: [
+        { key: 'pack', type: ParamType.FormFileText },
+        { key: 'mode', type: ParamType.Query },
+        { key: 'targetRuleId', type: ParamType.Query }
+      ],
+      handler: (_pack, mode) => emptyMockPackImportResult(toMockPackImportMode(mode))
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.IMPORT_HAR,
+      params: [
+        { key: 'pack', type: ParamType.FormFileText },
+        { key: 'mode', type: ParamType.Query },
+        { key: 'targetRuleId', type: ParamType.Query }
+      ],
+      handler: (_pack, mode) => ({
+        ...emptyMockPackImportResult(toMockPackImportMode(mode)),
+        suggestions: [] as MockPackIssue[]
+      })
     })
 
   }

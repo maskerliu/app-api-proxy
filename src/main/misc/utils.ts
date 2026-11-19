@@ -1,7 +1,7 @@
 import { BrowserWindow } from "electron"
 import { Request } from "express"
 import { File } from "formidable"
-import { readFileSync } from "fs"
+import { readFileSync, rmSync } from "fs"
 import JSONBig from 'json-bigint'
 import { NetworkInterfaceInfo, networkInterfaces } from 'os'
 import { BizContext, LocalIP, UserDevice, UserNetwork } from '@shared/base.models'
@@ -120,14 +120,30 @@ export function parseJsonBody(req: Request) {
   }
 }
 
-export function fetchFormFile(file: File) {
-  const data = readFileSync(file.filepath, 'utf-8')
-  switch (file.mimetype) {
-    case BizNetwork.MIME_JSON:
-      return JSON.parse(data)
-    case BizNetwork.MIME_TEXT:
-    case BizNetwork.MIME_IMAGE:
-      return data
+/**
+ * 取上传内容的 utf-8 文本，不做任何 mimetype 猜测：
+ * `.har` 的 mimetype 由操作系统 MIME 表决定，浏览器可能给 application/json、
+ * application/octet-stream 或空串，按类型分派会把「格式不对」变成「内部错误」。
+ * 空串时 formidable 根本不把它当文件（见 Formidable.js 的 `if (!part.mimetype)`），
+ * 内容会以字符串留在 fields 里，所以这里两种形状都要接住。
+ * 是规则包还是 HAR 由服务端按包内 format 字段判断。
+ */
+export function fetchFormFileText(part?: File | File[] | string | string[]): string | undefined {
+  const item = Array.isArray(part) ? part[0] : part
+  if (typeof item === 'string') return item
+  if (item?.filepath == null) return undefined
+  return readFileSync(item.filepath, 'utf-8')
+}
+
+/** formidable 解析后不会自清临时文件；50MB 级上传必须由调用方显式删除 */
+export function removeUploadedFiles(files: Array<File>): void {
+  for (const file of files ?? []) {
+    if (file?.filepath == null) continue
+    try {
+      rmSync(file.filepath, { force: true })
+    } catch (err) {
+      console.warn(`remove upload temp file failed: ${file.filepath}`, (err as Error)?.message ?? err)
+    }
   }
 }
 

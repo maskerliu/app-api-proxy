@@ -4,7 +4,7 @@ import fse from 'fs-extra'
 import os from 'os'
 import path from 'path'
 import type { Version } from '@shared/base.models'
-import { MAIN_API_CMD } from '@shared/ipc.api'
+import { MAIN_API_CMD, SaveFileResult } from '@shared/ipc.api'
 import { cancelUpdate, runUpdate } from './update.runner'
 import { USER_DATA_DIR } from './constants'
 import { getAppWindow } from './misc/utils'
@@ -92,34 +92,42 @@ ipcMain.handle(MAIN_API_CMD.WriteClipboard, (_, text: string) => {
   clipboard.writeText(String(text ?? ''))
 })
 
-ipcMain.handle(MAIN_API_CMD.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, silent = false) => {
-  let filePath = path.join(USER_DATA_DIR, fileName)
-  await fse.ensureDir(path.dirname(filePath))
-
-  if (silent) {
-    await fse.writeFile(filePath, Buffer.from(data as any) as any)
-    return
-  }
-
-  let filters = [{ name: '全部文件', extensions: ['*'] }]
-  let ext = path.extname(fileName)
-  if (ext && ext !== '.') {
-    const name = ext.slice(1, ext.length)
-    if (name) {
-      filters.unshift({ name: '', extensions: [name] })
-    }
-  }
+// 落盘结果必须回到调用方：写失败原先只 console.log，渲染层照样提示「导出成功」；
+// 而取消不是失败，混在一起会让「取消」弹成错误。
+ipcMain.handle(MAIN_API_CMD.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, silent = false): Promise<SaveFileResult> => {
+  const defaultPath = path.join(USER_DATA_DIR, fileName)
+  const buf = Buffer.from(data as any)
 
   try {
-    const result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
-      title,
-      filters,
-      defaultPath: filePath
-    })
-    if (result.canceled || !result.filePath) return
-    await fse.writeFile(result.filePath, Buffer.from(data as any) as any)
+    await fse.ensureDir(path.dirname(defaultPath))
+
+    if (silent) {
+      await fse.writeFile(defaultPath, buf)
+      return { status: 'saved', filePath: defaultPath }
+    }
+
+    let filters = [{ name: '全部文件', extensions: ['*'] }]
+    let ext = path.extname(fileName)
+    if (ext && ext !== '.') {
+      const name = ext.slice(1, ext.length)
+      // 空 name 在系统保存面板里是一行没有标签的过滤器，用户看不出它只匹配 .json/.har
+      if (name) {
+        filters.unshift({ name: `${name.toUpperCase()} (${ext})`, extensions: [name] })
+      }
+    }
+
+    const options = { title, filters, defaultPath }
+    const win = BrowserWindow.getFocusedWindow()
+    // showSaveDialog 的窗口参数不接受 null：没有焦点窗口时改用无父窗口那个重载
+    const result = win
+      ? await dialog.showSaveDialog(win, options)
+      : await dialog.showSaveDialog(options)
+    if (result.canceled || !result.filePath) return { status: 'canceled' }
+
+    await fse.writeFile(result.filePath, buf)
+    return { status: 'saved', filePath: result.filePath }
   } catch (e) {
-    console.log(`save as--catch:${e}`)
+    return { status: 'failed', error: e instanceof Error ? e.message : String(e) }
   }
 })
 

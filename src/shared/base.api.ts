@@ -64,8 +64,14 @@ export async function post<T>(path: string, baseURL?: string, params?: {}, data?
   return request<T>('POST', path, baseURL, { 'Content-Type': 'application/json' }, params, data, options)
 }
 
-export async function formPost<T>(path: string, baseURL?: string, params?: {}, data?: FormData) {
-  return request<T>('POST', path, baseURL, { 'Content-Type': 'multipart/form-data' }, params, data)
+/**
+ * 上传 FormData：不显式写 Content-Type，交给浏览器补 boundary。
+ * 写死 'multipart/form-data' 会原样发出去（axios 只在 data 为 undefined 时才摘掉头），
+ * 缺少 boundary 的请求体服务端根本无法解析。
+ */
+export async function formPost<T>(path: string, baseURL?: string, params?: {}, data?: FormData,
+  options?: RequestOptions) {
+  return request<T>('POST', path, baseURL, { 'Content-Type': null }, params, data, options)
 }
 
 export function updateUpdateServer(url?: string) {

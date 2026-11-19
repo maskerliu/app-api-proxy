@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron'
 import type { LocalServerConfig } from '@shared/base.models'
-import { IMainAPI, MAIN_API_CMD } from '@shared/ipc.api'
+import { IMainAPI, MAIN_API_CMD, SaveFileResult } from '@shared/ipc.api'
 
 let downloadUpdateListener: ((event: any, ...args: any[]) => void) | null = null
 
@@ -21,8 +21,8 @@ const mainApi: IMainAPI = {
   openFolder(path: string) {
     ipcRenderer.invoke(MAIN_API_CMD.OpenFolder, path)
   },
-  saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent: boolean = false): void {
-    ipcRenderer.invoke(MAIN_API_CMD.SaveFileAs, title, fileName, file, silent)
+  async saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent: boolean = false): Promise<SaveFileResult> {
+    return ipcRenderer.invoke(MAIN_API_CMD.SaveFileAs, title, fileName, file, silent)
   },
   openDevTools(...args: any) {
     ipcRenderer.invoke(MAIN_API_CMD.OpenDevTools, args)

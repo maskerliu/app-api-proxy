@@ -19,6 +19,11 @@ export const API_URL = {
     GET_MOCK_MIGRATION_REPORT: `${APPMOCK}/getMockMigrationReport`,
     REVERT_MOCK_MATCH: `${APPMOCK}/revertMockMatch`,
     GET_MOCK_MATCH_WARNINGS: `${APPMOCK}/getMockMatchWarnings`,
+    // R4 规则导入/导出：与 R1 匹配引擎同批新增的端点一律用 UPPER_SNAKE 键，旧 PascalCase 不改名
+    EXPORT_MOCK_PACK: `${APPMOCK}/exportMockPack`,
+    PREVIEW_MOCK_PACK: `${APPMOCK}/previewMockPack`,
+    IMPORT_MOCK_PACK: `${APPMOCK}/importMockPack`,
+    IMPORT_HAR: `${APPMOCK}/importHar`,
     GetServerConfig: `${APPMOCK}/getServerConfig`,
     SaveProxyConfig: `${APPMOCK}/saveProxyConfig`,
     GetProxyConfig: `${APPMOCK}/getProxyConfig`,

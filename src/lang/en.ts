@@ -270,6 +270,20 @@ export default {
         recordTooMany: 'Record count exceeds the limit, cannot enable'
       }
     },
+    // 键集与 src/shared/mock.errors.ts 的 MOCK_PACK_CODES 严格相等（test/unit/pack-errors.test.ts 断言）。
+    // 独立于 editor.validation：导入失败多数要在文件侧或数据侧修，不是编辑器里能改好的。
+    pack: {
+      packFormatUnknown: 'Not an AppApiProxy rule pack or a HAR file',
+      packVersionUnsupported: 'The pack is newer than this app; upgrade before importing',
+      packTooLarge: 'File exceeds 50MB; split scenarios and export again',
+      packRecordLimit: 'More than 5000 records in the pack; split by scenario',
+      packEmpty: 'No importable entries',
+      harEntryLimit: 'More than 1000 HAR entries; export in batches',
+      harNoResponse: 'No response recorded; entry skipped',
+      harBodyUnreadable: 'Response body missing or undecodable; entry skipped',
+      packNameCollision: 'Scenario name already exists; a suffix was added',
+      packWriteAborted: 'Import canceled'
+    },
     // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
     // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成
     // `mock.ordering.${ordering}` 直接交给 $t，没有 te() 兜底——两边任改一处，界面就显示原始键名。

@@ -45,12 +45,30 @@ export const MOCK_CONFLICT_CODES = [
   'notImplemented',
 ] as const
 
+/**
+ * 导入/导出（R4）：包级失败要在文件侧修，条目级失败要在数据侧修，
+ * 两者都不属于「编辑器里就能改好」，因此文案独立落在 mock.pack.* 一块。
+ */
+export const MOCK_PACK_CODES = [
+  'packFormatUnknown',
+  'packVersionUnsupported',
+  'packTooLarge',
+  'packRecordLimit',
+  'packEmpty',
+  'harEntryLimit',
+  'harNoResponse',
+  'harBodyUnreadable',
+  'packNameCollision',
+  'packWriteAborted',
+] as const
+
 export const MOCK_ERROR_CODES = [
-  ...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES, ...MOCK_CONFLICT_CODES,
+  ...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES, ...MOCK_CONFLICT_CODES, ...MOCK_PACK_CODES,
 ] as const
 
 export type MockErrorCode = typeof MOCK_ERROR_CODES[number]
 export type MockValidationCode = typeof MOCK_VALIDATION_CODES[number]
+export type MockPackCode = typeof MOCK_PACK_CODES[number]
 
 export interface MockErrorPayload {
   code: MockErrorCode | string

@@ -18,6 +18,16 @@ export const MAIN_API_CMD = {
   WriteClipboard: 'writeClipboard'
 }
 
+/**
+ * @public
+ * 落盘结果三态：用户取消不是失败。合成一个布尔会让 UI 在取消后弹「导出失败」。
+ */
+export interface SaveFileResult {
+  status: 'saved' | 'canceled' | 'failed'
+  filePath?: string
+  error?: string
+}
+
 export interface IMainAPI {
 
   relaunch(): void
@@ -28,7 +38,7 @@ export interface IMainAPI {
 
   openFolder(path: string): void
 
-  saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent?: boolean): void
+  saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent?: boolean): Promise<SaveFileResult>
 
   openDevTools(...args: any): void
 

@@ -5,9 +5,12 @@ import type {
   AnalyzeMockRequest, AnalyzeMockResponse, MatchMockRequest, MatchMockResponse,
   MigrationReport, MockMatchWarning, RevertMockRequest, RevertMockResponse,
 } from './mock.models'
-import { get, post, RequestOptions } from './base.api'
+import { formPost, get, post, RequestOptions } from './base.api'
 import { API_URL } from './api.const'
-
+import type {
+  MockPackExportOptions, MockPackImportOptions, MockPackImportResult, MockPackPreviewOptions,
+  MockPackPreviewResult, MockPackV1,
+} from './mock.pack'
 // 客户端 HTTP API：依赖 axios / vant，仅限渲染进程使用；
 // 主进程请从 './proxy.models' 引入纯模型。
 
@@ -79,6 +82,62 @@ export function revertMockMatch(request: RevertMockRequest) {
 export function getMockMatchWarnings(ruleId: string) {
   return get<MockMatchWarning[]>(
     API_URL.GET_MOCK_MATCH_WARNINGS, null, { ruleId })
+}
+
+// ---- R4 规则导入/导出 ----
+
+/**
+ * 文件部分固定用 pack 这个键，导入选项一律放 query。
+ * `.har` 这类后缀常常没有登记 MIME，浏览器给出的 File.type 是空串，
+ * multipart 里就会缺少 part 的 Content-Type——服务端只能把它当普通字段读进内存。
+ * 补上兜底类型，让 50MB 级的包走 formidable 的落盘通道而不是堆在字段缓冲里。
+ */
+function packForm(file: File | Blob): FormData {
+  const form = new FormData()
+  form.append('pack', withFallbackMimeType(file))
+  return form
+}
+
+function withFallbackMimeType(file: File | Blob): File | Blob {
+  const name = (file as File).name
+  return name && !file.type ? new File([file], name, { type: 'application/octet-stream' }) : file
+}
+
+// 桌面端导出由主进程组装后弹保存框落盘，只有 Web 分支请求这个端点拿包文本
+export function exportMockPack(options: MockPackExportOptions) {
+  return get<MockPackV1>(API_URL.EXPORT_MOCK_PACK, undefined, {
+    scope: options.scope,
+    ruleId: options.ruleId ?? undefined,
+    includeSource: options.includeSource,
+    redact: options.redact,
+    includeVariants: options.includeVariants,
+  })
+}
+
+export function previewMockPack(file: File | Blob, options: MockPackPreviewOptions,
+  requestOptions?: RequestOptions) {
+  return formPost<MockPackPreviewResult>(API_URL.PREVIEW_MOCK_PACK, undefined, {
+    mode: options.mode,
+    targetRuleId: options.targetRuleId ?? undefined,
+  }, packForm(file), requestOptions)
+}
+
+export function importMockPack(file: File | Blob, options: MockPackImportOptions,
+  requestOptions?: RequestOptions) {
+  return formPost<MockPackImportResult>(API_URL.IMPORT_MOCK_PACK, undefined, {
+    mode: options.mode,
+    targetRuleId: options.targetRuleId ?? undefined,
+    conflict: options.conflict,
+  }, packForm(file), requestOptions)
+}
+
+export function importHar(file: File | Blob, options: MockPackImportOptions,
+  requestOptions?: RequestOptions) {
+  return formPost<MockPackImportResult>(API_URL.IMPORT_HAR, undefined, {
+    mode: options.mode,
+    targetRuleId: options.targetRuleId ?? undefined,
+    includeStatic: options.includeStatic,
+  }, packForm(file), requestOptions)
 }
 
 export function getServerConfig() {

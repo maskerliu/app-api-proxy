@@ -269,6 +269,20 @@ export default {
         recordTooMany: '记录数超过上限，暂时无法启用'
       }
     },
+    // 键集与 src/shared/mock.errors.ts 的 MOCK_PACK_CODES 严格相等（test/unit/pack-errors.test.ts 断言）。
+    // 独立于 editor.validation：导入失败多数要在文件侧或数据侧修，不是编辑器里能改好的。
+    pack: {
+      packFormatUnknown: '文件不是 AppApiProxy 规则包，也不是 HAR',
+      packVersionUnsupported: '规则包版本高于当前程序，请升级后再导入',
+      packTooLarge: '文件超过 50MB，请按场景拆分后重新导出',
+      packRecordLimit: '包内记录超过 5000 条，请按场景拆分',
+      packEmpty: '没有任何可导入的条目',
+      harEntryLimit: 'HAR 条目超过 1000 条，请分批导出',
+      harNoResponse: '该请求没有响应记录，已跳过',
+      harBodyUnreadable: '响应体缺失或无法解码，已跳过',
+      packNameCollision: '场景名称已存在，已追加序号',
+      packWriteAborted: '导入已取消'
+    },
     // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
     // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成
     // `mock.ordering.${ordering}` 直接交给 $t，没有 te() 兜底——两边任改一处，界面就显示原始键名。
