@@ -1,4 +1,5 @@
 import type { LocalServerConfig } from "./base.models"
+import type { MockPackExportOptions } from './mock.pack'
 
 export const MAIN_API_CMD = {
   Relaunch: 'relaunch',
@@ -6,6 +7,8 @@ export const MAIN_API_CMD = {
   SelectFolder: 'selectFolder',
   OpenFolder: 'openFolder',
   SaveFileAs: 'saveFile',
+  SelectSavePath: 'selectSavePath',
+  ExportMockPack: 'exportMockPack',
   OpenDevTools: 'openDevTools',
   OpenMockRuleMgr: 'openMockRuleMgr',
   OpenSettings: 'openSettings',
@@ -28,6 +31,27 @@ export interface SaveFileResult {
   error?: string
 }
 
+/**
+ * @public
+ * 只弹保存框拿路径，不写任何字节。导出必须走这一步再加 `exportMockPack`：
+ * 合成一把 `saveFile(data)` 就等于把几十 MB 的包文本经 structured clone 搬进渲染进程再搬回来，
+ * 内存峰值下界仍是包体积（见技术设计 6.3 基准）。
+ */
+export interface SelectSavePathResult {
+  status: 'selected' | 'canceled'
+  filePath?: string
+}
+
+/**
+ * @public
+ * 落盘回执带条数：UI 据此提示「已导出 N 条」，并在超过 `MOCK_PACK_MAX_RECORDS` 时说明
+ * 这份包本程序读得动、导入侧却会整包拒绝。
+ */
+export interface SaveMockPackResult extends SaveFileResult {
+  ruleCount?: number
+  recordCount?: number
+}
+
 export interface IMainAPI {
 
   relaunch(): void
@@ -39,6 +63,10 @@ export interface IMainAPI {
   openFolder(path: string): void
 
   saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent?: boolean): Promise<SaveFileResult>
+
+  selectSavePath(title: string, fileName: string): Promise<SelectSavePathResult>
+
+  exportMockPack(filePath: string, options: MockPackExportOptions): Promise<SaveMockPackResult>
 
   openDevTools(...args: any): void
 

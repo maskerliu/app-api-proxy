@@ -284,6 +284,23 @@ export default {
       packNameCollision: 'Scenario name already exists; a suffix was added',
       packWriteAborted: 'Import canceled'
     },
+    export: {
+      title: 'Export',
+      dialogTitle: 'Export rule pack',
+      scopeLabel: 'Scope',
+      scopeCurrent: 'This scenario',
+      scopeAll: 'All scenarios',
+      variants: 'Include response variants',
+      source: 'Include recorded request headers/URL',
+      redact: 'Redact credentials',
+      rawTitle: 'Export unredacted pack',
+      rawConfirm: 'With redaction off the pack keeps real request headers, cookies and tokens. Do not commit it to Git or share it. Continue?',
+      saveTitle: 'Choose export location',
+      saving: 'Exporting…',
+      saved: 'Exported {ruleCount} scenarios / {recordCount} records',
+      failed: 'Export failed: {reason}',
+      overLimit: 'The pack has {recordCount} records, above the import limit of {limit}: this app can read it, but importing it is rejected as a whole'
+    },
     // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
     // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成
     // `mock.ordering.${ordering}` 直接交给 $t，没有 te() 兜底——两边任改一处，界面就显示原始键名。

@@ -212,6 +212,8 @@ export class MockPackService {
   @inject(IOC_TYPES.MockRepo)
   private mockRepo: MockPackSource
 
+  // 预统计没有调用方，是刻意留的：技术设计 5.3 原写「>5,000 显示耗时预估」，但预估要把全库数一遍，
+  // 比实测 283ms 的写盘还贵；条数改由落盘回执给出。若将来要做真正的耗时预估，别接回这里。
   async estimate(options: MockPackExportOptions) {
     return estimateMockPack(this.mockRepo, options)
   }

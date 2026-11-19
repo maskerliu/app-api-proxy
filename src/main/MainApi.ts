@@ -1,6 +1,9 @@
 import { ipcRenderer } from 'electron'
 import type { LocalServerConfig } from '@shared/base.models'
-import { IMainAPI, MAIN_API_CMD, SaveFileResult } from '@shared/ipc.api'
+import type { MockPackExportOptions } from '@shared/mock.pack'
+import {
+  IMainAPI, MAIN_API_CMD, SaveFileResult, SaveMockPackResult, SelectSavePathResult,
+} from '@shared/ipc.api'
 
 let downloadUpdateListener: ((event: any, ...args: any[]) => void) | null = null
 
@@ -23,6 +26,12 @@ const mainApi: IMainAPI = {
   },
   async saveFile(title: string, fileName: string, file: string | ArrayBuffer, silent: boolean = false): Promise<SaveFileResult> {
     return ipcRenderer.invoke(MAIN_API_CMD.SaveFileAs, title, fileName, file, silent)
+  },
+  async selectSavePath(title: string, fileName: string): Promise<SelectSavePathResult> {
+    return ipcRenderer.invoke(MAIN_API_CMD.SelectSavePath, title, fileName)
+  },
+  async exportMockPack(filePath: string, options: MockPackExportOptions): Promise<SaveMockPackResult> {
+    return ipcRenderer.invoke(MAIN_API_CMD.ExportMockPack, filePath, options)
   },
   openDevTools(...args: any) {
     ipcRenderer.invoke(MAIN_API_CMD.OpenDevTools, args)

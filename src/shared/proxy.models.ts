@@ -181,6 +181,9 @@ export namespace ProxyMock {
     name: string
     desc: string
     isMock?: boolean = false
+    // 规则文档落库时由仓库层写入（见 MockRuleDoc），未保存的新场景没有这两个值，导出时留空
+    createdAt?: number
+    updatedAt?: number
     // 仅渲染层使用的列表缓存，不参与持久化；key 为记录 ID
     requests: Map<string, MockRecord> = new Map()
     // 规则详情接口返回的记录规模提示，不持久化

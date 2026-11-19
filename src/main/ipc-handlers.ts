@@ -4,10 +4,20 @@ import fse from 'fs-extra'
 import os from 'os'
 import path from 'path'
 import type { Version } from '@shared/base.models'
-import { MAIN_API_CMD, SaveFileResult } from '@shared/ipc.api'
+import type { MockPackExportOptions } from '@shared/mock.pack'
+import { MAIN_API_CMD, SaveFileResult, SaveMockPackResult, SelectSavePathResult } from '@shared/ipc.api'
+import { bizContainer } from './IocContainer'
+import { IOC_TYPES, USER_DATA_DIR } from './constants'
+import type { MockPackService } from './service/mock.pack.service'
 import { cancelUpdate, runUpdate } from './update.runner'
-import { USER_DATA_DIR } from './constants'
 import { getAppWindow } from './misc/utils'
+import { saveDialogOptions } from './misc/save-path'
+
+// showSaveDialog 的窗口参数不接受 null：没有焦点窗口时改用无父窗口那个重载
+async function showSaveDialog(options: ReturnType<typeof saveDialogOptions>) {
+  const win = BrowserWindow.getFocusedWindow()
+  return win ? dialog.showSaveDialog(win, options) : dialog.showSaveDialog(options)
+}
 
 ipcMain.handle(MAIN_API_CMD.Relaunch, (_) => {
   const resourcesUpdate = path.join(process.resourcesPath, 'update.asar')
@@ -106,26 +116,29 @@ ipcMain.handle(MAIN_API_CMD.SaveFileAs, async (_, title: string, fileName: strin
       return { status: 'saved', filePath: defaultPath }
     }
 
-    let filters = [{ name: '全部文件', extensions: ['*'] }]
-    let ext = path.extname(fileName)
-    if (ext && ext !== '.') {
-      const name = ext.slice(1, ext.length)
-      // 空 name 在系统保存面板里是一行没有标签的过滤器，用户看不出它只匹配 .json/.har
-      if (name) {
-        filters.unshift({ name: `${name.toUpperCase()} (${ext})`, extensions: [name] })
-      }
-    }
-
-    const options = { title, filters, defaultPath }
-    const win = BrowserWindow.getFocusedWindow()
-    // showSaveDialog 的窗口参数不接受 null：没有焦点窗口时改用无父窗口那个重载
-    const result = win
-      ? await dialog.showSaveDialog(win, options)
-      : await dialog.showSaveDialog(options)
+    const result = await showSaveDialog(saveDialogOptions(title, USER_DATA_DIR, fileName))
     if (result.canceled || !result.filePath) return { status: 'canceled' }
 
     await fse.writeFile(result.filePath, buf)
     return { status: 'saved', filePath: result.filePath }
+  } catch (e) {
+    return { status: 'failed', error: e instanceof Error ? e.message : String(e) }
+  }
+})
+
+// 导出这类「数据由主进程产生」的落盘要拆成两步：先只拿路径，再让主进程边拼边写目标文件。
+// 合成一步就得把整包文本经 structured clone 交给渲染进程再交回来，内存峰值下界仍是包体积。
+ipcMain.handle(MAIN_API_CMD.SelectSavePath, async (_, title: string, fileName: string): Promise<SelectSavePathResult> => {
+  const result = await showSaveDialog(saveDialogOptions(title, USER_DATA_DIR, fileName))
+  if (result.canceled || !result.filePath) return { status: 'canceled' }
+  return { status: 'selected', filePath: result.filePath }
+})
+
+ipcMain.handle(MAIN_API_CMD.ExportMockPack, async (_, filePath: string, options: MockPackExportOptions): Promise<SaveMockPackResult> => {
+  if (!filePath) return { status: 'failed', error: 'missing target path' }
+  try {
+    const meta = await bizContainer.get<MockPackService>(IOC_TYPES.MockPackService).exportToFile(filePath, options)
+    return { status: 'saved', filePath, ...meta }
   } catch (e) {
     return { status: 'failed', error: e instanceof Error ? e.message : String(e) }
   }

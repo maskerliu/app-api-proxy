@@ -73,6 +73,10 @@
                 :disabled="curRule._id == null">
                 <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
               </van-button>
+              <!-- 导出不依赖当前场景（可选全部场景），所以按钮不置灰；未选中场景时对话框里禁掉「仅当前场景」 -->
+              <van-button v-if="!isWeb" plain type="primary" size="small" @click="onExportOpen">
+                {{ $t('mock.export.title') }}
+              </van-button>
             </div>
           </template>
           <template #right-icon>
@@ -227,6 +231,33 @@
       </van-row>
     </van-dialog>
 
+    <van-dialog v-model:show="showExport" :title="$t('mock.export.dialogTitle')" show-cancel-button
+      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
+      :before-close="onExportClose">
+      <div class="export-form">
+        <!-- 范围单独占一块：radio 与标签同一行时，英文两枚选项在 md14 会把第二枚挤到下一行 -->
+        <div class="export-field">
+          <span class="export-label">{{ $t('mock.export.scopeLabel') }}</span>
+          <van-radio-group v-model="exportScope" direction="horizontal" class="export-radios">
+            <van-radio name="rule" :disabled="curRule._id == null">{{ $t('mock.export.scopeCurrent') }}</van-radio>
+            <van-radio name="all">{{ $t('mock.export.scopeAll') }}</van-radio>
+          </van-radio-group>
+        </div>
+        <van-row class="export-row" align="center" justify="space-between" :wrap="false">
+          <span class="export-label">{{ $t('mock.export.variants') }}</span>
+          <van-switch v-model="exportVariants" />
+        </van-row>
+        <van-row class="export-row" align="center" justify="space-between" :wrap="false">
+          <span class="export-label">{{ $t('mock.export.source') }}</span>
+          <van-switch v-model="exportSource" />
+        </van-row>
+        <van-row class="export-row" align="center" justify="space-between" :wrap="false">
+          <span class="export-label">{{ $t('mock.export.redact') }}</span>
+          <van-switch v-model="exportRedact" />
+        </van-row>
+      </div>
+    </van-dialog>
+
   </van-row>
 </template>
 
@@ -236,14 +267,17 @@ import {
   getMockRecords, getMockRuleDetail, MOCK_RECORD_REJECT_LIMIT, ProxyMock, saveMockRecord,
   saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
+import { MOCK_PACK_MAX_RECORDS } from '@shared/mock.pack'
+import type { MockPackExportOptions, MockPackScope } from '@shared/mock.pack'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
-import { showConfirmDialog, showNotify } from 'vant'
+import { showConfirmDialog, showLoadingToast, showNotify, type ToastWrapperInstance } from 'vant'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { scrollOptions } from '../../../common/scroll'
 import { methodTagType } from '../../../common/tag'
 import MiniSelect from '../../components/MiniSelect.vue'
 import MockRecordEditor from './MockRecordEditor.vue'
+import { isOverImportLimit, packFileName } from './pack.export'
 import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import {
   levelTagType, matchesKeyword, recordRowOf, sortRecords, warningLabelKey, warningTagType,
@@ -263,6 +297,12 @@ const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const showConflict = ref(false)
+// 导出选项只在打开对话框时按当前场景重置，默认值与服务端一致（三个开关全开）
+const showExport = ref(false)
+const exportScope = ref<MockPackScope>('rule')
+const exportVariants = ref(true)
+const exportSource = ref(true)
+const exportRedact = ref(true)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const recordListWidth = ref<number>(0)
 let recordListObserver: ResizeObserver = null
@@ -840,6 +880,94 @@ async function onRecordDeleteConfirm() {
     showNotify({ message: t('mock.deleteFailed'), type: 'warning', duration: 1000 })
   }
 }
+
+function onExportOpen() {
+  // 未选中场景时「仅当前场景」是禁用的，默认值只能落在全部场景上
+  exportScope.value = curRule.value?._id == null ? 'all' : 'rule'
+  exportVariants.value = true
+  exportSource.value = true
+  exportRedact.value = true
+  showExport.value = true
+}
+
+async function onExportClose(action: string): Promise<boolean> {
+  if (action !== 'confirm') return true
+  // 关掉脱敏就是导出明文凭证，确认框必须出现在落盘之前而不是选项行里
+  if (exportRedact.value) {
+    startExport()
+    return true
+  }
+  try {
+    await showConfirmDialog({
+      title: t('mock.export.rawTitle'),
+      message: t('mock.export.rawConfirm'),
+      showCancelButton: true,
+      confirmButtonText: t('common.done'),
+      cancelButtonText: t('common.cancel')
+    })
+    startExport()
+    return true
+  } catch (err) {
+    // 取消明文导出停在当前对话框，用户还能改回脱敏
+    return false
+  }
+}
+
+function exportOptions(): MockPackExportOptions {
+  const scope = exportScope.value
+  return {
+    scope,
+    ruleId: scope === 'rule' ? curRule.value._id : null,
+    includeVariants: exportVariants.value,
+    includeSource: exportSource.value,
+    redact: exportRedact.value
+  }
+}
+
+// 选路径与写盘分两次 IPC：包文本由主进程边拼边写进文件，渲染层经手的只有几十字节的回执
+async function startExport() {
+  const options = exportOptions()
+  const fileName = packFileName({
+    scope: options.scope,
+    ruleName: options.scope === 'rule' ? curRule.value.name : undefined,
+    redact: options.redact
+  })
+  let loading: ToastWrapperInstance = null
+  try {
+    const picked = await window.mainApi.selectSavePath(t('mock.export.saveTitle'), fileName)
+    // 用户在系统保存框里取消不是失败，什么都不提示
+    if (picked.status !== 'selected' || picked.filePath == null) return
+    loading = showLoadingToast({ message: t('mock.export.saving'), forbidClick: true, duration: 0 })
+    const result = await window.mainApi.exportMockPack(picked.filePath, options)
+    if (result.status === 'failed') {
+      showNotify({
+        message: t('mock.export.failed', { reason: normalizeErrorText(result.error) }),
+        type: 'danger',
+        duration: 2000
+      })
+      return
+    }
+    const ruleCount = result.ruleCount ?? 0
+    const recordCount = result.recordCount ?? 0
+    showNotify({ message: t('mock.export.saved', { ruleCount, recordCount }), type: 'success', duration: 1500 })
+    // 导出侧只按体积放行了，导入侧还会按条数整包拒绝，落盘当场说明比事后失败便宜
+    if (isOverImportLimit(recordCount)) {
+      showNotify({
+        message: t('mock.export.overLimit', { recordCount, limit: MOCK_PACK_MAX_RECORDS }),
+        type: 'warning',
+        duration: 5000
+      })
+    }
+  } catch (err) {
+    showNotify({
+      message: t('mock.export.failed', { reason: normalizeErrorText(err) }),
+      type: 'danger',
+      duration: 2000
+    })
+  } finally {
+    loading?.close()
+  }
+}
 </script>
 
 <style scoped>
@@ -1166,6 +1294,29 @@ async function onRecordDeleteConfirm() {
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
 
+/* 自带内容的弹窗沿用上面的沟道口径（见 .conflict-message 的注释）。
+   弹窗正文读 --van-font-size-lg（随字号设置走），这里不再另定一档。 */
+.export-form {
+  padding: var(--van-padding-xs) var(--app-dialog-gutter);
+}
+
+/* 三条开关行与一块范围选项共用同一档行距：加一种行型不用补规则 */
+.export-form > * + * {
+  margin-top: var(--app-sp-md);
+}
+
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-sp-sm);
+}
+
+/* 置灰的「仅当前场景」：Vant 用 --van-text-color-3，暗色下覆成 #4d4d4d 压在弹窗底色上几乎读不出，
+   与时间戳同一口径改走 text-color-2（能看出比同行淡，但读得清） */
+.export-field :deep(.van-radio--disabled .van-radio__label) {
+  color: var(--van-text-color-2);
+}
+
 .mgr-content :deep(.van-popover__wrapper) {
   display: block;
   width: 100%;
@@ -1222,6 +1373,12 @@ async function onRecordDeleteConfirm() {
   display: inline-flex;
   align-items: center;
   gap: var(--app-sp-tight);
+}
+
+/* 文字按钮（导出）与同排三枚 .btn-icon-only 方格等高：Vant 的 small 按钮是 md*2.5，比方格的
+   --app-control-height（md*2.2）高一档，混排时方格会被看成没撑开 */
+.rule-head-actions :deep(.van-button) {
+  height: var(--app-control-height);
 }
 
 .rule-head-col :deep(.van-cell__title) {

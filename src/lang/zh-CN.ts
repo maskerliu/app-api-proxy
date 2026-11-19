@@ -283,6 +283,23 @@ export default {
       packNameCollision: '场景名称已存在，已追加序号',
       packWriteAborted: '导入已取消'
     },
+    export: {
+      title: '导出',
+      dialogTitle: '导出规则包',
+      scopeLabel: '导出范围',
+      scopeCurrent: '仅当前场景',
+      scopeAll: '全部场景',
+      variants: '包含多变体响应',
+      source: '包含录制请求头与 URL',
+      redact: '凭据脱敏',
+      rawTitle: '导出未脱敏包',
+      rawConfirm: '关闭脱敏后，包内会保留真实的请求头、Cookie 与令牌，请勿提交到 Git 或转发给他人。确认继续？',
+      saveTitle: '选择导出位置',
+      saving: '正在导出…',
+      saved: '已导出 {ruleCount} 个场景 / {recordCount} 条记录',
+      failed: '导出失败：{reason}',
+      overLimit: '包内 {recordCount} 条记录已超过导入上限 {limit} 条：这份包本程序读得动，导入时会被整包拒绝'
+    },
     // 全站只有这一组与 proxy.socket.errors 用数据字面量当键，其余一律 camelCase：这里的键就是
     // MockMatchOrdering 的取值（见 src/shared/mock.models.ts），由 match.ts 的 orderingLabelKey() 拼成
     // `mock.ordering.${ordering}` 直接交给 $t，没有 te() 兜底——两边任改一处，界面就显示原始键名。
