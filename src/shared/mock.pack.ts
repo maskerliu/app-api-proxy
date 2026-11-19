@@ -132,15 +132,29 @@ export interface MockPackPreviewResult {
   packVersion: number
   appVersion?: string
   ruleCount: number
+  /** 包内记录全量，含条目级会跳过的坏记录：「将导入 N 条」是 `recordCount - invalidCount` */
   recordCount: number
+  /** 只数将写入的那批（无效记录压根不进库，数它的变体会让两个数对不上） */
   variantCount: number
   invalidCount: number
+  /** 按「维度 × 条目」计：一条记录 `_id` 与指纹都撞就算两条，四象限要分开给策略 */
   conflictCount: number
   /** 仅前 MOCK_PACK_ISSUE_PAGE_LIMIT 条；总数看 issueTotal */
   issues: MockPackIssue[]
   issueTotal: number
+  /** 同样只回传前 MOCK_PACK_ISSUE_PAGE_LIMIT 条，总数看 `conflictCount` */
   conflicts: MockPackConflict[]
-  /** 新建模式下的建议场景名（场景名冲突时已追加 `(1)`） */
+  /**
+   * 「包没写这个字段、我们按默认值补了」（R4C-12 的 `notes`），同样分页。
+   * 它单独一条通道而不是并进 `issues`：同一条记录可以既补了 `id` 又完全合法，
+   * 混进失败明细会让结果页把导入成功的记录计成失败。
+   */
+  notes: MockPackIssue[]
+  noteTotal: number
+  /**
+   * 新建模式下第一个场景的建议名（场景名冲突时已追加 `(1)`）。
+   * 多场景包不填：一个名字代表不了 N 个场景，逐条对照交给 UI 自己算（`rules[i].name` 与库内名集）。
+   */
   suggestedRuleName?: string
 }
 
@@ -228,6 +242,31 @@ export function toMockPackImportMode(value: unknown): MockPackImportMode {
 }
 
 /**
+ * 明细折叠（技术设计 5.4「展示与存储分别定义」）：只回前 N 条，其余只报总数。
+ * 取的是**包内顺序的前 N 条**而不是「每个原因留一条」——明细要能回指「第几个场景的第几条」，
+ * 打乱包内顺序去凑原因分布，会让人照着明细改文件却改错那条。被折掉的其余条数不给分布：
+ * 那要多带一张 map，而列出的这 N 条已经看得见成因构成，真要逐条核对的人手里本来就拿着那个文件。
+ */
+export function pageMockPackIssues<T>(items: T[], limit = MOCK_PACK_ISSUE_PAGE_LIMIT): T[] {
+  return items.length > limit ? items.slice(0, limit) : items
+}
+
+/**
+ * 新建模式的建议场景名（AC-R4-03）：与库内重名就追加 `(1)`，被占了就顺延 `(2)`。
+ * 基名为空（手改的包没写 `name`）时回空串而不是编一个「未命名场景」——主进程拿不到文件名，
+ * 「场景名取文件名」那条回落（PRD 4.4.5）只有渲染层说得清，这里造名字就是把决定做两次。
+ */
+export function suggestMockPackRuleName(base: string, taken: Array<string | undefined>): string {
+  const name = base == null ? '' : String(base)
+  const used = new Set(taken.filter(it => it != null).map(it => String(it)))
+  if (!used.has(name)) return name
+  for (let i = 1; ; i++) {
+    const candidate = `${name}(${i})`
+    if (!used.has(candidate)) return candidate
+  }
+}
+
+/**
  * query 里的开关只有字符串：缺省按默认值（导出默认带全量信息、默认脱敏），
  * 显式写 `false` 才是关。渲染层传布尔，axios 会序列化成 `'false'`。
  */
@@ -237,13 +276,6 @@ export function toMockPackFlag(value: unknown, fallback: boolean): boolean {
 }
 
 /** 路由 handler 返回 undefined 会被 base.router 转成「biz inner error」，空结果必须显式回对象 */
-export function emptyMockPackPreviewResult(): MockPackPreviewResult {
-  return {
-    kind: 'pack', packVersion: 0, ruleCount: 0, recordCount: 0, variantCount: 0,
-    invalidCount: 0, conflictCount: 0, issues: [], issueTotal: 0, conflicts: [],
-  }
-}
-
 export function emptyMockPackImportResult(mode: MockPackImportMode): MockPackImportResult {
   return {
     ruleId: null, mode, created: [], updated: [], skipped: [], invalid: [], failed: [],

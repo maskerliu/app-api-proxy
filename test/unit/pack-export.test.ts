@@ -52,6 +52,15 @@ class FakeSource {
     this.pageSizes.push(pageSize)
     for (const record of this.records.get(ruleId) ?? []) await visitor(record)
   }
+
+  // 导出不碰这把原语（它属预览的冲突索引），但替身要给真形状：
+  // 空数组会让「预览误用导出替身」这种错一路绿到底
+  async listRecordSummaries(ruleId: string) {
+    return (this.records.get(ruleId) ?? []).map(it => ({
+      _id: it.id, ruleId: it.ruleId, url: it.url, name: it.name, match: it.match,
+      matchFingerprint: it.matchFingerprint, createdAt: it.createdAt, updatedAt: it.updatedAt,
+    }))
+  }
 }
 
 class ThrowingSource extends FakeSource {

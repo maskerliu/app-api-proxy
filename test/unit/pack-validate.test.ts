@@ -198,14 +198,29 @@ describe('R4C-10 包级校验：format / version / 体积 / 总条数 / 空包',
 describe('两阶段校验的端点接线：拒绝即零写入', () => {
   // readPack 现在压根没有仓库依赖，这条断言钉的是将来：别为了「总条数」去查库，
   // 一旦阶段一读了库，坏包就可能已经带着一次遍历落进写库分支。
+  // 写原语也一并挂上探针：预览改成读库之后，「不碰仓库」这句已经说不下去了，能说的、也是要说的是「只读不写」。
   const newFakeRepo = () => {
     const calls: string[] = []
-    return {
+    const readOnly = ['listRules', 'getRule', 'countRecords', 'iterateRecords', 'listRecordSummaries']
+    const repo: any = {
       calls,
+      readOnly,
       listRules: async () => { calls.push('listRules'); return [] },
       getRule: async () => { calls.push('getRule'); return null },
       countRecords: async () => { calls.push('countRecords'); return 0 },
       iterateRecords: async () => { calls.push('iterateRecords') },
+      listRecordSummaries: async () => { calls.push('listRecordSummaries'); return [] },
+    }
+    for (const name of ['save', 'saveRecord', 'removeRecord', 'delete', 'importRecords', 'setLastActiveRuleId']) {
+      repo[name] = async () => { calls.push(name); throw new Error(`${name}：校验与预览阶段不许写库`) }
+    }
+    return repo as typeof repo & Record<string, any>
+  }
+
+  /** 读可以，写不行——写探针自己会抛，所以这里只补一句「一次都没被调过」 */
+  function assertNoWrite(repo: any, label: string) {
+    for (const name of repo.calls as string[]) {
+      assert.equal(repo.readOnly.includes(name), true, `${label}：${name} 不是读原语`)
     }
   }
 
@@ -284,19 +299,11 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     return { status: res.status, body: await res.json().catch(() => null) }
   }
 
-  // 过了闸门之后两个端点各自回什么样的桩：这里钉的是「当前还没实现到哪」，
-  // R4C-13 填预览统计、R4C-14 填写入时，这两条断言会同时变红，改的人就看得见自己动了哪个桩。
-  const stubShapes: Record<string, (data: any) => void> = {
-    [API_URL.PREVIEW_MOCK_PACK]: (data) => {
-      assert.equal(data.ruleCount, 0, 'R4C-13 之前预览统计还没实现，这里不能假装已有')
-      assert.equal(data.recordCount, 0)
-    },
-    [API_URL.IMPORT_MOCK_PACK]: (data) => {
-      assert.deepEqual(data.created, [], 'R4C-14 之前不写库')
-      assert.equal(data.enabled, false)
-    },
-  }
+  /** `calls` 挂在 describe 级的替身上累加，端点用例只能判「我这一次请求产生了什么」——取完即清 */
+  const takeCalls = () => repo.calls.splice(0)
 
+  // 两个端点过了闸门之后各回什么：预览（R4C-13）已经在报统计，写库（R4C-14/15）还是桩。
+  // 后面那张桩的形状断言同样钉「现在还没实现到哪」，谁填实现谁就得改这句话。
   for (const pathname of [API_URL.PREVIEW_MOCK_PACK, API_URL.IMPORT_MOCK_PACK]) {
     it(`${pathname}：坏包以包级错误码拒绝，且不产生任何库调用`, async () => {
       const cases: Array<[string, unknown, string]> = [
@@ -314,32 +321,51 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
         assert.equal(body.errorCode, code, `${label} 的错误码不对：${JSON.stringify(body)}`)
         assert.equal(body.data, undefined, `${label} 不能既报错又带回半截结果`)
       }
-      assert.deepEqual(repo.calls, [], `${pathname} 在包级拒绝路径上读了库`)
-    })
-
-    it(`${pathname}：过了两阶段闸门仍回空结果桩（明细回传与写库未接线）`, async () => {
-      const { body } = await uploadPack(pathname, packText([{ ...ruleWith(0), records: [validRecordAt(0)] }]))
-      assert.equal(body.code, BizCode.SUCCESS)
-      stubShapes[pathname](body.data)
-      assert.deepEqual(repo.calls, [], `${pathname} 在桩阶段不碰仓库`)
-    })
-
-    // 条目级失败是「数据」不是「错误码」：一条坏记录不该让整个请求变成 BizCode.ERROR（PRD 4.4.7）。
-    // R4C-13 若把明细实现成抛错，这条会先红。
-    it(`${pathname}：好坏混包仍回成功——条目级不过只跳那一条`, async () => {
-      const { body } = await uploadPack(pathname, packText([
-        { id: 'rule_1', name: '订单中心', records: [validRecordAt(0), recordAt(1), null] }
-      ]))
-      assert.equal(body.code, BizCode.SUCCESS, `坏条目把整包带崩了：${JSON.stringify(body)}`)
-      stubShapes[pathname](body.data)
-      assert.deepEqual(repo.calls, [], '条目级失败也不该产生库调用')
+      assert.deepEqual(takeCalls(), [], `${pathname} 在包级拒绝路径上读了库`)
     })
   }
+
+  it(`${API_URL.PREVIEW_MOCK_PACK}：合法包回真统计，条目级明细与回落说明一并回传`, async () => {
+    const { body } = await uploadPack(API_URL.PREVIEW_MOCK_PACK, packText([
+      { id: 'rule_1', name: '订单中心', records: [validRecordAt(0), recordAt(1)] }
+    ]))
+    assert.equal(body.code, BizCode.SUCCESS, `坏条目把整包带崩了：${JSON.stringify(body)}`)
+    assert.equal(body.data.packVersion, MOCK_PACK_VERSION)
+    assert.equal(body.data.ruleCount, 1)
+    assert.equal(body.data.recordCount, 2, '记录数按包内全量计，含会被跳过的那条')
+    assert.equal(body.data.invalidCount, 1)
+    assert.equal(body.data.variantCount, 0, '变体只数将写入的那批，坏条目压根不进库')
+    // 一条坏记录同时报 match / statusCode / bodyType 三项：明细按「问题」计，被跳过的条数另说
+    assert.deepEqual(body.data.issues.map((it: any) => [it.code, it.field, it.recordIndex]), [
+      ['matchMissing', 'match', 1],
+      ['statusRange', 'response.statusCode', 1],
+      ['bodyType', 'response.bodyType', 1],
+    ], 'R4C-11 欠的「明细回传」现在要有出口了')
+    assert.deepEqual(body.data.notes, [], '好记录字段齐全，没有回落可报')
+    assert.equal(body.data.noteTotal, 0)
+    assert.deepEqual(body.data.conflicts, [], '新建模式不比冲突')
+    assert.equal(body.data.suggestedRuleName, '订单中心', '库内没有同名场景时，建议名就是包里的名字')
+    assert.deepEqual(takeCalls(), ['listRules'], '新建模式只该读一次场景名集')
+    assertNoWrite(repo, '预览')
+  })
+
+  it(`${API_URL.IMPORT_MOCK_PACK}：写库未接线，过了闸门仍回空结果桩`, async () => {
+    const { body } = await uploadPack(API_URL.IMPORT_MOCK_PACK, packText([{ ...ruleWith(0), records: [validRecordAt(0)] }]))
+    assert.equal(body.code, BizCode.SUCCESS)
+    assert.deepEqual(body.data.created, [], 'R4C-14/15 之前不写库')
+    assert.equal(body.data.enabled, false)
+    // 条目级失败是「数据」不是「错误码」：一条坏记录不该让整个请求变成 BizCode.ERROR（PRD 4.4.7）
+    const mixed = await uploadPack(API_URL.IMPORT_MOCK_PACK, packText([
+      { id: 'rule_1', name: '订单中心', records: [validRecordAt(0), recordAt(1), null] }
+    ]))
+    assert.equal(mixed.body.code, BizCode.SUCCESS, `坏条目把整包带崩了：${JSON.stringify(mixed.body)}`)
+    assert.deepEqual(takeCalls(), [], '导入桩阶段不碰仓库')
+  })
 
   it('IMPORT_HAR 不吃规则包的包级闸门：一份合法包文本走 HAR 端点仍回桩结果', async () => {
     const { body } = await uploadPack(API_URL.IMPORT_HAR, packText([ruleWith(1)]))
     assert.equal(body.code, BizCode.SUCCESS)
     assert.deepEqual(body.data.suggestions, [])
-    assert.deepEqual(repo.calls, [])
+    assert.deepEqual(takeCalls(), [], 'HAR 端点走自己的判定，不该读规则包那套库原语')
   })
 })

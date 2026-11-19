@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
 import {
-  MockPackIssue, emptyMockPackImportResult, emptyMockPackPreviewResult,
+  MockPackIssue, emptyMockPackImportResult,
   toMockPackFlag, toMockPackImportMode,
 } from '@shared/mock.pack'
 import { ProxyMock } from '@shared/proxy.models'
@@ -430,15 +430,16 @@ export class AppMockRouter extends BaseRouter {
       path: API_URL.PREVIEW_MOCK_PACK,
       params: [
         { key: 'pack', type: ParamType.FormFileText },
-        { key: 'mode', type: ParamType.Query }
+        { key: 'mode', type: ParamType.Query },
+        { key: 'targetRuleId', type: ParamType.Query }
       ],
-      // 校验与归一化已接线（R4C-10 包级 / R4C-11 条目级 / R4C-12 归一化）：包级不过整包拒绝，条目级不过只跳那一条。
-      // 坏包不再被当成「预览成功、0 条」；算出的明细与归一化结果现在就地丢掉——回传是 R4C-13 预览统计的事，
-      // 这里不假装已经在报明细。
-      handler: (pack) => {
-        this.mockPackService.readPack(pack)
-        return emptyMockPackPreviewResult()
-      }
+      // 三阶段（R4C-10 包级 / R4C-11 条目级 / R4C-12 归一化）+ 统计与冲突（R4C-13）已全部接线，且全程只读：
+      // 包级不过整包拒绝，条目级不过只跳那一条，明细与回落说明分页回传。
+      // 上限复核与写库属 R4C-14/15，所以这里报的「将导入 N 条」还不包含「库内已有 + 待写入」那道判定。
+      handler: (pack, mode, targetRuleId) => this.mockPackService.preview(pack, {
+        mode: toMockPackImportMode(mode),
+        targetRuleId: targetRuleId == null || targetRuleId === '' ? null : String(targetRuleId),
+      })
     })
 
     this.addApiInfo({
