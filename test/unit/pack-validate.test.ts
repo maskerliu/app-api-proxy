@@ -9,6 +9,7 @@ import {
   MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES, MOCK_PACK_MAX_RECORDS, MOCK_PACK_VERSION,
   readMockPackText,
 } from '@shared/mock.pack'
+import { makeMatch } from './fixtures'
 
 // 路由链上的 electron 只用到 app.getPath / app.getVersion，base.api 顶层 import vant 只为报错提示：
 // 与 form-file.test.ts、pack-web-export.test.ts 同一套替身，才能在 Node 里挂真实由。
@@ -31,9 +32,20 @@ const { AppMockRouter } = await import('@main/router/appmock.router')
 const { MockPackService, readMockPack } = await import('@main/service/mock.pack.service')
 const { API_URL } = await import('@shared/api.const')
 
-/** 一条最小可用的包内记录：阶段一只看顶层结构，字段级校验（R4C-11）不吃这里的东西 */
+/**
+ * 阶段一的样例记录：只保证顶层是个对象。它故意过不了阶段二（没 match、状态码字段名不对），
+ * 因为包级闸门压根不看字段——条目级用例见 pack-records.test.ts，需要好记录的在这里用 `validRecordAt`。
+ */
 function recordAt(i: number) {
   return { id: `rec_${i}`, name: `记录 ${i}`, response: { status: 200, body: '{}' } }
+}
+
+/** 两阶段都过得了的记录：包不带 url，所以 match 必须是完整形态（`makeMatch` 给的就是库内那个形状） */
+function validRecordAt(i: number) {
+  return {
+    id: `rec_${i}`, name: `记录 ${i}`, match: makeMatch({ path: `/v1/orders/${i}` }),
+    response: { statusCode: 200, headers: {}, body: '{}', bodyType: 'json', delayMs: 0 },
+  }
 }
 
 function ruleWith(count: number, offset = 0) {
@@ -174,7 +186,7 @@ describe('R4C-10 包级校验：format / version / 体积 / 总条数 / 空包',
       return (original as any).call(Buffer, input, encoding)
     }
     try {
-      assert.equal(readMockPack(text).rules.length, 1)
+      assert.equal(readMockPack(text).pack.rules.length, 1)
     } finally {
       ;(Buffer as any).byteLength = original
     }
@@ -182,7 +194,7 @@ describe('R4C-10 包级校验：format / version / 体积 / 总条数 / 空包',
   })
 })
 
-describe('R4C-10 拒绝即零写入', () => {
+describe('两阶段校验的端点接线：拒绝即零写入', () => {
   // readPack 现在压根没有仓库依赖，这条断言钉的是将来：别为了「总条数」去查库，
   // 一旦阶段一读了库，坏包就可能已经带着一次遍历落进写库分支。
   const newFakeRepo = () => {
@@ -203,8 +215,22 @@ describe('R4C-10 拒绝即零写入', () => {
 
     expectPackCode('packFormatUnknown', () => service.readPack('not json at all'), '路由外的坏包')
     assert.deepEqual(repo.calls, [], '包级校验读了库，就不能再说「零写入」')
-    assert.equal(service.readPack(packText([ruleWith(1)])).rules.length, 1)
+    assert.equal(service.readPack(packText([ruleWith(1)])).pack.rules.length, 1)
     assert.deepEqual(repo.calls, [], '阶段一整个都不该出现库原语')
+  })
+
+  it('服务侧一次读取串两阶段：包级抛、条目级进 issues', () => {
+    const repo = newFakeRepo()
+    const service = new MockPackService()
+    ;(service as any).mockRepo = repo
+
+    const read = service.readPack(packText([{ ...ruleWith(0), records: [validRecordAt(0), recordAt(1)] }]))
+    assert.equal(read.pack.rules.length, 1)
+    assert.equal(read.valid.length, 1, '好记录要带着坐标交给下一阶段')
+    assert.equal(read.valid[0].recordIndex, 0)
+    assert.equal(read.invalidCount, 1)
+    assert.equal(read.issues[0].code, 'matchMissing', `明细要能指出为什么跳，实际 ${JSON.stringify(read.issues)}`)
+    assert.deepEqual(repo.calls, [], '条目级失败同样不该出现库原语')
   })
 
   // 真实由 + 真实 multipart 通道：坏包拿到的是错误码，不是一个「成功的空结果」
@@ -268,11 +294,22 @@ describe('R4C-10 拒绝即零写入', () => {
       assert.deepEqual(repo.calls, [], `${pathname} 在包级拒绝路径上读了库`)
     })
 
-    it(`${pathname}：过了包级闸门仍回空结果桩（条目级与写库未接线）`, async () => {
-      const { body } = await uploadPack(pathname, packText([ruleWith(3)]))
+    it(`${pathname}：过了两阶段闸门仍回空结果桩（明细回传与写库未接线）`, async () => {
+      const { body } = await uploadPack(pathname, packText([{ ...ruleWith(0), records: [validRecordAt(0)] }]))
       assert.equal(body.code, BizCode.SUCCESS)
       stubShapes[pathname](body.data)
       assert.deepEqual(repo.calls, [], `${pathname} 在桩阶段不碰仓库`)
+    })
+
+    // 条目级失败是「数据」不是「错误码」：一条坏记录不该让整个请求变成 BizCode.ERROR（PRD 4.4.7）。
+    // R4C-13 若把明细实现成抛错，这条会先红。
+    it(`${pathname}：好坏混包仍回成功——条目级不过只跳那一条`, async () => {
+      const { body } = await uploadPack(pathname, packText([
+        { id: 'rule_1', name: '订单中心', records: [validRecordAt(0), recordAt(1), null] }
+      ]))
+      assert.equal(body.code, BizCode.SUCCESS, `坏条目把整包带崩了：${JSON.stringify(body)}`)
+      stubShapes[pathname](body.data)
+      assert.deepEqual(repo.calls, [], '条目级失败也不该产生库调用')
     })
   }
 

@@ -1,6 +1,7 @@
 import { MockError } from './mock.errors'
 import type { MockErrorCode } from './mock.errors'
 import type { MockMatchRule } from './mock.models'
+import { validateMockRecord } from './mock.validation'
 import type { ProxyMock } from './proxy.models'
 import { MOCK_SENSITIVE_HEADERS } from './http-header'
 
@@ -301,7 +302,7 @@ function assertMockPackEnvelope(value: unknown): MockPackV1 {
 }
 
 /**
- * 文本 → 校验过的包对象。
+ * 文本 → 校验过的包对象（阶段一）。
  * `byteSize` 由持有文件的一侧算好传进来（主进程用 `Buffer.byteLength`，只扫不分配）：这里自己编码一次
  * 就等于为 50MB 的包凭空多备一份副本，而校验恰恰跑在最缺内存的时候。
  * 体积先于解析：过了上限的文件不该先被 `JSON.parse` 一遍再拒。
@@ -319,4 +320,76 @@ export function readMockPackText(text: string | undefined, byteSize: number): Mo
     throw new MockError('packFormatUnknown', 'not valid json')
   }
   return assertMockPackEnvelope(value)
+}
+
+/** 通过条目级校验的记录及其包内坐标：写库与冲突明细都要能回指「第几个场景的第几条」 */
+export interface MockPackLocatedRecord {
+  ruleIndex: number
+  recordIndex: number
+  record: MockPackRecord
+}
+
+/** 阶段二（条目级）的产出 */
+export interface MockPackRecordCheck {
+  /** 原顺序、原坐标，不做归一化——补默认值是 R4C-12，写库是 R4C-14 */
+  valid: MockPackLocatedRecord[]
+  issues: MockPackIssue[]
+  /** 被整条跳过的记录数：一条记录可以同时有几项问题，所以它不等于 `issues.length` */
+  invalidCount: number
+}
+
+/**
+ * 阶段二（技术设计 D8）：逐条复用保存路径的同一套判定，单条不过就跳过它、其余继续（PRD 4.4.7）。
+ *
+ * 只调 `validateMockRecord` 一处就够——它内部已经串了 `validateMatchRule(record.match)`
+ * （`mock.validation.ts:146`），响应体上限、变体上限、`match.body` 非 `ignore` 的拒绝语义全在里面。
+ * 再包一层自己的判定就等于给导入开第二条标准，「导入进得去、编辑器保存不了」是这种漂移唯一的症状。
+ *
+ * 递给判定的是按包契约重建的视图，不是包里的原始对象：`validateMockRecord` 认「没有 match 但有 url」
+ * 这条路（库内历史记录如此），而 `url` 压根不是包字段（`MockPackRecord` 的注释写明它不落包）。原样透传
+ * 就等于让手写的 `"url": "..."` 过阶段二，但派生 match 发生在 `MockService.saveMockRecord`、仓库层不做
+ * （R4C-15 走 `importRecords`）——症状正是技术设计风险表 RK1 那句「导入成功、一条不命中、全程不报错」。
+ * 所以视图里只留包契约声明的六个字段：包内记录必须有 match，缺它就拿 `matchMissing`。
+ *
+ * `field` 保持记录内相对路径（如 `match.body.mode`），不拼成 `rules[0].records[3].match...`：
+ * 定位已由 `ruleIndex`/`recordIndex`/`recordId` 三个字段承担，拼上去只会把明细行挤出横向滚动。
+ *
+ * 明细里的 code 全是 `MOCK_VALIDATION_CODES` 那一族（不是 `MOCK_PACK_CODES`），文案落在
+ * `mock.editor.validation.*`——同一份判定就该同一份文案，见技术设计 7 节的回写。
+ *
+ * 不做「库内已有 + 待写入」的上限复核：那要读库，属阶段一之后、写库之前的 R4C-14（5.3 表第三行）。
+ */
+export function validateMockPackRecords(pack: MockPackV1): MockPackRecordCheck {
+  const valid: MockPackLocatedRecord[] = []
+  const issues: MockPackIssue[] = []
+  let invalidCount = 0
+  for (let ruleIndex = 0; ruleIndex < pack.rules.length; ruleIndex++) {
+    const records = pack.rules[ruleIndex].records
+    for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
+      const record = records[recordIndex]
+      // 非对象（字符串、数字）也当空记录报：`'x'.match` 是 String.prototype 上的方法，
+      // 直接透传会让它冒充一条匹配规则，报出来的是「pathType 不合法」而不是「这条不是记录」。
+      const fields: MockPackRecord = (record != null && typeof record === 'object') ? record : {} as MockPackRecord
+      const found = validateMockRecord({
+        id: fields.id ?? null,
+        name: fields.name,
+        match: fields.match,
+        response: fields.response,
+        variants: fields.variants,
+        activeVariantId: fields.activeVariantId,
+      } as unknown as ProxyMock.MockRecord)
+      if (found.length === 0) {
+        valid.push({ ruleIndex, recordIndex, record })
+        continue
+      }
+      invalidCount++
+      for (const issue of found) {
+        issues.push({
+          code: issue.code, field: issue.field, detail: issue.detail,
+          ruleIndex, recordIndex, recordId: record?.id ?? undefined,
+        })
+      }
+    }
+  }
+  return { valid, issues, invalidCount }
 }

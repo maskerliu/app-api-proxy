@@ -50,4 +50,15 @@ describe('R4 导入/导出码表与 i18n', () => {
       assert.equal(validationKeys.has(code), false, `${code} 应在 mock.pack 而不是 mock.editor.validation`)
     }
   })
+
+  // R4C-11 起，条目级明细里的 code 全是 `MOCK_VALIDATION_CODES` 那一族，界面按 `mock.editor.validation.<code>` 取文案。
+  // 上面那条断言把两族隔开了，这一条保证隔开之后仍有话可说：缺哪个码，导入弹窗就显示原始键名。
+  it('条目级会回传的每个校验码都有中英文案', () => {
+    for (const [locale, messages] of [['zh-CN', zhCN], ['en', en]] as const) {
+      const block = (messages as any).mock.editor.validation
+      const missing = MOCK_VALIDATION_CODES.filter(code => typeof block?.[code] !== 'string' || String(block[code]).trim() === '')
+      assert.deepEqual(missing, [],
+        `${locale} 的 mock.editor.validation 覆盖 ${Object.keys(block ?? {}).length} 键 / 码表 ${MOCK_VALIDATION_CODES.length} 项，缺 ${missing.join(',')}`)
+    }
+  })
 })
