@@ -401,8 +401,9 @@ export class AppMockRouter extends BaseRouter {
     })
 
     // R4 规则导入/导出的桩端点（R4C-03）：先把参数表与响应形状钉死，渲染层得以并行开发；
-    // 导出组装已在 R4C-06 落地，包校验在 N2、写入与生效在 N3 逐张卡替换实现。
-    // 桩不解释文件内容：上传通道本身由 test/unit/form-file.test.ts 守住。
+    // 导出组装已在 R4C-06 落地，写入与生效在 N3 逐张卡替换实现。
+    // 包级校验已在 R4C-10 接线：这两个桩不再假装「什么文件都收得下」，坏包拿到的是错误码而不是一个成功的空结果。
+    // 上传通道本身由 test/unit/form-file.test.ts 守住。
     // 导出组装（R4C-06）：回的是包文本，不是包对象。桌面端拿它直接写盘、Web 端包成 Blob，
     // 若在这里回对象，主进程流式拼好的字符串还要再解析 + 序列化一遍，省下的内存等于还回去了。
     this.addApiInfo({
@@ -431,7 +432,12 @@ export class AppMockRouter extends BaseRouter {
         { key: 'pack', type: ParamType.FormFileText },
         { key: 'mode', type: ParamType.Query }
       ],
-      handler: () => emptyMockPackPreviewResult()
+      // 阶段一已接线（R4C-10）：包级不过就整包拒绝，条目级校验与写库在 R4C-11/R4C-14 各自接上。
+      // 过了校验仍回空结果是当前状态，但坏包不再被当成「预览成功、0 条」。
+      handler: (pack) => {
+        this.mockPackService.readPack(pack)
+        return emptyMockPackPreviewResult()
+      }
     })
 
     this.addApiInfo({
@@ -442,7 +448,10 @@ export class AppMockRouter extends BaseRouter {
         { key: 'mode', type: ParamType.Query },
         { key: 'targetRuleId', type: ParamType.Query }
       ],
-      handler: (_pack, mode) => emptyMockPackImportResult(toMockPackImportMode(mode))
+      handler: (pack, mode) => {
+        this.mockPackService.readPack(pack)
+        return emptyMockPackImportResult(toMockPackImportMode(mode))
+      }
     })
 
     this.addApiInfo({
@@ -453,6 +462,8 @@ export class AppMockRouter extends BaseRouter {
         { key: 'mode', type: ParamType.Query },
         { key: 'targetRuleId', type: ParamType.Query }
       ],
+      // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门；
+      // 「按内容分派两种包」是 R4C-21，entry 上限 harEntryLimit 是 R4C-24。
       handler: (_pack, mode) => ({
         ...emptyMockPackImportResult(toMockPackImportMode(mode)),
         suggestions: [] as MockPackIssue[]

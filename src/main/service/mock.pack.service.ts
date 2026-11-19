@@ -6,7 +6,7 @@ import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
 import {
   MOCK_PACK_FORMAT, MOCK_PACK_MAX_RECORDS, MOCK_PACK_VERSION,
-  MockPackExportOptions, MockPackRecord, redactPackRecord,
+  MockPackExportOptions, MockPackRecord, MockPackV1, readMockPackText, redactPackRecord,
 } from '@shared/mock.pack'
 import { IOC_TYPES } from '../constants'
 
@@ -206,6 +206,15 @@ export async function estimateMockPack(source: MockPackSource,
   return { ruleCount: rules.length, recordCount, oversized: recordCount > MOCK_PACK_MAX_RECORDS }
 }
 
+/**
+ * 阶段一入口（技术设计 D8）：预览与写入都要先过这一步，包级不过就连一个字符都不往下带。
+ * 字节数在这一侧算——`Buffer.byteLength` 只扫不分配，换成 `TextEncoder` 就要为 50MB 的包多备一份副本。
+ * 上传通道的上限只比这里多 1MB 余量，所以越过 50MB 的包确实能走到这一步，而不是先在传输层断掉。
+ */
+export function readMockPack(text: string | undefined): MockPackV1 {
+  return readMockPackText(text, Buffer.byteLength(text ?? '', 'utf8'))
+}
+
 @injectable()
 export class MockPackService {
 
@@ -225,5 +234,13 @@ export class MockPackService {
   /** 桌面端出口：包文本直接进文件，不经过渲染进程（几十 MB 走 IPC 会被克隆两遍） */
   async exportToFile(filePath: string, options: MockPackExportOptions) {
     return exportMockPackToFile(filePath, this.mockRepo, options, app.getVersion())
+  }
+
+  /**
+   * 阶段一：包级校验。这里没有 `this.mockRepo` 是刻意的——坏包在碰到任何库原语之前就该被拒，
+   * 「零写入」由这一步的位置保证，不靠后面的写库代码自觉。
+   */
+  readPack(text: string | undefined) {
+    return readMockPack(text)
   }
 }

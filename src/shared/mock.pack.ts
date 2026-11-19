@@ -1,3 +1,4 @@
+import { MockError } from './mock.errors'
 import type { MockErrorCode } from './mock.errors'
 import type { MockMatchRule } from './mock.models'
 import type { ProxyMock } from './proxy.models'
@@ -247,4 +248,75 @@ export function emptyMockPackImportResult(mode: MockPackImportMode): MockPackImp
     ruleId: null, mode, created: [], updated: [], skipped: [], invalid: [], failed: [],
     enabled: false, invalidTotal: 0, nameCollided: false, partial: false, aborted: false,
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** 诊断用的取值摘要：detail 会进响应体，不能把用户文件里的任意长串原样带出去 */
+function describeValue(value: unknown): string {
+  const text = value === undefined ? '(missing)' : typeof value === 'string' ? value : String(value)
+  return text.length > 32 ? `${text.slice(0, 32)}…` : text
+}
+
+/**
+ * 阶段一（技术设计 D8）的唯一一道闸门：整包通过才交出包对象，任一项不过就抛 `MockError`。
+ * 「拒绝即零写入」是靠这道闸门跑在任何写库动作之前实现的，不是靠写库那段代码自觉。
+ *
+ * 只判顶层结构与限额，字段级问题留给阶段二逐条处理（R4C-11）：一条被手改坏的记录不该把整包
+ * 带崩，那与 4.4.7「单条失败跳过、其余继续」相反。
+ */
+function assertMockPackEnvelope(value: unknown): MockPackV1 {
+  if (!isRecord(value)) throw new MockError('packFormatUnknown', `top level is ${describeValue(value)}`)
+  if (value.format !== MOCK_PACK_FORMAT) {
+    throw new MockError('packFormatUnknown', `format=${describeValue(value.format)}`)
+  }
+  // 兼容性只认 pack.version：库内 schema 版本与包格式版本是两条线（R4 不新增迁移），
+  // 拿 appVersion 猜版本会让「升级程序」和「换包格式」两件事互相冒充。
+  // version 缺失或不象版本号属「这不是我们的包」——给 packVersionUnsupported 会让用户去升级一个并不存在的旧版本。
+  const version = value.version
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
+    throw new MockError('packFormatUnknown', `version=${describeValue(version)}`)
+  }
+  if (version > MOCK_PACK_VERSION) {
+    throw new MockError('packVersionUnsupported', `version=${version} supported=${MOCK_PACK_VERSION}`)
+  }
+  const rules = value.rules
+  if (!Array.isArray(rules)) throw new MockError('packFormatUnknown', `rules is ${describeValue(rules)}`)
+
+  let recordCount = 0
+  for (let i = 0; i < rules.length; i++) {
+    if (!isRecord(rules[i])) throw new MockError('packFormatUnknown', `rules[${i}] is ${describeValue(rules[i])}`)
+    const records = rules[i].records
+    if (!Array.isArray(records)) throw new MockError('packFormatUnknown', `rules[${i}].records is ${describeValue(records)}`)
+    recordCount += records.length
+  }
+  if (recordCount === 0) throw new MockError('packEmpty', `rules=${rules.length}`)
+  if (recordCount > MOCK_PACK_MAX_RECORDS) {
+    throw new MockError('packRecordLimit', `records=${recordCount} limit=${MOCK_PACK_MAX_RECORDS}`)
+  }
+  // 阶段一只保证到这里：records[] 里的字段仍按外部输入看待，交给阶段二逐条校验
+  return value as unknown as MockPackV1
+}
+
+/**
+ * 文本 → 校验过的包对象。
+ * `byteSize` 由持有文件的一侧算好传进来（主进程用 `Buffer.byteLength`，只扫不分配）：这里自己编码一次
+ * 就等于为 50MB 的包凭空多备一份副本，而校验恰恰跑在最缺内存的时候。
+ * 体积先于解析：过了上限的文件不该先被 `JSON.parse` 一遍再拒。
+ */
+export function readMockPackText(text: string | undefined, byteSize: number): MockPackV1 {
+  if (byteSize > MOCK_PACK_MAX_FILE_BYTES) throw new MockError('packTooLarge', `bytes=${byteSize}`)
+  // 空文件在 multipart 侧是刻意放行的（formidable 默认会用英文报错拒掉 0 字节），
+  // 放行之后就由这里给出「没有任何可导入的条目」——见 base.router.parseMultipart 的同一句注释。
+  // 只带了普通字段、压根没有文件部分时 `fetchFormFileText` 给的就是 undefined，同一个原因。
+  if (text == null || text.trim() === '') throw new MockError('packEmpty', `bytes=${byteSize}`)
+  let value: unknown
+  try {
+    value = JSON.parse(text)
+  } catch {
+    throw new MockError('packFormatUnknown', 'not valid json')
+  }
+  return assertMockPackEnvelope(value)
 }
