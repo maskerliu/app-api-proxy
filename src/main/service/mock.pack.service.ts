@@ -121,9 +121,9 @@ async function writeMockPack(source: MockPackSource, options: MockPackExportOpti
 
 /**
  * 字符串出口：Web 分支要把包文本交给 Blob 下载，只能整体返回。
- * 峰值 = 分片缓冲 + 最后一次 join 的完整副本，即包文本的两倍；
- * 5,000 条 / 42.7MB 实测 RSS 高水位 +195.6MB（对照组聚合成对象再 stringify 是 +154.8MB）——
- * 只要出口还是字符串，分片就省不下那一份完整副本。桌面端因此走 `exportMockPackToFile`。
+ * 峰值下界由出口形态决定，不由分片决定：5,000 条 / 42.7MB 实测收尾活堆 +85.5MB，
+ * 与「聚合成对象再 stringify」同档（见技术设计 6.3 三档对照表）——分片省不下最后一次 join 的完整副本。
+ * 桌面端因此走 `exportMockPackToFile`。
  */
 export async function assembleMockPack(source: MockPackSource, options: MockPackExportOptions,
   appVersion?: string): Promise<MockPackText> {

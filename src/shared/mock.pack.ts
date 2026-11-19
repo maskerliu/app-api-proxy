@@ -25,6 +25,18 @@ export const MOCK_PACK_WRITE_BATCH = 200
 export const MOCK_PACK_KINDS = ['pack', 'har'] as const
 export type MockPackKind = typeof MOCK_PACK_KINDS[number]
 
+/**
+ * 文件选择框的白名单。两种部署形态共用同一把 `<input type="file">`：扩展名管住「知道自己后缀」的用户，
+ * mimetype 管住只认类型的系统对话框。`.har` 在多数系统里没有登记 MIME，浏览器给的 `File.type` 常是空串，
+ * 所以主力是扩展名那一半；上传时由 `proxy.api.withFallbackMimeType` 补 part 的 Content-Type，
+ * 服务端才把它当文件而不是普通字段。
+ * 键集必须等于 `MOCK_PACK_KINDS`——新增 kind 忘了配白名单，pack-file.test.ts 立刻变红。
+ */
+export const MOCK_PACK_FILE_ACCEPT: Record<MockPackKind, string> = {
+  pack: '.json,application/json',
+  har: '.har,application/har+json,application/json'
+}
+
 /** new=新建场景（ID 全部重生成），merge=合并到目标场景（保留包内 recordId 以支持幂等重放） */
 export const MOCK_PACK_IMPORT_MODES = ['new', 'merge'] as const
 export type MockPackImportMode = typeof MOCK_PACK_IMPORT_MODES[number]
