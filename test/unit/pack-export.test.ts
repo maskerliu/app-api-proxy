@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { registerHooks } from 'node:module'
-import { describe, it } from 'node:test'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { after, describe, it } from 'node:test'
 import { ProxyMock } from '@shared/proxy.models'
 import type { MockPackExportOptions, MockPackV1 } from '@shared/mock.pack'
 import { MOCK_PACK_FORMAT, MOCK_PACK_MAX_RECORDS, MOCK_PACK_VERSION } from '@shared/mock.pack'
@@ -20,7 +23,8 @@ registerHooks({
   },
 })
 
-const { assembleMockPack, estimateMockPack } = await import('@main/service/mock.pack.service')
+const { assembleMockPack, estimateMockPack, exportMockPackToFile } =
+  await import('@main/service/mock.pack.service')
 const { MockError } = await import('@shared/mock.errors')
 
 class FakeSource {
@@ -42,9 +46,25 @@ class FakeSource {
     return this.totalRecords ?? [...this.records.values()].reduce((sum, list) => sum + list.length, 0)
   }
 
-  async iterateRecords(ruleId: string, visitor: (record: ProxyMock.MockRecord) => void, pageSize = 100) {
+  // 真仓库的 iterateRecords 是 `await visitor(doc)`：替身必须照抄，
+  // 否则落盘出口的写序就没人守（分片会在并发 write 里串味）
+  async iterateRecords(ruleId: string, visitor: (record: ProxyMock.MockRecord) => Promise<void>, pageSize = 100) {
     this.pageSizes.push(pageSize)
-    for (const record of this.records.get(ruleId) ?? []) visitor(record)
+    for (const record of this.records.get(ruleId) ?? []) await visitor(record)
+  }
+}
+
+class ThrowingSource extends FakeSource {
+  constructor(private failAfter: number) {
+    super()
+  }
+
+  async iterateRecords(ruleId: string, visitor: (record: ProxyMock.MockRecord) => Promise<void>, pageSize = 100) {
+    let seen = 0
+    for (const record of this.records.get(ruleId) ?? []) {
+      if (++seen > this.failAfter) throw new Error('读库失败')
+      await visitor(record)
+    }
   }
 }
 
@@ -244,5 +264,56 @@ describe('R4 导出组装', () => {
 
     withRecords(source, 'r1', MOCK_PACK_MAX_RECORDS + 1)
     assert.equal((await estimateMockPack(source, DEFAULTS)).oversized, true)
+  })
+})
+
+describe('R4 导出落盘出口', () => {
+  const workDir = mkdtempSync(path.join(tmpdir(), 'mock-pack-export-'))
+  after(() => rmSync(workDir, { recursive: true, force: true }))
+
+  const stripClock = (text: string) => text.replace(/"exportedAt":\d+/, '"exportedAt":0')
+
+  function bigSource(records: number, bodyKb: number) {
+    const source = new FakeSource()
+    source.rules = [rule('r1')]
+    const list: ProxyMock.MockRecord[] = []
+    for (let i = 0; i < records; i++) {
+      const item = makeRecord({ ruleId: 'r1', url: `/api/r1/${i}` })
+      // 用真实字节而不是 ConsString：分片的正确性要在真的跨过 1MB 缓冲时才验得出来
+      item.response = { ...ProxyMock.defaultResponse(), body: Buffer.alloc(bodyKb * 1024, 0x61 + i % 26).toString('latin1') }
+      list.push(item)
+    }
+    source.records.set('r1', list)
+    return source
+  }
+
+  it('落盘内容与字符串出口逐字节一致，包括跨过写缓冲边界的分片', async () => {
+    const source = bigSource(300, 8) // ≈ 2.4MB，必然跨过一次 1MB 冲刷
+    const target = path.join(workDir, 'pack.json')
+    const meta = await exportMockPackToFile(target, source, DEFAULTS)
+    const onDisk = readFileSync(target, 'utf-8')
+
+    assert.equal(meta.recordCount, 300)
+    assert.equal(stripClock(onDisk), stripClock((await assembleMockPack(source, DEFAULTS)).content))
+    assert.equal(JSON.parse(onDisk).rules[0].records.length, 300)
+  })
+
+  it('组装中途失败：不留 .part，也不碰用户已有的同名文件', async () => {
+    const target = path.join(workDir, 'keep.json')
+    writeFileSync(target, '原有内容')
+    const source = new ThrowingSource(5)
+    source.rules = [rule('r1')]
+    withRecords(source, 'r1', 10)
+
+    await assert.rejects(() => exportMockPackToFile(target, source, DEFAULTS), /读库失败/)
+    assert.equal(readFileSync(target, 'utf-8'), '原有内容')
+    assert.equal(existsSync(`${target}.part`), false, '失败的半成品要删掉')
+  })
+
+  it('目录不存在时按失败回，不静默产出空文件', async () => {
+    const source = new FakeSource()
+    source.rules = [rule('r1')]
+    await assert.rejects(() =>
+      exportMockPackToFile(path.join(workDir, 'no-such-dir', 'pack.json'), source, DEFAULTS))
   })
 })

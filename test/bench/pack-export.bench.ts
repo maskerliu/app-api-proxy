@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { registerHooks } from 'node:module'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
@@ -11,8 +13,13 @@ import { MockError } from '@shared/mock.errors'
 import { makeMatch } from '../unit/fixtures'
 
 // R4C-06 验收：5,000 条导出的堆增长要有实测数。
-// 两条路径各起一个进程：堆与 RSS 在同进程里单调上涨，先跑的那条会把后一条的基线抬高。
+// 每条路径各起一个进程：堆与 RSS 在同进程里单调上涨，先跑的那条会把后一条的基线抬高。
 // RSS 回落很慢，所以收尾的 RSS−起点近似这段工作的高水位。
+//
+// 三档：
+//   stream    —— 流式拼接 + 返回字符串（Web 分支的出口）
+//   aggregate —— 对照组：整棵对象图聚合成对象再 stringify
+//   file      —— 流式拼接 + 直接落盘（裁决后的桌面端出口）：峰值应与包大小无关
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SELF = path.resolve(ROOT, 'test/bench/pack-export.bench.ts')
@@ -36,7 +43,7 @@ registerHooks({
   },
 })
 
-const { assembleMockPack } = await import('@main/service/mock.pack.service')
+const { assembleMockPack, exportMockPackToFile } = await import('@main/service/mock.pack.service')
 
 /**
  * 每条一份独立的 8KB 字符串。
@@ -94,11 +101,13 @@ class StreamingSource {
     return RECORD_COUNT
   }
 
-  async iterateRecords(_ruleId: string, visitor: (item: ProxyMock.MockRecord) => void,
+  async iterateRecords(_ruleId: string, visitor: (item: ProxyMock.MockRecord) => void | Promise<void>,
     pageSize: number = PAGE_SIZE): Promise<void> {
     for (let start = 0; start < RECORD_COUNT; start += pageSize) {
       for (let i = 0; i < Math.min(pageSize, RECORD_COUNT - start); i++) {
-        visitor(record(start + i))
+        // 必须逐条 await：仓库的 iterateRecords 就是这么做的，导出侧的写序与背压都建立在这上面。
+        // 早前这里没 await，一页 200 次写盘并发跑，量出来的峰值是替身的错，不是导出的。
+        await visitor(record(start + i))
         this.visited += 1
       }
       this.onHandoff()
@@ -124,29 +133,38 @@ async function aggregatePackText(source: StreamingSource): Promise<string> {
 }
 
 interface Measurement {
+  /** 包体积一律按 UTF-8 字节计：落盘文件、上传体积、50MB 上限量的是同一个东西 */
   packBytes: number
   /** 信封头（到 "rules": 之前），导出时间与 appVersion 之外的差异都要一致 */
   head: string
-  /** rules 载荷的 FNV-1a：两条路径逐字段一致的证明，切片比对不额外复制 40MB */
+  /** rules 载荷的 FNV-1a：三档逐字段一致的证明 */
   checksum: string
-  /** 每页交接时采一次：读数据这一段的堆高水位 */
+  /** 每页交接时「强制 GC 之后」的活堆高水位：这才是峰值，不含还来不及回收的分配垃圾。
+   * 基准每页现造 200 条 8KB 记录，分配速率远高于导出本身——只看 RSS 会把它记成导出的开销。 */
+  liveMb: number
+  /** 每页交接时不 GC 的堆高水位：与活堆之差就是这段的分配垃圾 */
   handoffMb: number
-  /** 收尾 RSS−起点：包含各自最后一次同步序列化 */
+  /** 收尾 RSS−起点：含分配抖动，只作参考 */
   rssGrowthMb: number
-  /** 结果交还并强制 GC 之后仍读到的堆差值：两侧数字相同，说明它是 V8 大字符串的账面底，
-   * 而不是某一条路径的泄漏——所以只打印、不作闸门 */
+  /** 结果交还并强制 GC 之后仍读到的堆差值：字符串档留着整个包，落盘档应当接近零 */
   residualMb: number
   ms: number
   visited: number
 }
 
-function fnv1a(text: string, from: number = 0): string {
+/**
+ * 一律按 UTF-8 字节取包体积与校验和：落盘文件、上传体积、50MB 上限量的是同一个东西，
+ * 而字符串档的 `.length` 是 UTF-16 码元数，含中文记录名时与字节数不等——混用会假报不一致。
+ * FNV-1a 逐字节累加。
+ */
+function digest(bytes: Buffer) {
+  const rulesAt = bytes.indexOf(Buffer.from('"rules":[', 'latin1'))
   let hash = 0x811c9dc5
-  for (let i = from; i < text.length; i++) {
-    hash ^= text.charCodeAt(i)
+  for (let i = rulesAt; i < bytes.length; i++) {
+    hash ^= bytes[i]
     hash = Math.imul(hash, 0x01000193) >>> 0
   }
-  return hash.toString(16)
+  return { head: bytes.subarray(0, rulesAt).toString('latin1'), checksum: hash.toString(16) }
 }
 
 function mb(bytes: number): number {
@@ -166,26 +184,42 @@ async function measure(mode: string): Promise<Measurement> {
   const before = gcMb()
   const rssBefore = process.memoryUsage().rss
   let handoff = before
+  let live = before
   const source = new StreamingSource()
-  source.onHandoff = () => { handoff = Math.max(handoff, heapMb()) }
+  // 每页交接量两次：先看不 GC 的堆（含分配垃圾），再强制 GC 看活堆。
+  // 只报 RSS 会把「每页现造 200 条 8KB 记录」的分配抖动记成导出的开销。
+  source.onHandoff = () => {
+    handoff = Math.max(handoff, heapMb())
+    live = Math.max(live, gcMb())
+  }
+  // 落盘档写进系统临时目录而不是工作树：几十 MB 的基准产物不该污染仓库
+  const dir = mode === 'file' ? mkdtempSync(path.join(tmpdir(), 'mock-pack-bench-')) : null
+  const filePath = dir != null ? path.join(dir, 'pack.json') : null
 
   const startedAt = performance.now()
-  // 两边都不传 appVersion：信封头才是可比的，包文本逐字段一致由 head + checksum + 长度共同证明
-  let content: string = mode === 'stream'
-    ? (await assembleMockPack(source, OPTIONS)).content
-    : await aggregatePackText(source)
+  // 三档都不传 appVersion：信封头才是可比的，包文本逐字段一致由 head + checksum + 长度共同证明
+  let text: string = null
+  if (mode === 'stream') {
+    text = (await assembleMockPack(source, OPTIONS)).content
+  } else if (mode === 'file') {
+    await exportMockPackToFile(filePath, source, OPTIONS)
+  } else {
+    text = await aggregatePackText(source)
+  }
   const ms = performance.now() - startedAt
-  // 先量 RSS 再做任何切片：校验和的中间副本不算进高水位
+  // 先取 RSS 再读回文件：读回那一份副本不该记进导出自己的高水位
   const rssGrowthMb = mb(process.memoryUsage().rss - rssBefore)
   const visited = source.visited
-  const rulesAt = content.indexOf('"rules":[')
-  const packBytes = content.length
-  const head = content.slice(0, rulesAt)
-  const checksum = fnv1a(content, rulesAt)
-  content = null
+  // 落盘档读回的是字节，字符串档把字符串按 UTF-8 编码成同样的字节再比
+  let bytes: Buffer = mode === 'file' ? readFileSync(filePath) : Buffer.from(text, 'utf8')
+  const packBytes = bytes.length
+  const { head, checksum } = digest(bytes)
+  bytes = null
+  text = null
+  if (dir != null) rmSync(dir, { recursive: true, force: true })
   return {
-    packBytes, head, checksum, handoffMb: handoff - before, rssGrowthMb,
-    residualMb: Math.max(0, gcMb() - before), ms, visited,
+    packBytes, head, checksum, liveMb: live - before, handoffMb: handoff - before,
+    rssGrowthMb, residualMb: Math.max(0, gcMb() - before), ms, visited,
   }
 }
 
@@ -202,44 +236,85 @@ function spawn(mode: string): Measurement {
 }
 
 function report(label: string, row: Measurement): string {
-  return `${label} 包文本 ${mb(row.packBytes).toFixed(1)}MB · 耗时 ${row.ms.toFixed(0)}ms · ` +
-    `读数据时堆高水位 +${row.handoffMb.toFixed(1)}MB（不强制 GC，含待回收对象） · ` +
-    `进程 RSS 高水位 +${row.rssGrowthMb.toFixed(1)}MB · 交还后账面残留 +${row.residualMb.toFixed(1)}MB`
+  return `${label} 包 ${(mb(row.packBytes)).toFixed(1)}MB · 耗时 ${row.ms.toFixed(0)}ms · ` +
+    `活堆峰值 +${row.liveMb.toFixed(1)}MB（每页 GC 之后） · 不 GC 堆峰值 +${row.handoffMb.toFixed(1)}MB · ` +
+    `RSS +${row.rssGrowthMb.toFixed(1)}MB（含每页现造记录的分配抖动） · 交还后残留 +${row.residualMb.toFixed(1)}MB`
+}
+
+/** 落盘档的字节数必须和字符串档逐字节相同，否则比较内存没有意义 */
+function samePack(label: string, a: Measurement, b: Measurement): void {
+  assert.equal(a.visited, RECORD_COUNT, `${label}：5,000 条没有全部读到`)
+  assert.equal(a.packBytes, b.packBytes, `${label}：包字节数与另一档不一致`)
+  assert.equal(a.head.replace(/"exportedAt":\d+/, '"exportedAt":0'),
+    b.head.replace(/"exportedAt":\d+/, '"exportedAt":0'), `${label}：信封头不一致`)
+  assert.equal(a.checksum, b.checksum, `${label}：组装出的包不逐字段一致`)
 }
 
 async function runParent(): Promise<void> {
-  if (typeof global.gc !== 'function') console.log('[bench] 提示：未经 --expose-gc 启动，残留量按不强制 GC 读取')
-  console.log(`\n[bench] R4 导出组装：${RECORD_COUNT.toLocaleString('en-US')} 条 / 响应体 ${BODY_BYTES / 1024}KB` +
-    `（两条路径各起一个进程，避免前一条抬高后一条的基线）`)
-  const stream = spawn('stream')
-  const aggregate = spawn('aggregate')
-  console.log(`  ${report('流式拼接  ', stream)}`)
-  console.log(`  ${report('聚合成对象', aggregate)}`)
-
-  assert.equal(stream.visited, RECORD_COUNT, '5,000 条应当全部读到，一条不落')
-  // 一致性：流式实现若漏字段/多逗号，与对照组立刻对不上
-  assert.equal(stream.packBytes, aggregate.packBytes, '两条路径的包文本长度不同')
-  assert.notEqual(stream.checksum, '', '基准没有读到任何内容')
-  assert.equal(stream.head.replace(/"exportedAt":\d+/, '"exportedAt":0'),
-    aggregate.head.replace(/"exportedAt":\d+/, '"exportedAt":0'), '信封头不一致')
-  assert.equal(stream.checksum, aggregate.checksum, '两条路径组装出的包不逐字段一致')
-
-  const budget = mb(stream.packBytes) * 5
-  if (stream.rssGrowthMb > budget) {
-    console.error(`\n流式拼接的 RSS 高水位 ${stream.rssGrowthMb.toFixed(1)}MB 超过包文本 5 倍预算 ${budget.toFixed(1)}MB`)
+  if (typeof global.gc !== 'function') {
+    console.error('[bench] 必须经 --expose-gc 启动：活堆峰值靠每页强制 GC 才量得准')
     process.exit(1)
   }
-  console.log(`\n实测：同样 5,000 条 / ${mb(stream.packBytes).toFixed(1)}MB 包文本，` +
-    `流式拼接堆峰值 +${stream.handoffMb.toFixed(1)}MB、进程 RSS 高水位 +${stream.rssGrowthMb.toFixed(1)}MB；` +
-    `聚合成对象 +${aggregate.handoffMb.toFixed(1)}MB / +${aggregate.rssGrowthMb.toFixed(1)}MB`)
-  // 这条结论必须随实现一起看：只要 assembleMockPack 还返回一个大字符串，
-  // 分片拼接省下的就只是「文档对象图」那一份，最后一次 join 仍要复制整个包。
-  // 想让峰值与包大小解耦，出口必须是文件流（见 R4C-08 的落盘通道）。
-  console.log('注：两侧都以「返回完整字符串」为前提，峰值下界就是包文本的 2 倍（chunks + join）。')
+  const runFile = !process.argv.includes('--no-file')
+  console.log(`\n[bench] R4 导出组装：${RECORD_COUNT.toLocaleString('en-US')} 条 / 响应体 ${BODY_BYTES / 1024}KB` +
+    `（每档各起一个进程，避免前一档抬高后一档的基线）`)
+  const legs: Array<[string, Measurement]> = [
+    ['stream    ', spawn('stream')],
+    ['aggregate ', spawn('aggregate')],
+  ]
+  if (runFile) legs.push(['file      ', spawn('file')])
+  for (const [label, row] of legs) console.log(`  ${report(label, row)}`)
+
+  const stream = legs[0][1]
+  const aggregate = legs[1][1]
+  // 一致性：流式实现若漏字段/多逗号，与对照组立刻对不上
+  samePack('stream', stream, aggregate)
+  // 字符串档的活堆峰值本就是包体积的两倍（分片数组 + 最后一次 join 的完整副本），
+  // 这条闸门只用来抓真正的失控累积，不用来宣称流式拼接省了内存——它省不下那一份副本。
+  const budget = mb(stream.packBytes)
+  if (stream.liveMb > budget * 2.5) {
+    console.error(`\n流式拼接的活堆峰值 ${stream.liveMb.toFixed(1)}MB 高于包体积 ${budget.toFixed(1)}MB——` +
+      '序列化过程中攒了不该攒的东西')
+    process.exit(1)
+  }
+
+  if (legs.length > 2) {
+    const file = legs[2][1]
+    samePack('file', file, stream)
+    console.log(`\n实测：同样 ${budget.toFixed(1)}MB 的包，活堆峰值 ` +
+      `流式拼接返字符串 +${stream.liveMb.toFixed(1)}MB · 聚合成对象 +${aggregate.liveMb.toFixed(1)}MB · ` +
+      `流式直接落盘 +${file.liveMb.toFixed(1)}MB`)
+    console.log(`交还后残留：字符串档 +${stream.residualMb.toFixed(1)}MB（留住整个包） / ` +
+      `落盘档 +${file.residualMb.toFixed(1)}MB`)
+    // 裁决「改成边拼边写盘」要证明的两件事：峰值不再随包大小走，且结果不再被调用方持有
+    if (file.liveMb * 4 > stream.liveMb) {
+      console.error(`\n落盘档活堆峰值 ${file.liveMb.toFixed(1)}MB 相对字符串档 ${stream.liveMb.toFixed(1)}MB ` +
+        '没有降到一个量级——峰值仍在随包大小走')
+      process.exit(1)
+    }
+    if (file.residualMb > stream.residualMb / 2) {
+      console.error(`\n落盘档残留 ${file.residualMb.toFixed(1)}MB 没有比字符串档 ${stream.residualMb.toFixed(1)}MB ` +
+        '降下来：包文本被留在了内存里')
+      process.exit(1)
+    }
+  } else {
+    console.log('\n注：stream/aggregate 两档都以「返回完整字符串」为前提，峰值下界就是包体积本身；')
+    console.log('与包大小无关的是落盘档（--mode=file），本次以 --no-file 跳过。')
+  }
 }
 
 async function runChild(mode: string): Promise<void> {
-  process.stdout.write(`RESULT ${JSON.stringify(await measure(mode))}\n`)
+  const leaked: string[] = []
+  // 背压每冲刷一次若留一个悬空监听器，几十 MB 的量才会报出来——基准正是那把尺
+  process.on('warning', (w) => {
+    if (w.name === 'MaxListenersExceededWarning') leaked.push(w.message)
+  })
+  const row = await measure(mode)
+  process.stdout.write(`RESULT ${JSON.stringify(row)}\n`)
+  if (leaked.length > 0) {
+    console.error(`监听器没摘干净：${leaked.join(' / ')}`)
+    process.exit(3)
+  }
 }
 
 const mode = process.argv.find(it => it.startsWith('--mode='))?.slice('--mode='.length)
