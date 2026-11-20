@@ -8,6 +8,7 @@ import {
   pageMockPackIssues, suggestMockPackRuleName, toMockPackConflictStrategy,
 } from '@shared/mock.pack'
 import { makeMatch } from './fixtures'
+import { MOCK_RECORD_REJECT_LIMIT, MOCK_RECORD_WARN_LIMIT, recordLimitState } from '@shared/mock.models'
 
 // 与 pack-export.test.ts 同一套替身：service 经 repository/constants 引到 electron，
 // 但预览本身不碰 electron（也不碰任何写原语），替身只要能被 import 就够
@@ -36,6 +37,8 @@ const READ_PRIMITIVES = ['listRules', 'getRule', 'countRecords', 'iterateRecords
 class FakeSource {
   rules: ProxyMock.MockRule[] = []
   summaries: MockRecordSummary[] = []
+  /** 「库内已有条数」的替身：越档用例靠它把合计推到 5,000/10,000 之上，不必真造几万条记录 */
+  recordCount = 0
   calls: string[] = []
 
   async listRules() {
@@ -50,7 +53,7 @@ class FakeSource {
 
   async countRecords() {
     this.calls.push('countRecords')
-    return 0
+    return this.recordCount
   }
 
   async iterateRecords() {
@@ -279,7 +282,7 @@ describe('previewMockPack：合并模式在目标场景内建冲突索引', () =
     }]), { mode: 'merge', targetRuleId: 'rule_1' })
     assert.equal(result.conflictCount, total)
     assert.equal(result.conflicts.length, MOCK_PACK_ISSUE_PAGE_LIMIT)
-    assert.deepEqual(source.calls, ['getRule', 'listRecordSummaries'])
+    assert.deepEqual(source.calls, ['getRule', 'countRecords', 'listRecordSummaries'])
     source.assertReadsOnly('合并')
   })
 
@@ -291,6 +294,75 @@ describe('previewMockPack：合并模式在目标场景内建冲突索引', () =
     }]), { mode: 'merge', targetRuleId: 'rule_1' })
     assert.equal(result.invalidCount, 1)
     assert.deepEqual(result.conflicts, [], '拿 matchMissing 的条目去比指纹等于比了个空 match')
+  })
+})
+
+describe('previewMockPack：「库内已有 + 待写入」的合计档位（R4C-20）', () => {
+  async function quotaOf(existing: number, records: number) {
+    const source = mergeSource([])
+    source.recordCount = existing
+    const result = await previewMockPack(source, packOf([ruleOf(records)]),
+      { mode: 'merge', targetRuleId: 'rule_1' })
+    // 待写入数必须是「将导入 N 条」那个数本身，quota 不能变成第三套计数
+    assert.equal(result.quota?.incomingRecordCount, result.recordCount - result.invalidCount)
+    return result.quota
+  }
+
+  it('两个数分开摊给 UI，合计只是它们相加——不替用户算「还剩多少可写」', async () => {
+    const quota = await quotaOf(7, 3)
+    assert.deepEqual(quota, {
+      existingRecordCount: 7, incomingRecordCount: 3, totalRecordCount: 10,
+      warn: false, reject: false, suggestion: undefined
+    })
+  })
+
+  it('档位边界是「大于」而不是「不小于」：合计正好 5,000 与 10,000 都不亮', async () => {
+    // 判据比的是合计，所以这里让合计落在档位值上：已有 = 档位 − 1、待写入 = 1
+    for (const [total, warn, reject] of [
+      [MOCK_RECORD_WARN_LIMIT, false, false],
+      [MOCK_RECORD_WARN_LIMIT + 1, true, false],
+      [MOCK_RECORD_REJECT_LIMIT, true, false],
+      [MOCK_RECORD_REJECT_LIMIT + 1, true, true],
+    ] as Array<[number, boolean, boolean]>) {
+      const quota = await quotaOf(total - 1, 1)
+      assert.equal(quota.warn, warn, `合计 ${total}`)
+      assert.equal(quota.reject, reject, `合计 ${total}`)
+    }
+    assert.equal((await quotaOf(MOCK_RECORD_WARN_LIMIT, 1)).suggestion, 'splitRecommended')
+    assert.equal((await quotaOf(MOCK_RECORD_REJECT_LIMIT, 1)).suggestion, 'recordTooMany')
+  })
+
+  it('待写入数只数过了条目级校验的记录：坏条目压根不进库，数它就是把警告算给不存在的数据', async () => {
+    const source = mergeSource([])
+    source.recordCount = 2
+    const result = await previewMockPack(source, packOf([{
+      id: 'rule_1', name: '订单中心',
+      records: [
+        packRecord(0),
+        { id: 'rec_bad', name: '坏记录', response: OK_RESPONSE },
+        packRecord(1),
+      ]
+    }]), { mode: 'merge', targetRuleId: 'rule_1' })
+    assert.equal(result.invalidCount, 1)
+    assert.equal(result.quota?.incomingRecordCount, 2, '三条里有一条坏，待写入该是 2')
+    assert.equal(result.quota?.totalRecordCount, 4)
+  })
+
+  it('与库内既有上限提示同判据：档位取自 recordLimitState，包侧不写第二把尺', async () => {
+    // 故意取一个会亮黄灯的合计：两个都是 false 的比对证明不了「同源」
+    const quota = await quotaOf(MOCK_RECORD_WARN_LIMIT - 2, 3)
+    const state = recordLimitState(MOCK_RECORD_WARN_LIMIT + 1)
+    assert.equal(state.warn, true, '这条用例的前提：合计已过建议档')
+    assert.deepEqual([quota.warn, quota.reject, quota.suggestion], [state.warn, state.reject, state.suggestion])
+  })
+
+  it('新建模式不填 quota：每个新场景从 0 起，而包级闸门已把整包压在建议档之内', async () => {
+    const source = mergeSource([])
+    source.recordCount = 999999
+    const result = await previewMockPack(source, packOf([ruleOf(3)]), { mode: 'new' })
+    assert.equal(result.quota, undefined,
+      '新建模式没有目标场景，那个 999999 属于谁都没定义，拿它吓用户不如不给')
+    assert.equal(source.calls.includes('countRecords'), false, '既然不填，就不该为它多读一次库')
   })
 })
 

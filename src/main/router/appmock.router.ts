@@ -435,7 +435,8 @@ export class AppMockRouter extends BaseRouter {
       ],
       // 三阶段（R4C-10 包级 / R4C-11 条目级 / R4C-12 归一化）+ 统计与冲突（R4C-13）已全部接线，且全程只读：
       // 包级不过整包拒绝，条目级不过只跳那一条，明细与回落说明分页回传。
-      // 上限复核与写库属 R4C-14/15，所以这里报的「将导入 N 条」还不包含「库内已有 + 待写入」那道判定。
+      // 上限口径（R4C-20）在同一个响应体的 `quota` 里，但只到「把两个数与档位摊出来」为止，
+      // 真拦下来仍发生在写库那一步（`recordTooMany`），这里不改判。
       handler: (pack, mode, targetRuleId) => this.mockPackService.preview(pack, {
         mode: toMockPackImportMode(mode),
         targetRuleId: targetRuleId == null || targetRuleId === '' ? null : String(targetRuleId),
@@ -454,7 +455,8 @@ export class AppMockRouter extends BaseRouter {
       // 写库已接线（R4C-18）：冲突三策略的落点在 `importMockPack`，时间戳按模式注入（R4C-16）而不是客户端开关。
       // 取消/回滚（R4C-19）也接上了，但**这一层没有取消与进度的通道**：`cancelImport()`/`getImportProgress()`
       // 还没有端点或 IPC 对应物（通道走哪条属 R4C-26/27），所以这个端点目前只能被单例挡住第二个并发请求（`packImportInProgress`）。
-      // 还缺的另一件是预览阶段的「库内已有 + 待写入」提示（R4C-20），上限至今只在写库那一步拦下来报 `recordTooMany`。
+      // 预览那一步现在有「库内已有 + 待写入」的合计口径了（R4C-20 的 `quota`），但判定仍只在写库那一步落地：
+      // 这里报 `recordTooMany` 是最后一道闸，绕过 UI 直接打接口一样拦得住。
       handler: (pack, mode, targetRuleId, conflict) => this.mockPackService.import(pack, {
         mode: toMockPackImportMode(mode),
         targetRuleId: emptyToNull(targetRuleId),

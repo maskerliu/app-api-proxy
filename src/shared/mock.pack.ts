@@ -1,6 +1,7 @@
 import { MockError } from './mock.errors'
 import type { MockErrorCode } from './mock.errors'
-import type { MockMatchRule } from './mock.models'
+import type { MockLimitState, MockMatchRule } from './mock.models'
+import { recordLimitState } from './mock.models'
 import { normalizeMockRecord, validateMockRecord } from './mock.validation'
 import type { ProxyMock } from './proxy.models'
 import { MOCK_SENSITIVE_HEADERS } from './http-header'
@@ -127,6 +128,42 @@ export interface MockPackConflict {
   existingEnabled?: boolean
 }
 
+/**
+ * 「库内已有 + 待写入」的合计口径（R4C-20）：预览把两个数摊给 UI，档位判定不另起一套——
+ * 复用库内既有上限提示那一份 `recordLimitState`（`mock.cache.ts` 的 `getLimitState` 也读它）。
+ * 上限是**每场景**口径，所以只有合并模式需要它：新建模式每个新场景都从 0 条起，见 `MockPackPreviewResult.quota`。
+ */
+export interface MockPackQuota {
+  /** 目标场景库内已有条数 */
+  existingRecordCount: number
+  /**
+   * 待写入条数，只数过了条目级校验的记录（无效条目压根不进库）——它就是同一个响应体里
+   * `recordCount - invalidCount` 那个数，quota 不引入第三套计数。
+   * 跳过与覆盖都不新增条目，所以这是**上界**：预览报的档位只会早于仓库那句复核
+   * （`mock.repo.ts` 的 `countRecords + 本批条数`）真正拦下的时机，不会漏报。
+   */
+  incomingRecordCount: number
+  /** 合计——档位是拿它比的 */
+  totalRecordCount: number
+  /** 超 5,000 建议档：只提示，不拒 */
+  warn: boolean
+  /** 超 10,000 拒绝档：真写下去会被整批拒掉（`recordTooMany`） */
+  reject: boolean
+  suggestion?: MockLimitState['suggestion']
+}
+
+export function mockPackQuotaOf(existing: number, incoming: number): MockPackQuota {
+  const state = recordLimitState(existing + incoming)
+  return {
+    existingRecordCount: existing,
+    incomingRecordCount: incoming,
+    totalRecordCount: state.count,
+    warn: state.warn,
+    reject: state.reject,
+    suggestion: state.suggestion,
+  }
+}
+
 export interface MockPackPreviewResult {
   kind: MockPackKind
   packVersion: number
@@ -156,6 +193,12 @@ export interface MockPackPreviewResult {
    * 多场景包不填：一个名字代表不了 N 个场景，逐条对照交给 UI 自己算（`rules[i].name` 与库内名集）。
    */
   suggestedRuleName?: string
+  /**
+   * 「库内已有 + 待写入」的档位（R4C-20），仅合并模式填。
+   * 新建模式每个新场景都从 0 起，而包级闸门 `MOCK_PACK_MAX_RECORDS`(5,000) 已经把整包条数
+   * 钉死在建议档之内 ⇒ 那两个档位在新建模式不可能亮，填一个恒为 false 的字段只会给 UI 多一个分支。
+   */
+  quota?: MockPackQuota
 }
 
 export interface MockPackSkipped {

@@ -4,7 +4,7 @@ import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
-import { MOCK_RECORD_REJECT_LIMIT } from '@shared/mock.models'
+import { recordLimitState } from '@shared/mock.models'
 import { MOCK_PACK_WRITE_BATCH, packTimestampOf } from '@shared/mock.pack'
 import { USER_DATA_DIR } from '../constants'
 import type {
@@ -502,10 +502,12 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
       }
 
       // 上限复核排在查重之前：先确认这批写得下，再花一次扫描建索引。
-      // 更新分支并不新增条目，所以这是个偏保守的上界——拒绝档宁可多拦一次，也不能让库越过上限
-      const total = await this.countRecords(ruleId)
-      if (total + records.length > MOCK_RECORD_REJECT_LIMIT) {
-        throw new MockError('recordTooMany', `records=${total + records.length}`)
+      // 更新分支并不新增条目，所以这是个偏保守的上界——拒绝档宁可多拦一次，也不能让库越过上限。
+      // 档位判据全站只 `recordLimitState` 一把尺：预览那两个数（R4C-20）与这里必须亮同一档，
+      // 这里再手写一次 `> MOCK_RECORD_REJECT_LIMIT` 就是第二套标准
+      const quota = recordLimitState((await this.countRecords(ruleId)) + records.length)
+      if (quota.reject) {
+        throw new MockError('recordTooMany', `records=${quota.count}`)
       }
 
       // 一次摘要扫描建两张表：指纹归属（查重用）与本场景已有的 `_id`（判断包内 id 能不能当更新用）

@@ -10,7 +10,7 @@ import {
   MockPackConflict, MockPackConflictStrategy, MockPackExportOptions, MockPackImportOptions,
   MockPackImportResult, MockPackIssue, MockPackPreparedRecord, MockPackPreviewOptions,
   MockPackPreviewResult, MockPackRecord, MockPackRecordCheck, MockPackSkipped, MockPackV1,
-  emptyMockPackImportResult, pageMockPackIssues, prepareMockPackRecord, readMockPackText,
+  emptyMockPackImportResult, mockPackQuotaOf, pageMockPackIssues, prepareMockPackRecord, readMockPackText,
   redactPackRecord, suggestMockPackRuleName, validateMockPackRecords,
 } from '@shared/mock.pack'
 import { fingerprintOf } from '../repository/mock.docs'
@@ -333,7 +333,8 @@ function classifyMockPackClash(index: MockPackTargetIndex, item: MockPackPrepare
 }
 
 /**
- * 预览（R4C-13）：把三阶段的产出折算成响应体，全程只读——用的三把原语里没有一把写得住东西，
+ * 预览（R4C-13 + R4C-20）：把三阶段的产出折算成响应体，全程只读——用的四把原语（`listRules`/`getRule`/
+ * `countRecords`/`listRecordSummaries`）里没有一把写得住东西，
  * 「预览不落库」因此是结构事实，不是一句约定。
  *
  * 冲突只在合并模式算，且只在**目标场景内**比：指纹查重在库里就是规则级的（`findByFingerprint(ruleId, …)`），
@@ -370,6 +371,10 @@ export async function previewMockPack(source: MockPackSource, text: string | und
   const ruleId = options.targetRuleId ?? null
   if (ruleId == null) throw new MockError('ruleMissing', 'merge preview requires targetRuleId')
   if (await source.getRule(ruleId) == null) throw new MockError('ruleMissing', ruleId)
+  // 「库内已有」取仓库的 `countRecords` 而不是摘要扫描的条数：写库前那道复核读的就是这个数，
+  // 预览与它同源才不会出现「预览没亮灯、导入却被整批拒」。待写入数按全算新增取上界（跳过与覆盖不新增条目），
+  // 所以预览只会提前警告、不会漏报。
+  result.quota = mockPackQuotaOf(await source.countRecords(ruleId), read.prepared.length)
   const index = await indexMockPackTarget(source, ruleId)
   const conflicts: MockPackConflict[] = []
   for (const item of read.prepared) {
