@@ -94,6 +94,17 @@ export interface MockPackExportOptions {
   includeVariants?: boolean
 }
 
+/**
+ * 导出进度：以场景为粒度（一个场景一次），不是字节数——包文本是分片直写文件的，
+ * 字节数要么等于「已写缓冲」这种和用户体验无关的数，要么得在写盘路径上多算一遍长度。
+ * `recordCount` 是到当前为止累计的条数，让界面在只有一个场景时也有东西可报。
+ */
+export interface MockPackExportProgress {
+  rulesDone: number
+  ruleTotal: number
+  recordCount: number
+}
+
 export interface MockPackPreviewOptions {
   mode: MockPackImportMode
   /** 合并模式的目标场景；新建模式忽略 */

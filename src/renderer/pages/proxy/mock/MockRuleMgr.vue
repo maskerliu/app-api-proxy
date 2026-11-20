@@ -1,7 +1,10 @@
 <template>
   <van-row class="mgr-content">
+    <!-- 这一页是 position=right 的抽屉，popup 从视口 y=0 起，右侧直接压在系统画的最小化/最大化/关闭上
+         （MainApp.ts 的 titleBarOverlay），所以桌面端首行要让开 App.vue .drag-bar 那 32px 再留一档间距；
+         Web 分支没有窗口控制件，让位为 0。 -->
     <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - var(--app-card-gutter) * 2);"
-      :style="{ paddingTop: isWeb ? '0' : 'calc(var(--van-font-size-md) * 0.5)' }">
+      :style="{ paddingTop: isWeb ? '0' : 'calc(32px + var(--app-sp-md))' }">
       <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
           placement="bottom-start" :show-arrow="false" :offset="[0, 2]">
@@ -44,9 +47,9 @@
         <van-cell :clickable="false" center class="rule-head-cell" :title-style="{ flexGrow: 1.2 }"
           value-class="rule-mgr-cell-value">
           <template #icon>
-            <van-icon class="iconfont icon-cancel rule-cancel-icon"
-              :class="{ 'rule-cancel-disabled': curRule._id == null }"
-              :style="{ color: curRule._id == null ? 'var(--van-gray-5)' : 'var(--van-danger-color)' }"
+            <!-- 取消这枚与同排编辑/删除同一套类：字形尺寸、热区内边距、hover 底色、置灰档都不另立第二种 -->
+            <van-icon class="iconfont icon-cancel icon-action action-glyph rule-cancel-icon"
+              :class="curRule._id == null ? 'action-glyph--disabled' : 'action-glyph--danger'"
               @click="onRuleSelect(null)" />
           </template>
           <template #title>
@@ -57,25 +60,24 @@
                 :type="curRule.isMock ? 'success' : 'warning'" v-tip="mockStateTip">
                 {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
               </van-tag>
+              <!-- 导出进行中：关掉弹窗不等于取消任务，这里留一个把它找回来的入口（并入标题行，不另起一行） -->
+              <van-tag v-if="exportRunning" class="rule-progress-tag" plain type="primary" @click="showExport = true">
+                {{ $t('mock.export.viewProgress') }}
+              </van-tag>
               <span class="rule-head-desc truncate" v-tip="curRule?.desc">{{ curRule?.desc || $t('mock.rule.desc')
                 }}</span>
             </van-row>
           </template>
           <template #value>
             <div class="rule-head-actions">
-              <van-button class="btn-icon-only" plain type="primary" size="small" @click="onRuleEdit(curRule)"
-                :disabled="curRule._id == null">
-                <van-icon class="iconfont icon-edit btn-action-icon" />
-              </van-button>
-              <van-button class="btn-icon-only" plain type="danger" size="small" @click="onRuleDelete(curRule)"
-                :disabled="curRule._id == null">
-                <van-icon class="iconfont icon-delete btn-action-icon btn-action-icon--danger" />
-              </van-button>
-              <van-button class="btn-icon-only" plain type="primary" size="small" @click="onSave"
-                :disabled="curRule._id == null">
-                <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
-              </van-button>
-              <!-- 数据搬运与场景 CRUD 不同类，收进「更多」：头部一行从五枚压到四枚，窄窗口里右端不再被面板裁掉 -->
+              <!-- 头部三枚一律用裸图标：与搜索结果的行内动作同款，按钮外壳只会把这一排的固有宽度顶到溢出 -->
+              <van-icon class="iconfont icon-edit icon-action action-glyph"
+                :class="curRule._id == null ? 'action-glyph--disabled' : 'action-glyph--primary'"
+                @click="curRule._id != null && onRuleEdit(curRule)" />
+              <van-icon class="iconfont icon-delete icon-action action-glyph"
+                :class="curRule._id == null ? 'action-glyph--disabled' : 'action-glyph--danger'"
+                @click="onRuleDelete(curRule)" />
+              <!-- 数据搬运与场景 CRUD 不同类，导入/导出收进「更多」菜单 -->
               <van-popover v-model:show="showHeadMenu" trigger="click" placement="bottom-end"
                 class="head-menu-popover" :actions="headMenuActions" @select="onHeadMenuSelect">
                 <template #reference>
@@ -95,7 +97,10 @@
           </template>
           <template #right-icon>
             <van-row class="rule-mock-switch" v-tip="mockStateTip" align="center" :wrap="false">
-              <van-switch v-model="curRule.isMock" @change="onMockSwitchChanged(curRule)"
+              <!-- Vant 的开关盒子高是 1em+4px、字形档默认写死 26px（既不等高也不随字号缩放），
+                   所以把 1em 定成同排图标热区边长减去那 4px 壳：md13 实测 26px、md14 实测 28px，与图标一致 -->
+              <van-switch v-model="curRule.isMock" size="calc(var(--app-action-square) - 4px)"
+                @change="onMockSwitchChanged(curRule)"
                 :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
             </van-row>
           </template>
@@ -245,54 +250,27 @@
       </van-row>
     </van-dialog>
 
-    <van-dialog v-model:show="showExport" :title="$t('mock.export.dialogTitle')" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')" :before-close="onExportClose">
-      <div class="export-form">
-        <!-- 范围单独占一块：radio 与标签同一行时，英文两枚选项在 md14 会把第二枚挤到下一行 -->
-        <div class="export-field">
-          <span class="export-label">{{ $t('mock.export.scopeLabel') }}</span>
-          <van-radio-group v-model="exportScope" direction="horizontal" class="export-radios">
-            <van-radio name="rule" :disabled="curRule._id == null">{{ $t('mock.export.scopeCurrent') }}</van-radio>
-            <van-radio name="all">{{ $t('mock.export.scopeAll') }}</van-radio>
-          </van-radio-group>
-        </div>
-        <van-row class="export-row" align="center" justify="space-between" :wrap="false">
-          <span class="export-label">{{ $t('mock.export.variants') }}</span>
-          <van-switch v-model="exportVariants" />
-        </van-row>
-        <van-row class="export-row" align="center" justify="space-between" :wrap="false">
-          <span class="export-label">{{ $t('mock.export.source') }}</span>
-          <van-switch v-model="exportSource" />
-        </van-row>
-        <van-row class="export-row" align="center" justify="space-between" :wrap="false">
-          <span class="export-label">{{ $t('mock.export.redact') }}</span>
-          <van-switch v-model="exportRedact" />
-        </van-row>
-        <!-- Web 分支没有保存框，包文本要整份进浏览器内存：风险在导出前说，不等下载完再解释 -->
-        <div v-if="isWeb" class="export-tip">{{ $t('mock.export.webTip') }}</div>
-      </div>
-    </van-dialog>
+    <mock-export-dialog v-model:show="showExport" v-model:running="exportRunning" :rule-id="curRule?._id"
+      :rule-name="curRule?.name" />
 
   </van-row>
 </template>
 
 <script lang="ts" setup>
 import {
-  canonicalMatch, deleteMockRecord, deleteMockRule, exportMockPack, getActiveMockRule,
+  canonicalMatch, deleteMockRecord, deleteMockRule, getActiveMockRule,
   getMockRecord, getMockRecords, getMockRuleDetail, MOCK_RECORD_REJECT_LIMIT, ProxyMock,
   saveMockRecord, saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
-import type { MockPackExportOptions, MockPackScope } from '@shared/mock.pack'
-import { MOCK_PACK_MAX_RECORDS } from '@shared/mock.pack'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
-import { showConfirmDialog, showLoadingToast, showNotify, type ToastWrapperInstance } from 'vant'
+import { showConfirmDialog, showNotify } from 'vant'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { scrollOptions } from '../../../common/scroll'
 import { methodTagType } from '../../../common/tag'
 import MiniSelect from '../../components/MiniSelect.vue'
+import MockExportDialog from './MockExportDialog.vue'
 import MockRecordEditor from './MockRecordEditor.vue'
-import { isOverImportLimit, packFileName } from './pack.export'
 import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import {
   levelTagType, matchesKeyword, recordRowOf, sortRecords, warningLabelKey, warningTagType,
@@ -312,13 +290,13 @@ const showRuleEdit = ref(false)
 const showRuleDelete = ref(false)
 const showRecordDelete = ref(false)
 const showConflict = ref(false)
-// 导出选项只在打开对话框时按当前场景重置，默认值与服务端一致（三个开关全开）
+// 导出选项在打开对话框时按当前场景重置，那套状态与任务本身都住在 MockExportDialog 里
 const showExport = ref(false)
 const showHeadMenu = ref(false)
-const exportScope = ref<MockPackScope>('rule')
-const exportVariants = ref(true)
-const exportSource = ref(true)
-const exportRedact = ref(true)
+// 导出任务住在弹窗组件里，这里只镜像它的在跑状态：菜单条目与标题行的浮标都读这一个数
+const exportRunning = ref(false)
+// 「无规则时导出置灰」需要知道库里到底有没有场景，页面上没有常驻的场景总数可读
+const exportRuleTotal = ref<number>(null)
 const curRule = ref<ProxyMock.MockRule>(new ProxyMock.MockRule())
 const recordListWidth = ref<number>(0)
 let recordListObserver: ResizeObserver = null
@@ -818,10 +796,6 @@ async function onMockSwitchChanged(rule: ProxyMock.MockRule) {
   })
 }
 
-function onSave(): Promise<boolean> {
-  return saveRule(true)
-}
-
 async function saveRule(notifySuccess: boolean): Promise<boolean> {
   if (curRule.value == null) return false
 
@@ -907,121 +881,35 @@ async function onRecordDeleteConfirm() {
 // 导入常驻占位但不启用：写库端点已接上仓库（R4C-18），缺的是弹窗与结果页接线（R4C-25~27）和「导入即生效」的验收（R4C-17），接上时只换 handler 与这句说明
 const headMenuActions = computed(() => [
   { key: 'import', text: t('mock.import.menuTitle'), disabled: true, hint: t('mock.import.disabledTip') },
-  // 导出不依赖当前场景（可选全部场景），所以条目不置灰；未选中场景时对话框里禁掉「仅当前场景」
-  { key: 'export', text: t('mock.export.dialogTitle') }
+  {
+    key: 'export',
+    text: t('mock.export.dialogTitle'),
+    // 进行中不再发起第二份，空库也不给导一个空包；两者的原因都写在条目第二行
+    disabled: exportRunning.value || exportRuleTotal.value === 0,
+    hint: exportRunning.value
+      ? t('mock.export.menuBusy')
+      : exportRuleTotal.value === 0 ? t('mock.export.menuEmpty') : undefined
+  }
 ])
 
 function onHeadMenuSelect(action: { key?: string }) {
   showHeadMenu.value = false
-  if (action.key === 'export') onExportOpen()
+  if (action.key === 'export') showExport.value = true
 }
 
-function onExportOpen() {
-  // 未选中场景时「仅当前场景」是禁用的，默认值只能落在全部场景上
-  exportScope.value = curRule.value?._id == null ? 'all' : 'rule'
-  exportVariants.value = true
-  exportSource.value = true
-  exportRedact.value = true
-  showExport.value = true
-}
-
-async function onExportClose(action: string): Promise<boolean> {
-  if (action !== 'confirm') return true
-  // 关掉脱敏就是导出明文凭证，确认框必须出现在落盘之前而不是选项行里
-  if (exportRedact.value) {
-    startExport()
-    return true
-  }
+// 「无规则时导出置灰」要的是库内场景总数，而这一页只在搜索时读规则，没有别的常驻读数可用，
+// 只能在菜单展开的当口取一次。判据只认明确数出来的 0：查询失败或返回空体都记成未知并放行，
+// 置灰错了会把导出彻底锁死，比晚一格置灰贵得多
+watch(showHeadMenu, async (open) => {
+  if (!open) return
   try {
-    await showConfirmDialog({
-      title: t('mock.export.rawTitle'),
-      message: t('mock.export.rawConfirm'),
-      showCancelButton: true,
-      confirmButtonText: t('common.done'),
-      cancelButtonText: t('common.cancel')
-    })
-    startExport()
-    return true
+    const result = await searchMockRules('')
+    exportRuleTotal.value = result?.length ?? null
   } catch (err) {
-    // 取消明文导出停在当前对话框，用户还能改回脱敏
-    return false
+    exportRuleTotal.value = null
   }
-}
+})
 
-function exportOptions(): MockPackExportOptions {
-  const scope = exportScope.value
-  return {
-    scope,
-    ruleId: scope === 'rule' ? curRule.value._id : null,
-    includeVariants: exportVariants.value,
-    includeSource: exportSource.value,
-    redact: exportRedact.value
-  }
-}
-
-// Web 分支的落盘就是浏览器的下载：文件名交给 a.download，落到哪儿由浏览器/用户决定
-function downloadPack(fileName: string, text: string) {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
-  a.download = fileName
-  a.click()
-  // 同步 revoke 会把浏览器还没接手的下载一起取消
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
-}
-
-// 选路径与写盘分两次 IPC：包文本由主进程边拼边写进文件，渲染层经手的只有几十字节的回执。
-// Web 分支没有主进程可用，只能把整份包文本取进浏览器再交 Blob 下载——峰值与包大小同阶，
-// 所以风险写在对话框里（webTip），条数超限的提示也就给不出来（回执里没有条数）。
-async function startExport() {
-  const options = exportOptions()
-  const fileName = packFileName({
-    scope: options.scope,
-    ruleName: options.scope === 'rule' ? curRule.value.name : undefined,
-    redact: options.redact
-  })
-  let loading: ToastWrapperInstance = null
-  try {
-    if (isWeb) {
-      loading = showLoadingToast({ message: t('mock.export.saving'), forbidClick: true, duration: 0 })
-      // silentError：base.api 对 FAIL/ERROR 自己会弹一次提示，这里再由导出统一报「导出失败：原因」
-      downloadPack(fileName, await exportMockPack(options, { silentError: true }))
-      showNotify({ message: t('mock.export.savedWeb', { fileName }), type: 'success', duration: 2000 })
-      return
-    }
-    const picked = await window.mainApi.selectSavePath(t('mock.export.saveTitle'), fileName)
-    // 用户在系统保存框里取消不是失败，什么都不提示
-    if (picked.status !== 'selected' || picked.filePath == null) return
-    loading = showLoadingToast({ message: t('mock.export.saving'), forbidClick: true, duration: 0 })
-    const result = await window.mainApi.exportMockPack(picked.filePath, options)
-    if (result.status === 'failed') {
-      showNotify({
-        message: t('mock.export.failed', { reason: normalizeErrorText(result.error) }),
-        type: 'danger',
-        duration: 2000
-      })
-      return
-    }
-    const ruleCount = result.ruleCount ?? 0
-    const recordCount = result.recordCount ?? 0
-    showNotify({ message: t('mock.export.saved', { ruleCount, recordCount }), type: 'success', duration: 1500 })
-    // 导出侧只按体积放行了，导入侧还会按条数整包拒绝，落盘当场说明比事后失败便宜
-    if (isOverImportLimit(recordCount)) {
-      showNotify({
-        message: t('mock.export.overLimit', { recordCount, limit: MOCK_PACK_MAX_RECORDS }),
-        type: 'warning',
-        duration: 5000
-      })
-    }
-  } catch (err) {
-    showNotify({
-      message: t('mock.export.failed', { reason: normalizeErrorText(err) }),
-      type: 'danger',
-      duration: 2000
-    })
-  } finally {
-    loading?.close()
-  }
-}
 </script>
 
 <style scoped>
@@ -1298,6 +1186,12 @@ async function startExport() {
   flex: none;
 }
 
+/* 「查看进度」是能点回弹窗的浮标，不是状态标签：Vant 的 tag 只会显示，光标得自己给 */
+.rule-progress-tag {
+  flex: none;
+  cursor: pointer;
+}
+
 .rule-head-desc {
   flex: 1 1 auto;
   min-width: 0;
@@ -1348,50 +1242,15 @@ async function startExport() {
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
 
-/* 自带内容的弹窗沿用上面的沟道口径（见 .conflict-message 的注释）。
-   弹窗正文读 --van-font-size-lg（随字号设置走），这里不再另定一档。 */
-.export-form {
-  padding: var(--van-padding-xs) var(--app-dialog-gutter);
-}
-
-/* 三条开关行与一块范围选项共用同一档行距：加一种行型不用补规则 */
-.export-form>*+* {
-  margin-top: var(--app-sp-md);
-}
-
-.export-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-sp-sm);
-}
-
-/* 置灰的「仅当前场景」：Vant 用 --van-text-color-3，暗色下覆成 #4d4d4d 压在弹窗底色上几乎读不出，
-   与时间戳同一口径改走 text-color-2（能看出比同行淡，但读得清） */
-.export-field :deep(.van-radio--disabled .van-radio__label) {
-  color: var(--van-text-color-2);
-}
-
-/* Web 分支的说明文字没有复用全局 .hint：那一档读 --van-text-color-3，Vant 暗色把它钉成字面量 #4d4d4d
-   （store 的灰阶反转只覆盖 --van-gray-*，动不到它），压在弹窗底色上几乎读不出——与上面禁用态同一口径走 text-2。
-   .hint 全站十几处要不要整体提一档是另一件事，不在本批改。 */
-.export-tip {
-  color: var(--van-text-color-2);
-  font-size: var(--van-font-size-sm);
-}
-
 /* 只有搜索那枚弹层的触发器要撑满列宽；写在全页范围会连带把「更多」菜单的方格按钮拉成一整行 */
 .rule-search-col :deep(.van-popover__wrapper) {
   display: block;
   width: 100%;
 }
 
-/* 规则名/描述过长时收缩并省略，避免把右侧操作按钮挤出可视区 */
-.rule-cancel-disabled {
-  cursor: not-allowed;
-}
-
+/* 取消图标只保留它与标题列之间的沟道（这是布局约束，留在站点）；
+   字形尺寸、热区、配色与置灰档一律读同排那套 .icon-action / .action-glyph */
 .rule-cancel-icon {
-  font-size: calc(var(--van-font-size-md) * 1.5);
   margin-right: var(--app-sp-xl);
 }
 
@@ -1428,9 +1287,15 @@ async function startExport() {
   color: var(--van-danger-color);
 }
 
-/* 图标尺寸已由 global.css 的 .btn-icon-only .van-icon 单源，这里只保留配色语义 */
-.btn-action-icon--danger {
-  color: var(--van-danger-color);
+/* 未选中规则时的编辑/删除：与同格的取消图标同一套置灰（--van-gray-5 + not-allowed），
+   并压掉 .icon-action 的 hover 底色——灰图标亮出底来会被读成可以点 */
+.action-glyph--disabled {
+  color: var(--van-gray-5);
+  cursor: not-allowed;
+}
+
+.action-glyph--disabled:hover {
+  background: none;
 }
 
 .rule-head-actions {

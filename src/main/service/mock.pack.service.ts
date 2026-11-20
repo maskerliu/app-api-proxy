@@ -7,7 +7,7 @@ import { MockError } from '@shared/mock.errors'
 import type { MockMatchRule } from '@shared/mock.models'
 import {
   MOCK_PACK_FORMAT, MOCK_PACK_MAX_RECORDS, MOCK_PACK_VERSION,
-  MockPackConflict, MockPackConflictStrategy, MockPackExportOptions, MockPackImportOptions,
+  MockPackConflict, MockPackConflictStrategy, MockPackExportOptions, MockPackExportProgress, MockPackImportOptions,
   MockPackImportResult, MockPackIssue, MockPackPreparedRecord, MockPackPreviewOptions,
   MockPackPreviewResult, MockPackRecord, MockPackRecordCheck, MockPackSkipped, MockPackV1,
   emptyMockPackImportResult, mockPackQuotaOf, pageMockPackIssues, prepareMockPackRecord, readMockPackText,
@@ -130,8 +130,11 @@ async function resolveRules(source: MockPackSource, options: MockPackExportOptio
  * 空场景也会留下 `"records":[]`，否则导入侧无从区分「这个场景是空的」和「这个场景没导出」。
  */
 async function writeMockPack(source: MockPackSource, options: MockPackExportOptions,
-  sink: MockPackSink, appVersion?: string): Promise<MockPackMeta> {
+  sink: MockPackSink, appVersion?: string,
+  onProgress?: (p: MockPackExportProgress) => void): Promise<MockPackMeta> {
   const rules = await resolveRules(source, options)
+  // 总数在场景解析完才知道，先报一次 0/N：界面据此决定这轮进度是「N 分之一」还是只有「正在导出」
+  onProgress?.({ rulesDone: 0, ruleTotal: rules.length, recordCount: 0 })
   const header: Record<string, unknown> = {
     format: MOCK_PACK_FORMAT,
     version: MOCK_PACK_VERSION,
@@ -160,6 +163,7 @@ async function writeMockPack(source: MockPackSource, options: MockPackExportOpti
     }, PACK_EXPORT_PAGE_SIZE)
     recordCount += seen
     await sink.write(']}')
+    onProgress?.({ rulesDone: i + 1, ruleTotal: rules.length, recordCount })
   }
   await sink.write(']}')
   return { ruleCount: rules.length, recordCount }
@@ -186,7 +190,8 @@ export async function assembleMockPack(source: MockPackSource, options: MockPack
  * 先写 `.part` 再改名：中途失败不会把用户已有的同名文件截成半截。
  */
 export async function exportMockPackToFile(filePath: string, source: MockPackSource,
-  options: MockPackExportOptions, appVersion?: string): Promise<MockPackMeta> {
+  options: MockPackExportOptions, appVersion?: string,
+  onProgress?: (p: MockPackExportProgress) => void): Promise<MockPackMeta> {
   const stagingPath = `${filePath}.part`
   const stream = createWriteStream(stagingPath)
   let buffer = ''
@@ -222,7 +227,7 @@ export async function exportMockPackToFile(filePath: string, source: MockPackSou
   try {
     const meta = await writeMockPack(source, options, {
       write: async (text) => { buffer += text; await flush(false) }
-    }, appVersion)
+    }, appVersion, onProgress)
     await flush(true)
     if (failed != null) throw failed
     await new Promise<void>((resolve, reject) => {
@@ -600,8 +605,9 @@ export class MockPackService {
   }
 
   /** 桌面端出口：包文本直接进文件，不经过渲染进程（几十 MB 走 IPC 会被克隆两遍） */
-  async exportToFile(filePath: string, options: MockPackExportOptions) {
-    return exportMockPackToFile(filePath, this.mockRepo, options, app.getVersion())
+  async exportToFile(filePath: string, options: MockPackExportOptions,
+    onProgress?: (p: MockPackExportProgress) => void) {
+    return exportMockPackToFile(filePath, this.mockRepo, options, app.getVersion(), onProgress)
   }
 
   /**

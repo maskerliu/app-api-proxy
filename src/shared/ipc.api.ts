@@ -1,5 +1,5 @@
 import type { LocalServerConfig } from "./base.models"
-import type { MockPackExportOptions } from './mock.pack'
+import type { MockPackExportOptions, MockPackExportProgress } from './mock.pack'
 
 export const MAIN_API_CMD = {
   Relaunch: 'relaunch',
@@ -9,6 +9,7 @@ export const MAIN_API_CMD = {
   SaveFileAs: 'saveFile',
   SelectSavePath: 'selectSavePath',
   ExportMockPack: 'exportMockPack',
+  ExportPackProgress: 'exportPackProgress',
   OpenDevTools: 'openDevTools',
   OpenMockRuleMgr: 'openMockRuleMgr',
   OpenSettings: 'openSettings',
@@ -91,4 +92,12 @@ export interface IMainAPI {
   onDownloadUpdate(callback: any): void
 
   offDownloadUpdate(): void
+
+  /**
+   * 导出进度推送：桌面端的导出是主进程边拼边写，渲染层手里没有字节，
+   * 不推就只能在对话框上挂一个和进度无关的转圈（本仓库明确不用 toast 承载进度）。
+   */
+  onExportPackProgress(callback: (progress?: MockPackExportProgress) => void): void
+
+  offExportPackProgress(): void
 }

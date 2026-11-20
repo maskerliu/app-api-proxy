@@ -34,6 +34,19 @@ export function sanitizeNamePart(text: string): string {
   return dashed.replace(/[-.]+$/g, '')
 }
 
+/**
+ * 文件名可以改，但改完仍要过一次净化才能交给保存框：`saveDialogOptions` 走的是
+ * `path.join(baseDir, fileName)`，带路径分隔符或盘符的名字能直接越出用户数据目录（R4C-29 那条
+ * 「文件名不参与路径拼接」在这里的落点）。补 `.json` 是因为过滤器按扩展名生成，
+ * 用户删掉后缀会得到一行没有标签的过滤器；剥空了才回落默认名，不产出 `.json` 这种无名文件。
+ */
+export function normalizeExportFileName(text: string, fallback: string): string {
+  const trimmed = (text ?? '').trim()
+  if (trimmed === '') return fallback
+  const safe = sanitizeNamePart(trimmed.replace(/(\.json)+$/i, ''))
+  return safe === '' ? fallback : `${safe}.json`
+}
+
 /** 本地日期的 YYYY-MM-DD：toISOString 是 UTC，跨零点导出的包会标错一天 */
 export function formatDay(date: Date): string {
   const pad = (n: number) => `${n}`.padStart(2, '0')

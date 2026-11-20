@@ -4,8 +4,10 @@ import type { MockPackExportOptions } from '@shared/mock.pack'
 import {
   IMainAPI, MAIN_API_CMD, SaveFileResult, SaveMockPackResult, SelectSavePathResult,
 } from '@shared/ipc.api'
+import type { MockPackExportProgress } from '@shared/mock.pack'
 
 let downloadUpdateListener: ((event: any, ...args: any[]) => void) | null = null
+let exportPackProgressListener: ((event: any, ...args: any[]) => void) | null = null
 
 const mainApi: IMainAPI = {
   relaunch() {
@@ -84,6 +86,19 @@ const mainApi: IMainAPI = {
     if (downloadUpdateListener != null) {
       ipcRenderer.removeListener(MAIN_API_CMD.DownloadUpdate, downloadUpdateListener)
       downloadUpdateListener = null
+    }
+  },
+
+  onExportPackProgress(callback: (progress?: MockPackExportProgress) => void) {
+    if (exportPackProgressListener != null) ipcRenderer.removeListener(MAIN_API_CMD.ExportPackProgress, exportPackProgressListener)
+    exportPackProgressListener = (_, progress: MockPackExportProgress) => callback(progress)
+    ipcRenderer.on(MAIN_API_CMD.ExportPackProgress, exportPackProgressListener)
+  },
+
+  offExportPackProgress() {
+    if (exportPackProgressListener != null) {
+      ipcRenderer.removeListener(MAIN_API_CMD.ExportPackProgress, exportPackProgressListener)
+      exportPackProgressListener = null
     }
   },
 }

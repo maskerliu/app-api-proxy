@@ -177,9 +177,10 @@ function onOpenDebugPanel() {
 .rule-mgr-cell-value {
   /* 这个类由 MockRuleMgr 的 value-class 挂进 Vant Cell 自己的模板，元素不带页面组件的 scope id，
      所以只能在这里（非 scoped）定义——页面里再写一份同名 scoped 规则不会命中任何元素。
-     地板 120px 是原先写死的值：字号 9 不变，字号 10 放宽到 md*9.2=128.8，
-     不再把 Mock 规则头部的规则名挤成省略号 */
-  flex: 0 0 max(120px, calc(var(--van-font-size-md) * 9.2)) !important;
+     宽度只许按内容固有值取：Vant 给 .van-cell__value 的是 flex: 1 配 overflow: hidden，
+     原先写死的 max(120px, md*9.2) 是照抄那一排按钮的固有宽度，按钮一增删就对不上——
+     字号 13/14 档实测窄过内容 7.4/8.4px，最右那枚「更多」图标被裁掉半枚。 */
+  flex: 0 0 auto !important;
 }
 
 </style>

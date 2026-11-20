@@ -44,6 +44,10 @@
      和 Vant 的 tabsLineHeight / dialogButtonHeight 都读这一个值，不再各处重抄 md*2.2。 */
   --app-control-height: calc(var(--van-font-size-md) * 2.2);
 
+  /* 裸图标（.icon-action + 字形 md*1.2）hover 方格的实际边长：md*1.2 + 上下各 sp-tight(md*0.4) = md*2.0，
+     实测 md13 档 26px、md14 档 28px。要比这对齐的控件（同一行的开关等）读这一条，别照抄像素值。 */
+  --app-action-square: calc(var(--van-font-size-md) * 2);
+
   /* 弹层宽度档位 */
   --app-popup-w-lg: min(80vw, 1200px);
   --app-popup-w-md: min(70vw, 960px);

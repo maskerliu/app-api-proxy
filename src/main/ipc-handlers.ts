@@ -137,7 +137,9 @@ ipcMain.handle(MAIN_API_CMD.SelectSavePath, async (_, title: string, fileName: s
 ipcMain.handle(MAIN_API_CMD.ExportMockPack, async (_, filePath: string, options: MockPackExportOptions): Promise<SaveMockPackResult> => {
   if (!filePath) return { status: 'failed', error: 'missing target path' }
   try {
-    const meta = await bizContainer.get<MockPackService>(IOC_TYPES.MockPackService).exportToFile(filePath, options)
+    // 进度按场景推：一个场景一次，最多几十条消息，不值得再合并节流
+    const meta = await bizContainer.get<MockPackService>(IOC_TYPES.MockPackService)
+      .exportToFile(filePath, options, (progress) => getAppWindow()?.webContents.send(MAIN_API_CMD.ExportPackProgress, progress))
     return { status: 'saved', filePath, ...meta }
   } catch (e) {
     return { status: 'failed', error: e instanceof Error ? e.message : String(e) }

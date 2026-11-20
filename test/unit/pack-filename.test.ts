@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { MOCK_PACK_MAX_RECORDS } from '@shared/mock.pack'
 import { MAIN_API_CMD } from '@shared/ipc.api'
-import { formatDay, isOverImportLimit, packFileName, sanitizeNamePart } from '@renderer/pages/proxy/mock/pack.export'
+import { formatDay, isOverImportLimit, normalizeExportFileName, packFileName, sanitizeNamePart } from '@renderer/pages/proxy/mock/pack.export'
 import en from '../../src/lang/en'
 import zhCN from '../../src/lang/zh-CN'
 
@@ -96,5 +96,39 @@ describe('R4C-08 导出 IPC 通道与文案', () => {
         assert.notEqual(`${messages.mock.export[key]}`.trim(), '', `mock.export.${key} 是空的`)
       }
     }
+  })
+})
+
+// 文件名从「算出来的」变成「用户改的」之后，净化就不是可选的了：保存框的 defaultPath 是 path.join(用户数据目录, fileName)
+describe('R4C-26 可编辑文件名的净化', () => {
+  const fallback = 'appapi-mock-all-2026-11-19.json'
+
+  it('空、纯空白、只剩分隔符都回落默认名，不产出 .json 这种无名文件', () => {
+    for (const text of ['', '   ', null, undefined, '/', '\\', '???', '...', '---']) {
+      assert.equal(normalizeExportFileName(text as any, fallback), fallback, `${text} 应回落`)
+    }
+  })
+
+  it('路径分隔符与盘符被剥掉：越出用户数据目录的那条路要堵死', () => {
+    assert.equal(normalizeExportFileName('../../etc/passwd', fallback), 'etc-passwd.json')
+    assert.equal(normalizeExportFileName('C:\\Windows\\system32\\x', fallback), 'C-Windows-system32-x.json')
+    assert.equal(normalizeExportFileName('..\\..\\a.json', fallback), 'a.json')
+  })
+
+  it('补回 .json，且重复后缀只留一个', () => {
+    assert.equal(normalizeExportFileName('orders', fallback), 'orders.json')
+    assert.equal(normalizeExportFileName('orders.json', fallback), 'orders.json')
+    assert.equal(normalizeExportFileName('orders.json.json', fallback), 'orders.json')
+    assert.equal(normalizeExportFileName('orders.txt', fallback), 'orders.txt.json')
+  })
+
+  it('名字内部的点与连字符保留：净化只处理分隔符、空白与首尾', () => {
+    assert.equal(normalizeExportFileName('my.pack-v2 final', fallback), 'my.pack-v2-final.json')
+  })
+
+  it('超长截断后仍带后缀，且不会把截断留下的末位分隔符带进文件名', () => {
+    const name = normalizeExportFileName(`${'x'.repeat(60)}-`, fallback)
+    assert.equal(name.endsWith('.json'), true)
+    assert.equal(/[-.]$/.test(name.slice(0, -'.json'.length)), false)
   })
 })
