@@ -62,10 +62,12 @@ async function ruleNames(): Promise<string[]> {
 }
 
 /**
- * 条数一律用 `countRecords`、回读一律用 `readDocs({keys})`，两处都不走 `iterateRecords`：
- * 批量写进来的记录共用一个 `createdAt`（仓库那一句 `now` 整批一次），而 `iterateRecords` 按
- * `createdAt` 排序 + bookmark 翻页，页边界落在相同 key 上会漏条（2026-11-20 实测 250 条只枚举出 100 条，
- * 导出侧 `PACK_EXPORT_PAGE_SIZE=200` 时 250 条只导出了 200 条）。修法与用例属新卡，本批不在这个文件里修。
+ * 条数一律用 `countRecords`、回读一律用 `readDocs({keys})`，两处都不走 `iterateRecords`。
+ * 本批当时（R4C-19）的理由是那条读路会漏条：批量写进来的记录共用一个 `createdAt`（仓库那一句 `now`
+ * 整批一次），而它按 `createdAt` 排序 + bookmark 翻页，页边界落在相同 key 上只读得出第一页
+ * （2026-11-20 实测 250 条只枚举出 100 条）。该缺陷已由 R4C-34 修掉并另有真库用例
+ * （`test/migration/repo-record-paging.test.ts`），这里的按 ID 回取保留：取消与回收要断言的正是
+ * 「哪些 ID 落了库」，按 ID 直取比依赖一条排序读路更直白。
  * 另外 `countRecords` 在「整批被拒」那两个用例里被换成越界探针，那里改用 `docsOf(created).length`。
  */
 async function countOf(ruleId: string): Promise<number> {

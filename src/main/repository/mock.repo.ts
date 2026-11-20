@@ -22,6 +22,8 @@ const RECORD_PAGE_LIMIT = 100
 const MAX_RECORD_PAGE_LIMIT = 500
 const RECORD_COUNT_PAGE_LIMIT = 1000
 const RECORD_ID_COUNT_PAGE_LIMIT = 2000
+/** 记录整批翻页与列表分页共用的索引顺序；取值并列时由 `_id` 隐式定序，见 `eachRecordPage` */
+const RECORD_SORT = ['type', 'ruleId', 'createdAt']
 
 export interface MockRecordChangeEvent {
   type: 'upsert' | 'remove' | 'reset' | 'invalidate'
@@ -269,24 +271,44 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     return true
   }
 
+  /**
+   * 记录文档整批翻页的唯一实现：同一个请求一路按 `skip` 取页，直到某一页不满，逐页交给 `onPage`。
+   *
+   * 不用 pouchdb-find 的 `bookmark`：排序键有并列时它下一页返回空、`bookmark` 直接给 null，调用方
+   * 只看到「读完了」。并列是批量写自己造出来的——`importRecords` 每次调用只取一次 `now`，同批记录的
+   * `createdAt` 全同值。2026-11-20 实测同批 1,200 条时，页大小 100/200/500/1000 各只读得出第一页，
+   * 导出、预览查重、上限复核、缓存编译四条读路一起静默少条，没有任何错误码。
+   *
+   * 也不用按 `_id` 的游标翻页（`selector._id > 上一页末条`）：那样 `sort` 选不到记录索引，2 万条实测
+   * 比 `skip` 慢一倍以上（页大小 1000：`skip` 2.4s、游标 5.9s），而且结果变成 `_id` 序，要自己按
+   * `createdAt` 重排才保得住原来的时间升序。
+   *
+   * 代价与 `listRecords` 同款：翻页期间有新写入或回滚会让窗口漂移，读到的不保证是同一时刻的快照。
+   */
+  private async eachRecordPage(request: { selector: Record<string, unknown>, sort: string[], fields?: string[] },
+    pageSize: number, onPage: (docs: MockRecordDoc[]) => Promise<void> | void): Promise<void> {
+    const size = Math.max(Math.floor(pageSize) || 1, 1)
+    for (let skip = 0; ; skip += size) {
+      const docs = await this.find({ ...request, limit: size, skip } as any) as unknown as MockRecordDoc[]
+      await onPage(docs)
+      if (docs.length < size) return
+    }
+  }
+
+  /**
+   * 带 `ruleId` 走 `eachRecordPage`（只投影 `_id`，内存峰值与响应体大小无关）；
+   * 不带 `ruleId` 走 `allDocs` 的 key 区间，数的是整个库的记录文档。
+   * 两条路都有翻页期间窗口漂移的代价：某条被写到你的窗口之前会重复计数，被回滚到窗口之后会漏计，
+   * 读到的不是同一快照。对「现有条数 + 新请求条数 > 上限」这个判据来说误差量级远小于上限本身，可接受。
+   */
   public async countRecords(ruleId?: string): Promise<number> {
     if (ruleId != null) {
       let count = 0
-      let bookmark: string = null
-      while (true) {
-        const request: any = {
-          selector: { type: RECORD_TYPE, ruleId },
-          sort: ['type', 'ruleId', 'createdAt'],
-          fields: ['_id'],
-          limit: RECORD_COUNT_PAGE_LIMIT,
-        }
-        if (bookmark != null) request.bookmark = bookmark
-        const page = await this.pouchdb.find(request)
-        count += page.docs.length
-        if (page.docs.length < RECORD_COUNT_PAGE_LIMIT) return count
-        bookmark = (page as any).bookmark
-        if (bookmark == null) return count
-      }
+      await this.eachRecordPage(
+        { selector: { type: RECORD_TYPE, ruleId }, sort: RECORD_SORT, fields: ['_id'] },
+        RECORD_COUNT_PAGE_LIMIT,
+        docs => { count += docs.length })
+      return count
     }
 
     let count = 0
@@ -301,44 +323,29 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     }
   }
 
-  /** 规则级元信息分页遍历：缓存编译只依赖 match，不带响应体 */
+  /**
+   * 规则级元信息整批遍历：缓存编译只依赖 match，不带响应体。
+   * 页大小原样交给 PouchDB，不做上限收敛——调用方（导出/预览）按自己的分片大小传。
+   */
   public async listRecordSummaries(ruleId: string, pageSize: number = 500): Promise<MockRecordSummary[]> {
     const result: MockRecordSummary[] = []
-    let bookmark: string = null
-    while (true) {
-      const request: any = {
-        selector: { type: RECORD_TYPE, ruleId },
-        sort: ['type', 'ruleId', 'createdAt'],
-        fields: RECORD_SUMMARY_FIELDS,
-        limit: pageSize,
-      }
-      if (bookmark != null) request.bookmark = bookmark
-      const page = await this.pouchdb.find(request)
-      result.push(...(page.docs as unknown as MockRecordSummary[]))
-      if (page.docs.length < pageSize) return result
-      bookmark = (page as any).bookmark
-      if (bookmark == null) return result
-    }
+    await this.eachRecordPage(
+      { selector: { type: RECORD_TYPE, ruleId }, sort: RECORD_SORT, fields: RECORD_SUMMARY_FIELDS },
+      pageSize,
+      docs => { result.push(...(docs as unknown as MockRecordSummary[])) })
+    return result
   }
 
   /** 迁移与派生只需匹配相关字段，分页读取避免整库响应体进内存 */
   public async listAllRecordSummaries(pageSize: number = 500): Promise<MockRecordSummary[]> {
+    // 不加 `createdAt` 谓词、排序停在 `type`：加了那个谓词反而选不到索引、结果退化到按 `_id` 序。
+    // 于是顺序只保证「同一场景挨在一起」，跨场景不保证，调用方要时间序自己再排。
     const result: MockRecordSummary[] = []
-    let bookmark: string = null
-    while (true) {
-      const request: any = {
-        selector: { type: RECORD_TYPE },
-        sort: ['type'],
-        fields: RECORD_SUMMARY_FIELDS,
-        limit: pageSize,
-      }
-      if (bookmark != null) request.bookmark = bookmark
-      const page = await this.pouchdb.find(request)
-      result.push(...(page.docs as unknown as MockRecordSummary[]))
-      if (page.docs.length < pageSize) return result
-      bookmark = (page as any).bookmark
-      if (bookmark == null) return result
-    }
+    await this.eachRecordPage(
+      { selector: { type: RECORD_TYPE }, sort: ['type'], fields: RECORD_SUMMARY_FIELDS },
+      pageSize,
+      docs => { result.push(...(docs as unknown as MockRecordSummary[])) })
+    return result
   }
 
   /** 命中缓存重建用：按创建时间稳定分页拿到规则下全部记录 */
@@ -348,25 +355,18 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     return result
   }
 
-  /** 分页遍历规则下全部记录，不受列表 MAX_RECORD_PAGE_LIMIT 限制 */
+  /**
+   * 遍历规则下全部记录，不受列表 MAX_RECORD_PAGE_LIMIT 限制。
+   * 逐页交给 visitor（不先把整批读进内存），顺序仍是 `createdAt` 升序；翻页写法见 `eachRecordPage`。
+   */
   public async iterateRecords(ruleId: string,
     visitor: (record: ProxyMock.MockRecord) => Promise<void> | void,
     pageSize: number = 100): Promise<void> {
     if (ruleId == null) return
-    let bookmark: string = null
-    while (true) {
-      const request: any = {
-        selector: { type: RECORD_TYPE, ruleId },
-        sort: ['type', 'ruleId', 'createdAt'],
-        limit: pageSize,
-      }
-      if (bookmark != null) request.bookmark = bookmark
-      const page = await this.pouchdb.find(request)
-      for (const doc of page.docs as unknown as MockRecordDoc[]) await visitor(docToRecord(doc))
-      if (page.docs.length < pageSize) return
-      bookmark = (page as any).bookmark
-      if (bookmark == null) return
-    }
+    await this.eachRecordPage({ selector: { type: RECORD_TYPE, ruleId }, sort: RECORD_SORT }, pageSize,
+      async docs => {
+        for (const doc of docs) await visitor(docToRecord(doc))
+      })
   }
 
   public async getLastActiveRuleId(): Promise<string | null> {
@@ -385,7 +385,7 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
     const skip = Math.max(Math.floor(offset) || 0, 0)
     const docs = await this.find({
       selector: { type: RECORD_TYPE, ruleId, createdAt: { $gt: null } },
-      sort: ['type', 'ruleId', 'createdAt'],
+      sort: RECORD_SORT,
       limit: size + 1,
       skip
     } as any) as unknown as MockRecordDoc[]
