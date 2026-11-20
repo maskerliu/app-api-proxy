@@ -472,8 +472,9 @@ export class AppMockRouter extends BaseRouter {
         { key: 'mode', type: ParamType.Query },
         { key: 'targetRuleId', type: ParamType.Query }
       ],
-      // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门；
-      // 「按内容分派两种包」是 R4C-21，entry 上限 harEntryLimit 是 R4C-24。
+      // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门。
+      // 「按内容分派两种包」的判据已经落在 `mock.har.ts` 的 `readHarText`（R4C-21：选错 kind 时 detail 直接说破对方形状），
+      // 但这个 handler 还没接过去——仍是空结果桩；entry 上限 harEntryLimit 与静态资源开关属 R4C-24。
       handler: (_pack, mode) => ({
         ...emptyMockPackImportResult(toMockPackImportMode(mode)),
         suggestions: [] as MockPackIssue[]
