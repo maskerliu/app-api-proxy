@@ -60,6 +60,7 @@ export const MOCK_PACK_CODES = [
   'harBodyUnreadable',
   'packFieldDefaulted',
   'packNameCollision',
+  'packIdCollision',
   'packWriteAborted',
 ] as const
 

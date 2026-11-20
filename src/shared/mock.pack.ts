@@ -160,15 +160,20 @@ export interface MockPackPreviewResult {
 
 export interface MockPackSkipped {
   recordId?: string
+  /** 包内坐标：一个包可以有多个场景，只给 `recordIndex` 指不回是哪条 */
+  ruleIndex?: number
   recordIndex?: number
   reason: MockErrorCode | string
   detail?: string
 }
 
 export interface MockPackImportResult {
-  /** 新建模式返回新生成的场景 ID，合并模式等于 targetRuleId */
-  ruleId: string | null
-  ruleName?: string
+  /**
+   * 本次写入落到的场景。合并模式恒为一个（目标场景）；新建模式按包内场景逐个创建，
+   * 一个 N 场景的包就有 N 个（PRD 4.4.4「为每个导入场景创建新规则」）。
+   * 这里原来是单数 `ruleId`/`ruleName`，装不下多场景包，也没法告诉 UI「前往启用」该跳哪几个。
+   */
+  ruleIds: string[]
   mode: MockPackImportMode
   created: string[]
   /** 合并·覆盖策略替换掉的库内记录 */
@@ -256,6 +261,18 @@ export function toMockPackImportMode(value: unknown): MockPackImportMode {
 }
 
 /**
+ * 冲突策略收敛：认不出来就按 PRD 4.4.4 的默认档「跳过」。
+ * 这里不能图省事复用上头那个「缺省即默认」的写法去猜 `copy`——三种策略里只有 skip 是安全的，
+ * 拼错一个字母就盖掉库内数据，比漏跳几条难发现得多。
+ */
+export function toMockPackConflictStrategy(value: unknown): MockPackConflictStrategy {
+  const strategy = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return MOCK_PACK_CONFLICT_STRATEGIES.includes(strategy as MockPackConflictStrategy)
+    ? strategy as MockPackConflictStrategy
+    : 'skip'
+}
+
+/**
  * 明细折叠（技术设计 5.4「展示与存储分别定义」）：只回前 N 条，其余只报总数。
  * 取的是**包内顺序的前 N 条**而不是「每个原因留一条」——明细要能回指「第几个场景的第几条」，
  * 打乱包内顺序去凑原因分布，会让人照着明细改文件却改错那条。被折掉的其余条数不给分布：
@@ -292,7 +309,7 @@ export function toMockPackFlag(value: unknown, fallback: boolean): boolean {
 /** 路由 handler 返回 undefined 会被 base.router 转成「biz inner error」，空结果必须显式回对象 */
 export function emptyMockPackImportResult(mode: MockPackImportMode): MockPackImportResult {
   return {
-    ruleId: null, mode, created: [], updated: [], skipped: [], invalid: [], failed: [],
+    ruleIds: [], mode, created: [], updated: [], skipped: [], invalid: [], failed: [],
     enabled: false, invalidTotal: 0, nameCollided: false, partial: false, aborted: false,
   }
 }

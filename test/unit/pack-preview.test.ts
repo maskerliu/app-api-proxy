@@ -5,7 +5,7 @@ import type { ProxyMock } from '@shared/proxy.models'
 import type { MockPackRecord } from '@shared/mock.pack'
 import {
   MOCK_PACK_FORMAT, MOCK_PACK_ISSUE_PAGE_LIMIT, MOCK_PACK_VERSION,
-  pageMockPackIssues, suggestMockPackRuleName,
+  pageMockPackIssues, suggestMockPackRuleName, toMockPackConflictStrategy,
 } from '@shared/mock.pack'
 import { makeMatch } from './fixtures'
 
@@ -291,5 +291,18 @@ describe('previewMockPack：合并模式在目标场景内建冲突索引', () =
     }]), { mode: 'merge', targetRuleId: 'rule_1' })
     assert.equal(result.invalidCount, 1)
     assert.deepEqual(result.conflicts, [], '拿 matchMissing 的条目去比指纹等于比了个空 match')
+  })
+})
+
+describe('冲突策略的取值收敛（R4C-18）', () => {
+  it('认不出来的取值落回默认档「跳过」', () => {
+    assert.equal(toMockPackConflictStrategy('skip'), 'skip')
+    assert.equal(toMockPackConflictStrategy('overwrite'), 'overwrite')
+    assert.equal(toMockPackConflictStrategy('copy'), 'copy')
+    // query 里过来的是字符串：大小写、多余空格都要认，否则用户选的档位会静默变成默认档
+    assert.equal(toMockPackConflictStrategy(' OverWrite '), 'overwrite')
+    for (const value of [undefined, null, '', 'overwite', 'SKIP ALL', 0, {}]) {
+      assert.equal(toMockPackConflictStrategy(value), 'skip', `${String(value)} 该落回默认档`)
+    }
   })
 })

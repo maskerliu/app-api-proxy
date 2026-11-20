@@ -4,7 +4,7 @@ import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
 import {
   MockPackIssue, emptyMockPackImportResult,
-  toMockPackFlag, toMockPackImportMode,
+  toMockPackConflictStrategy, toMockPackFlag, toMockPackImportMode,
 } from '@shared/mock.pack'
 import { ProxyMock } from '@shared/proxy.models'
 import { IOC_TYPES } from '../constants'
@@ -448,12 +448,17 @@ export class AppMockRouter extends BaseRouter {
       params: [
         { key: 'pack', type: ParamType.FormFileText },
         { key: 'mode', type: ParamType.Query },
-        { key: 'targetRuleId', type: ParamType.Query }
+        { key: 'targetRuleId', type: ParamType.Query },
+        { key: 'conflict', type: ParamType.Query }
       ],
-      handler: (pack, mode) => {
-        this.mockPackService.readPack(pack)
-        return emptyMockPackImportResult(toMockPackImportMode(mode))
-      }
+      // 写库已接线（R4C-18）：冲突三策略的落点在 `importMockPack`，时间戳按模式注入（R4C-16）而不是客户端开关。
+      // 还没有的两件：取消/回滚（R4C-19，所以 `aborted` 恒 false）、预览阶段提示「库内已有 + 待写入」（R4C-20，
+      // 所以上限只在写库那一步拦下来报 `recordTooMany`）。
+      handler: (pack, mode, targetRuleId, conflict) => this.mockPackService.import(pack, {
+        mode: toMockPackImportMode(mode),
+        targetRuleId: emptyToNull(targetRuleId),
+        conflict: toMockPackConflictStrategy(conflict),
+      })
     })
 
     this.addApiInfo({

@@ -73,7 +73,7 @@
                 :disabled="curRule._id == null">
                 <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
               </van-button>
-              <!-- 导入常驻占位但不启用：写入与生效（R4C-15/16/17）还没落地，接上时只换 handler 与提示 -->
+              <!-- 导入常驻占位但不启用：写库端点已接上仓库（R4C-18），缺的是弹窗与结果页接线（R4C-25~27）和「导入即生效」的验收（R4C-17），接上时只换 handler 与提示 -->
               <van-button class="btn-icon-only" plain type="primary" size="small" disabled
                 v-tip="$t('mock.import.disabledTip')">
                 <van-icon class="iconfont icon-import btn-action-icon" />

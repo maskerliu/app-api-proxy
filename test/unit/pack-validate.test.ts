@@ -297,7 +297,7 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
   const server = app.listen(0)
   after(() => new Promise<void>(resolve => server.close(() => resolve())))
 
-  async function uploadPack(pathname: string, text?: string) {
+  async function uploadPack(pathname: string, text?: string, query = 'mode=new') {
     const boundary = '----AppApiProxyPackValidateProbe'
     const body = text === undefined
       // 只带普通字段、不带文件部分：渲染层「没选到文件」时就是这个形状
@@ -305,7 +305,7 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
       : `--${boundary}\r\nContent-Disposition: form-data; name="pack"; filename="rules.json"\r\n`
         + `Content-Type: application/json\r\n\r\n${text}\r\n--${boundary}--\r\n`
     const address = server.address() as AddressInfo
-    const res = await fetch(`http://127.0.0.1:${address.port}${pathname}?mode=new`, {
+    const res = await fetch(`http://127.0.0.1:${address.port}${pathname}?${query}`, {
       method: 'POST',
       headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
       body,
@@ -316,8 +316,8 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
   /** `calls` 挂在 describe 级的替身上累加，端点用例只能判「我这一次请求产生了什么」——取完即清 */
   const takeCalls = () => repo.calls.splice(0)
 
-  // 两个端点过了闸门之后各回什么：预览（R4C-13）已经在报统计，写库（R4C-14/15）还是桩。
-  // 后面那张桩的形状断言同样钉「现在还没实现到哪」，谁填实现谁就得改这句话。
+  // 两个端点过了闸门之后各回什么：预览（R4C-13）在报统计，导入（R4C-18）在写库。
+  // 下面这两条形状断言同样钉「实现接到哪一步」，谁再改动接线方式谁就得连着改这句话。
   for (const pathname of [API_URL.PREVIEW_MOCK_PACK, API_URL.IMPORT_MOCK_PACK]) {
     it(`${pathname}：坏包以包级错误码拒绝，且不产生任何库调用`, async () => {
       const cases: Array<[string, unknown, string]> = [
@@ -363,17 +363,74 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     assertNoWrite(repo, '预览')
   })
 
-  it(`${API_URL.IMPORT_MOCK_PACK}：写库未接线，过了闸门仍回空结果桩`, async () => {
-    const { body } = await uploadPack(API_URL.IMPORT_MOCK_PACK, packText([{ ...ruleWith(0), records: [validRecordAt(0)] }]))
-    assert.equal(body.code, BizCode.SUCCESS)
-    assert.deepEqual(body.data.created, [], 'R4C-14/15 之前不写库')
-    assert.equal(body.data.enabled, false)
-    // 条目级失败是「数据」不是「错误码」：一条坏记录不该让整个请求变成 BizCode.ERROR（PRD 4.4.7）
-    const mixed = await uploadPack(API_URL.IMPORT_MOCK_PACK, packText([
-      { id: 'rule_1', name: '订单中心', records: [validRecordAt(0), recordAt(1), null] }
-    ]))
-    assert.equal(mixed.body.code, BizCode.SUCCESS, `坏条目把整包带崩了：${JSON.stringify(mixed.body)}`)
-    assert.deepEqual(takeCalls(), [], '导入桩阶段不碰仓库')
+  it(`${API_URL.IMPORT_MOCK_PACK}：query 三参数交给写库编排，仓库逐条结果折成响应体（R4C-18）`, async () => {
+    // 三策略的落点在真库上验（test/migration/pack-import-service.test.ts）；这条只管端点这一层：
+    // 参数有没有交下去、`importRecords` 的 created/duplicate 有没有折算成响应体的对应两栏。
+    const ops: any[] = []
+    const originals = { save: repo.save, importRecords: repo.importRecords, getRule: repo.getRule }
+    // 合并模式要先确认目标场景存在，替身默认回 null，那就轮到 `ruleMissing`
+    repo.getRule = async (ruleId: string) => {
+      repo.calls.push('getRule')
+      return { _id: ruleId, name: '目标场景' }
+    }
+    repo.save = async (rule: any) => {
+      repo.calls.push('save')
+      ops.push({ op: 'save', name: rule.name, desc: rule.desc })
+      return 'rule_imported'
+    }
+    repo.importRecords = async (ruleId: string, records: any[], options: any) => {
+      repo.calls.push('importRecords')
+      ops.push({
+        op: 'importRecords', ruleId, count: records.length,
+        ids: records.map(it => it.id), preserveTimestamps: options?.preserveTimestamps
+      })
+      // index 0 报 duplicate、其余 created：一次调用同时喂到 skipped 与 created 两栏
+      return {
+        outcomes: records.map((it, index) => index === 0
+          ? { index, status: 'duplicate', id: 'rec_holder', reason: 'matchDuplicate' }
+          : { index, status: 'created', id: `rec_new_${index}` }),
+        created: records.slice(1).map((it, index) => `rec_new_${index + 1}`),
+        updated: []
+      }
+    }
+
+    try {
+      const { body } = await uploadPack(API_URL.IMPORT_MOCK_PACK, packText([
+        { id: 'rule_1', name: '订单中心', records: [validRecordAt(0), validRecordAt(1), recordAt(2)] }
+      ]), 'mode=merge&targetRuleId=rule_target&conflict=overwrite')
+      // 条目级失败是「数据」不是「错误码」：一条坏记录不该让整个请求变成 BizCode.ERROR（PRD 4.4.7）
+      assert.equal(body.code, BizCode.SUCCESS, `坏条目把整包带崩了：${JSON.stringify(body.data ?? body)}`)
+      assert.deepEqual(ops.splice(0), [
+        { op: 'importRecords', ruleId: 'rule_target', count: 2, ids: ['rec_0', 'rec_1'], preserveTimestamps: true }
+      ], '合并模式只写目标场景，建新场景那条路不该被走到')
+      const data = body.data
+      assert.deepEqual(data.ruleIds, ['rule_target'])
+      assert.deepEqual(data.created, ['rec_new_1'])
+      assert.deepEqual([data.updated.length, data.failed.length], [0, 0])
+      assert.deepEqual([data.skipped[0].reason, data.skipped[0].recordIndex, data.skipped[0].recordId],
+        ['matchDuplicate', 0, 'rec_0'], '跳过明细要带包内坐标与包内 ID，才指得回文件里那一行')
+      assert.equal(data.skipped[0].detail.includes('rec_holder'), true, '要说清撞的是库里哪一条')
+      assert.deepEqual([data.invalidTotal, data.invalid.length], [1, 3], '一条坏记录报几项明细都可以，条数只算一次')
+      assert.equal(data.enabled, false, '导入不自动启用')
+      assert.deepEqual([data.partial, data.aborted], [false, false], '没有写失败的批次就谈不上部分成功')
+
+      const created = await uploadPack(API_URL.IMPORT_MOCK_PACK, packText([
+        { id: 'rule_1', name: '订单中心', records: [validRecordAt(0)] }
+      ]))
+      assert.deepEqual(ops.splice(0), [
+        { op: 'save', name: '订单中心', desc: '' },
+        { op: 'importRecords', ruleId: 'rule_imported', count: 1, ids: ['rec_0'], preserveTimestamps: true }
+      ], '新建模式（query 缺省）先建新场景，再把记录写进那个新 ID')
+      assert.deepEqual(created.body.data.ruleIds, ['rule_imported'])
+      assert.deepEqual(created.body.data.created, [], '替身把这条报成 duplicate，落到响应体就该是跳过')
+      assert.equal(created.body.data.skipped.length, 1)
+    } finally {
+      // 写探针得还给后面的用例：别的端点用例仍要拿「调了就抛」来钉「只读不写」
+      repo.save = originals.save
+      repo.importRecords = originals.importRecords
+      repo.getRule = originals.getRule
+      takeCalls()
+    }
   })
 
   it('IMPORT_HAR 不吃规则包的包级闸门：一份合法包文本走 HAR 端点仍回桩结果', async () => {
