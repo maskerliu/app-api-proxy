@@ -282,6 +282,7 @@ export default {
       harNoResponse: 'No response recorded; entry skipped',
       harBodyUnreadable: 'Response body missing or undecodable; entry skipped',
       harUnsupportedProtocol: 'Request protocol is not http/https; entry skipped',
+      harStaticResource: 'Static resource (js / css / image); entry skipped',
       packFieldDefaulted: 'Not provided in the pack, or not usable; a default value was applied',
       packNameCollision: 'Scenario name already exists; a suffix was added',
       packIdCollision: 'A record with this ID already exists; the pack entry was skipped',

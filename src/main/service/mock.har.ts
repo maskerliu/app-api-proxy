@@ -1,10 +1,10 @@
 import { MockError } from '@shared/mock.errors'
 import type { MockErrorCode } from '@shared/mock.errors'
-import { MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES } from '@shared/mock.pack'
+import { MOCK_HAR_MAX_ENTRIES, MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES } from '@shared/mock.pack'
 import type { MockPackRecord } from '@shared/mock.pack'
 import type { ProxyMock } from '@shared/proxy.models'
 import { pickHeader } from '@shared/http-header'
-import { base64ToText, inferBodyType, sanitizeResponseHeaders } from '@shared/mock.validation'
+import { base64ToText, inferBodyType, normalizeMimeType, sanitizeResponseHeaders } from '@shared/mock.validation'
 import { parseLooseUrl } from '@shared/url'
 import { analyzeMatchStability } from './mock.derive'
 
@@ -158,7 +158,8 @@ function withoutFragment(value: unknown): string {
  *
  * 「按内容分派两种包」落在信封判定上：HAR 与规则包顶层没有共同形状（`log.entries` 对 `format` + `rules`），
  * 所以选错 kind 时 detail 直接说破「这是一份规则包」，而不是让用户对着 `log is undefined` 猜该走哪个端点。
- * entry 条数上限（`harEntryLimit`）不在这一步——判不判静态资源会改变「有几条 entry」，那是 R4C-24 的口径。
+ * entry 条数上限（`harEntryLimit`）不在这一步——判不判静态资源会改变「有几条 entry 要写进库」，
+ * 所以它判在映射层的候选数上，见 `mapHarEntries`。
  */
 export function readHarText(text: string | undefined, byteSize: number): HarDocument {
   if (byteSize > MOCK_PACK_MAX_FILE_BYTES) throw new MockError('packTooLarge', `bytes=${byteSize}`)
@@ -185,7 +186,7 @@ export function readHarText(text: string | undefined, byteSize: number): HarDocu
 
 /**
  * 阶段一之后、映射之前的逐条解析：只把「报得出正文」的交出去，报不出的按 §9 归成两种跳过原因。
- * 协议白名单（R4C-22 的 `rejectedScheme`）、base64 解码（R4C-23 的 `bodyOf`）、静态资源开关（R4C-24）
+ * 协议白名单（R4C-22 的 `rejectedScheme`）、base64 解码（R4C-23 的 `bodyOf`）、静态资源开关与条数上限（R4C-24 的 `staticKindOf` / `MOCK_HAR_MAX_ENTRIES`）
  * 都排在后面：那三件事各有裁决，各也各自新增跳过口径，放这层就会把「entry 有没有正文」问两遍。
  */
 export function parseHarEntries(entries: unknown[]): HarParseResult {
@@ -267,8 +268,18 @@ export interface HarMappedRecord {
 
 export interface HarMappingResult {
   records: HarMappedRecord[]
-  /** 只装本步新拒的条目；解析层跳过的那些仍在 `HarParseResult.skipped`，两层各自数各自的 */
+  /** 只装本步新拒的条目（协议白名单、静态资源、正文读不出三道），解析层跳过的那些仍在 `HarParseResult.skipped`，两层各自数各自的 */
   skipped: HarSkipped[]
+}
+
+export interface HarMappingOptions {
+  analyzedAt?: number
+  /**
+   * 默认关：js / css / 图片逐条跳过并计数（R4C-24）。
+   * 它是「这一次导入」的开关，契约字段是 `MockPackImportOptions.includeStatic`，不进全局设置（Q5）——
+   * 这一层只认传入的值，界面在哪、参数怎么从端点走到这里属 R4C-25/27。
+   */
+  includeStatic?: boolean
 }
 
 /**
@@ -288,6 +299,36 @@ function rejectedScheme(url: string): string | null {
   const parsed = parseLooseUrl(url)
   if (parsed == null) return null
   return HAR_PROTOCOLS.indexOf(parsed.protocol) < 0 ? parsed.protocol : null
+}
+
+/**
+ * 这条 entry 「是什么类型」的唯一读法：响应头里的 `content-type` 优先，其次 `content.mimeType`。
+ * `bodyType`（R4C-23）与静态资源判定（R4C-24）都读它——两头各读一次就会造出「算图片却按文本存」的自相矛盾条目，
+ * 而这两种判定落在同一个循环里，读者只会看到一个结果。
+ */
+function contentTypeOf(entry: HarEntry): string {
+  return pickHeader(entry.response.headers, 'content-type') ?? entry.response.content.mimeType
+}
+
+/**
+ * js / css / 图片三类，就是卡片（R4C-24）的字面范围，不顺手扩到字体、音视频：
+ * 那两类同样可能淹没有效记录，但 PRD 4.4.5 与评审都没裁决过它们，跳过用户没要求跳的条目比留下更糟。
+ * `image/` 按前缀整类算（`image/svg+xml` 也是图片），js/css 用精确类型表。
+ */
+const HAR_JS_MIME_TYPES = ['application/ecmascript', 'application/javascript', 'application/x-javascript', 'text/ecmascript', 'text/javascript']
+const HAR_CSS_MIME_TYPES = ['text/css']
+
+/**
+ * 只看类型，不看 URL 后缀：后缀要在这一层再起一套路径解析，而 HAR 的 `content.mimeType` 与响应头才是权威。
+ * 类型读不出来（空串）不算静态资源——宁可多导一条无用记录，也不静默跳掉用户没要求跳的条目。
+ */
+function staticKindOf(contentType: string): 'css' | 'image' | 'js' | null {
+  const type = normalizeMimeType(contentType)
+  if (type === '') return null
+  if (type.startsWith('image/')) return 'image'
+  if (HAR_CSS_MIME_TYPES.indexOf(type) >= 0) return 'css'
+  if (HAR_JS_MIME_TYPES.indexOf(type) >= 0) return 'js'
+  return null
 }
 
 /**
@@ -332,12 +373,11 @@ function bodyOf(content: HarContent, contentType: string): HarResponseBody | nul
 
 /**
  * 读不到正文时只回一句 detail（与解析层共用 `harBodyUnreadable`），交给调用方去计入跳过明细。
- * `bodyType` 先认响应头里的 `content-type`，其次才是 `content.mimeType`：两头不一致时，命中后带回去的是头那一份。
+ * `contentType` 由调用方用 `contentTypeOf` 算好交进来——静态资源判定已经读过同一个值，这里再读一遍就是两条标准。
  * `statusCode` 越界不夹成 200（`responseFromLegacy` 那样做是因为旧记录压根没校验通道），留给阶段二报 `statusRange`。
  */
-function responseOf(entry: HarEntry): { response: ProxyMock.MockResponseDef } | { unreadable: string } {
+function responseOf(entry: HarEntry, contentType: string): { response: ProxyMock.MockResponseDef } | { unreadable: string } {
   const headers = sanitizeResponseHeaders(entry.response.headers)
-  const contentType = pickHeader(headers, 'content-type') ?? entry.response.content.mimeType
   const body = bodyOf(entry.response.content, contentType)
   if (body == null) {
     return { unreadable: `encoding=${entry.response.content.encoding || '(missing)'} mimeType=${contentType || '(missing)'}` }
@@ -357,22 +397,42 @@ function responseOf(entry: HarEntry): { response: ProxyMock.MockResponseDef } | 
  * 每条单独调一次派生：`entry` 之间常常同接口不同参数，攒成一组就会触发 E1 自动忽略与 Path 自动参数化，
  * 那两条正是 B.3 明令「不自动」的。
  */
-export function mapHarEntries(entries: HarEntry[], options?: { analyzedAt?: number }): HarMappingResult {
-  const records: HarMappedRecord[] = []
+export function mapHarEntries(entries: HarEntry[], options?: HarMappingOptions): HarMappingResult {
   const skipped: HarSkipped[] = []
+  const candidates: Array<{ entry: HarEntry, response: ProxyMock.MockResponseDef }> = []
 
+  // 三道「这条要不要」的判定排在同一遍里：协议白名单、静态资源开关、正文报不报得出来。
+  // 合成一遍不只是为了省一次循环——跳过明细因此始终按文件下标升序，展示层不必再排一次。
   for (const entry of entries) {
     const scheme = rejectedScheme(entry.request.url)
     if (scheme != null) {
       skipped.push({ entryIndex: entry.index, reason: 'harUnsupportedProtocol', detail: `scheme=${scheme}` })
       continue
     }
-    const mapped = responseOf(entry)
+    const contentType = contentTypeOf(entry)
+    const staticKind = options?.includeStatic === true ? null : staticKindOf(contentType)
+    if (staticKind != null) {
+      skipped.push({ entryIndex: entry.index, reason: 'harStaticResource', detail: `kind=${staticKind} mimeType=${contentType || '(missing)'}` })
+      continue
+    }
+    const mapped = responseOf(entry, contentType)
     if ('unreadable' in mapped) {
       skipped.push({ entryIndex: entry.index, reason: 'harBodyUnreadable', detail: mapped.unreadable })
       continue
     }
-    const response = mapped.response
+    candidates.push({ entry, response: mapped.response })
+  }
+
+  // 上限判在候选数（= 这一次会写进库几条），不判文件里的 entry 总数：
+  // 静态资源开关的全部意义就是把一份页面 HAR 收成可用的一小批，判总数会让那几百张图照样把整包顶回 1,000 条之外。
+  // 排在派生之前是这个判定唯一的要求——超限的包不该先做 1,001 次 `analyzeMatchStability` 再被整包拒掉。
+  // 与 `packRecordLimit`（判包内记录总数）同属「整包拒绝、零记录」，所以这里抛错而不返回部分结果。
+  if (candidates.length > MOCK_HAR_MAX_ENTRIES) {
+    throw new MockError('harEntryLimit', `parsed=${entries.length} candidates=${candidates.length} limit=${MOCK_HAR_MAX_ENTRIES}`)
+  }
+
+  const records: HarMappedRecord[] = []
+  for (const { entry, response } of candidates) {
     // id / ruleId / 时间戳都是占位，只为让派生层吃下这条记录；真正写库时由 R4C-16/18 注入
     const draft: ProxyMock.MockRecord = {
       id: `har-${entry.index}`,

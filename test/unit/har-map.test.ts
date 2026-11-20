@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { ProxyMock } from '@shared/proxy.models'
+import { MockError } from '@shared/mock.errors'
+import { MOCK_HAR_MAX_ENTRIES } from '@shared/mock.pack'
 import { MOCK_MAX_BODY_BYTES, validateMockRecord } from '@shared/mock.validation'
 import { mapHarEntries, parseHarEntries } from '@main/service/mock.har'
 import type { HarEntry } from '@main/service/mock.har'
@@ -8,7 +10,7 @@ import type { HarEntry } from '@main/service/mock.har'
 /**
  * R4C-22 的验收面：附录 B.3 那张映射表逐行落地，且 **match 全部由既有派生层产出**。
  * R4C-23（响应体解码与类型、AC-R4-07）也在这张面上：`bodyOf` 的四种正文形态与那个码的跳过都在下面。
- * `harEntryLimit` 与静态资源开关属 R4C-24，不写在这里。
+ * R4C-24 的三道策略过滤（entry 上限、静态资源开关）同样长在这个函数里，用例在最后一张 describe。
  */
 
 /** 一条能走完映射的 entry，用例在它上面改 response 的一个字段 */
@@ -128,9 +130,10 @@ describe('mapHarEntries：B.3 的字段映射', () => {
   })
 
   it('base64 的二进制档原样存：解成文本再发就会被当 UTF-8 改坏', () => {
+    // 用 octet-stream 而不是 png：png 属 R4C-24 的静态资源，默认档下走不到正文这一道（png 那条在下面那张 describe 里验）
     const binary = entry({
-      headers: [{ name: 'content-type', value: 'image/png' }],
-      content: { size: 4, mimeType: 'image/png', text: 'iVBORw0KGgo=', encoding: 'BASE64' },
+      headers: [{ name: 'content-type', value: 'application/octet-stream' }],
+      content: { size: 4, mimeType: 'application/octet-stream', text: 'iVBORw0KGgo=', encoding: 'BASE64' },
     })
     const response = recordOf(binary).response
     assert.equal(response.body, 'iVBORw0KGgo=')
@@ -175,20 +178,20 @@ describe('mapHarEntries：B.3 的字段映射', () => {
 
   it('二进制却没有 base64 标记 → 逐条跳过 harBodyUnreadable，不静默交出一条回乱码的规则', () => {
     const result = mapHarEntries([entry({
-      headers: [{ name: 'content-type', value: 'image/png' }],
-      content: { size: 4, mimeType: 'image/png', text: '‰PNG' },
+      headers: [{ name: 'content-type', value: 'application/octet-stream' }],
+      content: { size: 4, mimeType: 'application/octet-stream', text: '‰PNG' },
     })])
     assert.deepEqual(result.records.map(it => it.entryIndex), [])
     assert.equal(result.skipped.length, 1)
     assert.equal(result.skipped[0].reason, 'harBodyUnreadable')
     assert.match(result.skipped[0].detail ?? '', /encoding=\(missing\)/)
-    assert.match(result.skipped[0].detail ?? '', /mimeType=image\/png/)
+    assert.match(result.skipped[0].detail ?? '', /mimeType=application\/octet-stream/)
   })
 
   it('空正文不猜编码：204 那类没有字节的照样导入，不占跳过数', () => {
     const empty = entry({
-      headers: [{ name: 'content-type', value: 'image/png' }],
-      content: { size: 0, mimeType: 'image/png', text: '' },
+      headers: [{ name: 'content-type', value: 'application/octet-stream' }],
+      content: { size: 0, mimeType: 'application/octet-stream', text: '' },
     })
     const response = recordOf(empty).response
     assert.equal(response.body, '')
@@ -385,5 +388,141 @@ describe('mapHarEntries：本步的跳过与不跳过', () => {
     const sample = entry()
     assert.equal(recordOf(sample, { analyzedAt: 1762310400000 }).match.derivation.analyzedAt, 1762310400000)
     assert.equal(recordOf(sample).match.derivation.analyzedAt, 0, '没给就不许自己取当前时间')
+  })
+})
+
+describe('mapHarEntries：R4C-24 的静态资源开关与 entry 上限', () => {
+  /** 一条只用来判类型的 entry：正文留空，好让 R4C-23 那几道正文判定不掺进这张面 */
+  function typed(contentType: string, url = 'https://a/x'): Record<string, unknown> {
+    return {
+      request: { method: 'GET', url, headers: [] },
+      response: {
+        status: 200,
+        headers: contentType === '' ? [] : [{ name: 'content-type', value: contentType }],
+        content: { size: 0, mimeType: contentType, text: '' },
+      },
+    }
+  }
+
+  /** 上限用例要的是成百上千条；path 按序号错开，免得同指纹的条目被读成一回事 */
+  function many(count: number, contentType: string): HarEntry[] {
+    return parseHarEntries(Array.from({ length: count }, (_, i) => typed(contentType, `https://a/api/${i}`))).entries
+  }
+
+  function thrown(fn: () => unknown): MockError {
+    try {
+      fn()
+    } catch (err) {
+      assert.ok(err instanceof MockError, `抛的不是 MockError：${String(err)}`)
+      return err as MockError
+    }
+    throw new assert.AssertionError({ message: '期待抛出 MockError，实际没抛' })
+  }
+
+  it('js / css / 图片默认逐条跳过并计数，detail 报得出是哪一类', () => {
+    const result = mapHarEntries(parseHarEntries([
+      typed('text/javascript'),
+      typed('text/css; charset=utf-8'),
+      typed('image/png'),
+      typed('image/svg+xml'),
+      typed('application/json'),
+    ]).entries)
+    assert.deepEqual(result.skipped.map(it => [it.entryIndex, it.reason, it.detail]), [
+      [0, 'harStaticResource', 'kind=js mimeType=text/javascript'],
+      [1, 'harStaticResource', 'kind=css mimeType=text/css; charset=utf-8'],
+      [2, 'harStaticResource', 'kind=image mimeType=image/png'],
+      [3, 'harStaticResource', 'kind=image mimeType=image/svg+xml'],
+    ])
+    assert.deepEqual(result.records.map(it => it.entryIndex), [4])
+  })
+
+  it('静态资源判据与 bodyType 读同一个 content-type：响应头说了算', () => {
+    // 头是 json、content.mimeType 是 png：这一条既要留下来，也要按 json 存——两头各判一次就会出现「算图片却按文本存」
+    const headerWins = only({
+      request: { method: 'GET', url: 'https://a/app.js', headers: [] },
+      response: { status: 200, headers: [{ name: 'content-type', value: 'application/json' }], content: { size: 2, mimeType: 'image/png', text: '{}' } },
+    })
+    assert.equal(mapOne(headerWins).record.response.bodyType, 'json')
+
+    const headerImage = only({
+      request: { method: 'GET', url: 'https://a/data', headers: [] },
+      response: { status: 200, headers: [{ name: 'content-type', value: 'image/png' }], content: { size: 2, mimeType: 'application/json', text: '{}' } },
+    })
+    assert.deepEqual(mapHarEntries([headerImage]).skipped.map(it => [it.entryIndex, it.reason]), [[0, 'harStaticResource']],
+      '命中后带回去的是头那一份类型，跳过的也按头那一份判')
+  })
+
+  it('类型读不出来不算静态资源，字体与音视频也不在字面范围内', () => {
+    const noType = only({
+      request: { method: 'GET', url: 'https://a/x', headers: [] },
+      response: { status: 200, headers: [], content: { size: 0, mimeType: '', text: '' } },
+    })
+    assert.deepEqual(mapHarEntries([noType]).skipped, [], '宁可多导一条，也不静默跳掉用户没要求跳的条目')
+
+    const outOfScope = parseHarEntries([typed('font/woff2'), typed('audio/mpeg'), typed('video/mp4')]).entries
+    assert.equal(mapHarEntries(outOfScope).records.length, 3, 'PRD 4.4.5 只裁决了 js / css / 图片三类')
+  })
+
+  it('includeStatic 打开时静态资源照常导入，存法仍由 R4C-23 那把尺决定', () => {
+    const png = only({
+      request: { method: 'GET', url: 'https://a/logo.png', headers: [] },
+      response: { status: 200, headers: [{ name: 'content-type', value: 'image/png' }], content: { size: 4, mimeType: 'image/png', text: 'iVBORw0KGgo=', encoding: 'BASE64' } },
+    })
+    assert.deepEqual(mapHarEntries([png]).skipped.map(it => it.reason), ['harStaticResource'])
+    const opened = mapHarEntries([png], { includeStatic: true })
+    assert.deepEqual(opened.skipped, [])
+    assert.equal(opened.records[0].record.response.bodyType, 'binary')
+    assert.equal(opened.records[0].record.response.bodyEncoding, 'base64')
+  })
+
+  it('上限判在候选数上：正好 1,000 条要得下，1,001 条整包拒绝', () => {
+    assert.equal(mapHarEntries(many(MOCK_HAR_MAX_ENTRIES, 'application/json')).records.length, MOCK_HAR_MAX_ENTRIES)
+
+    const over = many(MOCK_HAR_MAX_ENTRIES + 1, 'application/json')
+    const err = thrown(() => mapHarEntries(over))
+    assert.equal(err.code, 'harEntryLimit')
+    assert.equal(err.detail, `parsed=${over.length} candidates=${MOCK_HAR_MAX_ENTRIES + 1} limit=${MOCK_HAR_MAX_ENTRIES}`)
+  })
+
+  it('被跳过的条目不占名额：判的是这一次会写进库几条，不是文件里有多少条', () => {
+    // 1,200 条里 300 张图 → 候选 900 条，这份包本该吃得下；判文件总数就等于白装那道静态资源开关
+    const page = parseHarEntries([
+      ...Array.from({ length: 900 }, (_, i) => typed('application/json', `https://a/api/${i}`)),
+      ...Array.from({ length: 300 }, (_, i) => typed('image/png', `https://a/img/${i}`)),
+    ]).entries
+    assert.equal(mapHarEntries(page).records.length, 900)
+    assert.equal(thrown(() => mapHarEntries(page, { includeStatic: true })).code, 'harEntryLimit',
+      '开关打开后同一份文件就是 1,200 条候选，必须回到整包拒绝')
+
+    // 正文读不出那一道也排在判定之前：1,001 条里有一条回乱码 → 候选 1,000 条 → 要吃得下
+    const unreadable = {
+      request: { method: 'GET', url: 'https://a/blob', headers: [] },
+      response: { status: 200, headers: [{ name: 'content-type', value: 'application/octet-stream' }], content: { size: 4, mimeType: 'application/octet-stream', text: 'abcd' } },
+    }
+    const batch = parseHarEntries([
+      ...Array.from({ length: MOCK_HAR_MAX_ENTRIES }, (_, i) => typed('application/json', `https://a/api/${i}`)),
+      unreadable,
+    ]).entries
+    const result = mapHarEntries(batch)
+    assert.equal(result.records.length, MOCK_HAR_MAX_ENTRIES)
+    assert.deepEqual(result.skipped.map(it => it.reason), ['harBodyUnreadable'])
+  })
+
+  it('三道跳过的明细合在一张表里仍按文件下标升序，坐标指向原 entry', () => {
+    const parsed = parseHarEntries([
+      typed('image/png'),
+      { request: { method: 'GET', url: 'file:///C:/x.js', headers: [] }, response: { status: 200, headers: [{ name: 'content-type', value: 'application/json' }], content: { size: 0, mimeType: 'application/json', text: '' } } },
+      typed('application/json', 'https://a/keep'),
+      { request: { method: 'GET', url: 'https://a/gone' }, response: { status: 0, headers: [], content: { size: 0, text: '' } } },
+      typed('image/jpeg', 'https://a/logo'),
+    ])
+    assert.equal(parsed.skipped.length, 1, 'status=0 那条在解析层就掉了，不进映射层')
+    const result = mapHarEntries(parsed.entries)
+    assert.deepEqual(result.skipped.map(it => [it.entryIndex, it.reason]), [
+      [0, 'harStaticResource'],
+      [1, 'harUnsupportedProtocol'],
+      [4, 'harStaticResource'],
+    ])
+    assert.deepEqual(result.records.map(it => it.entryIndex), [2])
   })
 })

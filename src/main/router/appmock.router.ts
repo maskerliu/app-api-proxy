@@ -475,7 +475,9 @@ export class AppMockRouter extends BaseRouter {
       // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门。
       // 「按内容分派两种包」的判据已经落在 `mock.har.ts` 的 `readHarText`（R4C-21：选错 kind 时 detail 直接说破对方形状），
       // 字段映射与响应体也已在同一个文件就位（R4C-22 `mapHarEntries`：match 只由派生层产出；R4C-23 `bodyOf`：base64 分四档），
-      // 但这个 handler 还没接过去——仍是空结果桩；entry 上限 harEntryLimit 与静态资源开关属 R4C-24。
+      // 但这个 handler 还没接过去——仍是空结果桩。entry 上限与静态资源开关已在映射层就位
+      // （R4C-24：候选数超过 MOCK_HAR_MAX_ENTRIES 抛 harEntryLimit，js/css/图片默认逐条跳过）；
+      // 接线时 `includeStatic` 必须补进上面的 params：`proxy.api.ts` 的 `importHar` 已经在发这个字段，端点不接就等于开关永远无效。
       handler: (_pack, mode) => ({
         ...emptyMockPackImportResult(toMockPackImportMode(mode)),
         suggestions: [] as MockPackIssue[]

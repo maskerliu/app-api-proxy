@@ -62,8 +62,16 @@ export function base64ToText(value: string): string {
   }
 }
 
+/**
+ * MIME 归一化：截掉 `; charset=…` 这类参数、去空白、小写。
+ * `inferBodyType` 与 HAR 的静态资源判定都读这一份，别在调用方再抄一遍同样的三步（抄了就会分叉出「带参数的 css 不算 css」）。
+ */
+export function normalizeMimeType(contentType: string): string {
+  return String(contentType ?? '').split(';')[0].trim().toLowerCase()
+}
+
 export function inferBodyType(contentType: string): ProxyMock.MockBodyType {
-  const type = String(contentType ?? '').split(';')[0].trim().toLowerCase()
+  const type = normalizeMimeType(contentType)
   if (type === 'application/json' || type.endsWith('+json')) return 'json'
   if (type === 'application/xml' || type === 'text/xml' || type.endsWith('+xml')) return 'xml'
   if (type.startsWith('text/') || type === 'application/x-www-form-urlencoded') return 'text'
