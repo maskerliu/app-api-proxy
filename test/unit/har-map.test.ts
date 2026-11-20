@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { ProxyMock } from '@shared/proxy.models'
-import { validateMockRecord } from '@shared/mock.validation'
+import { MOCK_MAX_BODY_BYTES, validateMockRecord } from '@shared/mock.validation'
 import { mapHarEntries, parseHarEntries } from '@main/service/mock.har'
 import type { HarEntry } from '@main/service/mock.har'
 
 /**
  * R4C-22 的验收面：附录 B.3 那张映射表逐行落地，且 **match 全部由既有派生层产出**。
- * 解码与 bodyType 的进一步判定属 R4C-23、`harEntryLimit` 与静态资源开关属 R4C-24，不写在这里。
+ * R4C-23（响应体解码与类型、AC-R4-07）也在这张面上：`bodyOf` 的四种正文形态与那个码的跳过都在下面。
+ * `harEntryLimit` 与静态资源开关属 R4C-24，不写在这里。
  */
 
 /** 一条能走完映射的 entry，用例在它上面改 response 的一个字段 */
@@ -44,6 +45,11 @@ function recordOf(input: HarEntry, options?: { analyzedAt?: number }) {
 
 function codesOf(record: ProxyMock.MockRecord): string[] {
   return validateMockRecord(record).map(it => it.code)
+}
+
+/** 按 HAR 的写法给正文打 base64（Node 侧编码，与被测代码的 `atob` 解码互为对照） */
+function b64(text: string): string {
+  return Buffer.from(text, 'utf8').toString('base64')
 }
 
 describe('mapHarEntries：B.3 的字段映射', () => {
@@ -121,15 +127,87 @@ describe('mapHarEntries：B.3 的字段映射', () => {
     assert.equal(response.bodyEncoding, undefined, '没写编码就不冒充 base64')
   })
 
-  it('base64 只标注不解码：按 base64 存才发得对，解码是 R4C-23 的事', () => {
+  it('base64 的二进制档原样存：解成文本再发就会被当 UTF-8 改坏', () => {
     const binary = entry({
       headers: [{ name: 'content-type', value: 'image/png' }],
       content: { size: 4, mimeType: 'image/png', text: 'iVBORw0KGgo=', encoding: 'BASE64' },
     })
     const response = recordOf(binary).response
-    assert.equal(response.body, 'iVBORw0KGgo=', '解一次就得同时决定发出去的是原文还是解出来的文本')
+    assert.equal(response.body, 'iVBORw0KGgo=')
     assert.equal(response.bodyEncoding, 'base64')
     assert.equal(response.bodyType, 'binary')
+  })
+
+  it('base64 的文本档解成文本（AC-R4-07）：编辑器可直接改，字节与原始 base64 一致', () => {
+    const payload = '{"code":0,"data":{"message":"你好"}}'
+    const json = entry({
+      content: { size: payload.length, mimeType: 'application/json', text: b64(payload), encoding: 'base64' },
+    })
+    const record = recordOf(json)
+    assert.equal(record.response.body, payload, '解出来的文本必须逐字符等于录制的那份')
+    assert.equal(record.response.bodyType, 'json')
+    assert.equal(record.response.bodyEncoding, undefined, '存的是文本还标 base64，发送时会被再解一次')
+    assert.deepEqual(codesOf(record), [])
+  })
+
+  it('折行 base64 照常解（Chrome / Fiddler 每 76 字符折一行）：不因为换行降级成二进制', () => {
+    const payload = JSON.stringify({ list: Array.from({ length: 40 }, (_, i) => `item-${i}`) })
+    const wrapped = b64(payload).replace(/(.{20})/g, '$1\n')
+    assert.notEqual(wrapped, b64(payload), '样本得真是折过行的')
+    const response = recordOf(entry({
+      content: { size: payload.length, mimeType: 'application/json', text: wrapped, encoding: 'base64' },
+    })).response
+    assert.equal(response.body, payload)
+    assert.equal(response.bodyType, 'json', '折行不是「读不出」的理由')
+  })
+
+  it('解不出 UTF-8 时改按二进制存：mimeType 报文本而字节不是文本，发出去才不是乱码', () => {
+    const rawBytes = Buffer.from([0xff, 0xfe, 0x00, 0x41])
+    const notText = rawBytes.toString('base64')
+    const response = recordOf(entry({
+      content: { size: rawBytes.length, mimeType: 'text/plain', text: notText, encoding: 'base64' },
+    })).response
+    assert.equal(response.body, notText, '解不开就一个字都不动')
+    assert.equal(response.bodyType, 'binary')
+    assert.equal(response.bodyEncoding, 'base64')
+    assert.deepEqual(Buffer.from(response.body, 'base64'), rawBytes, '引擎按 base64 发出，字节必须等于录制原文')
+  })
+
+  it('二进制却没有 base64 标记 → 逐条跳过 harBodyUnreadable，不静默交出一条回乱码的规则', () => {
+    const result = mapHarEntries([entry({
+      headers: [{ name: 'content-type', value: 'image/png' }],
+      content: { size: 4, mimeType: 'image/png', text: '‰PNG' },
+    })])
+    assert.deepEqual(result.records.map(it => it.entryIndex), [])
+    assert.equal(result.skipped.length, 1)
+    assert.equal(result.skipped[0].reason, 'harBodyUnreadable')
+    assert.match(result.skipped[0].detail ?? '', /encoding=\(missing\)/)
+    assert.match(result.skipped[0].detail ?? '', /mimeType=image\/png/)
+  })
+
+  it('空正文不猜编码：204 那类没有字节的照样导入，不占跳过数', () => {
+    const empty = entry({
+      headers: [{ name: 'content-type', value: 'image/png' }],
+      content: { size: 0, mimeType: 'image/png', text: '' },
+    })
+    const response = recordOf(empty).response
+    assert.equal(response.body, '')
+    assert.equal(response.bodyEncoding, undefined)
+  })
+
+  it('2MB 判在解码之后的真实字节上：复用阶段二那把尺，映射层不起第二道', () => {
+    // 1.6MB 文本的 base64 是 2.19MB：不解码就会撞上限被拒，解完才是真实字节数
+    const fits = 'a'.repeat(1.6 * 1024 * 1024)
+    const fitsRecord = recordOf(entry({
+      content: { size: fits.length, mimeType: 'application/json', text: b64(fits), encoding: 'base64' },
+    }))
+    assert.ok(fitsRecord.response.body.length > MOCK_MAX_BODY_BYTES / 4, '样本够大才验得出上限语义')
+    assert.deepEqual(codesOf(fitsRecord), [], 'base64 文本长度越过 2MB 不该算超限')
+    // 真超限时由既有的 `validateResponseDef` 报 bodyTooLarge，与手工保存同一条标准
+    const tooBig = 'a'.repeat(MOCK_MAX_BODY_BYTES + 1)
+    assert.ok(codesOf(recordOf(entry({
+      content: { size: tooBig.length, mimeType: 'application/json', text: b64(tooBig), encoding: 'base64' },
+    }))).includes('bodyTooLarge'))
   })
 
   it('bodyType 认响应头优先于 content.mimeType：两头不一致时命中后带回去的是头', () => {

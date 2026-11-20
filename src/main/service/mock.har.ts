@@ -4,7 +4,7 @@ import { MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES } from '@shared/mock.pack'
 import type { MockPackRecord } from '@shared/mock.pack'
 import type { ProxyMock } from '@shared/proxy.models'
 import { pickHeader } from '@shared/http-header'
-import { inferBodyType, sanitizeResponseHeaders } from '@shared/mock.validation'
+import { base64ToText, inferBodyType, sanitizeResponseHeaders } from '@shared/mock.validation'
 import { parseLooseUrl } from '@shared/url'
 import { analyzeMatchStability } from './mock.derive'
 
@@ -184,9 +184,9 @@ export function readHarText(text: string | undefined, byteSize: number): HarDocu
 }
 
 /**
- * 阶段一之后、映射之前的逐条解析：只把「读得到的」交出去，读不到的按 §9 归成两种跳过原因。
- * 不判协议白名单（R4C-22 用 `toAbsoluteTarget` 拒）、不解码 base64（R4C-23）、不筛静态资源（R4C-24）——
- * 这三件事各有裁决，且都不改变「这条 entry 有没有响应正文」的答案。
+ * 阶段一之后、映射之前的逐条解析：只把「报得出正文」的交出去，报不出的按 §9 归成两种跳过原因。
+ * 协议白名单（R4C-22 的 `rejectedScheme`）、base64 解码（R4C-23 的 `bodyOf`）、静态资源开关（R4C-24）
+ * 都排在后面：那三件事各有裁决，各也各自新增跳过口径，放这层就会把「entry 有没有正文」问两遍。
  */
 export function parseHarEntries(entries: unknown[]): HarParseResult {
   const kept: HarEntry[] = []
@@ -291,22 +291,58 @@ function rejectedScheme(url: string): string | null {
 }
 
 /**
- * 响应体这一步只做「存得对」：base64 原样存 + `bodyEncoding='base64'`，引擎按 base64 发出（`mock.service.ts:132-133`），
- * 所以不解码——解码是为了编辑器能读，那是 R4C-23；在这里解一次，就得同时决定「发出去的是原文还是解出来的文本」。
+ * 响应体三元组，与渲染层编辑器同一约定（`MockResponseForm.vue:122-131`）：
+ * 「二进制」这一档的内容按 base64 存，其余档存可直接编辑的文本，`bodyEncoding` 只在存 base64 时给值。
+ */
+interface HarResponseBody {
+  body: string
+  bodyType: ProxyMock.MockBodyType
+  bodyEncoding?: 'base64'
+}
+
+/**
+ * 只解「解出来确实是文本」的那一半：文本档解成功就存文本、编辑器能直接改；解不出 UTF-8 说明
+ * `mimeType` 报的文本其实不是文本，继续按文本存就会发出乱码，改按二进制原样存 base64 才发得对。
+ * `atob` 会自己跳过折行空白（Chrome / Fiddler 那种每 76 字符折一行照常解得开），必抛的只剩两种：
+ * 中段出现 `=` 的拼接式 base64，以及解出来不是合法 UTF-8 的字节——后者正是这里要接住的那种。
+ *
+ * 反过来，`mimeType` 判成二进制却没有 base64 标记时返回 null：HAR 把字节当文本写了，
+ * 无论怎么存发出去的都是坏字节——这与 §9「`text` 缺失但 `size > 0`」是同一种「读不到正文」，
+ * 所以复用同一个码逐条跳过并计数，而不是静默交出一条看着成功、命中后回乱码的规则。
+ *
+ * 2MB 不在这道判：阶段二那把 `validateResponseDef`（`mock.validation.ts:120`）已经在数 body 的 UTF-8 字节，
+ * 这里再加一道就是第二条标准；代价是二进制那档量的仍是 base64 文本长度（比真实字节多约 1/3），
+ * 但编辑器里存二进制走的是同一把尺（`MockResponseForm.vue:148`），导入与手工保存因此保持一致。
+ */
+function bodyOf(content: HarContent, contentType: string): HarResponseBody | null {
+  const bodyType = inferBodyType(contentType)
+  const text = content.text ?? ''
+  const isBase64 = content.encoding === 'base64'
+  // 空正文不猜编码：没有字节就没有可解的东西，204 那类照样导入
+  if (text === '') return { body: '', bodyType }
+  if (bodyType === 'binary') {
+    return isBase64 ? { body: text, bodyType: 'binary', bodyEncoding: 'base64' } : null
+  }
+  if (!isBase64) return { body: text, bodyType }
+  const decoded = base64ToText(text)
+  return decoded == null
+    ? { body: text, bodyType: 'binary', bodyEncoding: 'base64' }
+    : { body: decoded, bodyType }
+}
+
+/**
+ * 读不到正文时只回一句 detail（与解析层共用 `harBodyUnreadable`），交给调用方去计入跳过明细。
  * `bodyType` 先认响应头里的 `content-type`，其次才是 `content.mimeType`：两头不一致时，命中后带回去的是头那一份。
  * `statusCode` 越界不夹成 200（`responseFromLegacy` 那样做是因为旧记录压根没校验通道），留给阶段二报 `statusRange`。
  */
-function responseOf(entry: HarEntry): ProxyMock.MockResponseDef {
+function responseOf(entry: HarEntry): { response: ProxyMock.MockResponseDef } | { unreadable: string } {
   const headers = sanitizeResponseHeaders(entry.response.headers)
   const contentType = pickHeader(headers, 'content-type') ?? entry.response.content.mimeType
-  return {
-    statusCode: entry.response.status,
-    headers,
-    body: entry.response.content.text ?? '',
-    bodyType: inferBodyType(contentType),
-    bodyEncoding: entry.response.content.encoding === 'base64' ? 'base64' : undefined,
-    delayMs: 0,
+  const body = bodyOf(entry.response.content, contentType)
+  if (body == null) {
+    return { unreadable: `encoding=${entry.response.content.encoding || '(missing)'} mimeType=${contentType || '(missing)'}` }
   }
+  return { response: { statusCode: entry.response.status, headers, delayMs: 0, ...body } }
 }
 
 /**
@@ -331,7 +367,12 @@ export function mapHarEntries(entries: HarEntry[], options?: { analyzedAt?: numb
       skipped.push({ entryIndex: entry.index, reason: 'harUnsupportedProtocol', detail: `scheme=${scheme}` })
       continue
     }
-    const response = responseOf(entry)
+    const mapped = responseOf(entry)
+    if ('unreadable' in mapped) {
+      skipped.push({ entryIndex: entry.index, reason: 'harBodyUnreadable', detail: mapped.unreadable })
+      continue
+    }
+    const response = mapped.response
     // id / ruleId / 时间戳都是占位，只为让派生层吃下这条记录；真正写库时由 R4C-16/18 注入
     const draft: ProxyMock.MockRecord = {
       id: `har-${entry.index}`,
