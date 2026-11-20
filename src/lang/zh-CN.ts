@@ -283,6 +283,7 @@ export default {
       packFieldDefaulted: '包内没给这个字段，或给的值用不了，已按默认值补齐',
       packNameCollision: '场景名称已存在，已追加序号',
       packIdCollision: '库里已有相同 ID 的记录，这条已跳过',
+      packImportInProgress: '已有一个导入正在进行，请等它结束或先取消',
       packWriteAborted: '导入已取消'
     },
     // 导入入口现在只有「禁用 + 这句说明」，标题与预览/结果文案随 R4C-25/27 落地时补

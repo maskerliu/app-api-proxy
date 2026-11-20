@@ -190,6 +190,11 @@ export interface MockPackImportResult {
   nameCollided: boolean
   /** 中途失败或取消导致的部分写入 */
   partial: boolean
+  /**
+   * 用户取消：剩下的批次一条都没写，没写的逐条以 `packWriteAborted` 进 `failed`。
+   * 与 `partial` 是两回事——取消在首批之前发生时 `partial` 为假（库里一个字没动），
+   * 但 `aborted` 为真，结果页要分得开「没写完」和「写坏了」。
+   */
   aborted: boolean
   /** HAR 不区分域名，与既有规则构成遮蔽的条数（Q2 的代价） */
   shadowedCount?: number

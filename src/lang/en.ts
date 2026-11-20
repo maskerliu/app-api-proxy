@@ -284,6 +284,7 @@ export default {
       packFieldDefaulted: 'Not provided in the pack, or not usable; a default value was applied',
       packNameCollision: 'Scenario name already exists; a suffix was added',
       packIdCollision: 'A record with this ID already exists; the pack entry was skipped',
+      packImportInProgress: 'An import is already running; wait for it to finish or cancel it first',
       packWriteAborted: 'Import canceled'
     },
     // 导入入口现在只有「禁用 + 这句说明」，标题与预览/结果文案随 R4C-25/27 落地时补

@@ -42,6 +42,31 @@ export interface MockPackWriteSource extends MockPackSource {
   save(rule: ProxyMock.MockRule): Promise<string>
   importRecords(ruleId: string, records: ProxyMock.MockRecord[],
     options?: MockRecordImportOptions): Promise<MockRecordImportResult>
+  /**
+   * 回滚用（R4C-19）：新建模式那个场景整批没写进去一条时把壳删掉。
+   * 就是 `MockRepo.delete`（`mock.repo.ts:257-270`：`enqueueSave` 串行 + 分页清记录 + `{type:'remove'}` 通知缓存 +
+   * 复位 `lastActiveRuleId`），服务层不许自己补任何一步。名字跟着仓库走：`this.mockRepo` 由 IOC 直接注进来的是仓库本体，
+   * 这里声明一个仓库没有的方法，编译期发现不了、运行时才炸。
+   */
+  delete(ruleId: string): Promise<boolean>
+}
+
+/**
+ * 运行时注入的一组东西，与 `MockPackImportOptions` 分开是有意的：
+ * 后者是端点能收的 query（客户端说了不算的语义不进那一层，同 `preserveTimestamps` 不当入参的理由），
+ * 取消信号与进度回调只能由持有任务的那一层（`MockPackService` 的单例）递进来。
+ */
+export interface MockPackImportRuntime {
+  signal?: AbortSignal
+  /** 每写完一批报一次，转给持有任务的那一层记进度 */
+  onBatch?: (written: number, total: number) => void
+}
+
+/** 正在进行的那一个导入任务：控制器 + 最后一批的读数，取消与进度都从这一份状态出 */
+interface MockPackImportTask {
+  controller: AbortController
+  written: number
+  total: number
 }
 
 /** 读侧分片大小：与写侧 MOCK_PACK_WRITE_BATCH 同量级，但两者没有耦合关系 */
@@ -411,10 +436,14 @@ interface MockPackWriteItem {
 /**
  * 一批写入 + 把仓库的逐条结果折算成响应体。六步齐全的落库只在 `MockRepo.importRecords` 里，
  * 这里不许出现第二次 `bulkDocs`，也不预过滤「大概会撞」的那些条目——那等于把仓库的判据搬到服务层再实现一遍。
+ *
+ * 返回值是**这一次调用写进库的条数**（新建模式拿它判断这个场景要不要回收，R4C-19）。
+ * 整批被拒时仓库抛错、那一批一条没落库，但同一场景若分了几批、前面几批已经写进去了——
+ * 所以这个数是「实际写入」，不是「尝试写入」，靠它才能判出「这个场景是不是空壳」。
  */
 async function writeMockPackItems(source: MockPackWriteSource, result: MockPackImportResult,
-  ruleId: string, items: MockPackWriteItem[]) {
-  if (items.length === 0) return
+  ruleId: string, items: MockPackWriteItem[], runtime?: MockPackImportRuntime): Promise<number> {
+  if (items.length === 0) return 0
   const locatedOf = (index: number) => ({
     ruleIndex: items[index].ruleIndex,
     recordIndex: items[index].recordIndex,
@@ -424,12 +453,14 @@ async function writeMockPackItems(source: MockPackWriteSource, result: MockPackI
   try {
     // 时间戳恒注入：两种模式共用同一条优先级（新建取包值、覆盖取库内原值，Q3），
     // 包里没写的条目由 `toRecordDoc` 自己回落 `now`，不需要这里再判一次
-    outcome = await source.importRecords(ruleId, items.map(it => it.record), { preserveTimestamps: true })
+    outcome = await source.importRecords(ruleId, items.map(it => it.record), {
+      preserveTimestamps: true, signal: runtime?.signal, onBatch: runtime?.onBatch
+    })
   } catch (err: any) {
-    // 整批被拒（`recordTooMany`、迁移闸门）：这批一条都没写。已经写进去的场景留着不回收，回滚属 R4C-19
+    // 整批被拒（`recordTooMany`、迁移闸门）：抛错那次调用一条都没写。回收与否由调用方看返回值决定（R4C-19）
     const code = err instanceof MockError ? err.code : String(err?.message ?? err)
     for (let index = 0; index < items.length; index++) result.failed.push({ code, ...locatedOf(index) })
-    return
+    return 0
   }
   // 落库成功的 ID 直接取仓库那两栏；只有 skipped/failed 需要按 `index` 回指包内坐标
   result.created.push(...outcome.created)
@@ -445,6 +476,8 @@ async function writeMockPackItems(source: MockPackWriteSource, result: MockPackI
     }
     result.failed.push({ code: it.reason ?? 'unknown', ...locatedOf(it.index) })
   }
+  if (outcome.aborted === true) result.aborted = true
+  return outcome.created.length + outcome.updated.length
 }
 
 /**
@@ -453,14 +486,14 @@ async function writeMockPackItems(source: MockPackWriteSource, result: MockPackI
  * 新建的场景一条都不属于，所以每条都走新分配 `rec_<uuid>`。
  */
 async function importMockPackAsNewRules(source: MockPackWriteSource, read: MockPackRead,
-  result: MockPackImportResult) {
+  result: MockPackImportResult, runtime?: MockPackImportRuntime) {
   const takenNames = (await source.listRules()).map(it => it.name)
   for (let ruleIndex = 0; ruleIndex < read.pack.rules.length; ruleIndex++) {
     const items: MockPackWriteItem[] = read.prepared
       .filter(it => it.ruleIndex === ruleIndex)
       .map(it => ({ ruleIndex: it.ruleIndex, recordIndex: it.recordIndex, record: it.record }))
     // 一条都写不了就不建场景：PRD 4.4.7「全部失败 → 不创建任何记录」。留个空壳等于把库弄脏，
-    // 而结果页没有「空场景」这一档可交代。§7 端点表把 `ruleId` 写成恒有值，以这里为准。
+    // 而结果页没有「空场景」这一档可交代。§7 端点表把 `ruleIds` 写成恒有值，以这里为准。
     if (items.length === 0) continue
     const packed = read.pack.rules[ruleIndex]
     const name = suggestMockPackRuleName(packed.name, takenNames)
@@ -470,8 +503,15 @@ async function importMockPackAsNewRules(source: MockPackWriteSource, read: MockP
     rule.name = name
     rule.desc = packed.desc ?? ''
     const ruleId = await source.save(rule)
+    // 场景先写记录、写满了才记账：`ruleIds` 是结果页「跳到哪几个场景」的入口，留一个空壳进去
+    // 等于让用户点进一个什么都没有的场景。整批被拒（`recordTooMany`、迁移闸门）与取消在首批之前
+    // 发生是同一种局面——本场景零写入，那个刚建出来的壳没有理由留下（用户 2026-11-20 裁决）。
+    const written = await writeMockPackItems(source, result, ruleId, items, runtime)
+    if (written === 0) {
+      await source.delete(ruleId)
+      continue
+    }
     result.ruleIds.push(ruleId)
-    await writeMockPackItems(source, result, ruleId, items)
   }
 }
 
@@ -481,7 +521,7 @@ async function importMockPackAsNewRules(source: MockPackWriteSource, read: MockP
  */
 async function importMockPackIntoRule(source: MockPackWriteSource, read: MockPackRead,
   result: MockPackImportResult, targetRuleId: string | null | undefined,
-  strategy: MockPackConflictStrategy) {
+  strategy: MockPackConflictStrategy, runtime?: MockPackImportRuntime) {
   if (targetRuleId == null || targetRuleId === '') {
     throw new MockError('ruleMissing', 'merge import requires targetRuleId')
   }
@@ -502,7 +542,7 @@ async function importMockPackIntoRule(source: MockPackWriteSource, read: MockPac
     })
   }
   result.ruleIds.push(targetRuleId)
-  await writeMockPackItems(source, result, targetRuleId, items)
+  await writeMockPackItems(source, result, targetRuleId, items, runtime)
 }
 
 /**
@@ -510,9 +550,12 @@ async function importMockPackIntoRule(source: MockPackWriteSource, read: MockPac
  * 「拒绝即零写入」靠这一步的位置保证。
  * 导入的记录一律不自动启用（阶段三在 `prepareMockPackRecord` 里把 `match.enabled` 钉成 `false`，
  * 风险表 RK6），所以 `enabled` 恒为 `false`，UI 必须显式提示「已导入但未启用」。
+ *
+ * `runtime`（R4C-19）不进 `MockPackImportOptions`：那个类型是端点能收的 query，
+ * `AbortSignal` 与回调序列化不过去，也不该由客户端指定。
  */
 export async function importMockPack(source: MockPackWriteSource, text: string | undefined,
-  options: MockPackImportOptions): Promise<MockPackImportResult> {
+  options: MockPackImportOptions, runtime?: MockPackImportRuntime): Promise<MockPackImportResult> {
   const read = readMockPack(text)
   const result: MockPackImportResult = {
     ...emptyMockPackImportResult(options.mode),
@@ -521,11 +564,13 @@ export async function importMockPack(source: MockPackWriteSource, text: string |
   }
   if (options.mode === 'merge') {
     await importMockPackIntoRule(source, read, result, options.targetRuleId,
-      options.conflict ?? 'skip')
+      options.conflict ?? 'skip', runtime)
   } else {
-    await importMockPackAsNewRules(source, read, result)
+    await importMockPackAsNewRules(source, read, result, runtime)
   }
-  // 「已成功保留」（PRD 4.4.4 结果页三态）：既有失败又有写入才算部分成功。取消与回滚属 R4C-19，那才有 `aborted`
+  // 「已成功保留」（PRD 4.4.4 结果页三态）：既有失败又有写入才算部分成功。
+  // 取消走 `aborted` 那一栏，跟 `partial` 分开：取消在首批之前发生时 `partial` 为假、`aborted` 为真，
+  // 两者混成一个布尔就没法交代「一条都没写」和「写了一半被你停住」是两回事
   result.partial = result.failed.length > 0 && (result.created.length + result.updated.length) > 0
   return result
 }
@@ -535,6 +580,9 @@ export class MockPackService {
 
   @inject(IOC_TYPES.MockRepo)
   private mockRepo: MockPackWriteSource
+
+  /** 同时只跑一个导入（R4C-19）；`import()` 进门前判空、`finally` 里交还，取消与进度都读它 */
+  private importTask: MockPackImportTask | null = null
 
   // 预统计没有调用方，是刻意留的：技术设计 5.3 原写「>5,000 显示耗时预估」，但预估要把全库数一遍，
   // 比实测 283ms 的写盘还贵；条数改由落盘回执给出。若将来要做真正的耗时预估，别接回这里。
@@ -568,8 +616,46 @@ export class MockPackService {
   /**
    * 导入（R4C-18）：真正写库。冲突三策略的落点在 `importMockPack`，上限复核沿用仓库那一句 `recordTooMany`。
    * 「库内已有 + 待写入」的**提示**要提前到预览给，那是 R4C-20；这里只保证写得下才写。
+   *
+   * 单例闸门（R4C-19）：同时只让一个导入在跑。并发导入比谁快是次要的，难查的是两个任务各自
+   * 复核一遍「库内已有 + 待写入」都合法、合起来把场景推过 10,000 拒绝档，而库里留下两半互相看不见的写入。
+   * 形态抄 `update.runner.ts:25-39` 的模块级 `AbortController`，但重复请求不学它静默忽略：
+   * 更新那条没人盯着，导入这条是用户按下按钮等结果的，挂住不返回比报错难交代。
    */
   async import(text: string | undefined, options: MockPackImportOptions) {
-    return importMockPack(this.mockRepo, text, options)
+    if (this.importTask != null) throw new MockError('packImportInProgress')
+    const task: MockPackImportTask = { controller: new AbortController(), written: 0, total: 0 }
+    this.importTask = task
+    try {
+      return await importMockPack(this.mockRepo, text, options, {
+        signal: task.controller.signal,
+        onBatch: (written, total) => {
+          task.written = written
+          task.total = total
+        }
+      })
+    } finally {
+      this.importTask = null
+    }
+  }
+
+  /** 取消在批与批之间生效：已写进去的一条不动，没写的逐条报 `packWriteAborted`。返回这次到底有没有任务可取消 */
+  cancelImport(): boolean {
+    const task = this.importTask
+    if (task == null) return false
+    task.controller.abort()
+    return true
+  }
+
+  /**
+   * 进度读数（R4C-19）：`written`/`total` 是**当前这一次 `importRecords` 的批次号**，
+   * 新建模式几个场景就重置几次（分批只发生在仓库那层，跨场景累计没人算）。
+   * 渲染层要的是哪种口径（累计条数还是当前场景第几批）、走 IPC 还是 HTTP 推，都属 R4C-26/27；
+   * 这里只保证「按批次不按字节」这一句有地方能读到。
+   */
+  getImportProgress() {
+    const task = this.importTask
+    if (task == null) return { running: false, written: 0, total: 0 }
+    return { running: true, written: task.written, total: task.total }
   }
 }

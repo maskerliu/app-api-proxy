@@ -49,6 +49,11 @@ export interface MockRecordImportResult {
   outcomes: MockRecordImportOutcome[]
   created: string[]
   updated: string[]
+  /**
+   * 取消在批与批之间生效：`created`/`updated` 只含已落库的那些，没写的逐条以
+   * `packWriteAborted` 记在 `outcomes` 里（同上一条契约：「没数」和「没写」要分得开）。
+   */
+  aborted: boolean
 }
 
 /** 导入路径独有的一组写入语义（普通 `saveRecord` 永远取不到这些） */
@@ -59,6 +64,13 @@ export interface MockRecordImportOptions {
    * 不注入就无法复现源机的相对优先级（AC-R4-01 据此成立），注入了也不许拿它判断「这条刚改过」。
    */
   preserveTimestamps?: boolean
+  /**
+   * 取消的检查点只放在这一层：批次循环只有这里有，服务层再切一遍就是两套批次口径。
+   * 只在批与批之间看，批内不看不等于批内能断——`bulkDocs` 的原子单位就是这一批。
+   */
+  signal?: AbortSignal
+  /** 每写完一批报一次（已写批数 / 本次调用的总批数）：§6.5 定的是按批次计量，不按字节 */
+  onBatch?: (written: number, total: number) => void
 }
 
 /**
@@ -475,7 +487,8 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
    * - 包内 `id` 只在它确实落在本场景时才当更新用（要续 `_rev`、要保住 `createdAt`），否则一律新分配
    *   `rec_<uuid>`：全盘接受的话，手改过的包能拿别的场景、甚至规则文档的 `_id` 盖掉库内那条。
    *
-   * 不回滚、不接取消：批次之间抛错时前面几批已经落库，那两件事属 R4C-19。
+   * 取消接在这一层（`options.signal`，批与批之间生效，剩下的批次一条都不写）；回滚不接——
+   * 批次之间抛错或取消时前面几批已经落库，要不要回收本场景由调用方按「本场景写进去几条」决定（§6.5）。
    * 时间戳默认整批共用一个 `now`；`preserveTimestamps` 是 R4C-16 只开给导入路径的注入口子——
    * 新建取包值、覆盖取库内原值（Q3 已裁决），包值不可用时仍回落 `now`。普通 `saveRecord` 取不到这个参数。
    */
@@ -569,7 +582,17 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
 
       const created: string[] = []
       const updated: string[] = []
-      for (let start = 0; start < docs.length; start += MOCK_PACK_WRITE_BATCH) {
+      const totalBatches = Math.ceil(docs.length / MOCK_PACK_WRITE_BATCH)
+      let aborted = false
+      for (let start = 0, batch = 0; start < docs.length; start += MOCK_PACK_WRITE_BATCH, batch++) {
+        if (options?.signal?.aborted === true) {
+          // 批与批之间断：这一批一条都没写，但剩下的每条仍要有交代，不能留成「没数」
+          for (let i = start; i < docs.length; i++) {
+            outcomes.push({ index: docs[i].index, status: 'failed', id: null, reason: 'packWriteAborted' })
+          }
+          aborted = true
+          break
+        }
         const chunk = docs.slice(start, start + MOCK_PACK_WRITE_BATCH)
         const results = await this.pouchdb.bulkDocs(chunk.map(it => it.doc) as any) as any[]
         // 逐条判定而不是 `assertBulkOk`：一批里有一条被 PouchDB 顶住，不该把同批已经写进去的其余条目报成整批失败
@@ -585,12 +608,14 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         })
         // 按批作废整个场景的快照与响应缓存；「导入即生效」由 R4C-17 钉成集成断言
         this.notifyRecordChanged({ type: 'invalidate', ruleId })
+        options?.onBatch?.(batch + 1, totalBatches)
       }
 
       return {
         outcomes: outcomes.sort((a, b) => a.index - b.index),
         created,
-        updated
+        updated,
+        aborted
       }
     })
   }

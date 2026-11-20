@@ -233,7 +233,8 @@ describe('R4C-15 importRecords 批量写（真 PouchDB）', () => {
     const mark = events.length
     const result = await repo.importRecords(ruleId, [])
 
-    assert.deepEqual(result, { outcomes: [], created: [], updated: [] })
+    // `aborted` 是 R4C-19 加的第四栏：没给 signal 时必须显式回「没取消」，不能靠调用方看 created 反推
+    assert.deepEqual(result, { outcomes: [], created: [], updated: [], aborted: false })
     assert.equal(eventsSince(mark).length, 0)
   })
 })

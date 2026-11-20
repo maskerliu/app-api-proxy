@@ -61,6 +61,7 @@ export const MOCK_PACK_CODES = [
   'packFieldDefaulted',
   'packNameCollision',
   'packIdCollision',
+  'packImportInProgress',
   'packWriteAborted',
 ] as const
 

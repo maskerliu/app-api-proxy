@@ -452,8 +452,9 @@ export class AppMockRouter extends BaseRouter {
         { key: 'conflict', type: ParamType.Query }
       ],
       // 写库已接线（R4C-18）：冲突三策略的落点在 `importMockPack`，时间戳按模式注入（R4C-16）而不是客户端开关。
-      // 还没有的两件：取消/回滚（R4C-19，所以 `aborted` 恒 false）、预览阶段提示「库内已有 + 待写入」（R4C-20，
-      // 所以上限只在写库那一步拦下来报 `recordTooMany`）。
+      // 取消/回滚（R4C-19）也接上了，但**这一层没有取消与进度的通道**：`cancelImport()`/`getImportProgress()`
+      // 还没有端点或 IPC 对应物（通道走哪条属 R4C-26/27），所以这个端点目前只能被单例挡住第二个并发请求（`packImportInProgress`）。
+      // 还缺的另一件是预览阶段的「库内已有 + 待写入」提示（R4C-20），上限至今只在写库那一步拦下来报 `recordTooMany`。
       handler: (pack, mode, targetRuleId, conflict) => this.mockPackService.import(pack, {
         mode: toMockPackImportMode(mode),
         targetRuleId: emptyToNull(targetRuleId),

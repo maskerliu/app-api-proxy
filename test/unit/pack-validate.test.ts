@@ -367,7 +367,7 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     // 三策略的落点在真库上验（test/migration/pack-import-service.test.ts）；这条只管端点这一层：
     // 参数有没有交下去、`importRecords` 的 created/duplicate 有没有折算成响应体的对应两栏。
     const ops: any[] = []
-    const originals = { save: repo.save, importRecords: repo.importRecords, getRule: repo.getRule }
+    const originals = { save: repo.save, importRecords: repo.importRecords, getRule: repo.getRule, delete: repo.delete }
     // 合并模式要先确认目标场景存在，替身默认回 null，那就轮到 `ruleMissing`
     repo.getRule = async (ruleId: string) => {
       repo.calls.push('getRule')
@@ -377,6 +377,12 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
       repo.calls.push('save')
       ops.push({ op: 'save', name: rule.name, desc: rule.desc })
       return 'rule_imported'
+    }
+    // 回收空壳走的是仓库那句 `delete`（R4C-19），这里换成记账版，好把「零写入就把刚建的那个场景删掉」验出来
+    repo.delete = async (ruleId: string) => {
+      repo.calls.push('delete')
+      ops.push({ op: 'delete', ruleId })
+      return true
     }
     repo.importRecords = async (ruleId: string, records: any[], options: any) => {
       repo.calls.push('importRecords')
@@ -419,9 +425,11 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
       ]))
       assert.deepEqual(ops.splice(0), [
         { op: 'save', name: '订单中心', desc: '' },
-        { op: 'importRecords', ruleId: 'rule_imported', count: 1, ids: ['rec_0'], preserveTimestamps: true }
+        { op: 'importRecords', ruleId: 'rule_imported', count: 1, ids: ['rec_0'], preserveTimestamps: true },
+        { op: 'delete', ruleId: 'rule_imported' }
       ], '新建模式（query 缺省）先建新场景，再把记录写进那个新 ID')
-      assert.deepEqual(created.body.data.ruleIds, ['rule_imported'])
+      assert.deepEqual(created.body.data.ruleIds, [],
+        'R4C-19：这条被替身报成 duplicate ⇒ 本场景零写入 ⇒ 刚建的那个壳回收，结果页没有场景可跳')
       assert.deepEqual(created.body.data.created, [], '替身把这条报成 duplicate，落到响应体就该是跳过')
       assert.equal(created.body.data.skipped.length, 1)
     } finally {
@@ -429,6 +437,7 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
       repo.save = originals.save
       repo.importRecords = originals.importRecords
       repo.getRule = originals.getRule
+      repo.delete = originals.delete
       takeCalls()
     }
   })
