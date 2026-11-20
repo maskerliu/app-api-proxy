@@ -280,6 +280,7 @@ export default {
       harEntryLimit: 'HAR 条目超过 1000 条，请分批导出',
       harNoResponse: '该请求没有响应记录，已跳过',
       harBodyUnreadable: '响应体缺失或无法解码，已跳过',
+      harUnsupportedProtocol: '请求协议不是 http/https，已跳过',
       packFieldDefaulted: '包内没给这个字段，或给的值用不了，已按默认值补齐',
       packNameCollision: '场景名称已存在，已追加序号',
       packIdCollision: '库里已有相同 ID 的记录，这条已跳过',

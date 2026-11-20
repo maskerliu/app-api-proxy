@@ -58,6 +58,7 @@ export const MOCK_PACK_CODES = [
   'harEntryLimit',
   'harNoResponse',
   'harBodyUnreadable',
+  'harUnsupportedProtocol',
   'packFieldDefaulted',
   'packNameCollision',
   'packIdCollision',

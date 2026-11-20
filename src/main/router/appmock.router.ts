@@ -474,6 +474,7 @@ export class AppMockRouter extends BaseRouter {
       ],
       // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门。
       // 「按内容分派两种包」的判据已经落在 `mock.har.ts` 的 `readHarText`（R4C-21：选错 kind 时 detail 直接说破对方形状），
+      // 字段映射也已在同一个文件就位（R4C-22 `mapHarEntries`：match 只由派生层产出），
       // 但这个 handler 还没接过去——仍是空结果桩；entry 上限 harEntryLimit 与静态资源开关属 R4C-24。
       handler: (_pack, mode) => ({
         ...emptyMockPackImportResult(toMockPackImportMode(mode)),

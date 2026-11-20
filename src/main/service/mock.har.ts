@@ -1,6 +1,12 @@
 import { MockError } from '@shared/mock.errors'
 import type { MockErrorCode } from '@shared/mock.errors'
 import { MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES } from '@shared/mock.pack'
+import type { MockPackRecord } from '@shared/mock.pack'
+import type { ProxyMock } from '@shared/proxy.models'
+import { pickHeader } from '@shared/http-header'
+import { inferBodyType, sanitizeResponseHeaders } from '@shared/mock.validation'
+import { parseLooseUrl } from '@shared/url'
+import { analyzeMatchStability } from './mock.derive'
 
 /**
  * HAR（HTTP Archive 1.2）解析层：把一份 `.har` 读成「够得着真实导出形态」的原料，仅此一件事。
@@ -14,7 +20,7 @@ export type HarHeaders = Record<string, string | string[]>
 export interface HarParam {
   name: string
   value: string
-  /** multipart/表单式上传里的文件名，只在 `source.requestBody` 里有展示价值 */
+  /** multipart/表单式上传里的文件名。映射层不入库（B.3 写的 `source.requestBody` 模型里没有），原料留着等那个落点定下来 */
   fileName: string
 }
 
@@ -25,7 +31,7 @@ export interface HarRequest {
   url: string
   headers: HarHeaders
   mimeType: string
-  /** `postData.text`；没有为 null。与 `params` 同时存在时两份都留着——取哪一份进 `source.requestBody` 是映射的决定 */
+  /** `postData.text`；没有为 null。与 `params` 同时存在时（Charles 会两个都写）两份都留着，映射层都不入库 */
   text: string | null
   /** `postData.params`，没有则空数组。HAR 不支持请求体匹配，这层因此不判它能不能当条件 */
   params: HarParam[]
@@ -55,7 +61,10 @@ export interface HarEntry {
   response: HarResponse
 }
 
-/** 条目级跳过：原因只允许是 §9 认下的 `harNoResponse` / `harBodyUnreadable`，这层不发明第三种 */
+/**
+ * 条目级跳过。解析层只用 §9 认下的 `harNoResponse` / `harBodyUnreadable` 两种，不给「文件被改坏」发明第三种；
+ * 映射层另加 `harUnsupportedProtocol`（§9 的协议白名单那行），它是「这条不要」而不是「这条读不出」。
+ */
 export interface HarSkipped {
   entryIndex: number
   reason: MockErrorCode
@@ -237,4 +246,122 @@ export function parseHarEntries(entries: unknown[]): HarParseResult {
     })
   }
   return { entries: kept, skipped }
+}
+
+/** HAR 能 Mock 的只有这两种协议；白名单交给 `toAbsoluteTarget`，与代理上游、诊断走同一把尺 */
+const HAR_PROTOCOLS = ['http:', 'https:']
+
+/** 参数化建议的原料：`suggested` 是把 ID 形态段换成 `*` 的那个模板，本卡不应用它（§9：只给建议） */
+export interface HarPathSuggestion {
+  original: string
+  suggested: string
+}
+
+export interface HarMappedRecord {
+  /** 与 `skipped.entryIndex` 同一个坐标：文件里的 entry 下标 */
+  entryIndex: number
+  /** 包侧的记录形状，可直接进既有的阶段二校验（R4C-10/11）、归一化（R4C-12）与写入（R4C-18）链路 */
+  record: MockPackRecord
+  suggestion?: HarPathSuggestion
+}
+
+export interface HarMappingResult {
+  records: HarMappedRecord[]
+  /** 只装本步新拒的条目；解析层跳过的那些仍在 `HarParseResult.skipped`，两层各自数各自的 */
+  skipped: HarSkipped[]
+}
+
+/**
+ * `data:` / `file:` / `chrome://` 这类 entry 拆不出可匹配的 path+query，也没有可 Mock 的上游语义，
+ * 放到最后只会变成「导入成功，但一堆规则永不命中」，所以在入口就拒掉并报出协议名。
+ *
+ * 卡片（R4C-22）写的是用 `toAbsoluteTarget` 的白名单拒，实测不行：它为了「裸主机名当 http 处理」那个输入框，
+ * 只认 `scheme://` 形态，于是 `data:image/png;base64,…` 与 `javascript:alert(1)` 被补成 `http://data:…` 之后
+ * 报的是 `invalid` 而不是 `unsupported`——既拒不掉，也读不出协议名，而 `parseLooseUrl` 对同一个串给出的
+ * pathname 是 `image/png;base64,…`，照原样走下去就导进一条永远不会命中的路径规则。
+ * 现在用 `parseLooseUrl` 读协议：它的返回值与后面派生 path 读的是同一个 URL 对象，一条串只有一种读法。
+ *
+ * 地址为空或压根解析不了不跳——那属阶段二 `matchMissing` 的话，与 §9「缺 `request` 的 entry 不跳过」同一条口径。
+ */
+function rejectedScheme(url: string): string | null {
+  if (url === '') return null
+  const parsed = parseLooseUrl(url)
+  if (parsed == null) return null
+  return HAR_PROTOCOLS.indexOf(parsed.protocol) < 0 ? parsed.protocol : null
+}
+
+/**
+ * 响应体这一步只做「存得对」：base64 原样存 + `bodyEncoding='base64'`，引擎按 base64 发出（`mock.service.ts:132-133`），
+ * 所以不解码——解码是为了编辑器能读，那是 R4C-23；在这里解一次，就得同时决定「发出去的是原文还是解出来的文本」。
+ * `bodyType` 先认响应头里的 `content-type`，其次才是 `content.mimeType`：两头不一致时，命中后带回去的是头那一份。
+ * `statusCode` 越界不夹成 200（`responseFromLegacy` 那样做是因为旧记录压根没校验通道），留给阶段二报 `statusRange`。
+ */
+function responseOf(entry: HarEntry): ProxyMock.MockResponseDef {
+  const headers = sanitizeResponseHeaders(entry.response.headers)
+  const contentType = pickHeader(headers, 'content-type') ?? entry.response.content.mimeType
+  return {
+    statusCode: entry.response.status,
+    headers,
+    body: entry.response.content.text ?? '',
+    bodyType: inferBodyType(contentType),
+    bodyEncoding: entry.response.content.encoding === 'base64' ? 'base64' : undefined,
+    delayMs: 0,
+  }
+}
+
+/**
+ * 附录 B.3 的字段映射。**match 一律由既有的派生层产出**（`mock.derive.ts` 的 `analyzeMatchStability`，
+ * 单条自成一组），因为这层要是自己拆一遍 URL，就会和匹配引擎的归一化结果分叉——症状是「导入了却不命中」。
+ * 于是 host 恒为空串（Q2）、E2 高风险键剔进 `ignoreKeys`、E1 不自动忽略（单条没有跨录制证据）、
+ * ID 形态段只出建议（单条不会自动参数化）全部是派生层的既有行为，不是这里新写的规则。
+ *
+ * `postData` 不入库：B.3 写的落点 `source.requestBody` 在模型里不存在，且全站没有任何界面读 Mock 记录的请求体
+ * （只有代理记录显示 `requestData`）。原料仍留在解析层，见技术设计 §11 的 PRD 差异表。
+ *
+ * 每条单独调一次派生：`entry` 之间常常同接口不同参数，攒成一组就会触发 E1 自动忽略与 Path 自动参数化，
+ * 那两条正是 B.3 明令「不自动」的。
+ */
+export function mapHarEntries(entries: HarEntry[], options?: { analyzedAt?: number }): HarMappingResult {
+  const records: HarMappedRecord[] = []
+  const skipped: HarSkipped[] = []
+
+  for (const entry of entries) {
+    const scheme = rejectedScheme(entry.request.url)
+    if (scheme != null) {
+      skipped.push({ entryIndex: entry.index, reason: 'harUnsupportedProtocol', detail: `scheme=${scheme}` })
+      continue
+    }
+    const response = responseOf(entry)
+    // id / ruleId / 时间戳都是占位，只为让派生层吃下这条记录；真正写库时由 R4C-16/18 注入
+    const draft: ProxyMock.MockRecord = {
+      id: `har-${entry.index}`,
+      ruleId: '',
+      name: '',
+      url: entry.request.url,
+      response,
+      variants: [],
+      activeVariantId: null,
+      source: {
+        method: entry.request.method,
+        url: entry.request.url,
+        statusCode: entry.response.status,
+        // 请求头进 `source.headers`：既有消费方（匹配测试台 `match.ts:413`）就是把它当请求头用的
+        headers: entry.request.headers,
+      },
+      createdAt: 0,
+      updatedAt: 0,
+    }
+    const [analysis] = analyzeMatchStability([draft], { source: 'import', analyzedAt: options?.analyzedAt })
+    records.push({
+      entryIndex: entry.index,
+      // `url`、`matchFingerprint`、`matchInvalid` 都不填：它们是派生值（`mock.pack.ts:55`），手填等于绕过查重
+      // `name` 也不填：交给 R4C-12 的默认值补齐，走 `packFieldDefaulted` 那条 notes 通道而不是这里编一个
+      record: analysis?.match != null ? { match: analysis.match, response, source: draft.source } : { response, source: draft.source },
+      suggestion: analysis?.pathSuggested != null
+        ? { original: analysis.pathOriginal ?? analysis.match?.path ?? '', suggested: analysis.pathSuggested }
+        : undefined,
+    })
+  }
+
+  return { records, skipped }
 }
