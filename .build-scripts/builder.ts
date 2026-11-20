@@ -1,11 +1,11 @@
 'use strict'
 
 import chalk from 'chalk'
-import { deleteSync } from 'del'
 import minimist from 'minimist'
 import Spinnies from 'spinnies'
 import webpack from 'webpack'
 import pkg from '../package.json' with { type: "json" }
+import { purge } from './purge'
 import { BaseConfig } from './webpack.base.config'
 import mainConfig from './webpack.main.config'
 import rendererConfig from './webpack.renderer.config'
@@ -23,22 +23,34 @@ const spinnies = new Spinnies({ color: 'blue', succeedColor: 'green', spinner })
 export function run() {
   let argv = minimist(process.argv.slice(2))
   if (argv['target'] == 'clean') clean()
-  if (argv['target'] == 'web') web()
-  else build()
+  else if (argv['target'] == 'web') web()
+  else build(argv['target'] == 'pkg')
 }
 
 function clean() {
   console.log('cleaning...')
-  deleteSync([`build/${pkg.version}/*`])
-  deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
+  const residual = [
+    ...purge([`build/${pkg.version}/*`]),
+    ...purge(['dist/electron/*', 'dist/web/*', '!.gitkeep']),
+  ]
+  if (residual.length > 0) {
+    console.error(`\n${chalk.bgRed.white(' FAIL ')} 仍有 ${residual.length} 项删不掉，请先退出占用进程\n`)
+    process.exit(1)
+  }
   console.log(`\n${chalk.bgGreen.white(' DONE ') + ' '}\n`)
   process.exit()
 }
 
-function build() {
+// packaging 为真时（yarn pkg）产物目录必须清空，否则 electron-builder 写 app.asar 时还会撞同一把锁
+function build(packaging: boolean) {
   greeting()
-  deleteSync([`build/${pkg.version}/*`])
-  deleteSync(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
+  const stale = purge([`build/${pkg.version}/*`])
+  // webpack 只写 dist/，dist 清不干净也照样往下跑
+  purge(['dist/electron/*', 'dist/web/*', '!.gitkeep'])
+  if (packaging && stale.length > 0) {
+    console.error(`\n${chalk.bgRed.white(' FAIL ')} build/${pkg.version} 还占着，打包会在 electron-builder 阶段重蹈同一个 EBUSY。按上面的 HOLDER 退出占用进程后重试。\n`)
+    process.exit(1)
+  }
 
   addSpinnerTask(mainConfig)
   addSpinnerTask(webConfig)
@@ -71,7 +83,7 @@ function pack(config: BaseConfig) {
 }
 
 function web() {
-  deleteSync(['dist/web/*', '!.gitkeep'])
+  purge(['dist/web/*', '!.gitkeep'])
   addSpinnerTask(webConfig)
 }
 

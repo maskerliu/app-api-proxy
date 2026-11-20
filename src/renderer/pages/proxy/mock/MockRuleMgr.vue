@@ -51,12 +51,14 @@
           </template>
           <template #title>
             <van-row class="rule-head-title" align="center" :wrap="false">
-              <span class="rule-head-name truncate" v-tip="curRule?.name">[{{ curRule?.name == null ? $t('mock.rule.name') : curRule?.name }}]</span>
+              <span class="rule-head-name truncate" v-tip="curRule?.name">[{{ curRule?.name == null ?
+                $t('mock.rule.name') : curRule?.name }}]</span>
               <van-tag v-if="curRule._id != null" class="rule-state-tag" plain
                 :type="curRule.isMock ? 'success' : 'warning'" v-tip="mockStateTip">
                 {{ curRule.isMock ? $t('mock.rule.enabled') : $t('mock.rule.disabled') }}
               </van-tag>
-              <span class="rule-head-desc truncate" v-tip="curRule?.desc">{{ curRule?.desc || $t('mock.rule.desc') }}</span>
+              <span class="rule-head-desc truncate" v-tip="curRule?.desc">{{ curRule?.desc || $t('mock.rule.desc')
+                }}</span>
             </van-row>
           </template>
           <template #value>
@@ -87,7 +89,6 @@
           </template>
           <template #right-icon>
             <van-row class="rule-mock-switch" v-tip="mockStateTip" align="center" :wrap="false">
-              <span class="rule-mock-switch-label">{{ $t('mock.rule.mockLabel') }}</span>
               <van-switch v-model="curRule.isMock" @change="onMockSwitchChanged(curRule)"
                 :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
             </van-row>
@@ -99,8 +100,8 @@
       <van-col class="record-pane">
         <van-row class="record-pane-head" align="center" justify="space-between" :wrap="false">
           <span class="record-pane-title">{{ $t('mock.records') }}</span>
-          <van-button class="btn-icon-only" plain type="primary" size="mini" icon="plus"
-            :disabled="curRule._id == null" @click="addRecord"></van-button>
+          <van-button class="btn-icon-only" plain type="primary" size="mini" icon="plus" :disabled="curRule._id == null"
+            @click="addRecord"></van-button>
         </van-row>
         <van-row class="record-filter" align="center" :wrap="false">
           <van-field v-model="recordKeyword" class="control-field record-field" clearable
@@ -142,7 +143,8 @@
                 </div>
               </template>
               <template #right-icon>
-                <van-icon name="cross" class="icon-action record-action record-action--muted" @click.stop="clearEditorState" />
+                <van-icon name="cross" class="icon-action record-action record-action--muted"
+                  @click.stop="clearEditorState" />
               </template>
             </van-cell>
             <van-cell center clickable v-for="row in recordRows" :key="row.record.id"
@@ -238,8 +240,7 @@
     </van-dialog>
 
     <van-dialog v-model:show="showExport" :title="$t('mock.export.dialogTitle')" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
-      :before-close="onExportClose">
+      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')" :before-close="onExportClose">
       <div class="export-form">
         <!-- 范围单独占一块：radio 与标签同一行时，英文两枚选项在 md14 会把第二枚挤到下一行 -->
         <div class="export-field">
@@ -275,8 +276,8 @@ import {
   getMockRecord, getMockRecords, getMockRuleDetail, MOCK_RECORD_REJECT_LIMIT, ProxyMock,
   saveMockRecord, saveMockRule, searchMockRules, validateMockRecord
 } from '@shared'
-import { MOCK_PACK_MAX_RECORDS } from '@shared/mock.pack'
 import type { MockPackExportOptions, MockPackScope } from '@shared/mock.pack'
+import { MOCK_PACK_MAX_RECORDS } from '@shared/mock.pack'
 import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
 import { showConfirmDialog, showLoadingToast, showNotify, type ToastWrapperInstance } from 'vant'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, Ref, ref, watch } from 'vue'
@@ -1328,7 +1329,7 @@ async function startExport() {
 }
 
 /* 三条开关行与一块范围选项共用同一档行距：加一种行型不用补规则 */
-.export-form > * + * {
+.export-form>*+* {
   margin-top: var(--app-sp-md);
 }
 

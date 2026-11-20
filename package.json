@@ -18,7 +18,7 @@
     "build:clean": "yarn build --target=clean",
     "build:web": "yarn build --target=web",
     "publish": "node --import tsx .build-scripts/publish.ts",
-    "pkg": "yarn build && electron-builder -c electron-builder.yml",
+    "pkg": "yarn build --target=pkg && electron-builder -c electron-builder.yml",
     "pub": "yarn pkg && node --import tsx .build-scripts/publish.ts",
     "pub:full": "yarn pkg && node --import tsx .build-scripts/publish.ts --target=full",
     "postinstall": "yarn electron-builder install-app-deps",

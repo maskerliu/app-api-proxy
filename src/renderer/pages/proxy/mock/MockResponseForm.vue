@@ -368,9 +368,14 @@ defineExpose({ focusField })
 }
 
 /* 卡片外观（描边/圆角/底色/裁切）统一由 global.css 的 .header-collapse 提供，
-   这里只留本面板的间距与撑满需求 */
+   这里只留本面板的间距与撑满需求。
+   水平不留边：global 那份 --van-padding-md 是给代理/Socket 两个详情面板的（那里通栏的卡片自己带同样的边距），
+   本列的响应体卡片 .form-section 通栏，响应头要跟着通栏才与它左右缘齐平。
+   留着它更麻烦的是与下面 width:100% 相加：margin box = 100% + 32px，面板（overflow:auto）必出横向滚动。 */
 .header-collapse {
   margin-top: var(--app-sp-xl);
+  margin-left: 0;
+  margin-right: 0;
   width: 100%;
 }
 
