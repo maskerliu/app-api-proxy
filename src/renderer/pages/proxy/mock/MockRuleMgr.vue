@@ -73,9 +73,15 @@
                 :disabled="curRule._id == null">
                 <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
               </van-button>
+              <!-- 导入常驻占位但不启用：写入与生效（R4C-15/16/17）还没落地，接上时只换 handler 与提示 -->
+              <van-button class="btn-icon-only" plain type="primary" size="small" disabled
+                v-tip="$t('mock.import.disabledTip')">
+                <van-icon class="iconfont icon-import btn-action-icon" />
+              </van-button>
               <!-- 导出不依赖当前场景（可选全部场景），所以按钮不置灰；未选中场景时对话框里禁掉「仅当前场景」 -->
-              <van-button plain type="primary" size="small" @click="onExportOpen">
-                {{ $t('mock.export.title') }}
+              <van-button class="btn-icon-only" plain type="primary" size="small"
+                v-tip="$t('mock.export.dialogTitle')" @click="onExportOpen">
+                <van-icon class="iconfont icon-export btn-action-icon" />
               </van-button>
             </div>
           </template>
@@ -1402,12 +1408,6 @@ async function startExport() {
   display: inline-flex;
   align-items: center;
   gap: var(--app-sp-tight);
-}
-
-/* 文字按钮（导出）与同排三枚 .btn-icon-only 方格等高：Vant 的 small 按钮是 md*2.5，比方格的
-   --app-control-height（md*2.2）高一档，混排时方格会被看成没撑开 */
-.rule-head-actions :deep(.van-button) {
-  height: var(--app-control-height);
 }
 
 .rule-head-col :deep(.van-cell__title) {

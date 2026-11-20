@@ -284,8 +284,11 @@ export default {
       packNameCollision: '场景名称已存在，已追加序号',
       packWriteAborted: '导入已取消'
     },
+    // 导入入口现在只有「禁用 + 这句说明」，标题与预览/结果文案随 R4C-25/27 落地时补
+    import: {
+      disabledTip: '导入即将开放：写入与生效尚未落地'
+    },
     export: {
-      title: '导出',
       dialogTitle: '导出规则包',
       scopeLabel: '导出范围',
       scopeCurrent: '仅当前场景',

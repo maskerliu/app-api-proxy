@@ -285,8 +285,11 @@ export default {
       packNameCollision: 'Scenario name already exists; a suffix was added',
       packWriteAborted: 'Import canceled'
     },
+    // 导入入口现在只有「禁用 + 这句说明」，标题与预览/结果文案随 R4C-25/27 落地时补
+    import: {
+      disabledTip: 'Import is not available yet: writing a pack into the library is not implemented'
+    },
     export: {
-      title: 'Export',
       dialogTitle: 'Export rule pack',
       scopeLabel: 'Scope',
       scopeCurrent: 'This scenario',
