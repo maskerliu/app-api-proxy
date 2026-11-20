@@ -306,6 +306,12 @@ export class MockCache {
       this.invalidateAll()
       return
     }
+    // 批量写（导入）按批作废整个场景：逐条 upsert 会把同一份快照编译 N 遍，
+    // 而导入的条目本身不要求立刻参与命中——下一次 ensureSnapshot 整体重建
+    if (event?.type === 'invalidate') {
+      if (event.ruleId != null) this.invalidate(event.ruleId)
+      return
+    }
     if (event?.type === 'upsert' && event.record != null) {
       this.upsert(event.record)
       return

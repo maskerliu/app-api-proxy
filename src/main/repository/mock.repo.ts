@@ -4,9 +4,11 @@ import path from 'path'
 import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
+import { MOCK_RECORD_REJECT_LIMIT } from '@shared/mock.models'
+import { MOCK_PACK_WRITE_BATCH } from '@shared/mock.pack'
 import { USER_DATA_DIR } from '../constants'
 import type {
-  DocMeta, MockMetaDoc, MockRecordDoc, MockRecordSummary, MockRuleDoc,
+  DocMeta, MockMetaDoc, MockRecordDoc, MockRecordFields, MockRecordSummary, MockRuleDoc,
 } from './mock.docs'
 import {
   CONFLICT_RETRY, DELETE_BATCH, META_ID, RECORD_PREFIX, RECORD_SUMMARY_FIELDS, RECORD_TYPE, RULE_TYPE,
@@ -22,11 +24,31 @@ const RECORD_COUNT_PAGE_LIMIT = 1000
 const RECORD_ID_COUNT_PAGE_LIMIT = 2000
 
 export interface MockRecordChangeEvent {
-  type: 'upsert' | 'remove' | 'reset'
+  type: 'upsert' | 'remove' | 'reset' | 'invalidate'
   ruleId?: string
   recordId?: string
   /** upsert 时携带最新记录，缓存据此做增量编译，避免回读 */
   record?: ProxyMock.MockRecord
+}
+
+/**
+ * `importRecords` 的单条落点。`index` 是入参下标：调用方要拿它回指包内「第几个场景的第几条」，
+ * 结果页的明细只有带着坐标才有用（同 R4C-13 的「明细要能指回文件里那一行」）。
+ */
+export interface MockRecordImportOutcome {
+  index: number
+  status: 'created' | 'updated' | 'duplicate' | 'failed'
+  /** created/updated：实际落库的 `_id`（可能与包内 id 不同）；duplicate：占住指纹的那条；failed：null */
+  id: string | null
+  /** `duplicate`/`failed` 的成因：能对上错误码就用错误码，PouchDB 自己的失败回它的 reason */
+  reason?: string
+}
+
+export interface MockRecordImportResult {
+  /** 与入参同序、每条都有值：跳过的那条也要有交代，否则调用方分不清「没写」和「没数」 */
+  outcomes: MockRecordImportOutcome[]
+  created: string[]
+  updated: string[]
 }
 
 /**
@@ -427,6 +449,126 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
           if (err?.status === 409 && attempt < CONFLICT_RETRY) continue
           throw err
         }
+      }
+    })
+  }
+
+  /**
+   * 批量写入（R4C-15）：`saveRecord` 的批量化，六步一步不少——归一化与指纹走 `recordFieldsOf`、
+   * doc 走 `toRecordDoc`、`enqueueSave` 串行、迁移闸门、指纹查重、变更通知，只有落库换成 `bulkDocs`。
+   * **不走 `bulkSave()`**：那是裸 `bulkDocs`，六步全跳，症状是「导入 5000 条成功、一条不命中、全程不报错」。
+   *
+   * 与单条保存不同的三处批语义：
+   * - 一条坏数据不拖垮整批：`recordFieldsOf` 抛出的错误码记在那条的 `failed` 上；
+   * - 指纹撞库内或撞同批前一条 → 那条不写、报 `duplicate`。跳过 / 覆盖 / 复制成三条策略是服务层的
+   *   取舍（R4C-18），这一层只保证「指纹唯一」这条不变量不会因为改批量写而被绕过；
+   * - 包内 `id` 只在它确实落在本场景时才当更新用（要续 `_rev`、要保住 `createdAt`），否则一律新分配
+   *   `rec_<uuid>`：全盘接受的话，手改过的包能拿别的场景、甚至规则文档的 `_id` 盖掉库内那条。
+   *
+   * 不回滚、不接取消：批次之间抛错时前面几批已经落库，那两件事属 R4C-19。
+   * 时间戳整批共用一个 `now`：包值优先与逐条回落属 R4C-16。
+   */
+  public async importRecords(ruleId: string,
+    records: ProxyMock.MockRecord[]): Promise<MockRecordImportResult> {
+    if (ruleId == null) throw new MockError('ruleMissing')
+
+    return this.enqueueSave(ruleId, async () => {
+      if (this.isRuleBlocked(ruleId)) {
+        throw new MockError('migrationFailed', 'mock import while migration in progress')
+      }
+
+      // 上限复核排在查重之前：先确认这批写得下，再花一次扫描建索引。
+      // 更新分支并不新增条目，所以这是个偏保守的上界——拒绝档宁可多拦一次，也不能让库越过上限
+      const total = await this.countRecords(ruleId)
+      if (total + records.length > MOCK_RECORD_REJECT_LIMIT) {
+        throw new MockError('recordTooMany', `records=${total + records.length}`)
+      }
+
+      // 一次摘要扫描建两张表：指纹归属（查重用）与本场景已有的 `_id`（判断包内 id 能不能当更新用）
+      const fingerprintOwner = new Map<string, string>()
+      const ownedIds = new Set<string>()
+      for (const item of await this.listRecordSummaries(ruleId)) {
+        ownedIds.add(item._id)
+        if (item.matchFingerprint != null && !fingerprintOwner.has(item.matchFingerprint)) {
+          fingerprintOwner.set(item.matchFingerprint, item._id)
+        }
+      }
+
+      const outcomes: MockRecordImportOutcome[] = []
+      const writes: Array<{ index: number; id: string; fields: MockRecordFields }> = []
+      for (let index = 0; index < records.length; index++) {
+        let fields: MockRecordFields
+        try {
+          // 目标场景由入参决定：包里那条带的 ruleId 指回的是导出的那个场景，照抄会把记录写进别的场景去
+          fields = recordFieldsOf({ ...records[index], ruleId })
+        } catch (err: any) {
+          outcomes.push({
+            index, status: 'failed', id: null,
+            reason: err instanceof MockError ? err.code : String(err?.message ?? err)
+          })
+          continue
+        }
+
+        const packId = fields.normalized.id
+        const id = packId != null && ownedIds.has(packId) ? packId : `${RECORD_PREFIX}${randomUUID()}`
+        // 与单条保存同一句判断：撞到自己正要更新的那条不算重复
+        const owner = fields.fingerprint == null ? null : fingerprintOwner.get(fields.fingerprint)
+        if (owner != null && owner !== id) {
+          outcomes.push({ index, status: 'duplicate', id: owner, reason: 'matchDuplicate' })
+          continue
+        }
+        if (fields.fingerprint != null) fingerprintOwner.set(fields.fingerprint, id)
+        writes.push({ index, id, fields })
+      }
+
+      // 更新分支要续 `_rev` 并保住 `createdAt`，而摘要里两个都没有：只回读这批真用得上的那几条
+      const now = Date.now()
+      const existingDocs = new Map<string, MockRecordDoc>()
+      const updateIds = writes.filter(it => ownedIds.has(it.id)).map(it => it.id)
+      for (let start = 0; start < updateIds.length; start += MOCK_PACK_WRITE_BATCH) {
+        const page = await this.pouchdb.allDocs({
+          keys: updateIds.slice(start, start + MOCK_PACK_WRITE_BATCH),
+          include_docs: true
+        } as any) as any
+        for (const row of page.rows) {
+          if (row.doc?.type === RECORD_TYPE) existingDocs.set(row.doc._id, row.doc as MockRecordDoc)
+        }
+      }
+
+      const docs: Array<{ index: number; isUpdate: boolean; doc: MockRecordDoc }> = []
+      for (const item of writes) {
+        const existing = ownedIds.has(item.id) ? existingDocs.get(item.id) ?? null : null
+        if (ownedIds.has(item.id) && existing == null) {
+          outcomes.push({ index: item.index, status: 'failed', id: null, reason: 'recordMissing' })
+          continue
+        }
+        docs.push({ index: item.index, isUpdate: existing != null, doc: toRecordDoc(item.fields, existing, item.id, now) })
+      }
+
+      const created: string[] = []
+      const updated: string[] = []
+      for (let start = 0; start < docs.length; start += MOCK_PACK_WRITE_BATCH) {
+        const chunk = docs.slice(start, start + MOCK_PACK_WRITE_BATCH)
+        const results = await this.pouchdb.bulkDocs(chunk.map(it => it.doc) as any) as any[]
+        // 逐条判定而不是 `assertBulkOk`：一批里有一条被 PouchDB 顶住，不该把同批已经写进去的其余条目报成整批失败
+        results.forEach((res, i) => {
+          const item = chunk[i]
+          if (res?.error === true) {
+            outcomes.push({ index: item.index, status: 'failed', id: null, reason: String(res.reason ?? res.message ?? 'bulkDocs') })
+            return
+          }
+          if (item.isUpdate) updated.push(item.doc._id)
+          else created.push(item.doc._id)
+          outcomes.push({ index: item.index, status: item.isUpdate ? 'updated' : 'created', id: item.doc._id })
+        })
+        // 按批作废整个场景的快照与响应缓存；「导入即生效」由 R4C-17 钉成集成断言
+        this.notifyRecordChanged({ type: 'invalidate', ruleId })
+      }
+
+      return {
+        outcomes: outcomes.sort((a, b) => a.index - b.index),
+        created,
+        updated
       }
     })
   }
