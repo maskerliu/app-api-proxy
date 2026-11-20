@@ -29,9 +29,9 @@
                 </template>
                 <template #value>
                   <div>
-                    <van-icon class="iconfont icon-edit icon-action result-action-icon result-action-icon--primary"
+                    <van-icon class="iconfont icon-edit icon-action action-glyph action-glyph--primary"
                       @click.stop="onRuleEdit(rule)" />
-                    <van-icon class="iconfont icon-delete icon-action result-action-icon result-action-icon--danger"
+                    <van-icon class="iconfont icon-delete icon-action action-glyph action-glyph--danger"
                       @click.stop="onRuleDelete(rule)" />
                   </div>
                 </template>
@@ -75,16 +75,22 @@
                 :disabled="curRule._id == null">
                 <van-icon class="iconfont icon-cloud-sync btn-action-icon" />
               </van-button>
-              <!-- 导入常驻占位但不启用：写库端点已接上仓库（R4C-18），缺的是弹窗与结果页接线（R4C-25~27）和「导入即生效」的验收（R4C-17），接上时只换 handler 与提示 -->
-              <van-button class="btn-icon-only" plain type="primary" size="small" disabled
-                v-tip="$t('mock.import.disabledTip')">
-                <van-icon class="iconfont icon-import btn-action-icon" />
-              </van-button>
-              <!-- 导出不依赖当前场景（可选全部场景），所以按钮不置灰；未选中场景时对话框里禁掉「仅当前场景」 -->
-              <van-button class="btn-icon-only" plain type="primary" size="small"
-                v-tip="$t('mock.export.dialogTitle')" @click="onExportOpen">
-                <van-icon class="iconfont icon-export btn-action-icon" />
-              </van-button>
+              <!-- 数据搬运与场景 CRUD 不同类，收进「更多」：头部一行从五枚压到四枚，窄窗口里右端不再被面板裁掉 -->
+              <van-popover v-model:show="showHeadMenu" trigger="click" placement="bottom-end"
+                class="head-menu-popover" :actions="headMenuActions" @select="onHeadMenuSelect">
+                <template #reference>
+                  <!-- 次级动作不给按钮外壳：一枚裸图标，热区与悬停底交给共享的 .icon-action -->
+                  <van-icon class="iconfont icon-more icon-action action-glyph action-glyph--primary"
+                    v-tip="$t('mock.rule.more')" />
+                </template>
+                <template #action="{ action }">
+                  <div class="head-menu-item">
+                    <span class="head-menu-text">{{ action.text }}</span>
+                    <!-- 置灰条目把「为什么现在还不能点」写在行内：菜单里没有悬浮提示可依赖 -->
+                    <span v-if="action.hint" class="head-menu-hint">{{ action.hint }}</span>
+                  </div>
+                </template>
+              </van-popover>
             </div>
           </template>
           <template #right-icon>
@@ -308,6 +314,7 @@ const showRecordDelete = ref(false)
 const showConflict = ref(false)
 // 导出选项只在打开对话框时按当前场景重置，默认值与服务端一致（三个开关全开）
 const showExport = ref(false)
+const showHeadMenu = ref(false)
 const exportScope = ref<MockPackScope>('rule')
 const exportVariants = ref(true)
 const exportSource = ref(true)
@@ -368,8 +375,15 @@ const mockStateTip = computed(() => {
   return curRule.value.isMock ? t('mock.rule.enabledTip') : t('mock.rule.disabledTip')
 })
 
-// 顶部搜索框与左侧记录列表同宽：列表宽度受窗口宽度影响，测量后同步
-const searchColStyle = computed(() => recordListWidth.value > 0 ? { width: `${recordListWidth.value}px` } : null)
+// 顶部搜索框与左侧记录列表同宽：列表宽度受窗口宽度影响，测量后回写给搜索列。
+// 必须用 min() 封顶：主体在 @container mgr (max-width: 63em) 以下改成上下堆叠，列表变成满宽，
+// 测量值照抄过来会把规则信息列压成 0，右侧操作按钮整组溢出被 .mgr-content 裁掉。
+// 封顶就用 --app-record-pane-width 这把现成的尺子，堆叠时搜索列维持并排档的宽度，不再另立第二个上限。
+const searchColStyle = computed(() => recordListWidth.value > 0
+  ? {
+    width: `min(${recordListWidth.value}px, calc(var(--app-record-pane-width) - var(--app-sp-xl)))`
+  }
+  : null)
 
 const RECORD_PAGE_SIZE = 100
 
@@ -890,6 +904,18 @@ async function onRecordDeleteConfirm() {
   }
 }
 
+// 导入常驻占位但不启用：写库端点已接上仓库（R4C-18），缺的是弹窗与结果页接线（R4C-25~27）和「导入即生效」的验收（R4C-17），接上时只换 handler 与这句说明
+const headMenuActions = computed(() => [
+  { key: 'import', text: t('mock.import.menuTitle'), disabled: true, hint: t('mock.import.disabledTip') },
+  // 导出不依赖当前场景（可选全部场景），所以条目不置灰；未选中场景时对话框里禁掉「仅当前场景」
+  { key: 'export', text: t('mock.export.dialogTitle') }
+])
+
+function onHeadMenuSelect(action: { key?: string }) {
+  showHeadMenu.value = false
+  if (action.key === 'export') onExportOpen()
+}
+
 function onExportOpen() {
   // 未选中场景时「仅当前场景」是禁用的，默认值只能落在全部场景上
   exportScope.value = curRule.value?._id == null ? 'all' : 'rule'
@@ -1353,7 +1379,8 @@ async function startExport() {
   font-size: var(--van-font-size-sm);
 }
 
-.mgr-content :deep(.van-popover__wrapper) {
+/* 只有搜索那枚弹层的触发器要撑满列宽；写在全页范围会连带把「更多」菜单的方格按钮拉成一整行 */
+.rule-search-col :deep(.van-popover__wrapper) {
   display: block;
   width: 100%;
 }
@@ -1387,16 +1414,17 @@ async function startExport() {
   white-space: nowrap;
 }
 
-.result-action-icon {
-  /* 内边距、圆角、hover 底色读 global.css 的 .icon-action，这里只留字形尺寸 */
+/* 裸图标（不带 .btn-icon-only 外壳）的字形尺寸与配色：内边距、圆角、hover 底色都读 global.css 的 .icon-action。
+   尺寸与 .btn-icon-only .van-icon 同一乘数——iconfont 基础类把 font-size 写死 16px，不显式给就不跟随字号。 */
+.action-glyph {
   font-size: calc(var(--van-font-size-md) * 1.2);
 }
 
-.result-action-icon--primary {
+.action-glyph--primary {
   color: var(--van-primary-color);
 }
 
-.result-action-icon--danger {
+.action-glyph--danger {
   color: var(--van-danger-color);
 }
 
@@ -1410,6 +1438,9 @@ async function startExport() {
   align-items: center;
   gap: var(--app-sp-tight);
 }
+
+/* 菜单的宽高与两行排版都在 global.css 的浮层菜单一节：弹层被 Vant teleport 到 body，
+   元素不带本页的 scope id，这里再写一份同名 scoped 规则不会命中任何元素。 */
 
 .rule-head-col :deep(.van-cell__title) {
   min-width: 0;

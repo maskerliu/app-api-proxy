@@ -135,6 +135,7 @@ export default {
       enabledTip: 'Requests matching this rule return the mocked response.',
       disabledTip: 'This rule is disabled; requests pass through to the target service.',
       mockLabel: 'Mock',
+      more: 'More actions',
       enabledToast: 'Rule enabled',
       disabledToast: 'Rule disabled',
       delete: {
@@ -289,8 +290,9 @@ export default {
       packImportInProgress: 'An import is already running; wait for it to finish or cancel it first',
       packWriteAborted: 'Import canceled'
     },
-    // 导入入口现在只有「禁用 + 这句说明」，标题与预览/结果文案随 R4C-25/27 落地时补
+    // 菜单条目名与这句说明成对出现（弹层里没有悬浮提示可用）；预览与结果页文案仍随导入功能落地时补
     import: {
+      menuTitle: 'Import rule pack',
       disabledTip: 'Import is not available yet: writing a pack into the library is not implemented'
     },
     export: {

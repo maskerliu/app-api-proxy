@@ -554,6 +554,31 @@
   font-size: var(--van-font-size-md);
 }
 
+/* ---- 浮层菜单（van-popover）：Vant 把弹层 teleport 到 document.body，整套排版只能住在非 scoped 层 ---- */
+
+/* 弹层里的元素不带页面组件的 scope id，页面 scoped 样式够不到：实测那条 :deep(.head-menu-popover) 与
+   .head-menu-item 的内边距全都没命中，宽高仍是 Vant 默认的 128×44，第二行「为什么现在还不能点」被行高裁掉。
+   宽度上限的 min() 兜的是视口：弹层不在面板里，面板的 overflow 裁不到它，超出的是窗口右缘。 */
+.head-menu-popover {
+  --van-popover-action-width: min(calc(var(--van-font-size-md) * 22), calc(100vw - var(--app-sp-3xl)));
+  --van-popover-action-height: auto;
+}
+
+/* 条目排两行：动作名 + 为什么现在还不能点。gap 与内边距同一档，行高交给内容，不再用 Vant 的定高行 */
+.head-menu-popover .head-menu-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--app-sp-tight);
+  padding: var(--app-sp-tight) 0;
+  min-width: 0;
+}
+
+/* 说明文字小一档即可，颜色一概不写：置灰那条要跟着 Vant 的 disabled 文字色走，写死次级色会比标题更亮、读成可点 */
+.head-menu-popover .head-menu-hint {
+  font-size: var(--van-font-size-sm);
+}
+
 /* ---- 操作按钮区：弹窗/面板底部按钮行统一（结构；上下文间距由使用方覆盖） ---- */
 
 .actions-bar {

@@ -134,6 +134,7 @@ export default {
       enabledTip: '命中该规则的请求将返回 Mock 响应',
       disabledTip: '当前规则未启用，请求将直接透传到目标服务',
       mockLabel: 'Mock',
+      more: '更多操作',
       enabledToast: '规则已启用',
       disabledToast: '规则已停用',
       delete: {
@@ -288,8 +289,9 @@ export default {
       packImportInProgress: '已有一个导入正在进行，请等它结束或先取消',
       packWriteAborted: '导入已取消'
     },
-    // 导入入口现在只有「禁用 + 这句说明」，标题与预览/结果文案随 R4C-25/27 落地时补
+    // 菜单条目名与这句说明成对出现（弹层里没有悬浮提示可用）；预览与结果页文案仍随导入功能落地时补
     import: {
+      menuTitle: '导入规则包',
       disabledTip: '导入即将开放：写入与生效尚未落地'
     },
     export: {
