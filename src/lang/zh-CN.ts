@@ -280,7 +280,7 @@ export default {
       harEntryLimit: 'HAR 条目超过 1000 条，请分批导出',
       harNoResponse: '该请求没有响应记录，已跳过',
       harBodyUnreadable: '响应体缺失或无法解码，已跳过',
-      packFieldDefaulted: '包内未提供该字段，已按默认值补齐',
+      packFieldDefaulted: '包内没给这个字段，或给的值用不了，已按默认值补齐',
       packNameCollision: '场景名称已存在，已追加序号',
       packWriteAborted: '导入已取消'
     },

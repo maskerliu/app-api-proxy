@@ -206,4 +206,17 @@ describe('R4C-12 归一化：把包里的记录变成库里那种形状', () => 
     assert.deepEqual([record.createdAt, record.updatedAt], [111, 222])
     assert.equal(record.url, '', 'url 不落包：导入侧保持空串，不拿 match 反推一个出来冒充录制地址')
   })
+
+  it('时间戳只认能用的：写了却用不了要报回落，没写则不作声', () => {
+    const bogus = prepareMockPackRecord(locate({ ...goodRecord(8), createdAt: 0, updatedAt: '昨天' } as unknown as MockPackRecord))
+    assert.deepEqual(bogus.defaulted, ['createdAt', 'updatedAt'], '「写了但用不了」和「没写」的修法不同，得报出来')
+    assert.deepEqual([bogus.record.createdAt, bogus.record.updatedAt], [0, 0], '坏值不许留在排序键上：updatedAt 是列表与匹配的兜底排序键')
+
+    const beyond = prepareMockPackRecord(locate({ ...goodRecord(9), updatedAt: 8.64e15 + 1 } as unknown as MockPackRecord))
+    assert.deepEqual(beyond.defaulted, ['updatedAt'], '超出 Date 表示范围同样算不可用')
+
+    const silent = prepareMockPackRecord(locate(goodRecord(10)))
+    assert.deepEqual(silent.defaulted, [], '包里没写时间戳不是用户的错，写入时刻本来就是缺省')
+    assert.deepEqual([silent.record.createdAt, silent.record.updatedAt], [0, 0])
+  })
 })

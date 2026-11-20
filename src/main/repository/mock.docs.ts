@@ -263,9 +263,17 @@ export function recordFieldsOf(record: ProxyMock.MockRecord): MockRecordFields {
  * 保留 `_rev`、保留 `createdAt`、以及「只有 v2 迁移来的记录才继续维护兼容快照」三条差别都在这里判定。
  * ID 与时间戳由调用方给：怎么分配（`rec_<uuid>` / 包内 id / 复制为新记录）与是否沿用包里的时间
  * 都是调用方所在路径的决定，写进这个函数就等于把同一个决定做两次。
+ * `stamps` 是那声「沿用」的入口（R4C-16，仅导入路径用）：`createdAt` 只在新建时生效——库里有就别动它，
+ * 这条优先级是 Q3「覆盖取目标值」的落点；`updatedAt` 不给就用 `now`。值必须已经过可用性判定，
+ * 这里不再判一次，否则预览说的和写进库的会不是同一件事。
  */
+export interface MockRecordStamps {
+  createdAt?: number
+  updatedAt?: number
+}
+
 export function toRecordDoc(fields: MockRecordFields, existing: MockRecordDoc | null,
-  id: string, now: number): MockRecordDoc {
+  id: string, now: number, stamps?: MockRecordStamps): MockRecordDoc {
   const doc: MockRecordDoc = {
     _id: id,
     type: RECORD_TYPE,
@@ -278,8 +286,8 @@ export function toRecordDoc(fields: MockRecordFields, existing: MockRecordDoc | 
     variants: fields.normalized.variants,
     activeVariantId: fields.normalized.activeVariantId,
     source: fields.normalized.source,
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now
+    createdAt: existing?.createdAt ?? stamps?.createdAt ?? now,
+    updatedAt: stamps?.updatedAt ?? now
   }
   if (existing?._rev != null) doc._rev = existing._rev
   if (existing?.record != null) doc.record = toCompatRecord(fields.normalized)

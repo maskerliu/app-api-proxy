@@ -5,10 +5,10 @@ import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
 import { MOCK_RECORD_REJECT_LIMIT } from '@shared/mock.models'
-import { MOCK_PACK_WRITE_BATCH } from '@shared/mock.pack'
+import { MOCK_PACK_WRITE_BATCH, packTimestampOf } from '@shared/mock.pack'
 import { USER_DATA_DIR } from '../constants'
 import type {
-  DocMeta, MockMetaDoc, MockRecordDoc, MockRecordFields, MockRecordSummary, MockRuleDoc,
+  DocMeta, MockMetaDoc, MockRecordDoc, MockRecordFields, MockRecordStamps, MockRecordSummary, MockRuleDoc,
 } from './mock.docs'
 import {
   CONFLICT_RETRY, DELETE_BATCH, META_ID, RECORD_PREFIX, RECORD_SUMMARY_FIELDS, RECORD_TYPE, RULE_TYPE,
@@ -49,6 +49,16 @@ export interface MockRecordImportResult {
   outcomes: MockRecordImportOutcome[]
   created: string[]
   updated: string[]
+}
+
+/** 导入路径独有的一组写入语义（普通 `saveRecord` 永远取不到这些） */
+export interface MockRecordImportOptions {
+  /**
+   * Q3 已裁决的口径：新建与复制取包内时间戳，合并覆盖取**库内原值**（不是包值）。
+   * 不给或 `false` 就是整批一个写入时刻——`updatedAt` 是列表与匹配排序的兜底键，
+   * 不注入就无法复现源机的相对优先级（AC-R4-01 据此成立），注入了也不许拿它判断「这条刚改过」。
+   */
+  preserveTimestamps?: boolean
 }
 
 /**
@@ -466,10 +476,11 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
    *   `rec_<uuid>`：全盘接受的话，手改过的包能拿别的场景、甚至规则文档的 `_id` 盖掉库内那条。
    *
    * 不回滚、不接取消：批次之间抛错时前面几批已经落库，那两件事属 R4C-19。
-   * 时间戳整批共用一个 `now`：包值优先与逐条回落属 R4C-16。
+   * 时间戳默认整批共用一个 `now`；`preserveTimestamps` 是 R4C-16 只开给导入路径的注入口子——
+   * 新建取包值、覆盖取库内原值（Q3 已裁决），包值不可用时仍回落 `now`。普通 `saveRecord` 取不到这个参数。
    */
   public async importRecords(ruleId: string,
-    records: ProxyMock.MockRecord[]): Promise<MockRecordImportResult> {
+    records: ProxyMock.MockRecord[], options?: MockRecordImportOptions): Promise<MockRecordImportResult> {
     if (ruleId == null) throw new MockError('ruleMissing')
 
     return this.enqueueSave(ruleId, async () => {
@@ -542,7 +553,18 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
           outcomes.push({ index: item.index, status: 'failed', id: null, reason: 'recordMissing' })
           continue
         }
-        docs.push({ index: item.index, isUpdate: existing != null, doc: toRecordDoc(item.fields, existing, item.id, now) })
+        // Q3：新建取包值、覆盖取库内原值。包值在归一化阶段就过了一遍 `packTimestampOf`，
+        // 到这里的 0 与「包里没写」同义，所以两侧都再过一次只是为了兜住没经过那一层的调用方（HAR、直接调仓库的测试）
+        let stamps: MockRecordStamps | undefined
+        if (options?.preserveTimestamps === true) {
+          stamps = existing == null
+            ? {
+              createdAt: packTimestampOf(item.fields.normalized.createdAt) ?? undefined,
+              updatedAt: packTimestampOf(item.fields.normalized.updatedAt) ?? undefined
+            }
+            : { updatedAt: packTimestampOf(existing.updatedAt) ?? undefined }
+        }
+        docs.push({ index: item.index, isUpdate: existing != null, doc: toRecordDoc(item.fields, existing, item.id, now, stamps) })
       }
 
       const created: string[] = []

@@ -195,6 +195,20 @@ export interface MockPackImportResult {
 /** 脱敏后的固定掩码：不写成空串，空串会让导入侧把「头不存在」和「头被脱敏」混为一谈 */
 export const MOCK_PACK_REDACTED_VALUE = '***'
 
+/** `Date` 能表示的最远时间；超出就按不可用处理，别让它进排序键 */
+const MAX_TIMESTAMP_MS = 8.64e15
+
+/**
+ * 包里的时间戳只认「可用的正整数毫秒」这一种读法：`normalizeMockRecord` 把缺失补成 `0`，
+ * 所以 `0` 与非数字 / 负数 / 超范围和「没写」是同一件事——都交给写入时刻。
+ * 判定只在这里写一遍：预览的提示与写入的回落共用同一个口径，否则会出现「预览说没问题、写入还是丢了」。
+ */
+export function packTimestampOf(value: unknown): number | null {
+  if (!Number.isSafeInteger(value)) return null
+  const ms = value as number
+  return ms > 0 && ms <= MAX_TIMESTAMP_MS ? ms : null
+}
+
 type PackHeaders = Record<string, unknown> | null | undefined
 
 /**
@@ -431,7 +445,7 @@ export interface MockPackPreparedRecord {
   recordIndex: number
   /** 不含 `ruleId`：它是「导到哪个场景」的答案，属预览与写入阶段（R4C-13/R4C-18），包里也没有这个字段 */
   record: ProxyMock.MockRecord
-  /** 回落了哪些字段（`id` / `name`），由调用方折算成 `packFieldDefaulted` 明细 */
+  /** 回落了哪些字段（`id` / `name` / 用不了的 `createdAt`/`updatedAt`），由调用方折算成 `packFieldDefaulted` 明细 */
   defaulted: string[]
 }
 
@@ -440,16 +454,20 @@ export interface MockPackPreparedRecord {
  * 用 `normalizeMockRecord` 而不是自己逐字段补——派生 match 之外的那套默认值有一份就够了，
  * 补两次就会漂移（读库路径 `docToRecord` 用的也是它）。
  *
- * 只有两处是归一化管不到、又必须强制的：
+ * 只有三处是归一化管不到、又必须强制的：
  * - `match.enabled = false`：导入不许劫持真实请求（风险表 RK6），启不启用是用户之后的决定；
  * - `match.derivation.source = 'import'`：包里的来源印记讲的是导出那台机器的事，
  *   对本库而言这条记录就是导入产生的（`mock.models.ts:95` 已有该取值，不扩类型）。
+ * - 时间戳只留 `packTimestampOf` 认得的：`normalizeMockRecord` 对这两个字段只做 `?? 0`，
+ *   字符串与越界数会原样进 doc，而 `updatedAt` 是列表与匹配排序的兜底键——坏值留到库里比丢掉更难查。
  *
  * 不生成 ID：`MockRepo.saveRecord` 里「无 id 就 `rec_<uuid>`」那次分配是唯一点，这里再分配一次就是第二条标准。
  * 但缺 id 要在 `defaulted` 里说一声——合并模式靠包内 `id` 做幂等重放，缺了它，重放同一个包就会多出副本。
  */
 export function prepareMockPackRecord(located: MockPackLocatedRecord): MockPackPreparedRecord {
   const packed = located.record
+  const createdAt = packTimestampOf(packed?.createdAt)
+  const updatedAt = packTimestampOf(packed?.updatedAt)
   const record = normalizeMockRecord({
     id: packed?.id ?? undefined,
     name: packed?.name,
@@ -458,13 +476,16 @@ export function prepareMockPackRecord(located: MockPackLocatedRecord): MockPackP
     variants: packed?.variants,
     activeVariantId: packed?.activeVariantId,
     source: packed?.source,
-    createdAt: packed?.createdAt,
-    updatedAt: packed?.updatedAt,
+    createdAt: createdAt ?? undefined,
+    updatedAt: updatedAt ?? undefined,
   })
   const defaulted: string[] = []
   if (record.id == null) defaulted.push('id')
   // 名称回落发生在仓库层（url → match.path），包内记录没有 url，所以这里只能说「名称是补的」
   if (record.name === '') defaulted.push('name')
+  // 只在包里写了却用不了时报一声：没写不是用户的错，写入时刻本来就是缺省
+  if (packed?.createdAt != null && createdAt == null) defaulted.push('createdAt')
+  if (packed?.updatedAt != null && updatedAt == null) defaulted.push('updatedAt')
   const match = record.match
   if (match != null) {
     const derivation = match.derivation

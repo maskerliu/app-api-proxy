@@ -237,3 +237,65 @@ describe('R4C-15 importRecords 批量写（真 PouchDB）', () => {
     assert.equal(eventsSince(mark).length, 0)
   })
 })
+
+// R4C-16：`updatedAt` 是列表与匹配排序的兜底键，导入若不注入就会把源机的相对优先级抹平（AC-R4-01）。
+// 注入只在导入路径开得动，所以这几条全部对照「不传 options」的默认形状写。
+describe('R4C-16 时间戳注入（仅导入路径）', () => {
+  const PACK_CREATED = 1_600_000_000_000
+  const PACK_UPDATED = 1_600_000_000_500
+
+  it('preserveTimestamps：新建取包内原值，写入时刻不参与', async () => {
+    const ruleId = await newRule('时间戳-新建取包值')
+    const result = await repo.importRecords(ruleId,
+      [packRecord(ruleId, 0, { createdAt: PACK_CREATED, updatedAt: PACK_UPDATED })],
+      { preserveTimestamps: true })
+    const doc = await repo.getDoc(result.created[0])
+
+    assert.deepEqual([doc.createdAt, doc.updatedAt], [PACK_CREATED, PACK_UPDATED])
+  })
+
+  it('不传 options 与 R4C-15 完全一致：整批共用一个写入时刻', async () => {
+    const ruleId = await newRule('时间戳-默认不注入')
+    const before = Date.now()
+    const result = await repo.importRecords(ruleId,
+      [packRecord(ruleId, 0, { createdAt: PACK_CREATED, updatedAt: PACK_UPDATED }), packRecord(ruleId, 1)])
+    const docs = await Promise.all(result.created.map((id: string) => repo.getDoc(id)))
+
+    assert.equal(new Set(docs.map((it: any) => it.updatedAt)).size, 1, '整批一个时刻，不许逐条取时间')
+    assert.ok(docs[0].updatedAt >= before, '默认口径下包值一概不用')
+    assert.equal(docs[0].createdAt, docs[0].updatedAt)
+  })
+
+  it('包值不可用（0、字符串、超 Date 范围）回落写入时刻，但仍算写成功', async () => {
+    const ruleId = await newRule('时间戳-坏值回落')
+    const before = Date.now()
+    const records = [
+      packRecord(ruleId, 0, { createdAt: 0, updatedAt: '昨天' }),
+      packRecord(ruleId, 1, { createdAt: 8.64e15 + 1, updatedAt: -5 }),
+    ]
+    const result = await repo.importRecords(ruleId, records, { preserveTimestamps: true })
+    const docs = await Promise.all(result.created.map((id: string) => repo.getDoc(id)))
+
+    assert.deepEqual(result.created.length, 2, '时间戳坏不是写入失败，回落就行')
+    for (const doc of docs) {
+      assert.ok(doc.createdAt >= before && doc.updatedAt >= before,
+        `坏值该换成写入时刻，实际 ${doc.createdAt}/${doc.updatedAt}`)
+    }
+  })
+
+  it('合并覆盖取库内原值（Q3）：包值与 now 都不许顶掉 updatedAt', async () => {
+    const ruleId = await newRule('时间戳-覆盖取目标值')
+    const saved = await repo.saveRecord(packRecord(ruleId, 2))
+    const before = await repo.getDoc(saved.id)
+
+    const result = await repo.importRecords(ruleId,
+      [{ ...packRecord(ruleId, 2), id: saved.id, name: '改过名', createdAt: PACK_CREATED, updatedAt: PACK_UPDATED }],
+      { preserveTimestamps: true })
+    const after = await repo.getDoc(saved.id)
+
+    assert.equal(statusOf(result, 0).status, 'updated')
+    assert.deepEqual([after.createdAt, after.updatedAt], [before.createdAt, before.updatedAt],
+      '覆盖不动时间戳：列表「更新时间」保持不变，结果页要写「保持原有优先级不变」')
+    assert.equal(after.name, '改过名', '内容该照写，只有时间戳不动')
+  })
+})

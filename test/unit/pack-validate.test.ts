@@ -271,6 +271,20 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     assert.deepEqual(repo.calls, [], '归一化同样不碰仓库')
   })
 
+  it('用不了的时间戳也折进 notes，交出去的已经是可用值', () => {
+    const repo = newFakeRepo()
+    const service = new MockPackService()
+    ;(service as any).mockRepo = repo
+    const odd = { ...validRecordAt(0), createdAt: '昨天', updatedAt: 8.64e15 + 1 }
+    const read = service.readPack(packText([{ id: 'rule_1', name: '订单中心', records: [odd] }]))
+
+    assert.deepEqual(read.notes.map(it => [it.code, it.field]),
+      [['packFieldDefaulted', 'createdAt'], ['packFieldDefaulted', 'updatedAt']])
+    assert.deepEqual([read.prepared[0].record.createdAt, read.prepared[0].record.updatedAt], [0, 0],
+      '坏值在这一层就清掉：`0` 与「没写」同义，写入侧据此取时刻，不必再判一次')
+    assert.deepEqual(repo.calls, [], '归一化不碰仓库')
+  })
+
   // 真实由 + 真实 multipart 通道：坏包拿到的是错误码，不是一个「成功的空结果」
   const router = new AppMockRouter()
   const repo = newFakeRepo()
