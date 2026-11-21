@@ -10,34 +10,37 @@
 
     <div class="import-body">
       <template v-if="result == null">
-        <van-row class="import-row" align="center" :wrap="false">
-          <span class="import-label">{{ $t('mock.import.fileLabel') }}</span>
-          <span class="import-file truncate" :class="{ 'is-empty': file == null }"
-            v-tip="file?.name ?? $t('mock.import.noFile')">{{ file?.name ?? $t('mock.import.noFile') }}</span>
-          <van-button class="import-pick" size="small" plain :disabled="busy || writing" @click="onPickFile">
-            {{ $t('mock.import.pickFile') }}
-          </van-button>
-        </van-row>
+        <!-- 三行配置一律用 field（#input 槽放自定义控件）：标签列宽、标签色（global.css 的 .van-field__label）、
+             行距与分隔线都由组件给，本页不再自写表单排版。文件名是只读值不是输入框，所以它进 #input 槽而不接 v-model。 -->
+        <van-field class="import-file-cell" :label="$t('mock.import.fileLabel')">
+          <template #input>
+            <span class="import-file truncate" :class="{ 'is-empty': file == null }"
+              v-tip="file?.name ?? $t('mock.import.noFile')">{{ file?.name ?? $t('mock.import.noFile') }}</span>
+            <van-button class="import-pick" size="small" plain :disabled="busy || writing" @click="onPickFile">
+              {{ $t('mock.import.pickFile') }}
+            </van-button>
+          </template>
+        </van-field>
 
-        <!-- 这两行的 :wrap 故意留默认：地板宽下整组拿不到剩余宽度，宁可让「导入方式」单独占一行，
-             也不让 radio 组被行压缩到比它自己最短的一枚还窄（那样标签尾端会被弹窗描边裁掉） -->
-        <van-row class="import-row" align="center">
-          <span class="import-label">{{ $t('mock.import.modeLabel') }}</span>
-          <van-radio-group v-model="mode" direction="horizontal" class="import-radios" :disabled="busy || writing">
-            <van-radio name="new">{{ $t('mock.import.modeNew') }}</van-radio>
-            <van-radio name="merge" :disabled="ruleId == null">{{ $t('mock.import.modeMerge') }}</van-radio>
-          </van-radio-group>
-        </van-row>
+        <van-field :label="$t('mock.import.modeLabel')">
+          <template #input>
+            <van-radio-group v-model="mode" direction="horizontal" class="import-radios" :disabled="busy || writing">
+              <van-radio name="new">{{ $t('mock.import.modeNew') }}</van-radio>
+              <van-radio name="merge" :disabled="ruleId == null">{{ $t('mock.import.modeMerge') }}</van-radio>
+            </van-radio-group>
+          </template>
+        </van-field>
 
         <!-- 冲突策略只在合并模式出现：新建模式包内每条都写进新场景，库里没有可撞的对象 -->
-        <van-row v-if="mode === 'merge'" class="import-row" align="center">
-          <span class="import-label">{{ $t('mock.import.conflictLabel') }}</span>
-          <van-radio-group v-model="conflict" direction="horizontal" class="import-radios" :disabled="busy || writing">
-            <van-radio name="skip">{{ $t('mock.import.conflictSkip') }}</van-radio>
-            <van-radio name="overwrite">{{ $t('mock.import.conflictOverwrite') }}</van-radio>
-            <van-radio name="copy">{{ $t('mock.import.conflictCopy') }}</van-radio>
-          </van-radio-group>
-        </van-row>
+        <van-field v-if="mode === 'merge'" :label="$t('mock.import.conflictLabel')">
+          <template #input>
+            <van-radio-group v-model="conflict" direction="horizontal" class="import-radios" :disabled="busy || writing">
+              <van-radio name="skip">{{ $t('mock.import.conflictSkip') }}</van-radio>
+              <van-radio name="overwrite">{{ $t('mock.import.conflictOverwrite') }}</van-radio>
+              <van-radio name="copy">{{ $t('mock.import.conflictCopy') }}</van-radio>
+            </van-radio-group>
+          </template>
+        </van-field>
 
         <div v-if="quotaText" class="import-quota" :class="quotaReject ? 'is-reject' : 'is-warn'">{{ quotaText }}</div>
         <!-- 建议名只在新建模式给（多场景包连一个名字都代表不了），合并模式这一格用来指认「当前场景」是哪个 -->
@@ -383,25 +386,30 @@ function onRestart() {
 </script>
 
 <style scoped>
-/* 自带内容的弹窗：沟道与按钮区都读全站那一份（见 global.css 的弹窗一节） */
+/* 自带内容的弹窗：沟道与按钮区都读全站那一份（见 global.css 的弹窗一节）。
+   横向内边距归零后 field 的标签正好落在标题那一条沟道上，分隔线两头也同步收进来——与 MockExportDialog 的
+   .export-form 同形。这两条同形的补丁暂时留在各自 scoped：上提要同时动导出弹窗，而它不属本批范围。 */
 .import-body {
+  --van-cell-horizontal-padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--app-sp-md);
   box-sizing: border-box;
-  /* 高度在「按字号放得下明细」与「不把矮窗口顶出屏幕」之间取小：弹窗高度恒定，明细区自己滚动 */
-  height: min(calc(var(--van-font-size-md) * 20), 45vh);
+  /* 高度在「按字号放得下明细」与「不把矮窗口顶出屏幕」之间取小：弹窗高度恒定，明细区自己滚动。
+     20/45 是 van-row 自写行那档（每行约 28px）；换成 field 之后行高由 cell 给（约 40px，按钮那行 48px），
+     三行配置块实测 124.8px（字号 13、合并模式），比原先高出 33.2px，明细区会被压到 26.6px 而只剩滚动条。
+     24/55 是补回这一档：同一场景实测明细区 78.6px，最坏那档（字号 14、窗口 640 以下顶到 vh 上限）也还有 58.9px。 */
+  height: min(calc(var(--van-font-size-md) * 24), 55vh);
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
 
-.import-row {
-  flex: none;
-  gap: var(--app-sp-lg);
+/* field 已经自带行距，再叠一档会比全站表单松；只有非 field 的行（散段说明、明细区、按钮行）读这一档 */
+.import-body>*+*:not(.van-cell) {
+  margin-top: var(--app-sp-md);
 }
 
-.import-label {
+/* 固定高度 + flex:1 的明细区之间，行不能被压缩：Vant 给 cell 的 overflow: hidden 会把压扁后的控件裁掉 */
+.import-body>.van-cell {
   flex: none;
-  color: var(--van-text-color-2);
 }
 
 .import-file {
@@ -415,6 +423,12 @@ function onRestart() {
 
 .import-pick {
   flex: none;
+}
+
+/* 「文件」那一格的 #input 里同时放文件名与按钮：Vant 给自定义控件的容器已经是 flex + 垂直居中，
+   只差一枚行内沟道（与本页其它行的控件沟道同档） */
+.import-file-cell :deep(.van-field__control) {
+  gap: var(--app-sp-lg);
 }
 
 /* Vant 的 radio 组是 flex-wrap: wrap：不收缩它就一直保持单行的固有宽，弹窗压到地板宽时整组顶穿
