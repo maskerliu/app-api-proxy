@@ -55,6 +55,7 @@ export const MOCK_PACK_CODES = [
   'packTooLarge',
   'packRecordLimit',
   'packEmpty',
+  'packModeUnsupported',
   'harEntryLimit',
   'harNoResponse',
   'harBodyUnreadable',

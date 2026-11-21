@@ -6,8 +6,8 @@ import express from 'express'
 import { BizCode } from '@shared/base.models'
 import { MockError } from '@shared/mock.errors'
 import {
-  MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES, MOCK_PACK_MAX_RECORDS, MOCK_PACK_VERSION,
-  readMockPackText,
+  MOCK_PACK_DETAIL_MAX_CHARS, MOCK_PACK_FORMAT, MOCK_PACK_MAX_FILE_BYTES, MOCK_PACK_MAX_RECORDS,
+  MOCK_PACK_VERSION, describeValue, readMockPackText,
 } from '@shared/mock.pack'
 import { makeMatch } from './fixtures'
 
@@ -177,6 +177,30 @@ describe('R4C-10 包级校验：format / version / 体积 / 总条数 / 空包',
     assert.match(detail, /rules\[1]\.records/, `detail 里要点明坏的下标，实际是 ${detail}`)
   })
 
+  it('坏取值的摘要只留得下去的长度：detail 进响应体，不能把用户文件原样带出去', () => {
+    // 顶层是数组：`String([])` 是空串，detail 只剩「top level is 」，读的人不知道坏在哪
+    expectPackCode('packFormatUnknown', () => readMockPackText('[]', 2), '顶层空数组')
+    assert.equal(describeValue([]), 'array(0)')
+    assert.equal(describeValue([1, 2, 3]), 'array(3)')
+
+    // 超长坏 format：截到上限，且上限本身就是那个常量（改了常量这里跟着动，不留第二个数）
+    const long = JSON.stringify({ format: 'x'.repeat(5000), version: 1, rules: [ruleWith(1)] })
+    let detail = ''
+    try {
+      readMockPackText(long, Buffer.byteLength(long, 'utf8'))
+    } catch (err) {
+      detail = (err as MockError).detail
+    }
+    assert.ok(detail.startsWith('format=xxx'), detail)
+    assert.equal(detail.length, 'format='.length + MOCK_PACK_DETAIL_MAX_CHARS + 1, `detail 把长串整段带出去了：${detail.length}`)
+    assert.ok(detail.endsWith('…'), '截断要留下标记，否则看不出是截的还是原值')
+
+    // 深到能撑爆递归的包：JSON.parse 交得出来就照常走闸门，不该以 RangeError 收场
+    const deep = `{"format":"${MOCK_PACK_FORMAT}","version":${MOCK_PACK_VERSION},"rules":`
+      + '{"a":'.repeat(200000) + '1' + '}'.repeat(200000) + '}'
+    expectPackCode('packFormatUnknown', () => readMockPackText(deep, Buffer.byteLength(deep, 'utf8')), 'rules 是深嵌套对象')
+  })
+
   it('字节数走 Buffer.byteLength：中文包不按字符数算', () => {
     const text = packText([ruleWith(1)]).replace('订单中心', '订单中心中中中')
     assert.ok(Buffer.byteLength(text, 'utf8') > text.length, '这份样例本身要能体现字节 > 字符')
@@ -338,6 +362,30 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
       assert.deepEqual(takeCalls(), [], `${pathname} 在包级拒绝路径上读了库`)
     })
   }
+
+  // mode 是 query 参数里唯一会决定「写不写库结构」的那个：拼错的 merge 静默落进新建，
+  // 用户看到的是一份没合并、却凭空多了几个场景的库（合并模式的缺参组合本就回 ruleMissing，见 R4C-18）。
+  // 认没认出来只能看行为：预览响应体里没有 mode 这个字段，所以用「走哪条分支」当判据。
+  it('mode：缺省按新建，大小写与空白照样认，认不出来的显式拒绝', async () => {
+    const text = packText([{ id: 'rule_1', name: '订单中心', records: [validRecordAt(0)] }])
+    for (const [label, query] of [['缺省', ''], ['新建', 'mode=new']] as Array<[string, string]>) {
+      const { body } = await uploadPack(API_URL.PREVIEW_MOCK_PACK, text, query)
+      assert.equal(body.code, BizCode.SUCCESS, `${label} 该按新建走通：${JSON.stringify(body)}`)
+    }
+    // 认成合并的判据：合并模式没给 targetRuleId 必回 ruleMissing（新建分支压根不看这个参数）
+    for (const [label, query] of [['大写', 'mode=MERGE'], ['首尾空白', 'mode=%20merge%20']] as Array<[string, string]>) {
+      takeCalls()
+      const { body } = await uploadPack(API_URL.PREVIEW_MOCK_PACK, text, query)
+      assert.equal(body.errorCode, 'ruleMissing', `${label} 要认成合并模式，实际 ${JSON.stringify(body)}`)
+      assert.deepEqual(takeCalls(), [], `${label}：合并模式在确认目标之前就退了，不该读库`)
+    }
+    for (const [label, query] of [['拼错', 'mode=merg'], ['第三种取值', 'mode=copy'], ['数字串', 'mode=0']] as Array<[string, string]>) {
+      takeCalls()
+      const { body } = await uploadPack(API_URL.PREVIEW_MOCK_PACK, text, query)
+      assert.equal(body.errorCode, 'packModeUnsupported', `${label} 要显式回错，实际 ${JSON.stringify(body)}`)
+      assert.deepEqual(takeCalls(), [], `${label}：既然拒了就不该读库`)
+    }
+  })
 
   it(`${API_URL.PREVIEW_MOCK_PACK}：合法包回真统计，条目级明细与回落说明一并回传`, async () => {
     const { body } = await uploadPack(API_URL.PREVIEW_MOCK_PACK, packText([

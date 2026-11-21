@@ -279,6 +279,7 @@ export default {
       packTooLarge: 'File exceeds 50MB; split scenarios and export again',
       packRecordLimit: 'More than 5000 records in the pack; split by scenario',
       packEmpty: 'No importable entries',
+      packModeUnsupported: 'Import mode must be either new or merge',
       harEntryLimit: 'More than 1000 HAR entries; export in batches',
       harNoResponse: 'No response recorded; entry skipped',
       harBodyUnreadable: 'Response body missing or undecodable; entry skipped',

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { MOCK_PACK_CODES, MOCK_VALIDATION_CODES } from '@shared/mock.errors'
 import { MOCK_PACK_FORMAT, MOCK_PACK_VERSION, MockPackRecord, MockPackV1, prepareMockPackRecord, validateMockPackRecords } from '@shared/mock.pack'
-import { MOCK_MAX_BODY_BYTES, MOCK_MAX_VARIANTS, canonicalMatch, normalizeMatchRule, normalizeMockRecord } from '@shared/mock.validation'
+import { MOCK_MAX_BODY_BYTES, MOCK_MAX_VARIANTS, canonicalMatch, normalizeMatchRule, normalizeMockRecord, sanitizeResponseHeaders } from '@shared/mock.validation'
+import { isHeaderName } from '@shared/http-header'
 import { makeMatch } from './fixtures'
 
 // 阶段二（条目级）是纯函数，不需要 electron 替身：与 pack-validate.test.ts 的分工是
@@ -88,6 +89,37 @@ describe('R4C-11 条目级校验：单条不过只跳那一条', () => {
     assert.deepEqual(codesOf(check.issues), ['bodyTooLarge'])
     assert.equal(check.issues[0].field, 'response.body')
     assert.deepEqual(check.valid.map(it => it.recordIndex), [0])
+  })
+
+  // `__proto__` 是合法的 HTTP token，`isHeaderName` 认它，但 `sanitizeResponseHeaders` 用赋值写结果，
+  // 这个键走的是原型 setter（字符串值被静默忽略）。放过它的症状是「编辑器里看得见、真实响应里没有」，
+  // 与 PRD 盲区第 10 条（预留字段必须明确拒绝，不能静默降级）同一种。
+  it('`__proto__` 当响应头名要显式拒：它进了库也发不出去', () => {
+    const headers = JSON.parse('{"__proto__":"polluted","constructor":"c","normal":"1"}')
+    assert.equal(isHeaderName('__proto__'), true, '它是合法 token，靠 isHeaderName 拦不住')
+    assert.deepEqual(Object.keys(sanitizeResponseHeaders(headers)), ['constructor', 'normal'],
+      '发送侧确实会静默丢掉它：正因为丢得无声，校验侧才不能放过')
+
+    const crafted = JSON.parse('{"id":"rec_p","name":"原型键","match":'
+      + JSON.stringify(makeMatch({ path: '/v1/orders/p' }))
+      + ',"response":{"statusCode":200,"bodyType":"json","body":"{}","delayMs":0,'
+      + '"headers":{"__proto__":"polluted","constructor":"c","normal":"1"}}}') as MockPackRecord
+    // 同一条包里放一条只有普通怪键名的记录：拒得准不准，全靠这条对照能不能活下来
+    const sibling = JSON.parse(JSON.stringify({ ...crafted, id: 'rec_q', name: '对照', response: {
+      statusCode: 200, bodyType: 'json', body: '{}', delayMs: 0,
+      headers: { constructor: 'c', prototype: 'p', normal: '1' } } })) as MockPackRecord
+    const check = validateMockPackRecords(packOf([crafted, sibling]))
+    assert.deepEqual(check.issues.map(it => [it.code, it.field, it.detail, it.recordIndex]),
+      [['headerName', 'response.headers', '__proto__', 0]],
+      '只拒真会静默消失的那一个键：constructor / prototype 作为普通数据留得下，不该跟着跳')
+    assert.deepEqual(check.valid.map(it => it.recordIndex), [1], '坏的那条整条跳过，对照那条照常进写侧')
+
+    const prepared = prepareMockPackRecord(check.valid[0])
+    assert.deepEqual(Object.keys(prepared.record.response.headers), ['constructor', 'prototype', 'normal'])
+    // 探针对象用 `in` 而不是 hasOwnProperty：污染发生时值长在原型的继承链上，own 判据看不见
+    for (const probe of ['polluted', 'c', 'p', '1']) {
+      assert.equal(probe in {}, false, `Object.prototype 被带上了 ${probe}`)
+    }
   })
 
   it('变体超上限只报条数，不逐个变体刷屏', () => {

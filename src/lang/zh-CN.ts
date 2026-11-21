@@ -278,6 +278,7 @@ export default {
       packTooLarge: '文件超过 50MB，请按场景拆分后重新导出',
       packRecordLimit: '包内记录超过 5000 条，请按场景拆分',
       packEmpty: '没有任何可导入的条目',
+      packModeUnsupported: '导入模式只认「新建场景」或「合并到现有场景」',
       harEntryLimit: 'HAR 条目超过 1000 条，请分批导出',
       harNoResponse: '该请求没有响应记录，已跳过',
       harBodyUnreadable: '响应体缺失或无法解码，已跳过',

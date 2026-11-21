@@ -11,7 +11,7 @@ import { IOC_TYPES, USER_DATA_DIR } from './constants'
 import type { MockPackService } from './service/mock.pack.service'
 import { cancelUpdate, runUpdate } from './update.runner'
 import { getAppWindow } from './misc/utils'
-import { saveDialogOptions } from './misc/save-path'
+import { saveDialogOptions, toSaveFileName } from './misc/save-path'
 
 // showSaveDialog 的窗口参数不接受 null：没有焦点窗口时改用无父窗口那个重载
 async function showSaveDialog(options: ReturnType<typeof saveDialogOptions>) {
@@ -105,7 +105,10 @@ ipcMain.handle(MAIN_API_CMD.WriteClipboard, (_, text: string) => {
 // 落盘结果必须回到调用方：写失败原先只 console.log，渲染层照样提示「导出成功」；
 // 而取消不是失败，混在一起会让「取消」弹成错误。
 ipcMain.handle(MAIN_API_CMD.SaveFileAs, async (_, title: string, fileName: string, data: string | ArrayBuffer, silent = false): Promise<SaveFileResult> => {
-  const defaultPath = path.join(USER_DATA_DIR, fileName)
+  // 名字先剥成最后一段再拼：`silent` 那一档不经对话框直接写盘，带 `../` 的名字等于让渲染层自己挑目录
+  const safeName = toSaveFileName(fileName)
+  if (safeName === '') return { status: 'failed', error: 'invalid file name' }
+  const defaultPath = path.join(USER_DATA_DIR, safeName)
   const buf = Buffer.from(data as any)
 
   try {
@@ -116,7 +119,7 @@ ipcMain.handle(MAIN_API_CMD.SaveFileAs, async (_, title: string, fileName: strin
       return { status: 'saved', filePath: defaultPath }
     }
 
-    const result = await showSaveDialog(saveDialogOptions(title, USER_DATA_DIR, fileName))
+    const result = await showSaveDialog(saveDialogOptions(title, USER_DATA_DIR, safeName))
     if (result.canceled || !result.filePath) return { status: 'canceled' }
 
     await fse.writeFile(result.filePath, buf)

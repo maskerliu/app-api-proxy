@@ -130,7 +130,9 @@ export function validateResponseDef(
   }
 
   for (const name of Object.keys(def.headers ?? {})) {
-    if (!isHeaderName(name)) {
+    // `__proto__` 是合法的 HTTP token，但 `sanitizeResponseHeaders` 用赋值写结果，这个键走的是
+    // 原型 setter（字符串值被静默忽略）：放过它就等于「编辑器里看得见、真实响应里没有」的静默降级
+    if (!isHeaderName(name) || name === '__proto__') {
       issues.push({ code: 'headerName', field: `${fieldPrefix}.headers`, detail: name })
       continue
     }

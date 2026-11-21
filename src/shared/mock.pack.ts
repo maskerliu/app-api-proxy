@@ -22,6 +22,11 @@ export const MOCK_PACK_MAX_RECORDS = 5000
 export const MOCK_HAR_MAX_ENTRIES = 1000
 /** 预览与结果页只回传前 N 条明细，其余按同类原因折叠计数 */
 export const MOCK_PACK_ISSUE_PAGE_LIMIT = 200
+/**
+ * `detail` 里的坏取值只留这么多个字符：detail 会进响应体、也会被 UI 原样摊给用户，
+ * 不能因为「排查方便」就把用户文件里的一段带出去。与明细条数上限是两回事，别合成一个常量。
+ */
+export const MOCK_PACK_DETAIL_MAX_CHARS = 32
 /** 批量写库的分片大小，与仓库层 DELETE_BATCH 同一节奏 */
 export const MOCK_PACK_WRITE_BATCH = 200
 
@@ -314,9 +319,18 @@ export function redactPackRecord<T extends MockPackRecord>(record: T, redact: bo
   return out
 }
 
-/** query 传进来的模式收敛到受支持取值：默认新建，合并必须显式声明 */
+/**
+ * query 传进来的模式收敛到受支持取值：缺省按新建，合并必须显式声明。
+ *
+ * 大小写与空白照 `toMockPackConflictStrategy` 同一条口径收（URL 里手打 `mode=Merge` 是常见写法），
+ * 但认不出来的取值不再落回新建：新建是唯一会改库结构的档位（一次建 N 个场景），
+ * 把拼错的 `merge` 静默当成它，用户看到的是一份「什么都没合并、却多了几个场景」的库。
+ */
 export function toMockPackImportMode(value: unknown): MockPackImportMode {
-  return value === 'merge' ? 'merge' : 'new'
+  if (value == null || value === '') return 'new'
+  const mode = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (mode === 'new' || mode === 'merge') return mode
+  throw new MockError('packModeUnsupported', `mode=${describeValue(value)}`)
 }
 
 /**
@@ -377,10 +391,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** 诊断用的取值摘要：detail 会进响应体，不能把用户文件里的任意长串原样带出去 */
-function describeValue(value: unknown): string {
+/**
+ * 诊断用的取值摘要：detail 会进响应体，不能把用户文件里的任意长串原样带出去。
+ * 数组单独说破：`String([])` 是空串，坏在顶层时 detail 只剩「top level is 」，
+ * 而这恰恰是「拿 HAR/别的工具的 JSON 打这个端点」最常见的形状。
+ */
+export function describeValue(value: unknown): string {
+  if (Array.isArray(value)) return `array(${value.length})`
   const text = value === undefined ? '(missing)' : typeof value === 'string' ? value : String(value)
-  return text.length > 32 ? `${text.slice(0, 32)}…` : text
+  return text.length > MOCK_PACK_DETAIL_MAX_CHARS
+    ? `${text.slice(0, MOCK_PACK_DETAIL_MAX_CHARS)}…` : text
 }
 
 /**

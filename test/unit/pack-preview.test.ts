@@ -5,7 +5,7 @@ import type { ProxyMock } from '@shared/proxy.models'
 import type { MockPackRecord } from '@shared/mock.pack'
 import {
   MOCK_PACK_FORMAT, MOCK_PACK_ISSUE_PAGE_LIMIT, MOCK_PACK_VERSION,
-  pageMockPackIssues, suggestMockPackRuleName, toMockPackConflictStrategy,
+  pageMockPackIssues, suggestMockPackRuleName, toMockPackConflictStrategy, toMockPackImportMode,
 } from '@shared/mock.pack'
 import { makeMatch } from './fixtures'
 import { MOCK_RECORD_REJECT_LIMIT, MOCK_RECORD_WARN_LIMIT, recordLimitState } from '@shared/mock.models'
@@ -147,10 +147,13 @@ describe('新建场景的建议名：只在单场景包上给', () => {
     assert.equal(suggestMockPackRuleName('订单中心', ['订单中心', '订单中心(1)']), '订单中心(2)')
   })
 
-  it('库内空名不参与判断；包内基名为空就回空串', () => {
+  it('库内缺名字段不参与判断；包内基名为空就回空串', () => {
     // 主进程拿不到文件名，「场景名取文件名」那条回落（PRD 4.4.5）只有渲染层说得清
     assert.equal(suggestMockPackRuleName('订单中心', [undefined, null]), '订单中心')
     assert.equal(suggestMockPackRuleName(undefined as unknown as string, ['订单中心']), '')
+    // 剔出去的是「压根没有这个键」，不是「名字是空串」：后者是个能占住、也能撞上的名字，
+    // 于是同一份无名包导两次得到的是 `''` 和 `(1)`（端到端形状见 migration 那份用例）
+    assert.equal(suggestMockPackRuleName('', ['']), '(1)')
   })
 })
 
@@ -375,6 +378,31 @@ describe('冲突策略的取值收敛（R4C-18）', () => {
     assert.equal(toMockPackConflictStrategy(' OverWrite '), 'overwrite')
     for (const value of [undefined, null, '', 'overwite', 'SKIP ALL', 0, {}]) {
       assert.equal(toMockPackConflictStrategy(value), 'skip', `${String(value)} 该落回默认档`)
+    }
+  })
+
+  // 与上面同一条口径（大小写与空白要认），但默认档不同：conflict 认不出来落回 skip 只是少写几条，
+  // mode 认不出来若落回 new 就是建出一批新场景——所以那一档只留给「压根没写」，写了却不认识要显式回错。
+  it('mode：没写按新建，写了不认识就抛 packModeUnsupported', () => {
+    assert.equal(toMockPackImportMode('new'), 'new')
+    assert.equal(toMockPackImportMode('merge'), 'merge')
+    assert.equal(toMockPackImportMode(' Merge '), 'merge')
+    assert.equal(toMockPackImportMode('NEW'), 'new')
+    for (const value of [undefined, null, '']) {
+      assert.equal(toMockPackImportMode(value), 'new', `${String(value)} 是没写，按默认档新建`)
+    }
+    for (const value of ['merg', 'import', 'copy', 'merge2', 0, {}, []] as unknown[]) {
+      const thrown: MockError | null = (() => {
+        try {
+          toMockPackImportMode(value)
+          return null
+        } catch (err) {
+          return err instanceof MockError ? err : null
+        }
+      })()
+      assert.ok(thrown != null, `${String(value)} 是写了却不认识，不能静默当成新建`)
+      assert.equal(thrown.code, 'packModeUnsupported', `${String(value)} 的错误码不对`)
+      assert.ok(thrown.detail.length > 0, '拒了要说得清拒在哪个取值')
     }
   })
 })

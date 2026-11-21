@@ -35,3 +35,36 @@ describe('R4C-08 保存框选项', () => {
     assert.equal(options.filters[0].extensions[0], 'json')
   })
 })
+
+// 默认名只决定面板开在哪，落盘路径来自对话框返回值；但 `defaultPath` 本身是 `path.join` 出来的，
+// 名字里带分隔符就会把面板开到用户数据目录之外（用户按回车就等于选了那个目录）。
+// 渲染层导出弹窗已经净化过一次，这里是主进程侧的同一道口子——不能只靠调用方自觉。
+describe('保存框默认名的边界（R4C-29）', () => {
+  const base = path.resolve('save-path-probe-base')
+
+  /** 净化后的默认名必须还落在 base 里面：目录先 resolve，且要求分隔符边界（`save-path-probe-base-evil` 那种同前缀目录骗不过去） */
+  function assertStaysInside(fileName: string) {
+    const { defaultPath } = saveDialogOptions('选择导出位置', base, fileName)
+    const inside = defaultPath === base || defaultPath.startsWith(base + path.sep)
+    assert.equal(inside, true, `${JSON.stringify(fileName)} 把面板带到了 ${defaultPath}`)
+  }
+
+  it('相对越界、绝对路径与 UNC 都只留最后一段', () => {
+    for (const fileName of ['../../evil.json', '..\\..\\evil.json', '/etc/passwd.json',
+      'D:/Windows/evil.json', '\\\\server\\share\\evil.json', 'a/b/c/d.json', 'x/../y.json']) {
+      assertStaysInside(fileName)
+    }
+    assert.equal(saveDialogOptions('t', base, '../../evil.json').defaultPath, path.join(base, 'evil.json'))
+  })
+
+  it('只剩分隔符或以 .. 收尾时只给目录，不给一个悬着分隔符的路径', () => {
+    for (const fileName of ['', null, undefined, '/', '\\', '..', '../..', path.sep]) {
+      assert.equal(saveDialogOptions('选择导出位置', base, fileName as any).defaultPath, base)
+    }
+  })
+
+  it('过滤器按净化后的名字生成：带路径的名字不许产出一行没有标签的过滤器', () => {
+    assert.deepEqual(buildSaveFilters('../../evil.json'), buildSaveFilters('evil.json'))
+    assert.deepEqual(buildSaveFilters('a/b.json/..'), [{ name: '全部文件', extensions: ['*'] }])
+  })
+})
