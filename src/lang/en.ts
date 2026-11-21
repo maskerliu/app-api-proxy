@@ -600,6 +600,10 @@ export default {
       placeholder: 'Please enter message',
       btnSend: 'Send'
     },
+    data: {
+      title: 'Data',
+      scopeNote: 'Export and import here cover a backup of every scene; to back up only the current scene, use the "More" menu in the Mock rule manager'
+    },
     resources: {
       title: 'Manage Remote Static Resources',
       manage: 'Static Resources'

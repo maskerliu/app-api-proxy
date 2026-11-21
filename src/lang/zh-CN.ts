@@ -597,6 +597,10 @@ export default {
       placeholder: '请输入内容',
       btnSend: '发送'
     },
+    data: {
+      title: '数据',
+      scopeNote: '这里导出与导入的是全部场景的备份；只备份当前场景请用 Mock 规则管理器头部的「更多」菜单'
+    },
     resources: {
       title: '静态资源管理',
       manage: '静态资源'

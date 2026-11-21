@@ -63,7 +63,7 @@
         <!-- RK6：导入的记录一律不自动启用，这句不说清用户会以为代理已经被这份包接管了 -->
         <div v-if="writtenCount > 0" class="import-enable">
           <span>{{ $t('mock.import.notEnabled', { count: writtenCount }) }}</span>
-          <van-button size="small" plain type="primary" @click="onGoto">
+          <van-button v-if="canGoto" size="small" plain type="primary" @click="onGoto">
             {{ sceneCount > 1 ? $t('mock.import.gotoFirst') : $t('mock.import.gotoEnable') }}
           </van-button>
         </div>
@@ -127,11 +127,13 @@ import { pickPackFile } from '../../../common/pack-file'
 import { normalizeErrorText } from './save-error'
 
 const show = defineModel<boolean>('show', { required: true })
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   /** 合并模式的目标场景就是当前选中的场景，没有它「合并」这一档不可选 */
   ruleId?: string | null
   ruleName?: string
-}>()
+  /** 「前往启用」要有宿主接得住（切到规则管理器并选中那条场景）；接不住的宿主把它关掉 */
+  canGoto?: boolean
+}>(), { ruleId: null, ruleName: '', canGoto: true })
 const emit = defineEmits<{
   (e: 'goto', ruleId: string): void
   (e: 'imported', ruleIds: string[]): void
