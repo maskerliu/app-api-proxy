@@ -1,35 +1,54 @@
 <template>
   <van-dialog v-model:show="show" width="var(--app-popup-w-md)" :show-confirm-button="false">
-    <!-- 统计长在标题行：这一页要放的行本来就多，五个数各占一行会把明细区挤到看不全 -->
+    <!-- 统计长在标题行：这一页要放的行本来就多，五个数各占一行会把明细区挤到看不全。
+       常规计数排成一句弱色文本，只有需要用户处理的异常计数（非 0）才单独出一枚 tag——五枚 tag 里三枚恒亮等于没表达 -->
     <template #title>
       <div class="import-head">
         <span>{{ headTitle }}</span>
-        <van-tag v-for="stat in headStats" :key="stat.key" plain :type="stat.type">{{ stat.text }}</van-tag>
+        <span v-if="headCounts.length > 0" class="import-head-counts">{{ headCounts.join(' · ') }}</span>
+        <van-tag v-for="stat in headAlarms" :key="stat.key" plain :type="stat.type">{{ stat.text }}</van-tag>
       </div>
     </template>
 
     <div class="import-body">
       <template v-if="result == null">
         <!-- 三行配置一律用 field（#input 槽放自定义控件）：标签列宽、标签色（global.css 的 .van-field__label）、
-             行距与分隔线都由组件给，本页不再自写表单排版。文件名是只读值不是输入框，所以它进 #input 槽而不接 v-model。 -->
-        <van-field class="import-file-cell" :label="$t('mock.import.fileLabel')">
-          <template #input>
-            <span class="import-file truncate" :class="{ 'is-empty': file == null }"
-              v-tip="file?.name ?? $t('mock.import.noFile')">{{ file?.name ?? $t('mock.import.noFile') }}</span>
-            <van-button class="import-pick" size="small" plain :disabled="busy || writing" @click="onPickFile">
-              {{ $t('mock.import.pickFile') }}
-            </van-button>
-          </template>
-        </van-field>
+             行距与分隔线都由组件给，本页不再自写表单排版。文件名是只读值不是输入框，所以它进 #input 槽而不接 v-model。
+             带说明的行由 import-block 成组：说明压在所属行下面而不是排在整块表单尾部（原先「当前场景是哪个」
+             掉在「冲突处理」下面，说的却是上一行），分隔线也跟着挪到组底，所以 cell 自带的那份下留白归沟道管。
+             说明留在整行宽度上而不是缩进进值列：值列比内容区窄 93px，配额那句在中英两种语言里都会多绕一行。 -->
+        <div class="import-block" :class="fileNote ? 'has-note van-hairline--bottom' : ''">
+          <van-field :label="$t('mock.import.fileLabel')" :border="!fileNote">
+            <template #input>
+              <div class="import-control-main">
+                <span class="import-file truncate" :class="{ 'is-empty': file == null }"
+                  v-tip="file?.name ?? $t('mock.import.noFile')">{{ file?.name ?? $t('mock.import.noFile') }}</span>
+                <van-button class="import-pick" size="small" plain :disabled="busy || writing" @click="onPickFile">
+                  {{ $t('mock.import.pickFile') }}
+                </van-button>
+              </div>
+            </template>
+          </van-field>
+          <!-- 包级失败与条数上限都只由「这个文件」决定，两者也互斥：读不出文件就没有预览数字。
+               包级失败留在原地而不是弹 toast：用户要对着同一行改成什么才能再试一次 -->
+          <div v-if="fileNote === 'error'" class="import-help is-error">
+            <span class="import-help-title">{{ $t('mock.import.fileProblem') }}</span>
+            <span>{{ packError }}</span>
+          </div>
+          <div v-else-if="fileNote === 'quota'" class="import-help" :class="{ 'is-reject': quotaReject }">{{ quotaText }}</div>
+        </div>
 
-        <van-field :label="$t('mock.import.modeLabel')">
-          <template #input>
-            <van-radio-group v-model="mode" direction="horizontal" class="import-radios" :disabled="busy || writing">
-              <van-radio name="new">{{ $t('mock.import.modeNew') }}</van-radio>
-              <van-radio name="merge" :disabled="ruleId == null">{{ $t('mock.import.modeMerge') }}</van-radio>
-            </van-radio-group>
-          </template>
-        </van-field>
+        <div class="import-block" :class="modeHint ? 'has-note van-hairline--bottom' : ''">
+          <van-field :label="$t('mock.import.modeLabel')" :border="!modeHint">
+            <template #input>
+              <van-radio-group v-model="mode" direction="horizontal" class="import-radios" :disabled="busy || writing">
+                <van-radio name="new">{{ $t('mock.import.modeNew') }}</van-radio>
+                <van-radio name="merge" :disabled="ruleId == null">{{ $t('mock.import.modeMerge') }}</van-radio>
+              </van-radio-group>
+            </template>
+          </van-field>
+          <div v-if="modeHint" class="import-help truncate" v-tip="modeHint">{{ modeHint }}</div>
+        </div>
 
         <!-- 冲突策略只在合并模式出现：新建模式包内每条都写进新场景，库里没有可撞的对象 -->
         <van-field v-if="mode === 'merge'" :label="$t('mock.import.conflictLabel')">
@@ -41,19 +60,6 @@
             </van-radio-group>
           </template>
         </van-field>
-
-        <div v-if="quotaText" class="import-quota" :class="quotaReject ? 'is-reject' : 'is-warn'">{{ quotaText }}</div>
-        <!-- 建议名只在新建模式给（多场景包连一个名字都代表不了），合并模式这一格用来指认「当前场景」是哪个 -->
-        <div v-if="suggestedName" class="import-hint">
-          {{ $t('mock.import.suggestedName', { name: suggestedName }) }}
-        </div>
-        <div v-else-if="mergeHint" class="import-hint truncate" v-tip="mergeHint">{{ mergeHint }}</div>
-
-        <!-- 包级失败留在原地而不是弹 toast：用户要对着同一行改成什么才能再试一次 -->
-        <div v-if="packError" class="import-error">
-          <span class="import-error-title">{{ $t('mock.import.fileProblem') }}</span>
-          <span>{{ packError }}</span>
-        </div>
       </template>
 
       <!-- 结果页的三态标注：取消、部分写入、场景名追加过序号，各自说清库里现在是什么样子 -->
@@ -158,6 +164,9 @@ const suggestedName = computed(() => preview.value?.suggestedRuleName ?? '')
 // 场景名不进 radio 标签：标签长度由库里那条规则决定，弹窗压到地板宽时它会把同组另一枚顶出描边
 const mergeHint = computed(() => mode.value === 'merge' && props.ruleName
   ? t('mock.import.mergeTarget', { name: props.ruleName }) : '')
+// 建议名只在新建模式给（多场景包连一个名字都代表不了），合并模式那一格换成指认「当前场景」是哪个
+const modeHint = computed(() => suggestedName.value === '' ? mergeHint.value
+  : t('mock.import.suggestedName', { name: suggestedName.value }))
 
 // 「将导入 N 条」= 包内条数减去条目级不通过的那几条，两个数在预览响应体里本就分得很清楚
 const willImportCount = computed(() => {
@@ -178,29 +187,45 @@ const quotaText = computed(() => {
     : q.warn ? t('mock.import.quotaWarn', { total: q.totalRecordCount, incoming: q.incomingRecordCount, existing: q.existingRecordCount }) : ''
 })
 const quotaReject = computed(() => preview.value?.quota?.reject === true)
+// 文件那一行的说明只有一个格子：包级失败优先，它成立时根本没有预览数字
+const fileNote = computed(() => packError.value !== '' ? 'error' : (quotaText.value !== '' ? 'quota' : ''))
 
-interface Stat { key: string, text: string, type: 'primary' | 'success' | 'warning' | 'danger' }
+interface Stat { key: string, text: string, type: 'warning' | 'danger' }
 
-const headStats = computed<Stat[]>(() => {
-  if (result.value != null) {
-    const r = result.value
+/** 常规计数：标题行里排成一句弱色文本，不需要单独占位就能读完 */
+const headCounts = computed<string[]>(() => {
+  const r = result.value
+  if (r != null)
     return [
-      { key: 'rules', text: t('mock.import.statRules', { count: r.ruleIds.length }), type: 'primary' },
-      { key: 'created', text: t('mock.import.statCreated', { count: r.created.length }), type: 'success' },
-      { key: 'updated', text: t('mock.import.statUpdated', { count: r.updated.length }), type: 'primary' },
-      { key: 'skipped', text: t('mock.import.statSkipped', { count: r.skipped.length }), type: 'warning' },
-      { key: 'failed', text: t('mock.import.statFailed', { count: r.invalidTotal + r.failed.length }), type: 'danger' },
+      t('mock.import.statRules', { count: r.ruleIds.length }),
+      t('mock.import.statCreated', { count: r.created.length }),
+      t('mock.import.statUpdated', { count: r.updated.length }),
     ]
+  const p = preview.value
+  if (p == null) return []
+  return [
+    t('mock.import.statRules', { count: p.ruleCount }),
+    t('mock.import.statRecords', { count: p.recordCount }),
+    t('mock.import.statVariants', { count: p.variantCount }),
+  ]
+})
+
+/** 异常计数：预览看条目级不通过与库内冲突，结果看跳过与写失败；为 0 就整枚不出现 */
+const headAlarms = computed<Stat[]>(() => {
+  const r = result.value
+  if (r != null) {
+    const failed = r.invalidTotal + r.failed.length
+    return [
+      r.skipped.length > 0 ? { key: 'skipped', text: t('mock.import.statSkipped', { count: r.skipped.length }), type: 'warning' } : null,
+      failed > 0 ? { key: 'failed', text: t('mock.import.statFailed', { count: failed }), type: 'danger' } : null,
+    ].filter((stat): stat is Stat => stat != null)
   }
   const p = preview.value
   if (p == null) return []
   return [
-    { key: 'rules', text: t('mock.import.statRules', { count: p.ruleCount }), type: 'primary' },
-    { key: 'records', text: t('mock.import.statRecords', { count: p.recordCount }), type: 'primary' },
-    { key: 'variants', text: t('mock.import.statVariants', { count: p.variantCount }), type: 'primary' },
-    { key: 'invalid', text: t('mock.import.statInvalid', { count: p.invalidCount }), type: p.invalidCount > 0 ? 'warning' : 'primary' },
-    { key: 'conflicts', text: t('mock.import.statConflicts', { count: p.conflictCount }), type: p.conflictCount > 0 ? 'warning' : 'primary' },
-  ]
+    p.invalidCount > 0 ? { key: 'invalid', text: t('mock.import.statInvalid', { count: p.invalidCount }), type: 'warning' } : null,
+    p.conflictCount > 0 ? { key: 'conflicts', text: t('mock.import.statConflicts', { count: p.conflictCount }), type: 'warning' } : null,
+  ].filter((stat): stat is Stat => stat != null)
 })
 
 const writtenCount = computed(() => {
@@ -386,6 +411,22 @@ function onRestart() {
 </script>
 
 <style scoped>
+/* 标题行落在 Vant 的 .van-dialog__header 里，那一格只有文字排版：要拿沟道与「放不下就整体换行」得自己起 flex。
+   flex-wrap 让异常 tag 挤不下时整枚掉到第二行，而不是把计数串劈成两截（计数串 flex: none 是这条的前提）。 */
+.import-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-sp-sm);
+  justify-content: center;
+}
+
+.import-head-counts {
+  color: var(--van-text-color-2);
+  flex: none;
+  font-size: var(--van-font-size-sm);
+}
+
 /* 自带内容的弹窗：沟道与按钮区都读全站那一份（见 global.css 的弹窗一节）。
    横向内边距归零后 field 的标签正好落在标题那一条沟道上，分隔线两头也同步收进来——与 MockExportDialog 的
    .export-form 同形。这两条同形的补丁暂时留在各自 scoped：上提要同时动导出弹窗，而它不属本批范围。 */
@@ -397,19 +438,43 @@ function onRestart() {
   /* 高度在「按字号放得下明细」与「不把矮窗口顶出屏幕」之间取小：弹窗高度恒定，明细区自己滚动。
      20/45 是 van-row 自写行那档（每行约 28px）；换成 field 之后行高由 cell 给（约 40px，按钮那行 48px），
      三行配置块实测 124.8px（字号 13、合并模式），比原先高出 33.2px，明细区会被压到 26.6px 而只剩滚动条。
-     24/55 是补回这一档：同一场景实测明细区 78.6px，最坏那档（字号 14、窗口 640 以下顶到 vh 上限）也还有 58.9px。 */
+     24/55 是补回这一档：同一场景实测明细区 78.6px，最坏那档（字号 14、窗口 640 以下顶到 vh 上限）也还有 58.9px。
+     说明归到所属行之后配置块又收回约 10px（72 档实测明细区中位 92.3 → 104.8、地板 48.9 → 54.5），
+     但把这一档退回 20/45 仍会在字号 14 的窄窗把明细区压到 0，所以留着。 */
   height: min(calc(var(--van-font-size-md) * 24), 55vh);
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
 
-/* field 已经自带行距，再叠一档会比全站表单松；只有非 field 的行（散段说明、明细区、按钮行）读这一档 */
-.import-body>*+*:not(.van-cell) {
+/* field 已经自带行距，再叠一档会比全站表单松；只有成组的行、明细区与按钮行读这一档 */
+.import-body>*+* {
   margin-top: var(--app-sp-md);
 }
 
 /* 固定高度 + flex:1 的明细区之间，行不能被压缩：Vant 给 cell 的 overflow: hidden 会把压扁后的控件裁掉 */
+.import-block,
 .import-body>.van-cell {
   flex: none;
+}
+
+/* 带说明的那一行自己成一组：说明紧贴所属行（紧邻即从属，比行与行之间紧一档），分隔线从行底挪到组底，
+   cell 自带的那份下留白就不再重复计一次——不收掉的话整组比说明散在表单尾部那版还高 13px。
+   position: relative 是给 van-hairline--bottom 的伪元素找锚点（Vant 那条规则是 absolute + 四边 -50%），
+   没有它这条线会按弹窗定位。 */
+.import-block.has-note {
+  gap: var(--app-sp-tight);
+  position: relative;
+}
+
+.import-block.has-note>.van-cell {
+  padding-bottom: 0;
+}
+
+/* 「文件」那一格里文件名与按钮并排：Vant 给自定义控件的容器已经是 flex + 垂直居中，只差一枚行内沟道 */
+.import-control-main {
+  align-items: center;
+  display: flex;
+  gap: var(--app-sp-lg);
+  min-width: 0;
 }
 
 .import-file {
@@ -423,12 +488,6 @@ function onRestart() {
 
 .import-pick {
   flex: none;
-}
-
-/* 「文件」那一格的 #input 里同时放文件名与按钮：Vant 给自定义控件的容器已经是 flex + 垂直居中，
-   只差一枚行内沟道（与本页其它行的控件沟道同档） */
-.import-file-cell :deep(.van-field__control) {
-  gap: var(--app-sp-lg);
 }
 
 /* Vant 的 radio 组是 flex-wrap: wrap：不收缩它就一直保持单行的固有宽，弹窗压到地板宽时整组顶穿
@@ -445,27 +504,24 @@ function onRestart() {
   color: var(--van-text-color-2);
 }
 
-.import-quota,
-.import-hint,
+.import-help,
 .import-note {
   flex: none;
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
 }
 
-.import-quota.is-reject {
+.import-help.is-reject {
   color: var(--van-danger-color);
 }
 
-.import-error {
-  flex: none;
+.import-help.is-error {
+  color: var(--van-danger-color);
   display: flex;
   gap: var(--app-sp-sm);
-  color: var(--van-danger-color);
-  font-size: var(--van-font-size-sm);
 }
 
-.import-error-title {
+.import-help-title {
   flex: none;
   font-weight: 500;
 }
