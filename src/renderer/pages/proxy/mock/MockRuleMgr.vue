@@ -253,6 +253,9 @@
     <mock-export-dialog v-model:show="showExport" v-model:running="exportRunning" :rule-id="curRule?._id"
       :rule-name="curRule?.name" />
 
+    <mock-import-dialog v-model:show="showImport" :rule-id="curRule?._id" :rule-name="curRule?.name"
+      @goto="onImportGoto" @imported="onImported" />
+
   </van-row>
 </template>
 
@@ -270,6 +273,7 @@ import { scrollOptions } from '../../../common/scroll'
 import { methodTagType } from '../../../common/tag'
 import MiniSelect from '../../components/MiniSelect.vue'
 import MockExportDialog from './MockExportDialog.vue'
+import MockImportDialog from './MockImportDialog.vue'
 import MockRecordEditor from './MockRecordEditor.vue'
 import { cloneRecord, emptyRecord, prettifyRecordJson, recordSnapshot } from './record'
 import {
@@ -292,6 +296,8 @@ const showRecordDelete = ref(false)
 const showConflict = ref(false)
 // 导出选项在打开对话框时按当前场景重置，那套状态与任务本身都住在 MockExportDialog 里
 const showExport = ref(false)
+// 导入的整个流程（选文件→预览→写库→结果）都在 MockImportDialog 里，这一页只留开关与跳转
+const showImport = ref(false)
 const showHeadMenu = ref(false)
 // 导出任务住在弹窗组件里，这里只镜像它的在跑状态：菜单条目与标题行的浮标都读这一个数
 const exportRunning = ref(false)
@@ -878,9 +884,10 @@ async function onRecordDeleteConfirm() {
   }
 }
 
-// 导入常驻占位但不启用：写库端点已接上仓库（R4C-18），缺的是弹窗与结果页接线（R4C-25~27）和「导入即生效」的验收（R4C-17），接上时只换 handler 与这句说明
+// 导入与导出同类，都住在「更多」里；导入的选项、预览与结果都在 MockImportDialog 内部，
+// 这一页只负责给出合并模式的目标场景（curRule）和「前往启用」的落点
 const headMenuActions = computed(() => [
-  { key: 'import', text: t('mock.import.menuTitle'), disabled: true, hint: t('mock.import.disabledTip') },
+  { key: 'import', text: t('mock.import.menuTitle') },
   {
     key: 'export',
     text: t('mock.export.dialogTitle'),
@@ -895,6 +902,18 @@ const headMenuActions = computed(() => [
 function onHeadMenuSelect(action: { key?: string }) {
   showHeadMenu.value = false
   if (action.key === 'export') showExport.value = true
+  if (action.key === 'import') showImport.value = true
+}
+
+/** 「前往启用」跳的就是导入结果里那几个场景之一，走的是与列表选中同一条路径（含未保存改动的确认） */
+function onImportGoto(ruleId: string) {
+  showImport.value = false
+  onRuleSelect({ _id: ruleId } as ProxyMock.MockRule)
+}
+
+// 合并到当前场景会把库内记录改掉，而这一页的记录列表是进场景时读的一次；不重读用户看到的就是旧的一半
+function onImported(ruleIds: string[]) {
+  if (ruleIds.includes(curRule.value?._id)) detailTask = fetchMockRuleDetail()
 }
 
 // 「无规则时导出置灰」要的是库内场景总数，而这一页只在搜索时读规则，没有别的常驻读数可用，

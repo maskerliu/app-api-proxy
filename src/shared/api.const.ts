@@ -24,6 +24,7 @@ export const API_URL = {
     PREVIEW_MOCK_PACK: `${APPMOCK}/previewMockPack`,
     IMPORT_MOCK_PACK: `${APPMOCK}/importMockPack`,
     IMPORT_HAR: `${APPMOCK}/importHar`,
+    CANCEL_MOCK_PACK_IMPORT: `${APPMOCK}/cancelMockPackImport`,
     GetServerConfig: `${APPMOCK}/getServerConfig`,
     SaveProxyConfig: `${APPMOCK}/saveProxyConfig`,
     GetProxyConfig: `${APPMOCK}/getProxyConfig`,

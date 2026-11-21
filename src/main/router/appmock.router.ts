@@ -453,8 +453,8 @@ export class AppMockRouter extends BaseRouter {
         { key: 'conflict', type: ParamType.Query }
       ],
       // 写库已接线（R4C-18）：冲突三策略的落点在 `importMockPack`，时间戳按模式注入（R4C-16）而不是客户端开关。
-      // 取消/回滚（R4C-19）也接上了，但**这一层没有取消与进度的通道**：`cancelImport()`/`getImportProgress()`
-      // 还没有端点或 IPC 对应物（通道走哪条属 R4C-26/27），所以这个端点目前只能被单例挡住第二个并发请求（`packImportInProgress`）。
+      // 取消通道已就位（R4C-27，见下面的 `cancelMockPackImport`），进度仍没有通道：`getImportProgress()`
+      // 回的是「当前场景第 K/M 批」，多场景包会来回重置，UI 要的是哪种口径属未裁决（详见技术设计 6.5 末段）。
       // 预览那一步现在有「库内已有 + 待写入」的合计口径了（R4C-20 的 `quota`），但判定仍只在写库那一步落地：
       // 这里报 `recordTooMany` 是最后一道闸，绕过 UI 直接打接口一样拦得住。
       handler: (pack, mode, targetRuleId, conflict) => this.mockPackService.import(pack, {
@@ -482,6 +482,15 @@ export class AppMockRouter extends BaseRouter {
         ...emptyMockPackImportResult(toMockPackImportMode(mode)),
         suggestions: [] as MockPackIssue[]
       })
+    })
+
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.CANCEL_MOCK_PACK_IMPORT,
+      // 取消落在写库的批与批之间（`MockRepo.importRecords`），已写进去的一条不动、没写的逐条报
+      // `packWriteAborted`；这里只负责把信号递给服务层那个单例，不自己判「有没有任务」——判据只有一处。
+      // 回布尔而不是抛错：弹窗在等那次上传的回执，没有任务时这一次点击不是失败。
+      handler: () => this.mockPackService.cancelImport()
     })
 
   }

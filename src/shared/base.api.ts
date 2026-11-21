@@ -15,6 +15,8 @@ let UPDATE_SERVER: string = null
 export interface RequestOptions {
   // 调用方自行处理失败提示时关闭全局 notify，避免同一错误弹两次
   silentError?: boolean
+  // 单次请求的超时毫秒数，0 = 不限时。不传则沿用 axios.defaults.timeout
+  timeout?: number
 }
 
 async function request<T>(method: string, path: string, baseURL?: string, headers?: any, params?: {}, data?: any,
@@ -23,6 +25,9 @@ async function request<T>(method: string, path: string, baseURL?: string, header
     baseURL: baseURL ? baseURL : BASE_DOMAIN,
     url: path,
     method, params, data,
+    // 只在这一次调用显式给了值时才覆盖，否则交回 axios.defaults.timeout：传 undefined 在 axios 的
+    // mergeConfig 里等于「用默认值」，写出来不影响任何没传 timeout 的调用点
+    timeout: options?.timeout,
     // 注册完成前还没有 uid，避免带上空值被服务端当成有效客户端
     headers: Object.assign(
       clientUID ? { [MOCK_UID_HEADER]: clientUID } : {},

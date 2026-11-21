@@ -116,12 +116,21 @@ export function exportMockPack(options: MockPackExportOptions, requestOptions?: 
   }, requestOptions)
 }
 
+/**
+ * 预览/导入/取消这三个入口的超时一律放到「不限时」，由服务端自己判完：50MB 的包上传 + 写 5,000 条
+ * 本来就可能跑过 axios 的 10s 默认值，客户端先把连接掐掉，用户看到的是「导入失败」而库里已经写进去一半。
+ * 卡住不动另有「取消」那一枚按钮兜，它走的是另一条请求，不受这次上传的影响。
+ */
+function packUploadOptions(requestOptions?: RequestOptions): RequestOptions {
+  return { timeout: 0, ...requestOptions }
+}
+
 export function previewMockPack(file: File | Blob, options: MockPackPreviewOptions,
   requestOptions?: RequestOptions) {
   return formPost<MockPackPreviewResult>(API_URL.PREVIEW_MOCK_PACK, undefined, {
     mode: options.mode,
     targetRuleId: options.targetRuleId ?? undefined,
-  }, packForm(file), requestOptions)
+  }, packForm(file), packUploadOptions(requestOptions))
 }
 
 export function importMockPack(file: File | Blob, options: MockPackImportOptions,
@@ -130,7 +139,7 @@ export function importMockPack(file: File | Blob, options: MockPackImportOptions
     mode: options.mode,
     targetRuleId: options.targetRuleId ?? undefined,
     conflict: options.conflict,
-  }, packForm(file), requestOptions)
+  }, packForm(file), packUploadOptions(requestOptions))
 }
 
 export function importHar(file: File | Blob, options: MockPackImportOptions,
@@ -139,7 +148,17 @@ export function importHar(file: File | Blob, options: MockPackImportOptions,
     mode: options.mode,
     targetRuleId: options.targetRuleId ?? undefined,
     includeStatic: options.includeStatic,
-  }, packForm(file), requestOptions)
+  }, packForm(file), packUploadOptions(requestOptions))
+}
+
+/**
+ * 取消当前那次导入：信号落在写库的批与批之间，已写进去的一条不动，没写的逐条以 `packWriteAborted` 交代。
+ * 回 `false` 表示「此刻没有导入任务」——不是失败，弹窗照常等那次请求的回执。
+ * 走 HTTP 而不是 IPC：触发导入的那次请求本身就是 multipart POST，两种部署形态同一份代码；
+ * 导出那次的进度用 IPC 推，是因为执行体在主进程、Web 分支根本没有主进程可推。
+ */
+export function cancelMockPackImport(requestOptions?: RequestOptions) {
+  return post<boolean>(API_URL.CANCEL_MOCK_PACK_IMPORT, undefined, undefined, undefined, requestOptions)
 }
 
 export function getServerConfig() {
