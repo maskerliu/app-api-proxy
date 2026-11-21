@@ -1,0 +1,874 @@
+{
+  "format": "appapi-mock-pack",
+  "version": 1,
+  "exportedAt": 1794721800000,
+  "appVersion": "1.0.6",
+  "rules": [
+    {
+      "id": "rule_9c1f0001-3a2b-4e7c-9d10-0b5f7a2c4e01",
+      "name": "移动端登录",
+      "desc": "账号、资料与会话，含一份 401 变体",
+      "createdAt": 1794709800000,
+      "updatedAt": 1794720600000,
+      "records": [
+        {
+          "id": "rec_b7e40001-1c2d-4a3e-8f5b-6d90c1e22001",
+          "name": "登录-成功",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "POST",
+            "host": "",
+            "pathType": "exact",
+            "path": "/api/auth/login",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": [
+                {
+                  "name": "x-device-id",
+                  "op": "equals",
+                  "value": "PAD-0001",
+                  "ignoreCase": false
+                }
+              ]
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"data\":{\"userId\":\"10001\",\"nick\":\"刘十一\",\"expireIn\":7200}}",
+            "bodyType": "json",
+            "delayMs": 80
+          },
+          "source": {
+            "method": "POST",
+            "url": "https://api.example.com/api/auth/login?_=1731637800000",
+            "statusCode": 200,
+            "capturedAt": 1794713400000,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8",
+              "authorization": "***",
+              "x-device-id": "PAD-0001",
+              "cookie": "***"
+            }
+          },
+          "createdAt": 1794713400000,
+          "updatedAt": 1794715800000
+        },
+        {
+          "id": "rec_b7e40002-1c2d-4a3e-8f5b-6d90c1e22002",
+          "name": "个人资料-含未授权变体",
+          "match": {
+            "version": 1,
+            "level": "standard",
+            "method": "GET",
+            "host": "",
+            "pathType": "exact",
+            "path": "/api/auth/profile",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "match",
+              "ignoreKeys": [
+                "_",
+                "trace"
+              ],
+              "conditions": [
+                {
+                  "key": "userId",
+                  "op": "equals",
+                  "value": "10001",
+                  "ignoreCase": false
+                }
+              ],
+              "allowExtra": false,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [
+                "_",
+                "trace"
+              ],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"data\":{\"userId\":\"10001\",\"mobile\":\"13800000000\"}}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "variants": [
+            {
+              "id": "var_a1",
+              "name": "正常返回",
+              "statusCode": 200,
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": "{\"code\":0,\"data\":{\"roles\":[\"user\",\"vip\"]}}",
+              "bodyType": "json",
+              "delayMs": 0,
+              "updatedAt": 1794719400000
+            },
+            {
+              "id": "var_a2",
+              "name": "未授权",
+              "statusCode": 401,
+              "headers": {
+                "content-type": "application/json"
+              },
+              "body": "{\"code\":40100,\"msg\":\"token expired\"}",
+              "bodyType": "json",
+              "delayMs": 0,
+              "updatedAt": 1794719460000
+            }
+          ],
+          "activeVariantId": "var_a1",
+          "createdAt": 1794713700000,
+          "updatedAt": 1794716100000
+        },
+        {
+          "id": "rec_b7e40003-1c2d-4a3e-8f5b-6d90c1e22003",
+          "name": "会话注销-204 空正文",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "DELETE",
+            "host": "",
+            "pathType": "exact",
+            "path": "/api/auth/session",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 204,
+            "headers": {},
+            "body": "",
+            "bodyType": "text",
+            "delayMs": 0
+          },
+          "createdAt": 1794714000000,
+          "updatedAt": 1794716400000
+        },
+        {
+          "id": "rec_b7e40004-1c2d-4a3e-8f5b-6d90c1e22004",
+          "name": "用户设置-慢响应 1.5s",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "PUT",
+            "host": "",
+            "pathType": "exact",
+            "path": "/api/users/settings",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"data\":{\"saved\":true}}",
+            "bodyType": "json",
+            "delayMs": 1500
+          },
+          "createdAt": 1794714300000,
+          "updatedAt": 1794716700000
+        }
+      ]
+    },
+    {
+      "id": "rule_9c1f0002-3a2b-4e7c-9d10-0b5f7a2c4e02",
+      "name": "静态资源与二进制",
+      "desc": "base64 图片、CSV、XML 与健康检查",
+      "createdAt": 1794712500000,
+      "updatedAt": 1794718800000,
+      "records": [
+        {
+          "id": "rec_b7e40005-1c2d-4a3e-8f5b-6d90c1e22005",
+          "name": "站点图标-PNG base64",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "GET",
+            "host": "",
+            "pathType": "exact",
+            "path": "/assets/logo.png",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "image/png"
+            },
+            "body": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+            "bodyType": "binary",
+            "delayMs": 0,
+            "bodyEncoding": "base64"
+          },
+          "source": {
+            "method": "GET",
+            "url": "https://cdn.example.com/assets/logo.png",
+            "statusCode": 200,
+            "capturedAt": 1794712500000,
+            "headers": {
+              "user-agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/130.0",
+              "referer": "https://example.com/"
+            }
+          },
+          "createdAt": 1794714600000,
+          "updatedAt": 1794717000000
+        },
+        {
+          "id": "rec_b7e40006-1c2d-4a3e-8f5b-6d90c1e22006",
+          "name": "导出清单-CSV 文本",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "GET",
+            "host": "",
+            "pathType": "prefix",
+            "path": "/assets/data.csv",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "text/csv",
+              "content-disposition": "attachment; filename=\"data.csv\""
+            },
+            "body": "id,name,amount\n1,苹果,12.5\n2,香蕉,7\n",
+            "bodyType": "text",
+            "delayMs": 0
+          },
+          "createdAt": 1794714900000,
+          "updatedAt": 1794717300000
+        },
+        {
+          "id": "rec_b7e40007-1c2d-4a3e-8f5b-6d90c1e22007",
+          "name": "站点地图-XML",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "GET",
+            "host": "",
+            "pathType": "exact",
+            "path": "/sitemap.xml",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/xml"
+            },
+            "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset><url><loc>https://example.com/</loc></url></urlset>",
+            "bodyType": "xml",
+            "delayMs": 0
+          },
+          "createdAt": 1794715200000,
+          "updatedAt": 1794717600000
+        },
+        {
+          "id": "rec_b7e40008-1c2d-4a3e-8f5b-6d90c1e22008",
+          "name": "健康检查-默认空响应",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "GET",
+            "host": "",
+            "pathType": "exact",
+            "path": "/health",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {},
+            "body": "",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "createdAt": 1794715500000,
+          "updatedAt": 1794717900000
+        }
+      ]
+    },
+    {
+      "id": "rule_9c1f0003-3a2b-4e7c-9d10-0b5f7a2c4e03",
+      "name": "订单查询",
+      "desc": "同一接口的 exact / prefix / glob / regex 四档",
+      "createdAt": 1794715200000,
+      "updatedAt": 1794717000000,
+      "records": [
+        {
+          "id": "rec_b7e40009-1c2d-4a3e-8f5b-6d90c1e22009",
+          "name": "订单列表-精确路径且 query 必配",
+          "match": {
+            "version": 1,
+            "level": "standard",
+            "method": "GET",
+            "host": "",
+            "pathType": "exact",
+            "path": "/v1/orders",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "match",
+              "ignoreKeys": [],
+              "conditions": [
+                {
+                  "key": "page",
+                  "op": "equals",
+                  "value": "1",
+                  "ignoreCase": false
+                },
+                {
+                  "key": "status",
+                  "op": "regex",
+                  "value": "paid|shipped",
+                  "ignoreCase": false
+                }
+              ],
+              "allowExtra": false,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"total\":1,\"items\":[{\"orderId\":\"SO20261115001\",\"status\":\"paid\"}]}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "createdAt": 1794715800000,
+          "updatedAt": 1794718200000
+        },
+        {
+          "id": "rec_b7e40010-1c2d-4a3e-8f5b-6d90c1e22010",
+          "name": "订单详情-glob 且忽略签名键",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "GET",
+            "host": "",
+            "pathType": "glob",
+            "path": "/v1/orders/*",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [
+                "sign",
+                "nonce"
+              ],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": 20,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [
+                "nonce",
+                "sign"
+              ],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"data\":{\"orderId\":\"SO20261115001\",\"amount\":199}}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "createdAt": 1794716100000,
+          "updatedAt": 1794718500000
+        },
+        {
+          "id": "rec_b7e40011-1c2d-4a3e-8f5b-6d90c1e22011",
+          "name": "订单分页-前缀匹配",
+          "match": {
+            "version": 1,
+            "level": "standard",
+            "method": "GET",
+            "host": "",
+            "pathType": "prefix",
+            "path": "/v1/orders/list",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"total\":0,\"items\":[]}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "createdAt": 1794716400000,
+          "updatedAt": 1794718800000
+        },
+        {
+          "id": "rec_b7e40012-1c2d-4a3e-8f5b-6d90c1e22012",
+          "name": "订单回调-正则路径",
+          "match": {
+            "version": 1,
+            "level": "custom",
+            "method": "POST",
+            "host": "",
+            "pathType": "regex",
+            "path": "^/v1/orders/SO[0-9]{11}/callback$",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "text/plain"
+            },
+            "body": "OK",
+            "bodyType": "text",
+            "delayMs": 0
+          },
+          "createdAt": 1794716700000,
+          "updatedAt": 1794719100000
+        },
+        {
+          "id": "rec_b7e40013-1c2d-4a3e-8f5b-6d90c1e22013",
+          "name": "订单创建-存在性条件与 201",
+          "match": {
+            "version": 1,
+            "level": "strict",
+            "method": "POST",
+            "host": "",
+            "pathType": "exact",
+            "path": "/v1/orders",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "match",
+              "ignoreKeys": [],
+              "conditions": [
+                {
+                  "key": "idempotency-key",
+                  "op": "exists",
+                  "value": "",
+                  "ignoreCase": false
+                }
+              ],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 201,
+            "headers": {
+              "content-type": "application/json",
+              "location": "/v1/orders/SO20261115002"
+            },
+            "body": "{\"code\":0,\"data\":{\"orderId\":\"SO20261115002\"}}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "createdAt": 1794717000000,
+          "updatedAt": 1794719400000
+        },
+        {
+          "id": "rec_b7e40014-1c2d-4a3e-8f5b-6d90c1e22014",
+          "name": "订单取消-PATCH 且录制头含凭证",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "PATCH",
+            "host": "",
+            "pathType": "exact",
+            "path": "/v1/orders/SO20261115001/cancel",
+            "pathIgnoreCase": false,
+            "ignoreTrailingSlash": true,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 200,
+            "headers": {
+              "content-type": "application/json;charset=UTF-8"
+            },
+            "body": "{\"code\":0,\"data\":{\"status\":\"canceled\"}}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "source": {
+            "method": "PATCH",
+            "url": "https://api.example.com/v1/orders/SO20261115001/cancel",
+            "statusCode": 200,
+            "capturedAt": 1794715200000,
+            "headers": {
+              "x-trace-id": "trace-9f2c1a",
+              "cookie": "***"
+            }
+          },
+          "createdAt": 1794717300000,
+          "updatedAt": 1794719700000
+        },
+        {
+          "id": "rec_b7e40015-1c2d-4a3e-8f5b-6d90c1e22015",
+          "name": "订单不存在-404",
+          "match": {
+            "version": 1,
+            "level": "loose",
+            "method": "GET",
+            "host": "",
+            "pathType": "exact",
+            "path": "/v1/orders/missing",
+            "pathIgnoreCase": true,
+            "ignoreTrailingSlash": false,
+            "query": {
+              "mode": "ignore",
+              "ignoreKeys": [],
+              "conditions": [],
+              "allowExtra": true,
+              "multiValue": "any"
+            },
+            "headers": {
+              "ignoreKeys": [],
+              "conditions": []
+            },
+            "body": {
+              "mode": "ignore"
+            },
+            "priority": null,
+            "enabled": true,
+            "derivation": {
+              "source": "manual",
+              "autoIgnoredKeys": [],
+              "suggestions": [],
+              "pathParameterized": false,
+              "analyzedAt": 0
+            },
+            "parameterizedSegmentIndex": null
+          },
+          "response": {
+            "statusCode": 404,
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": "{\"code\":40400,\"msg\":\"order not found\"}",
+            "bodyType": "json",
+            "delayMs": 0
+          },
+          "createdAt": 1794717600000,
+          "updatedAt": 1794720000000
+        }
+      ]
+    }
+  ]
+}
