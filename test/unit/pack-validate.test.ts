@@ -99,7 +99,7 @@ describe('R4C-10 包级校验：format / version / 体积 / 总条数 / 空包',
     }
   })
 
-  it('JSON 解析不过同样是 packFormatUnknown，不是抛原始 SyntaxError', () => {
+  it('JSON 解析不过同样是 packFormatUnknown（AC-R4-05），不是抛原始 SyntaxError', () => {
     expectPackCode('packFormatUnknown', () => readMockPackText('{"format": "appapi-mock-pack"', 30), '截断的 json')
     expectPackCode('packFormatUnknown', () => readMockPackText('name: order', 12), 'yaml 混进来的')
   })

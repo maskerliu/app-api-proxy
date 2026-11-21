@@ -475,7 +475,7 @@ describe('mapHarEntries：R4C-24 的静态资源开关与 entry 上限', () => {
     assert.equal(opened.records[0].record.response.bodyEncoding, 'base64')
   })
 
-  it('上限判在候选数上：正好 1,000 条要得下，1,001 条整包拒绝', () => {
+  it('上限判在候选数上（AC-R4-08）：正好 1,000 条要得下，1,001 条整包拒绝', () => {
     assert.equal(mapHarEntries(many(MOCK_HAR_MAX_ENTRIES, 'application/json')).records.length, MOCK_HAR_MAX_ENTRIES)
 
     const over = many(MOCK_HAR_MAX_ENTRIES + 1, 'application/json')

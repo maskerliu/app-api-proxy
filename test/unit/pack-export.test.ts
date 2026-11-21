@@ -164,7 +164,7 @@ describe('R4 导出组装', () => {
     assert.deepEqual(pack.rules.map(it => it.id), source.rules.map(it => it._id))
   })
 
-  it('空场景留在包里：导入侧才分得清「空的」和「没导」', async () => {
+  it('空场景留在包里（AC-R4-10）：导入侧才分得清「空的」和「没导」', async () => {
     const source = new FakeSource()
     source.rules = [rule('empty'), rule('full')]
     withRecords(source, 'full', 1)

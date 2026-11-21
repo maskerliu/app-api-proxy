@@ -26,7 +26,7 @@ describe('R4C-08 导出文件名', () => {
     }
   })
 
-  it('只有显式关闭脱敏才带 -raw：默认与 redact=true 都不标', () => {
+  it('只有显式关闭脱敏才带 -raw（AC-R4-14 的文件名半边）：默认与 redact=true 都不标', () => {
     const base = { scope: 'all' as const, date: day }
     assert.equal(packFileName({ ...base, redact: false }), 'appapi-mock-all-2026-11-19-raw.json')
     assert.equal(packFileName({ ...base, redact: true }), 'appapi-mock-all-2026-11-19.json')
