@@ -377,7 +377,7 @@
    取胜方式和上面 .van-cell:after 一样靠 vant.js 先于 renderer.js 注入。
    禁用态不受影响：Vant 那条是 .van-field--disabled .van-field__label（0,2,0），权重更高。
    影响面是所有带 label 的 van-field——除 Mock 编辑器/响应表单外，Settings、SysInfo、ClientMgr、
-   VersionTheme、LocalResourceMgr、Onboarding、Diagnostic、DebugPanel、MockRuleMgr 里的表单标签一起转灰。 */
+   VersionTheme、Onboarding、Diagnostic、DebugPanel、MockRuleMgr 里的表单标签一起转灰。 */
 .van-field__label {
   color: var(--van-text-color-2);
 }
