@@ -897,7 +897,7 @@ async function onRecordDeleteConfirm() {
 }
 
 // 导入与导出同类，都住在「更多」里；导入的选项、预览与结果都在 MockImportDialog 内部，
-// 这一页只负责给出合并模式的目标场景（curRule）和「前往启用」的落点
+// 这一页只负责给出合并模式的目标场景（curRule）和「查看场景」的落点
 const headMenuActions = computed(() => [
   { key: 'import', text: t('mock.import.menuTitle'), icon: 'icon-import' },
   {
@@ -918,7 +918,7 @@ function onHeadMenuSelect(action: { key?: string }) {
   if (action.key === 'import') showImport.value = true
 }
 
-/** 「前往启用」跳的就是导入结果里那几个场景之一，走的是与列表选中同一条路径（含未保存改动的确认） */
+/** 「查看场景」跳的就是导入结果里那几个场景之一，走的是与列表选中同一条路径（含未保存改动的确认） */
 function onImportGoto(ruleId: string) {
   showImport.value = false
   onRuleSelect({ _id: ruleId } as ProxyMock.MockRule)

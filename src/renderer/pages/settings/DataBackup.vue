@@ -51,7 +51,7 @@ const exportRuleTotal = ref<number>(null)
 const exportBlocked = computed(() => !exportRunning.value && exportRuleTotal.value === 0)
 
 // 抽屉里的宿主（Proxy.vue）提供深链；经 /settings 直达时上层没有 provider，
-// 「前往启用」无处可去，就用 canGoto 把那枚按钮藏掉，而不是留一个点了没反应的控件
+// 「查看场景」无处可去，就用 canGoto 把那枚按钮藏掉，而不是留一个点了没反应的控件
 const openMockRuleMgr = inject<((target: MockMgrTarget) => void) | null>('openMockRuleMgr', null)
 const canGoto = computed(() => openMockRuleMgr != null)
 

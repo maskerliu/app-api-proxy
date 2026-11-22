@@ -242,7 +242,7 @@ export interface MockPackImportResult {
   /**
    * 本次写入落到的场景。合并模式恒为一个（目标场景）；新建模式按包内场景逐个创建，
    * 一个 N 场景的包就有 N 个（PRD 4.4.4「为每个导入场景创建新规则」）。
-   * 这里原来是单数 `ruleId`/`ruleName`，装不下多场景包，也没法告诉 UI「前往启用」该跳哪几个。
+   * 这里原来是单数 `ruleId`/`ruleName`，装不下多场景包，也没法告诉 UI 那枚跳转按钮该落在哪几个场景。
    */
   ruleIds: string[]
   mode: MockPackImportMode
