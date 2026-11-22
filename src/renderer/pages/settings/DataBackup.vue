@@ -1,9 +1,12 @@
 <template>
   <van-cell-group inset>
-    <!-- 全量与单场景的区别写在组标题下那一行：两处入口的语义不同，不说明就会被读成重复入口 -->
+    <!-- 全量与单场景的区别并到组标题那一行、右对齐：两处入口的语义不同，不说明就会被读成重复入口，
+         但为一句说明单起一行会把这一组的地板抬高半档 -->
     <template #title>
-      <div>{{ $t('settings.data.title') }}</div>
-      <div class="hint data-scope">{{ $t('settings.data.scopeNote') }}</div>
+      <div class="data-head">
+        <span class="data-title">{{ $t('settings.data.title') }}</span>
+        <span class="hint data-scope truncate" v-tip="$t('settings.data.scopeNote')">{{ $t('settings.data.scopeNote') }}</span>
+      </div>
     </template>
 
     <!-- 空库不可导，禁用信号走「收起箭头 + 同栏说明」：这一档不能用置灰色，
@@ -11,6 +14,9 @@
          进行中不禁用这一行——再点一次是回到弹窗看进度，关掉弹窗不等于取消任务 -->
     <van-field :label="$t('mock.export.dialogTitle')" label-width="7.5em" input-align="right" readonly
       :is-link="!exportBlocked" :class="{ 'is-blocked': exportBlocked }" @click="onExportRow">
+      <template #left-icon>
+        <van-icon class="iconfont icon-export setting-cell-icon" />
+      </template>
       <template #input>
         <span v-if="exportBlocked" class="hint data-note">{{ $t('mock.export.menuEmpty') }}</span>
         <van-loading v-else-if="exportRunning" size="var(--van-font-size-md)" />
@@ -18,8 +24,11 @@
     </van-field>
 
     <!-- 导入没有「当前场景」可依附，弹窗里的合并档因为不传 ruleId 自然禁用 -->
-    <van-field :label="$t('mock.import.menuTitle')" label-width="7.5em" readonly is-link
-      @click="showImport = true" />
+    <van-field :label="$t('mock.import.menuTitle')" label-width="7.5em" readonly is-link @click="showImport = true">
+      <template #left-icon>
+        <van-icon class="iconfont icon-import setting-cell-icon" />
+      </template>
+    </van-field>
   </van-cell-group>
 
   <mock-export-dialog v-model:show="showExport" v-model:running="exportRunning" />
@@ -74,9 +83,29 @@ function onGoto(ruleId: string) {
 </script>
 
 <style scoped>
+/* 标题与说明同一行：说明吃剩余宽度并右对齐，标题不参与收缩。
+   右缘落在组标题带自己的 20px 内边距上（store 的 cellGroupInsetTitlePadding），
+   与下面单元格右缘那档 5px + md×1.2 基本同线。 */
+.data-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-sp-lg);
+}
+
+/* 与说明取同一个行盒：组标题带自己是 16px 的行高，不垫平的话两者基线差半档 */
+.data-title,
 .data-scope {
-  margin-top: var(--app-sp-tight);
   line-height: var(--van-line-height-md);
+}
+
+.data-title {
+  flex: none;
+}
+
+/* 说明恒单行，装不下就省略号收尾、全文交给 v-tip（与全站截断同一口径） */
+.data-scope {
+  min-width: 0;
 }
 
 /* 两行说明沿用 .hint 的字号档，颜色改走次级文本色：.hint 读 --van-text-color-3，Vant 暗色把它钉成字面量

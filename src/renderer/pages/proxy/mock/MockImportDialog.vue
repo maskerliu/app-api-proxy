@@ -1,5 +1,8 @@
 <template>
-  <van-dialog v-model:show="show" width="var(--app-popup-w-md)" :show-confirm-button="false">
+  <!-- 写库进行中遮罩不给关：那一段时间里唯一的有效动作是「取消导入」，而结果页（部分写入、场景名撞过号）
+       只在弹窗里说明，关掉就等于把这些交代丢在后台 -->
+  <van-dialog v-model:show="show" width="var(--app-popup-w-md)" :show-confirm-button="false"
+    :close-on-click-overlay="!writing">
     <!-- 统计长在标题行：这一页要放的行本来就多，五个数各占一行会把明细区挤到看不全。
        常规计数排成一句弱色文本，只有需要用户处理的异常计数（非 0）才单独出一枚 tag——五枚 tag 里三枚恒亮等于没表达 -->
     <template #title>
@@ -12,14 +15,14 @@
 
     <div class="import-body">
       <template v-if="result == null">
-        <!-- 三行配置一律用 field（#input 槽放自定义控件）：标签列宽、标签色（global.css 的 .van-field__label）、
-             行距与分隔线都由组件给，本页不再自写表单排版。文件名是只读值不是输入框，所以它进 #input 槽而不接 v-model。
-             带说明的行由 import-block 成组：说明压在所属行下面而不是排在整块表单尾部（原先「当前场景是哪个」
-             掉在「冲突处理」下面，说的却是上一行），分隔线也跟着挪到组底，所以 cell 自带的那份下留白归沟道管。
-             说明留在整行宽度上而不是缩进进值列：值列比内容区窄 93px，配额那句在中英两种语言里都会多绕一行。 -->
-        <div class="import-block" :class="fileNote ? 'has-note van-hairline--bottom' : ''">
-          <van-field :label="$t('mock.import.fileLabel')" :border="!fileNote">
-            <template #input>
+        <!-- 配置行的标签列宽、标签色、行距与分隔线都由组件给，本页不再自写表单排版。文件名是只读值 + 一枚动作，
+             不是输入框，所以那一格用 cell 的 #value 槽；选模式与冲突策略是真正的控件，用 field 的 #input 槽。
+             带说明的行由 import-block 成组：说明压在所属行下面而不是排在整块表单尾部，分隔线也跟着挪到组底，
+             所以 cell 自带的那份下留白归沟道管。配额那句留在整行宽度上而不是缩进进值列：值列比内容区窄 93px，
+             它在两种语言里都会多绕一行。 -->
+        <div class="import-block" :class="fileNote ? 'has-note' : ''">
+          <van-cell class="import-file-cell" :title="$t('mock.import.fileLabel')" :border="false" center>
+            <template #value>
               <div class="import-control-main">
                 <span class="import-file truncate" :class="{ 'is-empty': file == null }"
                   v-tip="file?.name ?? $t('mock.import.noFile')">{{ file?.name ?? $t('mock.import.noFile') }}</span>
@@ -28,7 +31,7 @@
                 </van-button>
               </div>
             </template>
-          </van-field>
+          </van-cell>
           <!-- 包级失败与条数上限都只由「这个文件」决定，两者也互斥：读不出文件就没有预览数字。
                包级失败留在原地而不是弹 toast：用户要对着同一行改成什么才能再试一次 -->
           <div v-if="fileNote === 'error'" class="import-help is-error">
@@ -38,17 +41,19 @@
           <div v-else-if="fileNote === 'quota'" class="import-help" :class="{ 'is-reject': quotaReject }">{{ quotaText }}</div>
         </div>
 
-        <div class="import-block" :class="modeHint ? 'has-note van-hairline--bottom' : ''">
-          <van-field :label="$t('mock.import.modeLabel')" :border="!modeHint">
-            <template #input>
+        <van-field :label="$t('mock.import.modeLabel')">
+          <template #input>
+            <div class="import-control-main">
               <van-radio-group v-model="mode" direction="horizontal" class="import-radios" :disabled="busy || writing">
                 <van-radio name="new">{{ $t('mock.import.modeNew') }}</van-radio>
                 <van-radio name="merge" :disabled="ruleId == null">{{ $t('mock.import.modeMerge') }}</van-radio>
               </van-radio-group>
-            </template>
-          </van-field>
-          <div v-if="modeHint" class="import-help truncate" v-tip="modeHint">{{ modeHint }}</div>
-        </div>
+              <!-- 目标场景名顶到行尾右沟道（与「选择文件」那枚按钮的右缘落在同一条竖线上），不再紧跟 radio：
+                   紧跟会被读成「radio 的附属说明」，顶到右端读起来像整行的状态标注 -->
+              <span v-if="modeHint" class="import-mode-hint truncate" v-tip="modeHint">{{ modeHint }}</span>
+            </div>
+          </template>
+        </van-field>
 
         <!-- 冲突策略只在合并模式出现：新建模式包内每条都写进新场景，库里没有可撞的对象 -->
         <van-field v-if="mode === 'merge'" :label="$t('mock.import.conflictLabel')">
@@ -501,7 +506,9 @@ function onRestart() {
      三行配置块实测 124.8px（字号 13、合并模式），比原先高出 33.2px，明细区会被压到 26.6px 而只剩滚动条。
      24/55 是补回这一档：同一场景实测明细区 78.6px，最坏那档（字号 14、窗口 640 以下顶到 vh 上限）也还有 58.9px。
      说明归到所属行之后配置块又收回约 10px（72 档实测明细区中位 92.3 → 104.8、地板 48.9 → 54.5），
-     但把这一档退回 20/45 仍会在字号 14 的窄窗把明细区压到 0，所以留着。 */
+     但把这一档退回 20/45 仍会在字号 14 的窄窗把明细区压到 0，所以留着。
+     目标场景名并进 radio 那一行、明细行降到次级字号后再测：960 宽弹窗的明细区 99 / 109 / 119px
+     （字号 12 / 13 / 14），地板宽 448 那档 102px（radio 换行把配置块顶高 6.5px），这一档不用再动。 */
   height: min(calc(var(--van-font-size-md) * 24), 55vh);
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
@@ -517,28 +524,76 @@ function onRestart() {
   flex: none;
 }
 
-/* 带说明的那一行自己成一组：说明紧贴所属行（紧邻即从属，比行与行之间紧一档），分隔线从行底挪到组底，
-   cell 自带的那份下留白就不再重复计一次——不收掉的话整组比说明散在表单尾部那版还高 13px。
-   position: relative 是给 van-hairline--bottom 的伪元素找锚点（Vant 那条规则是 absolute + 四边 -50%），
-   没有它这条线会按弹窗定位。 */
-.import-block.has-note {
-  gap: var(--app-sp-tight);
+/* 这一组的分隔线由 import-block 自己画，两种状态同源。交给 cell 画不出来：Vant 有一条
+   `.van-cell:last-child:after,.van-cell--borderless:after{display:none}`，没有副说明时这枚 cell 正好是组的
+   最后一个子元素，线被静默吃掉（2026-11-22 实拍发现「选择文件」底下没有线）；有说明时线又必须压在说明下面，
+   而不是夹在行与说明之间。几何照 global.css 的 `.van-cell:after`：左右读同一条 --van-cell-horizontal-padding、
+   颜色读 --van-cell-border-color，才和上下 field 行的线落在同一对沟道上。不用 van-hairline--bottom，
+   那条是四边 -50% + scale(.5) 的满宽线，两头不吃沟道。position: relative 是给这条伪元素找锚点，
+   没有它线会按弹窗定位。 */
+.import-block {
   position: relative;
+}
+
+.import-block:after {
+  border-bottom: 1px solid var(--van-cell-border-color);
+  bottom: 0;
+  box-sizing: border-box;
+  content: " ";
+  left: var(--van-cell-horizontal-padding);
+  pointer-events: none;
+  position: absolute;
+  right: var(--van-cell-horizontal-padding);
+  transform: scaleY(0.5);
+}
+
+/* 带说明的那一行自己成一组：说明紧贴所属行（紧邻即从属，比行与行之间紧一档），分隔线在组底，
+   cell 自带的那份下留白就不再重复计一次——不收掉的话整组比说明散在表单尾部那版还高 13px。
+   display 必须是 flex 列：gap 只在 flex/grid 上生效，默认 block 时那档 sp-tight 是条死声明
+   （实测说明贴所属行 0px，行底留白又收成 0，两句之间只剩行高自带的余量）。 */
+.import-block.has-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-sp-tight);
 }
 
 .import-block.has-note>.van-cell {
   padding-bottom: 0;
 }
 
-/* 「文件」那一格里文件名与按钮并排：Vant 给自定义控件的容器已经是 flex + 垂直居中，只差一枚行内沟道 */
+/* 「文件」那一格里文件名与按钮并排：这档 flex 容器同时服务 cell 的值列与 field 的自定义控件槽，
+   两边都只差一枚行内沟道（field 那层容器本就 flex + 垂直居中，cell 的值列不是）。
+   flex:1 在 field 的 body 里让容器吃满剩余宽度，这样末尾那枚「当前场景」hint 的 margin-left:auto
+   才真的能把 hint 顶到右沟道；在 cell 的值列里容器是 block 子元素，flex:1 不生效、无害。 */
 .import-control-main {
   align-items: center;
   display: flex;
+  flex: 1;
   gap: var(--app-sp-lg);
   min-width: 0;
 }
 
+/* 文件那一格改用 cell（只读值 + 动作，不是输入框）之后的两条补偿：
+   1) cell 的标题列默认与值列各 flex:1（各占一半），会和上下两行 field 那 6.2em 的固定标签列错开，
+      所以照 field 的同一份 token 对齐，标签右缘与上下两行落在同一条竖线上；
+   2) 标题色：field 的标签由 global.css 统一成 text-2，cell 标题仍是主文本色，同屏会读出两档深浅。 */
+.import-file-cell :deep(.van-cell__title) {
+  color: var(--van-text-color-2);
+  flex: none;
+  margin-right: var(--van-padding-sm);
+  width: var(--van-field-label-width);
+}
+
+/* 值列默认右对齐 + 次级灰，那是给「值文本」定的；这一格放的是控件，
+   由文件名自己吃满剩余宽度把按钮顶到右沟道上。min-width:0 让窄弹窗里先让文件名截断，而不是把按钮挤出描边。 */
+.import-file-cell :deep(.van-cell__value) {
+  min-width: 0;
+  text-align: left;
+}
+
+/* 文件名是主文本色（值列那条灰色是给值文本的），只有「未选择文件」那一档占位才走灰 */
 .import-file {
+  color: var(--van-text-color);
   flex: 1;
   min-width: 0;
 }
@@ -557,6 +612,19 @@ function onRestart() {
 .import-radios {
   min-width: 0;
   white-space: nowrap;
+}
+
+/* 目标场景名 / 建议名并入 radio 那一行（单起一行会被读成下一行「冲突处理」的说明）：
+/* 目标场景名 / 建议名都贴到行尾右沟道：hint 在 flex 容器里用 margin-left:auto 顶到最右，
+   与同弹窗「选择文件」那枚按钮的右缘落在同一条竖线上。字号取次级一档，与它说明的对象区分开，
+   也与弹窗里其余说明文字同档。flex 显式写成 0 1 auto——不放大（不抢 radio 组的固有宽）、可收缩
+   （放不下时先让自己省略号 + v-tip）；radio 组那头保持可收缩可换行，弹窗压到地板宽时不许裁掉半枚圆点。 */
+.import-mode-hint {
+  color: var(--van-text-color-2);
+  flex: 0 1 auto;
+  font-size: var(--van-font-size-sm);
+  margin-left: auto;
+  min-width: 0;
 }
 
 /* 禁用态的标签：Vant 用 --van-text-color-3，暗色下覆成 #4d4d4d 压在弹窗底色上几乎读不出，
@@ -595,10 +663,14 @@ function onRestart() {
   color: var(--van-text-color);
 }
 
+/* 明细区是数据面：全局 body 的 user-select: none 挡的是整页拖蓝，但包内 URL、字段名、错误 detail 要能
+   划出去贴给别人。放行只写在这块自己的类上，不上提成 .van-dialog__content 那条（全站共享面，见 R4 14.2 Q8）。
+   被省略号截断的那行也划得到全文——DOM 里存的是完整值，截断只是视觉。 */
 .import-detail {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  user-select: text;
 }
 
 .import-detail-empty {
@@ -608,8 +680,16 @@ function onRestart() {
   justify-content: center;
 }
 
+/* 明细行原先一行贴一行（组内 0 沟道），缩一档字号后补上同行沟道：行距取行内密排档里偏松的一档，
+   组与组之间再走区块级留白，否则「哪几行属于这一组」只能靠标题颜色认。 */
+.import-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-sp-lg);
+}
+
 .import-group+.import-group {
-  margin-top: var(--app-sp-lg);
+  margin-top: var(--app-sp-2xl);
 }
 
 .import-group-head {
@@ -623,9 +703,12 @@ function onRestart() {
   font-size: var(--van-font-size-sm);
 }
 
+/* 明细是逐行核对的数据，不是正文：字号降到次级一档（设置值 +2，与上面三行配置那档 +4 同一来源缩放，
+   不写死 px），整页只降这一档就够拉开——明细行原本与配置行同字号，读起来像同一组控件 */
 .import-item {
   display: flex;
   align-items: center;
+  font-size: var(--van-font-size-sm);
   gap: var(--app-sp-md);
   min-width: 0;
 }
@@ -636,6 +719,10 @@ function onRestart() {
 }
 
 .import-item-text {
+  /* 明细的状态句是这一区的主文本：Vant 的 cell 自己不带 color 规则，而这些行不是 cell，
+     不显式上色就一路继承 UA 黑色（暗色实测 rgb(0,0,0) 压在弹窗底色 rgb(28,28,30) 上读不出）。
+     定位那一格是次级信息，走 text-2，两档的分工与全站键值行同一口径。 */
+  color: var(--van-text-color);
   flex: 1;
   min-width: 0;
 }

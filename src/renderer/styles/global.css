@@ -44,8 +44,15 @@
      和 Vant 的 tabsLineHeight / dialogButtonHeight 都读这一个值，不再各处重抄 md*2.2。 */
   --app-control-height: calc(var(--van-font-size-md) * 2.2);
 
-  /* 裸图标（.icon-action + 字形 md*1.2）hover 方格的实际边长：md*1.2 + 上下各 sp-tight(md*0.4) = md*2.0，
-     实测 md13 档 26px、md14 档 28px。要比这对齐的控件（同一行的开关等）读这一条，别照抄像素值。 */
+  /* 裸图标的字形档单源：iconfont 基类把 font-size 写死 16px，不显式给就不跟随字号，因此 .btn-icon-only 的
+     按钮图标与 .icon-action 那一族裸图标都读这一条（原先两处各抄一遍 md*1.2）。
+     与开关同排时它也充当开关的盒高：Vant 把 size 落到 font-size，盒高是 calc(1em + 4px)，所以开关写
+     calc(var(--app-glyph-size) - 4px)，那 4px 是壳、不是能对齐的内容。两条 token 的分工见下一条注释。 */
+  --app-glyph-size: calc(var(--van-font-size-md) * 1.2);
+
+  /* 裸图标（.icon-action + 字形 --app-glyph-size）hover 方格的实际边长：md*1.2 + 上下各 sp-tight(md*0.4) = md*2.0，
+     实测 md13 档 26px、md14 档 28px。要按「整枚热区」对齐的读这一条（「更多」菜单的箭头落点就读它），
+     按「看得见的字形」对齐的读上面那条，别照抄像素值。 */
   --app-action-square: calc(var(--van-font-size-md) * 2);
 
   /* 弹层宽度档位 */
@@ -81,6 +88,18 @@
 
   /* 详情页顶部间距：HTTP / WebSocket / Statistics 统一 */
   --app-detail-top-gap: var(--van-padding-lg);
+}
+
+/* ---- 文字选中基线：控件不可选，只有内容区显式放行 ---- */
+
+/* 声明在 body 而不是 #app：user-select 是继承属性，而 Vant 的 van-popover（「更多」菜单、记录面板、
+   搜索结果）、MiniSelect 的下拉都 teleport 到 document.body，showToast / showNotify / showConfirmDialog
+   这几个函数式调用也直接挂在 body 上——它们不在 #app 子树里，挂在 #app 上的那条对一条都不生效。
+   2026-11-21 那次点「更多」菜单把「导入规则包」整条选中，就是这个缺口。
+   放行只留给数据展示区：现有四处 opt-in（.header-list 键值网格、请求体、WS URL、注册 URL）都在 #app 里面，
+   行为不变；输入框与文本域按规范不受祖先的 none 影响，全站本来就是这样工作的。 */
+body {
+  user-select: none;
 }
 
 /* ---- 页面级容器：全屏居中卡片布局（Onboarding / Diagnostic 共用） ---- */
@@ -245,7 +264,7 @@
    iconfont 基类写死的 16px 与 .van-icon 的 font-size: inherit，因此也与样式表插入顺序无关。
    1.2 取自 Vant 的 --van-button-icon-size，等于把各处抬到原本最大的一档，没有站点会变小。 */
 .btn-icon-only .van-icon {
-  font-size: calc(var(--van-font-size-md) * 1.2);
+  font-size: var(--app-glyph-size);
 }
 
 /* ---- 行内图标动作：不带按钮外壳的裸图标 ---- */
@@ -548,6 +567,20 @@
   border-left-width: 0;
 }
 
+/* 删除类确认弹窗的「确定」走 danger 那一档色（用法是往 van-dialog 上挂 .dialog--danger，
+   函数式的 showConfirmDialog 走同名 className）。Vant 的 Dialog 只有 confirm-button-color（拿到的是
+   写字号内联色）而没有 confirm-button-type，所以危险档只能填它自己的文字色变量；描边另补一条——
+   上面把 footer 两枚改成了描边按钮，只染文字会让这枚与旁边的「取消」差不出危险级，
+   红字红边才与「取消导入」那枚 plain type="danger" 同款观感。不写 ::after：Vant 这一版把按钮描边
+   画在元素自身（.van-button--default 的 border），没有 ::after 那圈可染。 */
+.dialog--danger {
+  --van-dialog-confirm-button-text-color: var(--van-danger-color);
+}
+
+.dialog--danger .van-dialog__confirm {
+  border-color: var(--van-danger-color);
+}
+
 /* 弹窗内只有一档按钮：footer 那两枚走 --van-dialog-button-height（store 里指到控件基准）与正文字号，
    而内容区自排的动作行（保存冲突）跟着 van-button size="small" 那一档，同族按钮高差 4px、字号差 2px、
    左右内边距差 7.6px。压在这里而不是改组件的 size：尺寸档位仍由使用方声明，只是弹窗内一律收到同一档。
@@ -561,20 +594,76 @@
 /* ---- 浮层菜单（van-popover）：Vant 把弹层 teleport 到 document.body，整套排版只能住在非 scoped 层 ---- */
 
 /* 弹层里的元素不带页面组件的 scope id，页面 scoped 样式够不到：实测那条 :deep(.head-menu-popover) 与
-   .head-menu-item 的内边距全都没命中，宽高仍是 Vant 默认的 128×44，第二行「为什么现在还不能点」被行高裁掉。
-   宽度上限的 min() 兜的是视口：弹层不在面板里，面板的 overflow 裁不到它，超出的是窗口右缘。 */
+   .head-menu-item 的内边距全都没命中，宽高仍是 Vant 默认的 128×44，第二行「为什么现在还不能点」被行高裁掉。 */
+
+/* 宽度按内容取，不再写死一档：条目最长也就一句「为什么现在还不能点」，原先的 md×22 让只有五个字的菜单
+   也撑出 242~308px。超过上限的那句（英文「导出进行中」）折行，行高仍交给内容。
+   上限的 min() 兜的是视口：弹层不在面板里，面板的 overflow 裁不到它，超出的是窗口右缘。 */
 .head-menu-popover {
-  --van-popover-action-width: min(calc(var(--van-font-size-md) * 22), calc(100vw - var(--app-sp-3xl)));
+  --van-popover-action-width: max-content;
   --van-popover-action-height: auto;
 }
 
-/* 条目排两行：动作名 + 为什么现在还不能点。gap 与内边距同一档，行高交给内容，不再用 Vant 的定高行 */
+/* 浮在白色抽屉头部上时，Vant 默认那一档读不出边界：外缘只有 0 2px 12px rgba(50,50,51,.12) 一层淡投影、
+   没有描边，箭头又是纯白三角（颜色就是弹层底色本身）。描边补全站同一条 --van-border-color，
+   与 .header-collapse / .section-card 同款，跟着主题灰阶走；投影仍留 Vant 那层，不加 --app-shadow-float。
+   箭头是 0×0 的 CSS 三角，上不了 border，只能用同色 drop-shadow 把两条斜边勾出来。
+   box-sizing 显式写 border-box：Vant 这层没声明，不写就整块弹层多撑 2px，右对齐时左缘跟着偏。 */
+.head-menu-popover .van-popover__content {
+  box-sizing: border-box;
+  border: 1px solid var(--van-border-color);
+}
+
+.head-menu-popover .van-popover__arrow {
+  filter: drop-shadow(0 0 1px var(--van-border-color));
+}
+
+.head-menu-popover .van-popover__action {
+  max-width: min(calc(var(--van-font-size-md) * 22), calc(100vw - var(--app-sp-3xl)));
+}
+
+/* 单行条目太紧：Vant 默认的 44px 那一档是写死的定高（--van-popover-action-height），两行条目会被它裁掉，
+   所以上面仍把高度交回内容，只把 44px 折算成随字号缩放的地板（锚在 md13：44/13 ≈ 3.4）。
+   地板落在 Vant 自己那层 .van-popover__action-text 上而不是行上：分隔线钉在它的 :after，
+   盒子得长到整行底那条线才落在行底；行内的垂直居中 Vant 已经用 align-items 给了，不再自己写。 */
+.head-menu-popover .van-popover__action-text {
+  min-height: calc(var(--van-font-size-md) * 3.4);
+}
+
+/* 锚点：bottom-end 把弹层右缘对齐到图标方格右缘，Vant 却把箭头钉在距右缘 --van-padding-md（16px）处，
+   实测箭头尖比图标中心偏左 10px。箭头尖在 right 值再往左一枚 arrow-size 的地方，取方格半宽减它即落在图标正中。
+   选择器按 -end 后缀匹配，装不下而翻到上方的那档（top-end）横向落点同款，一并接住。 */
+.head-menu-popover[data-popper-placement$="-end"] .van-popover__arrow {
+  right: calc(var(--app-action-square) / 2 - var(--van-popover-arrow-size));
+}
+
+/* 条目 = 前缀图标 + 两行文字（动作名 / 为什么现在还不能点）。图标与正文之间的横向档比两行之间的纵向档宽一档：
+   横向要紧到读出「这是一条」，纵向那两行本来就靠 sp-tight 的紧排读成一组。上下内边距仍与纵向 gap 同档，
+   行高交给内容（单行那档由上面的地板托住）。 */
 .head-menu-popover .head-menu-item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--app-sp-lg);
+  padding: var(--app-sp-tight) 0;
+  min-width: 0;
+}
+
+/* 图标不参与收缩：长说明折行时要把宽度全让给文字列。字形档与全站裸图标同源（--app-glyph-size），
+   不显式给就吃 iconfont 基类写死的 16px；选择器 (0,2,0) 同时压过那条与 .van-icon 的 font-size: inherit，
+   与样式表注入顺序无关。颜色一概不写——置灰条目要跟着 Vant 的 disabled 文字色一起灰。 */
+.head-menu-popover .head-menu-icon {
+  flex: none;
+  font-size: var(--app-glyph-size);
+  line-height: 1;
+}
+
+/* 文字列仍是原来的两行竖排 */
+.head-menu-popover .head-menu-body {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: var(--app-sp-tight);
-  padding: var(--app-sp-tight) 0;
   min-width: 0;
 }
 

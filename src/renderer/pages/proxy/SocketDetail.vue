@@ -463,7 +463,6 @@ onUnmounted(() => {
   padding: 0 var(--app-sp-md);
   font-size: var(--van-font-size-sm);
   color: var(--van-text-color-2);
-  user-select: none;
 }
 
 /* 选中态与 hover 读 global.css 的 .list-row：原先这里是实心主色 + 整行反白，

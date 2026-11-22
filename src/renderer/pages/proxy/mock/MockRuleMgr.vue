@@ -4,7 +4,7 @@
          （MainApp.ts 的 titleBarOverlay），所以桌面端首行要让开 App.vue .drag-bar 那 32px 再留一档间距；
          Web 分支没有窗口控制件，让位为 0。 -->
     <van-row class="border-bg top-bar" justify="start" style="width: calc(100% - var(--app-card-gutter) * 2);"
-      :style="{ paddingTop: isWeb ? '0' : 'calc(32px + var(--app-sp-md))' }">
+      :style="{ paddingTop: isWeb ? '0' : 'calc(10px + var(--app-sp-md))' }">
       <van-col class="rule-search-col" :style="searchColStyle">
         <van-popover class="rule-search-popover" v-model:show="showSearchResult" trigger="manual"
           placement="bottom-start" :show-arrow="false" :offset="[0, 2]">
@@ -78,18 +78,25 @@
                 :class="curRule._id == null ? 'action-glyph--disabled' : 'action-glyph--danger'"
                 @click="onRuleDelete(curRule)" />
               <!-- 数据搬运与场景 CRUD 不同类，导入/导出收进「更多」菜单 -->
-              <van-popover v-model:show="showHeadMenu" trigger="click" placement="bottom-end"
-                class="head-menu-popover" :actions="headMenuActions" @select="onHeadMenuSelect">
+              <van-popover v-model:show="showHeadMenu" trigger="click" placement="bottom-end" class="head-menu-popover"
+                :actions="headMenuActions" @select="onHeadMenuSelect">
                 <template #reference>
                   <!-- 次级动作不给按钮外壳：一枚裸图标，热区与悬停底交给共享的 .icon-action -->
                   <van-icon class="iconfont icon-more icon-action action-glyph action-glyph--primary"
                     v-tip="$t('mock.rule.more')" />
                 </template>
                 <template #action="{ action }">
-                  <div class="head-menu-item">
-                    <span class="head-menu-text">{{ action.text }}</span>
-                    <!-- 置灰条目把「为什么现在还不能点」写在行内：菜单里没有悬浮提示可依赖 -->
-                    <span v-if="action.hint" class="head-menu-hint">{{ action.hint }}</span>
+                  <!-- 用 Vant 自带的那层 action-text 包住条目：竖排菜单的分隔线本来就钉在它的 :after 上，
+                       末条不画线也由 Vant 的 :last-child 规则管；#action 槽直接返回内容时这层不存在，线才会消失 -->
+                  <div class="van-popover__action-text van-hairline--bottom">
+                    <div class="head-menu-item">
+                      <i class="iconfont head-menu-icon" :class="action.icon" />
+                      <div class="head-menu-body">
+                        <span class="head-menu-text">{{ action.text }}</span>
+                        <!-- 置灰条目把「为什么现在还不能点」写在行内：菜单里没有悬浮提示可依赖 -->
+                        <span v-if="action.hint" class="head-menu-hint">{{ action.hint }}</span>
+                      </div>
+                    </div>
                   </div>
                 </template>
               </van-popover>
@@ -97,9 +104,11 @@
           </template>
           <template #right-icon>
             <van-row class="rule-mock-switch" v-tip="mockStateTip" align="center" :wrap="false">
-              <!-- Vant 的开关盒子高是 1em+4px、字形档默认写死 26px（既不等高也不随字号缩放），
-                   所以把 1em 定成同排图标热区边长减去那 4px 壳：md13 实测 26px、md14 实测 28px，与图标一致 -->
-              <van-switch v-model="curRule.isMock" size="calc(var(--app-action-square) - 4px)"
+              <!-- Vant 的开关盒子高是 1em+4px，所以把 1em 定成同排裸图标的字形档（--app-glyph-size）减去那 4px 壳，
+                   于是盒高与铅笔、垃圾桶的字形同高（md13 15.6px、md14 16.8px）。
+                   原先对的是 hover 方格那一档（--app-action-square，26 / 28px）——方格平时看不见，
+                   开关按它做出来就比同排图标大一截。 -->
+              <van-switch v-model="curRule.isMock" size="calc(var(--app-glyph-size) - 4px)"
                 @change="onMockSwitchChanged(curRule)"
                 :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
             </van-row>
@@ -221,10 +230,13 @@
     </van-row>
 
     <van-dialog :title="$t('mock.rule.delete.title')" v-model:show="showRuleDelete" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')" @confirm="onRuleDeleteConfirm"
+      class="dialog--danger" :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
+      @confirm="onRuleDeleteConfirm"
       :message="$t('mock.rule.delete.confirm', { rule: curRule != null ? curRule.name : '' })" />
 
-    <van-dialog :title="$t('mock.rule.title')" v-model:show="showRuleEdit" show-cancel-button
+    <!-- 点遮罩关闭不另写一套：Dialog 把 before-close 透传给 Popup，遮罩那一路调用不带 action，
+         正好落进 onRuleEditClose 的取消分支，回滚照旧 -->
+    <van-dialog :title="$t('mock.rule.title')" v-model:show="showRuleEdit" show-cancel-button close-on-click-overlay
       :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
       :before-close="onRuleEditClose">
       <van-form ref="form" label-width="6.9em" v-if="curRule != null">
@@ -234,7 +246,7 @@
     </van-dialog>
 
     <van-dialog :title="$t('mock.record.delete.title')" v-model:show="showRecordDelete" show-cancel-button
-      :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
+      class="dialog--danger" :cancel-button-text="$t('common.cancel')" :confirm-button-text="$t('common.done')"
       @confirm="onRecordDeleteConfirm" :message="$t('mock.record.delete.confirm')" />
 
     <van-dialog v-model:show="showConflict" :title="$t('mock.record.conflictTitle')" :show-confirm-button="false">
@@ -887,10 +899,11 @@ async function onRecordDeleteConfirm() {
 // 导入与导出同类，都住在「更多」里；导入的选项、预览与结果都在 MockImportDialog 内部，
 // 这一页只负责给出合并模式的目标场景（curRule）和「前往启用」的落点
 const headMenuActions = computed(() => [
-  { key: 'import', text: t('mock.import.menuTitle') },
+  { key: 'import', text: t('mock.import.menuTitle'), icon: 'icon-import' },
   {
     key: 'export',
     text: t('mock.export.dialogTitle'),
+    icon: 'icon-export',
     // 进行中不再发起第二份，空库也不给导一个空包；两者的原因都写在条目第二行
     disabled: exportRunning.value || exportRuleTotal.value === 0,
     hint: exportRunning.value
@@ -1293,9 +1306,10 @@ watch(showHeadMenu, async (open) => {
 }
 
 /* 裸图标（不带 .btn-icon-only 外壳）的字形尺寸与配色：内边距、圆角、hover 底色都读 global.css 的 .icon-action。
-   尺寸与 .btn-icon-only .van-icon 同一乘数——iconfont 基础类把 font-size 写死 16px，不显式给就不跟随字号。 */
+   字形档与 .btn-icon-only .van-icon 同源（--app-glyph-size）——iconfont 基础类把 font-size 写死 16px，
+   不显式给就不跟随字号。 */
 .action-glyph {
-  font-size: calc(var(--van-font-size-md) * 1.2);
+  font-size: var(--app-glyph-size);
 }
 
 .action-glyph--primary {

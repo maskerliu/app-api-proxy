@@ -1,6 +1,7 @@
 <template>
   <OverlayScrollbarsComponent class="settings" :options="scrollOptions" defer>
-    <div label-align="right" colon>
+    <!-- 整页首组上方让开 App.vue 那条 absolute 的 32px .drag-bar，取值与 MockRuleMgr 顶栏同源。 -->
+    <div label-align="right" colon :style="{ paddingTop: isWeb ? '0' : 'calc(10px + var(--app-sp-md))' }">
       <sys-info />
       <van-cell-group inset :title="$t('settings.help.title')">
         <van-field :label="$t('settings.help.onboarding')" is-link readonly @click="open('/onboarding')">
@@ -14,8 +15,8 @@
           </template>
         </van-field>
       </van-cell-group>
-      <version-theme />
       <data-backup />
+      <version-theme />
       <client-mgr />
     </div>
   </OverlayScrollbarsComponent>
@@ -31,6 +32,7 @@ import SysInfo from './SysInfo.vue'
 import VersionTheme from './VersionTheme.vue'
 
 const router = useRouter()
+const isWeb = window.isWeb
 
 function open(path: string) {
   router.push(path)
@@ -44,7 +46,6 @@ function open(path: string) {
   max-width: 100vw;
   height: 100vh;
   height: 100dvh;
-  /* padding-top: 12px 0 20px 0; */
   background-color: var(--van-gray-1);
 }
 </style>

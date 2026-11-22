@@ -321,6 +321,8 @@ async function onUndoRecord(entry: MockRecordHistoryEntry) {
       message: entry.created
         ? t('mock.recordPanel.undoCreateMessage')
         : t('mock.recordPanel.undoUpdateMessage'),
+      // 撤销新建那一支就是把刚录进来的这条删掉，与场景/记录两处删除确认同档
+      className: 'dialog--danger',
       confirmButtonText: t('mock.recordPanel.undo'),
       cancelButtonText: t('common.cancel')
     })

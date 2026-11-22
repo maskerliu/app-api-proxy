@@ -1,5 +1,5 @@
 <template>
-  <van-cell-group inset :title="$t('settings.sys.title')" :style="{ paddingTop: isWeb ? '0' : '10px' }">
+  <van-cell-group inset :title="$t('settings.sys.title')">
     <van-field center :label="$t('settings.sys.protocol')" label-width="12.3em" readonly>
       <template #input>
         <van-radio-group v-model="protocol" direction="horizontal">
@@ -11,10 +11,7 @@
 
     <van-field :label="$t('settings.sys.server')" label-width="12.3em" readonly>
       <template #input>
-        <MiniSelect
-          :model-value="curServerIp?.address"
-          :options="ipOptions"
-          :placeholder="$t('settings.sys.server')"
+        <MiniSelect :model-value="curServerIp?.address" :options="ipOptions" :placeholder="$t('settings.sys.server')"
           @change="onSelectIPByAddress" />
       </template>
     </van-field>
@@ -42,8 +39,8 @@ import { LocalIP } from '@shared'
 import { showNotify } from 'vant'
 import { computed, inject, onMounted, ref, Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MiniSelect from '../components/MiniSelect.vue'
 import { CommonStore } from '../../store'
+import MiniSelect from '../components/MiniSelect.vue'
 
 type SettingPreference = {
   key: string

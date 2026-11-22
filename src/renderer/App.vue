@@ -91,15 +91,10 @@ function onOpenDebugPanel() {
   background: var(--van-gray-1);
   font-size: var(--van-font-size-md);
   letter-spacing: 1px;
-  /* -moz-user-select: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
-  user-select: none; */
   width: 100vw;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  user-select: none;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

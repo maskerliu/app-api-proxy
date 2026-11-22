@@ -1,35 +1,36 @@
 <template>
-  <van-dialog v-model:show="show" :title="$t('mock.export.dialogTitle')" :show-confirm-button="false">
+  <van-dialog v-model:show="show" :title="$t('mock.export.dialogTitle')" :show-confirm-button="false"
+    close-on-click-overlay>
     <div class="export-form">
-      <!-- 范围单独占一块：radio 与标签同一行时，英文两枚选项在 md14 会把第二枚挤到下一行 -->
-      <div class="export-field">
-        <span class="export-label">{{ $t('mock.export.scopeLabel') }}</span>
-        <van-radio-group v-model="scope" direction="horizontal" class="export-radios" :disabled="running">
-          <van-radio name="rule" :disabled="ruleId == null">{{ $t('mock.export.scopeCurrent') }}</van-radio>
-          <van-radio name="all">{{ $t('mock.export.scopeAll') }}</van-radio>
-        </van-radio-group>
-      </div>
-      <van-row class="export-row" align="center" justify="space-between" :wrap="false">
-        <span class="export-label">{{ $t('mock.export.variants') }}</span>
-        <van-switch v-model="includeVariants" :disabled="running" />
-      </van-row>
-      <van-row class="export-row" align="center" justify="space-between" :wrap="false">
-        <span class="export-label">{{ $t('mock.export.source') }}</span>
-        <van-switch v-model="includeSource" :disabled="running" />
-      </van-row>
-      <van-row class="export-row" align="center" justify="space-between" :wrap="false">
-        <span class="export-label">{{ $t('mock.export.redact') }}</span>
-        <van-switch v-model="redact" :disabled="running" />
-      </van-row>
-      <div class="export-field">
-        <span class="export-label">{{ $t('mock.export.fileName') }}</span>
-        <van-field v-model="fileNameDraft" class="control-field" :disabled="running"
-          :placeholder="derivedFileName" @update:model-value="fileNameTouched = true" />
-      </div>
+      <van-cell :title="$t('mock.export.scopeLabel')">
+        <template #right-icon>
+          <van-radio-group v-model="scope" direction="horizontal" class="export-radios" :disabled="running">
+            <van-radio name="rule" :disabled="ruleId == null">{{ $t('mock.export.scopeCurrent') }}</van-radio>
+            <van-radio name="all">{{ $t('mock.export.scopeAll') }}</van-radio>
+          </van-radio-group>
+        </template>
+      </van-cell>
+      <van-cell :title="$t('mock.export.variants')">
+        <template #right-icon>
+          <van-checkbox v-model="includeVariants" shape="square" :disabled="running" />
+        </template>
+      </van-cell>
+      <van-cell :title="$t('mock.export.source')">
+        <template #right-icon>
+          <van-checkbox v-model="includeSource" shape="square" :disabled="running" />
+        </template>
+      </van-cell>
+      <van-cell :title="$t('mock.export.redact')">
+        <template #right-icon>
+          <van-checkbox v-model="redact" shape="square" :disabled="running" />
+        </template>
+      </van-cell>
+      <van-field v-model="fileNameDraft" :label="$t('mock.export.fileName')" label-width="auto" :disabled="running"
+        :placeholder="derivedFileName" @update:model-value="fileNameTouched = true" />
       <!-- Web 分支没有保存框，包文本要整份进浏览器内存：风险在导出前说，不等下载完再解释 -->
       <div v-if="isWeb" class="export-tip">{{ $t('mock.export.webTip') }}</div>
       <!-- 进度写在正文里：本仓库不用 toast 承载进度，也不为它再套一层对话框 -->
-      <van-row v-if="running" class="export-row" align="center" :wrap="false">
+      <van-row v-if="running" class="export-status" align="center" :wrap="false">
         <van-loading size="var(--van-font-size-md)">{{ $t('mock.export.saving') }}</van-loading>
         <span v-if="progressText" class="export-progress mono">{{ progressText }}</span>
       </van-row>
@@ -199,39 +200,60 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 自带内容的弹窗沿用全站弹窗沟道（见 MockRuleMgr 的 .conflict-message 注释）。
-   弹窗正文读 --van-font-size-lg（随字号设置走），这里不再另定一档。 */
+/* 自带内容的弹窗沿用全站弹窗沟道（见 MockRuleMgr 的 .conflict-message 注释）：
+   沟道只有 --app-dialog-gutter 一条，而 cell 自带的横向内边距会把标签推到标题右边 15.6px，
+   归零只能落在这里——tip/进度/按钮行不是 cell，它们必须与标签停在同一条沟道上。
+   分隔线与标签读同一条 var（见 global.css 的 .van-cell:after），归零后两头正好落在沟道上。
+   纵向内边距不动，行距由 cell 自己给，与全站表单同一来源。 */
 .export-form {
+  --van-cell-horizontal-padding: 0;
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
 
-/* 开关行、范围块、文件名块与按钮行共用同一档行距：加一种行型不用补规则 */
-.export-form>*+* {
+/* cell/field 已经自带行距，再叠一档会比全站表单松 6.5px；只有非 cell 的行读本弹窗这一档 */
+.export-form>*+*:not(.van-cell):not(.van-field) {
   margin-top: var(--app-sp-md);
 }
 
-.export-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-sp-sm);
+/* 行标签与全站表单行标签同一档置灰（--van-text-color-2）：cell 的标题默认是主文本色，
+   而下面那枚 field 的标签已被 global.css 统一成 text-2，同屏两种深浅会读出两行型。 */
+.export-form :deep(.van-cell__title) {
+  color: var(--van-text-color-2);
+}
+
+/* Vant 把 right-icon 那一栏钉成恒定的 16px 图标字号，radio 的选项文字跟着它就不随字号缩放了，
+   改读 cell 自己的字号，与同行标题同一档 */
+.export-radios {
+  font-size: var(--van-cell-font-size);
 }
 
 /* 置灰的「仅当前场景」：Vant 用 --van-text-color-3，暗色下覆成 #4d4d4d 压在弹窗底色上几乎读不出，
    与时间戳同一口径改走 text-color-2（能看出比同行淡，但读得清） */
-.export-field :deep(.van-radio--disabled .van-radio__label) {
+.export-radios :deep(.van-radio--disabled .van-radio__label) {
   color: var(--van-text-color-2);
+}
+
+/* Vant 给横向 radio 组里每枚都留了 12px 右间距，最后一枚那份会让选项文字比整栏右缘早收 12px */
+.export-radios :deep(.van-radio:last-child) {
+  margin-right: 0;
 }
 
 /* Web 分支的说明文字没有复用全局 .hint：那一档读 --van-text-color-3，Vant 暗色把它钉成字面量 #4d4d4d
    （store 的灰阶反转只覆盖 --van-gray-*，动不到它），压在弹窗底色上几乎读不出——与上面禁用态同一口径走 text-2。 */
+/* 与导入弹窗的明细区同一口径：全局 body 的 user-select: none 挡的是整页拖蓝，正文里这两行是要划出去
+   贴给别人看的（Web 那段的提醒、已写条数的读数），放行只写在自己的类上，不上提成 .van-dialog__content。
+   文件名那一格不受影响——Vant 的 .van-field__control 自带 user-select: auto，但派生名是 placeholder，
+   placeholder 划不走，只有编辑过之后进了 value 才能划。 */
 .export-tip {
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
+  user-select: text;
 }
 
 .export-progress {
   margin-left: var(--app-sp-md);
   color: var(--van-text-color-2);
   font-size: var(--van-font-size-sm);
+  user-select: text;
 }
 </style>
