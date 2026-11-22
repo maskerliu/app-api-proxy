@@ -16,7 +16,6 @@
       </van-cell-group>
       <version-theme />
       <data-backup />
-      <local-resource-mgr />
       <client-mgr />
     </div>
   </OverlayScrollbarsComponent>
@@ -28,7 +27,6 @@ import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
 import ClientMgr from './ClientMgr.vue'
 import DataBackup from './DataBackup.vue'
-import LocalResourceMgr from './LocalResourceMgr.vue'
 import SysInfo from './SysInfo.vue'
 import VersionTheme from './VersionTheme.vue'
 

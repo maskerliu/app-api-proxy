@@ -3,7 +3,6 @@ export default {
     done: '确定',
     cancel: '取消',
     save: '保存',
-    upload: '上传',
     loading: '加载中...',
     searchPlaceholder: '请输入搜索关键词',
     searchNoMatch: '未找到符合的规则',
@@ -610,10 +609,6 @@ export default {
       title: '数据',
       scopeNote: '这里导出与导入的是全部场景的备份；只备份当前场景请用 Mock 规则管理器头部的「更多」菜单'
     },
-    resources: {
-      title: '静态资源管理',
-      manage: '静态资源'
-    }
   },
   // 开发者面板：面板内 Event Source / HLS 等分组标题仍是组件里硬编码的技术名，未走 i18n
   debug: {

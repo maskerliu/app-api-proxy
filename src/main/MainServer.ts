@@ -10,7 +10,7 @@ import tcpPortUsed from 'tcp-port-used'
 import { API_URL } from '@shared/api.const'
 import type { LocalServerConfig } from '@shared/base.models'
 import { bizContainer } from './IocContainer'
-import { IOC_TYPES, IS_DEV, USER_DATA_DIR } from './constants'
+import { IOC_TYPES, IS_DEV } from './constants'
 import { AppMockRouter, ProxyRouter } from './router'
 import { CommonService, MockService, ProxyService, PushService, SocketProxyService } from './service'
 
@@ -168,7 +168,6 @@ export class MainServer {
     })
 
     this.httpApp.use(express.static(path.resolve(__dirname, '../web')))
-    this.httpApp.use('/_res', express.static(path.join(USER_DATA_DIR, './static')))
     this.httpApp.use(cors(this.corsOpt))
 
     const formParser = express.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 })

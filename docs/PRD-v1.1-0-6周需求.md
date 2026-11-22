@@ -2051,7 +2051,7 @@ interface MockMissDiagnostic {
 | 明暗主题 + OverlayScrollbars 统一 | 7.3 一句「复用现有约定」 | 跨 10 个组件重构滚动容器与主题色 | `src/renderer/common/scroll.ts:4-10`；提交 `a06d34b` |
 | AceEditor 内容搜索 | 未提及 | 已交付，且**只在打包产物上暴露过故障**：`core` 的 `find` 命令按 `basePath` 动态加载，扩展必须静态引入否则打包后 404 | `src/renderer/pages/components/VueAceEditor.vue:5`（入口）、`:29-30`（静态引入及原因注释） |
 | HLS/流媒体预览 + CORS 旁路 | 未提及（1.4 排除的是场景 Mock，不含预览） | 已交付独立 `/corsMediaProxy` 通道 | `src/main/MainServer.ts:181`；提交 `9d976ce` |
-| 本地资源管理（近似 Map Local） | 1.4 明确**不包含** | 已存在设置页入口 | `src/renderer/pages/settings/LocalResourceMgr.vue` |
+| 本地资源管理（近似 Map Local） | 1.4 明确**不包含** | 设置页那枚入口只是没绑定逻辑的占位控件；**2026-11-22 整条链路删除**（占位控件 + `/_res` 静态目录服务 + 启动时创建 `static/` 目录），本项不再算「已交付」 | 原 `src/renderer/pages/settings/LocalResourceMgr.vue`、原 `MainServer.ts` 的 `httpApp.use('/_res', express.static(USER_DATA_DIR/static))`、原 `MainApp.ts` 的 `initAppEnv` 里 `static` 那一支（三者均已不在树中）；同批删 `settings.resources.*` 与 `common.upload` 两份文案、使用说明的 `static/` 目录行与第 10 节那条占位限制 |
 | Windows 防火墙放行规则 | 未提及 | 已交付：按名查询再添加规则，且需同时匹配中英文输出 | `src/main/MainApp.ts:314`、`:317` |
 | Linux/root 与 HiDPI 启动差异 | 未提及 | 已交付：root 下禁用沙箱并强制 2× 缩放因子 | `src/main/MainApp.ts:57-60` |
 | Mock 模板变量与预览 | 4.2.0 已回写「本期未实现」 | 与文档一致（不算缺口） | `{{...}}` 按原文返回 |

@@ -241,11 +241,6 @@ export default class MainApp {
   }
 
   private initAppEnv() {
-    let resPath = path.join(USER_DATA_DIR, 'static')
-    fs.access(resPath, err => {
-      if (err) fs.mkdir(resPath, err => console.log(err))
-    })
-
     let dbPath = path.join(USER_DATA_DIR, 'biz_storage')
     fs.access(dbPath, err => {
       if (err) fs.mkdir(dbPath, err => console.log(err))

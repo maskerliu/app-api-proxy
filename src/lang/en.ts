@@ -4,7 +4,6 @@ export default {
     done: 'Done',
     cancel: 'Cancel',
     save: 'Save',
-    upload: 'Upload',
     loading: 'Loading...',
     searchPlaceholder: 'Keyword for search',
     searchNoMatch: 'No match rule found',
@@ -613,10 +612,6 @@ export default {
       title: 'Data',
       scopeNote: 'Export and import here cover a backup of every scene; to back up only the current scene, use the "More" menu in the Mock rule manager'
     },
-    resources: {
-      title: 'Manage Remote Static Resources',
-      manage: 'Static Resources'
-    }
   },
   // 开发者面板：面板内 Event Source / HLS 等分组标题仍是组件里硬编码的技术名，未走 i18n
   debug: {
