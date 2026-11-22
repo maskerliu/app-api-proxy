@@ -71,9 +71,15 @@
         <div v-if="result.nameCollided" class="import-note">{{ $t('mock.import.nameCollided') }}</div>
         <!-- RK6：导入的记录一律不自动启用，这句不说清用户会以为代理已经被这份包接管了 -->
         <div v-if="writtenCount > 0" class="import-enable">
-          <span>{{ $t('mock.import.notEnabled', { count: writtenCount }) }}</span>
-          <van-button v-if="canGoto" size="small" plain type="primary" @click="onGoto">
-            {{ sceneCount > 1 ? $t('mock.import.gotoFirst') : $t('mock.import.gotoEnable') }}
+          <span>{{ enableSummary }}</span>
+          <!-- 只启用本次新建的那几条：覆盖到的库里那条保持它落库时的样子，一次点击不该改用户自己写好的记录 -->
+          <van-button v-if="enableTargets.length > 0" size="small" plain type="primary"
+            :loading="enabling" @click="onEnableRecords">
+            {{ $t('mock.import.enableRecords', { count: enableTargets.length }) }}
+          </van-button>
+          <!-- 启用记录不等于启用场景，第二枚负责把人带到场景那一页去开那个开关 -->
+          <van-button v-if="canGoto && sceneCount > 0" size="small" plain @click="onGoto">
+            {{ $t('mock.import.gotoScene') }}
           </van-button>
         </div>
       </template>
@@ -123,13 +129,13 @@
 </template>
 
 <script lang="ts" setup>
-import { cancelMockPackImport, importMockPack, previewMockPack } from '@shared'
+import { cancelMockPackImport, enableMockRecords, importMockPack, previewMockPack } from '@shared'
 import type {
   MockPackConflict, MockPackImportMode, MockPackImportResult, MockPackImportOptions,
   MockPackIssue, MockPackPreviewResult, MockPackConflictStrategy,
 } from '@shared/mock.pack'
 import { MOCK_PACK_CODES } from '@shared/mock.errors'
-import { showNotify } from 'vant'
+import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pickPackFile } from '../../../common/pack-file'
@@ -158,6 +164,9 @@ const packError = ref('')
 const busy = ref(false)
 const writing = ref(false)
 const cancelSent = ref(false)
+// 这一次点「启用这 N 条」实际翻开过的 id：结果页要按它把那句说明换成「已启用几条」，也让按钮只数还没开的
+const enabledIds = ref<Set<string>>(new Set())
+const enabling = ref(false)
 
 const headTitle = computed(() => t(result.value == null ? 'mock.import.previewTitle' : 'mock.import.resultTitle'))
 const suggestedName = computed(() => preview.value?.suggestedRuleName ?? '')
@@ -233,6 +242,22 @@ const writtenCount = computed(() => {
   return r == null ? 0 : r.created.length + r.updated.length
 })
 const sceneCount = computed(() => result.value?.ruleIds.length ?? 0)
+
+/** 只有新建的那几条是这次导入「带进来」的，覆盖那批的启用位属于库里原有那条记录，不在这次点击的范围里 */
+const enableTargets = computed<string[]>(() => {
+  const created = result.value?.created ?? []
+  return created.filter(id => !enabledIds.value.has(id))
+})
+
+/** 那句话必须跟着点击变：点了之后还说「均未启用」，用户会以为按钮没生效 */
+const enableSummary = computed(() => {
+  const opened = enabledIds.value.size
+  if (opened === 0) return t('mock.import.notEnabled', { count: writtenCount.value })
+  const rest = writtenCount.value - opened
+  return rest > 0
+    ? t('mock.import.enabledSome', { count: opened, rest })
+    : t('mock.import.enabledAll', { count: opened })
+})
 
 interface DetailRow { where: string, text: string, tip: string }
 interface DetailGroup { key: string, title: string, total: number, rows: DetailRow[], more: number }
@@ -402,11 +427,47 @@ function onGoto() {
   if (ids.length > 0) emit('goto', ids[0])
 }
 
+/**
+ * 二次确认里就要把「这只开记录、不开场景」写完：点完才发现代理还没走这个场景，
+ * 用户只会当成按钮坏了，而那实际上是另一枚开关。
+ */
+async function onEnableRecords() {
+  const ids = enableTargets.value
+  try {
+    await showConfirmDialog({
+      title: t('mock.import.enableTitle'),
+      message: t('mock.import.enableConfirm', { count: ids.length }),
+      showCancelButton: true,
+      confirmButtonText: t('common.done'),
+      cancelButtonText: t('common.cancel')
+    })
+  } catch (err) {
+    return
+  }
+  enabling.value = true
+  try {
+    const res = await enableMockRecords(ids)
+    enabledIds.value = new Set([...enabledIds.value, ...res.enabled])
+    // 打不开的那几条不改变句子结构，只补一声：整批计数（writtenCount）里它们仍然算「未启用」
+    if (res.unavailable > 0) {
+      showNotify({
+        message: t('mock.import.enableFailed', { count: res.unavailable }),
+        type: 'warning', duration: 2000,
+      })
+    }
+  } catch (err) {
+    showNotify({ message: normalizeErrorText(err), type: 'warning', duration: 2000 })
+  } finally {
+    enabling.value = false
+  }
+}
+
 function onRestart() {
   result.value = null
   preview.value = null
   file.value = null
   packError.value = ''
+  enabledIds.value = new Set()
 }
 </script>
 
