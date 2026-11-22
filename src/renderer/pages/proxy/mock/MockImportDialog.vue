@@ -76,7 +76,8 @@
         <div v-if="result.nameCollided" class="import-note">{{ $t('mock.import.nameCollided') }}</div>
         <!-- RK6：导入的记录一律不自动启用，这句不说清用户会以为代理已经被这份包接管了 -->
         <div v-if="writtenCount > 0" class="import-enable">
-          <span>{{ enableSummary }}</span>
+          <!-- 一批全是「覆盖」时这句没有可说的对象：那几条的启用位是库里那条自己的属性，本窗口既不报也不改 -->
+          <span v-if="createdCount > 0">{{ enableSummary }}</span>
           <!-- 只启用本次新建的那几条：覆盖到的库里那条保持它落库时的样子，一次点击不该改用户自己写好的记录 -->
           <van-button v-if="enableTargets.length > 0" size="small" plain type="primary"
             :loading="enabling" @click="onEnableRecords">
@@ -248,6 +249,12 @@ const writtenCount = computed(() => {
 })
 const sceneCount = computed(() => result.value?.ruleIds.length ?? 0)
 
+/**
+ * 那句「均未启用」说得起的只有本次新建的那几条：「覆盖」换掉的那几条沿用库里原本的启用位，
+ * 而界面既读不到库里那条是开着还是停着，那枚按钮也不碰它们——按 `created + updated` 计会在覆盖档把话说满。
+ */
+const createdCount = computed(() => result.value?.created.length ?? 0)
+
 /** 只有新建的那几条是这次导入「带进来」的，覆盖那批的启用位属于库里原有那条记录，不在这次点击的范围里 */
 const enableTargets = computed<string[]>(() => {
   const created = result.value?.created ?? []
@@ -257,8 +264,8 @@ const enableTargets = computed<string[]>(() => {
 /** 那句话必须跟着点击变：点了之后还说「均未启用」，用户会以为按钮没生效 */
 const enableSummary = computed(() => {
   const opened = enabledIds.value.size
-  if (opened === 0) return t('mock.import.notEnabled', { count: writtenCount.value })
-  const rest = writtenCount.value - opened
+  if (opened === 0) return t('mock.import.notEnabled', { count: createdCount.value })
+  const rest = createdCount.value - opened
   return rest > 0
     ? t('mock.import.enabledSome', { count: opened, rest })
     : t('mock.import.enabledAll', { count: opened })
@@ -453,7 +460,7 @@ async function onEnableRecords() {
   try {
     const res = await enableMockRecords(ids)
     enabledIds.value = new Set([...enabledIds.value, ...res.enabled])
-    // 打不开的那几条不改变句子结构，只补一声：整批计数（writtenCount）里它们仍然算「未启用」
+    // 打不开的那几条不改变句子结构，只补一声：本次新建的计数（createdCount）里它们仍然算「停用」
     if (res.unavailable > 0) {
       showNotify({
         message: t('mock.import.enableFailed', { count: res.unavailable }),
