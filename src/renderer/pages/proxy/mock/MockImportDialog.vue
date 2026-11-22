@@ -146,7 +146,7 @@ const props = withDefaults(defineProps<{
   /** 合并模式的目标场景就是当前选中的场景，没有它「合并」这一档不可选 */
   ruleId?: string | null
   ruleName?: string
-  /** 「前往启用」要有宿主接得住（切到规则管理器并选中那条场景）；接不住的宿主把它关掉 */
+  /** 「查看场景」要有宿主接得住（切到规则管理器并选中那条场景）；接不住的宿主把它关掉 */
   canGoto?: boolean
 }>(), { ruleId: null, ruleName: '', canGoto: true })
 const emit = defineEmits<{
