@@ -286,6 +286,33 @@ describe('合并·覆盖', () => {
     assert.equal(records[0].match.path, '/v1/refunds/9')
   })
 
+  it('覆盖换内容不换开关：库里那条在生效就继续在生效，停用的也不被打开', async () => {
+    const ruleId = await newRule('覆盖-启用位')
+    // 两条只有 path 不同，用「在生效的那条」和「停用着的那条」各演一遍同一种覆盖
+    await seed(ruleId, [
+      packRecord(0, { match: makeMatch({ path: '/v1/orders/on', enabled: true }) }),
+      packRecord(1, { match: makeMatch({ path: '/v1/orders/off', enabled: false }) }),
+    ])
+    const seeded = await readAll(ruleId)
+    // 按 path 认领而不是按下标：读路是按 createdAt 排的，两条同刻建出来时顺序不由用例说了算
+    const on = seeded.find((it: any) => it.match.path === '/v1/orders/on')
+    const off = seeded.find((it: any) => it.match.path === '/v1/orders/off')
+    assert.deepEqual([on.match.enabled, off.match.enabled], [true, false], '种子状态必须真是两档，否则这条断言是空的')
+
+    const result = await merge(mergePack(
+      packOf(on, { response: { ...ok, body: '{"changed":"on"}' } }),
+      packOf(off, { response: { ...ok, body: '{"changed":"off"}' } }),
+    ), ruleId, 'overwrite')
+
+    assert.deepEqual([...result.updated].sort(), [on.id, off.id].sort())
+    const after = await readAll(ruleId)
+    assert.equal(after.find(it => it.id === on.id).match.enabled, true,
+      '包里那条的 enabled 早在归一化时被钉成 false，照原样写就是把正在生效的记录悄悄停下')
+    assert.equal(after.find(it => it.id === off.id).match.enabled, false,
+      '沿用不等于打开：「导入即启用」正是风险表 RK6 拦的那件事')
+    assert.equal(result.enabled, false, '结果页那句「未启用」仍然成立：本次没有新启用任何一条')
+  })
+
   it('ID 占住者与指纹占住者不是同一条 → 覆盖指纹那条，库里不留同指纹对', async () => {
     const ruleId = await newRule('覆盖-错位')
     await seed(ruleId, [packRecord(0), packRecord(1)])

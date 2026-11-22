@@ -386,7 +386,7 @@ export async function previewMockPack(source: MockPackSource, text: string | und
   for (const item of read.prepared) {
     const existingOf = (existing: MockRecordSummary) => ({
       ruleIndex: item.ruleIndex, recordIndex: item.recordIndex, recordId: item.record.id ?? undefined,
-      existingRecordId: existing._id, existingName: existing.name, existingEnabled: existing.match?.enabled !== false,
+      existingRecordId: existing._id, existingName: existing.name, existingEnabled: isExistingEnabled(existing),
     })
     const clash = classifyMockPackClash(index, item)
     if (clash.sameId != null) conflicts.push({ kind: 'id', ...existingOf(clash.sameId) })
@@ -407,6 +407,22 @@ function recordWithId(record: ProxyMock.MockRecord, id: string | null): ProxyMoc
   return { ...record, id: id as string }
 }
 
+/** 库里那条此刻在不在生效：判据与 `normalizeMatchRule`（缺省即 true）、`mock.matcher.ts` 同一份，别在这里立第二条标准 */
+function isExistingEnabled(existing: MockRecordSummary): boolean {
+  return existing.match?.enabled !== false
+}
+
+/**
+ * 覆盖换的是内容，不是用户在本机拧过的那枚开关。
+ * 包里那条的 `match.enabled` 早在阶段三被钉成 `false`（RK6 要的是「导入不许自己启用东西」），
+ * 照原样写下去就会变成「一次导入把一条正在生效的记录悄悄停下」——那是 RK6 反过来咬人。
+ */
+function withExistingEnabled(record: ProxyMock.MockRecord, existing: MockRecordSummary): ProxyMock.MockRecord {
+  const match = record.match
+  if (match == null || !isExistingEnabled(existing)) return record
+  return { ...record, match: { ...match, enabled: true } }
+}
+
 /**
  * 三策略 × 冲突象限的落点表（技术设计 D5、PRD 4.4.4）。「算不算撞」只有 `classifyMockPackClash` 一份实现，
  * 这里只决定撞上之后把这条放哪儿——仓库层那句 `findByFingerprint` 查重（`mock.repo.ts:430`）是代码级判据、
@@ -419,7 +435,9 @@ function placeMockPackRecord(item: MockPackPrepared, clash: MockPackClash,
     // 指纹优先于 ID：同 ID 那条若留着别的条件，按 ID 覆盖会放行「库里出现两条同指纹」，
     // 而那一对记录此后在编辑器里双双存不下。没有指纹冲突时才按包内 id 精确覆盖（PRD 的那一格）。
     const id = clash.sameFingerprint != null ? clash.sameFingerprint._id : item.record.id
-    return { action: 'write', record: recordWithId(item.record, id) }
+    // 被盖住的那条就是决定落点的那条：指纹占住者优先，其次同 ID 那条——启用位也从它身上取
+    const replaced = clash.sameFingerprint ?? clash.sameId!
+    return { action: 'write', record: withExistingEnabled(recordWithId(item.record, id), replaced) }
   }
   if (strategy === 'copy') {
     // 复制为新记录：ID 交回仓库那唯一一次分配，撞不撞指纹由它那把查重裁决（撞上了报 duplicate 进 skipped）。
@@ -561,6 +579,8 @@ async function importMockPackIntoRule(source: MockPackWriteSource, read: MockPac
  * 「拒绝即零写入」靠这一步的位置保证。
  * 导入的记录一律不自动启用（阶段三在 `prepareMockPackRecord` 里把 `match.enabled` 钉成 `false`，
  * 风险表 RK6），所以 `enabled` 恒为 `false`，UI 必须显式提示「已导入但未启用」。
+ * 唯一的例外在合并·覆盖那一格：库里原本在生效的那条**沿用它自己的启用位**（`withExistingEnabled`），
+ * 那是继承不是启用——这次点击没有把任何一条原本停用的记录打开，所以这句契约仍然成立。
  *
  * `runtime`（R4C-19）不进 `MockPackImportOptions`：那个类型是端点能收的 query，
  * `AbortSignal` 与回调序列化不过去，也不该由客户端指定。

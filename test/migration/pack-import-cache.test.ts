@@ -193,6 +193,10 @@ describe('导入即生效：覆盖导入换掉的响应体立刻生效（R4C-17 
     // 批作废同时清了快照与响应缓存。快照重不重建跟这条断言无关，响应体不能还是旧的
     const after = await cache.getRecordForResponse(ruleId, hit.recordId!)
     assert.equal(after.response.body, '新文本', '响应缓存没随批作废就会拿到覆盖前的旧文本')
+    assert.equal((await readAll(ruleId))[0].match.enabled, true,
+      '覆盖换内容不换开关：库里那条原本在生效，不该被这次导入停下')
+    assert.equal((await cache.match(ruleId, request('/v1/orders/9'))).matched, true,
+      '保住启用位之后仍然导入即生效，用户不必为了重新生效再点一次启用')
   })
 })
 

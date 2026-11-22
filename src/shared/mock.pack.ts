@@ -254,7 +254,10 @@ export interface MockPackImportResult {
   invalid: MockPackIssue[]
   /** 校验通过但写库失败 */
   failed: MockPackIssue[]
-  /** 导入的记录一律不自动启用，UI 必须显式提示「已导入但未启用」 */
+  /**
+   * 导入的记录一律不自动启用，UI 必须显式提示「已导入但未启用」。
+   * 合并·覆盖保住库里那条原本的启用位不算违反这句：那条本来就在生效，本次写入没把任何一条停用的打开。
+   */
   enabled: false
   invalidTotal: number
   /** 场景名冲突已追加 `(1)` */
@@ -563,7 +566,9 @@ export interface MockPackPreparedRecord {
  * 补两次就会漂移（读库路径 `docToRecord` 用的也是它）。
  *
  * 只有三处是归一化管不到、又必须强制的：
- * - `match.enabled = false`：导入不许劫持真实请求（风险表 RK6），启不启用是用户之后的决定；
+ * - `match.enabled = false`：导入不许劫持真实请求（风险表 RK6），启不启用是用户之后的决定。
+ *   这份 false 的意思是「这条自己不带来启用状态」，不是「落库一定停用」——合并·覆盖那一格会拿回库里
+ *   那条原本的开关（`mock.pack.service.ts` 的 `withExistingEnabled`）；
  * - `match.derivation.source = 'import'`：包里的来源印记讲的是导出那台机器的事，
  *   对本库而言这条记录就是导入产生的（`mock.models.ts:95` 已有该取值，不扩类型）。
  * - 时间戳只留 `packTimestampOf` 认得的：`normalizeMockRecord` 对这两个字段只做 `?? 0`，

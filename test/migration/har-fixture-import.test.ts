@@ -393,6 +393,7 @@ describe('R4C-35 importHarPack：一份 .har 文本一步落到真库（AC-R4-06
       '换 overwrite 就落在那两条已有记录上：场景里恒为 2 条，重放不涨条数')
     const all = await recordsOf(first.ruleIds[0])
     assert.equal(all.length, 2)
-    assert.ok(all.every((it: any) => it.match.enabled === false), '覆盖之后仍是停用档')
+    assert.ok(all.every((it: any) => it.match.enabled === false),
+      '这两条第一次是新建进来的、本来就停用：覆盖沿用库里那条自己的开关，不会顺手把它们打开')
   })
 })

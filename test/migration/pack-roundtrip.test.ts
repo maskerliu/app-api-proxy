@@ -276,7 +276,7 @@ describe('往返·合并覆盖模式：内容换掉，时间戳与位置保持�
       '导出读的是库值而不是包值：否则第二轮覆盖会拿上一轮的包值继续盖')
   })
 
-  it('覆盖顺带把已启用那条打回未启用：AC 没写这一格，实现确实这么做（待裁决，见任务拆分）', async () => {
+  it('覆盖保住库里那条原本的启用位：内容换了，开关仍是用户自己拧的那一档（2026-11-22 裁决）', async () => {
     const sourceId = await newScene('覆盖来源 D', [packSeed()])
     const targetId = await newScene('覆盖目标 D', [dbSeed()])
     const pack = await assembleMockPack(repo, { scope: 'rule', ruleId: sourceId } as any)
@@ -287,8 +287,16 @@ describe('往返·合并覆盖模式：内容换掉，时间戳与位置保持�
     assert.equal(result.updated.length, 1)
 
     const revised = (await readAll(targetId))[0]
-    assert.equal(revised.match.enabled, false,
-      'RK6 那条禁令不分新建/覆盖：写进去的 match 就是归一化后的那一份')
-    assert.equal(result.enabled, false, '结果页说的「未启用」因此是真的')
+    assert.equal(revised.match.enabled, true,
+      '覆盖只换内容：包里那份钉死的 false 不许盖到用户自己开过的开关上，一次导入不该把正在生效的记录停下')
+    assert.equal(result.enabled, false,
+      '契约没破：这次导入没把任何一条原本停用的记录打开，保住的那位是从库里继承的')
+
+    // 反向那一半同样要钉住：保住不等于打开，「导入即启用」正是 RK6 拦的事
+    await repo.saveRecord({ ...revised, match: { ...revised.match, enabled: false } })
+    const again = await importMockPack(repo, pack.content,
+      { mode: 'merge', targetRuleId: targetId, conflict: 'overwrite' } as any)
+    assert.deepEqual([again.updated.length, (await readAll(targetId))[0].match.enabled], [1, false],
+      '库里那条本来就停用 → 覆盖之后仍停用')
   })
 })
