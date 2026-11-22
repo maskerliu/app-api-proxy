@@ -37,6 +37,8 @@ const BASE_THEME_VARS: ConfigProviderThemeVars = {
   checkboxSize: 'calc(var(--van-font-size-md) * 1.2)',
   cellGroupInsetPadding: 'var(--app-card-gutter, 5px)',
   cellGroupInsetTitlePadding: '5px 20px',
+  // Vant 这条默认恒 16px、不跟字号，改成与全站裸图标字形同一档（.van-cell__left-icon / __right-icon 共用它）
+  cellIconSize: 'var(--app-glyph-size)',
   collapseItemContentPadding: '0px',
   tagPadding: '2px 5px',
   tagRadius: '5px',

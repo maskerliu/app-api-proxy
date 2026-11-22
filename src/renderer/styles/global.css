@@ -688,7 +688,14 @@ body {
 
 /* ---- 设置页单元格图标 ---- */
 
-/* Settings 与 VersionTheme 两个页面各写了一份相同的左缩进，Settings 那条还单独占了一个 style 块。 */
+/* Settings、VersionTheme、DataBackup 三个页面各写了一份相同的左缩进，Settings 那条还单独占了一个 style 块。 */
 .setting-cell-icon {
   margin-left: var(--app-sp-3xl);
+}
+
+/* 字形档与全站裸图标同源（--app-glyph-size）：不显式给就吃 iconfont 基类写死的 16px，字号档位切换时不动。
+   带 .van-cell__left-icon 前缀拿 (0,2,0)，同时压过基类那条与 Vant 给容器写的 --van-cell-icon-size: 16px，
+   与样式表注入顺序无关（机制同 .icon-action.action-glyph）。 */
+.van-cell__left-icon .setting-cell-icon {
+  font-size: var(--app-glyph-size);
 }
