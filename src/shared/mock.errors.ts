@@ -62,7 +62,6 @@ export const MOCK_PACK_CODES = [
   'harUnsupportedProtocol',
   'harStaticResource',
   'packFieldDefaulted',
-  'packNameCollision',
   'packIdCollision',
   'packImportInProgress',
   'packWriteAborted',

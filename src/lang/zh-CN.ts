@@ -284,7 +284,6 @@ export default {
       harUnsupportedProtocol: '请求协议不是 http/https，已跳过',
       harStaticResource: 'js / css / 图片等静态资源，默认已跳过',
       packFieldDefaulted: '包内没给这个字段，或给的值用不了，已按默认值补齐',
-      packNameCollision: '场景名称已存在，已追加序号',
       packIdCollision: '库里已有相同 ID 的记录，这条已跳过',
       packImportInProgress: '已有一个导入正在进行，请等它结束或先取消',
       packWriteAborted: '导入已取消'
