@@ -291,8 +291,8 @@ export default {
     },
     // 导入弹窗（预览 → 写库 → 结果）。三类失败分开措辞：包级=文件问题、条目级=数据问题、冲突=库内状态问题
     import: {
-      menuTitle: '导入规则包',
-      previewTitle: '导入规则包',
+      menuTitle: '导入规则',
+      previewTitle: '导入规则',
       resultTitle: '导入结果',
       fileLabel: '文件',
       noFile: '尚未选择文件',
@@ -350,7 +350,7 @@ export default {
       conflictEnabled: '该条正在生效'
     },
     export: {
-      dialogTitle: '导出规则包',
+      dialogTitle: '导出规则',
       scopeLabel: '导出范围',
       scopeCurrent: '仅当前场景',
       scopeAll: '全部场景',
