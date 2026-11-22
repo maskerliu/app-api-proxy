@@ -164,6 +164,11 @@ export function cancelMockPackImport(requestOptions?: RequestOptions) {
   return post<boolean>(API_URL.CANCEL_MOCK_PACK_IMPORT, undefined, undefined, undefined, requestOptions)
 }
 
+/** 批量打开记录的启用位；入参是 id 列表，返回三种去向的计数，见 `ProxyMock.MockRecordEnableResult` */
+export function enableMockRecords(recordIds: string[], options?: RequestOptions) {
+  return post<ProxyMock.MockRecordEnableResult>(API_URL.ENABLE_MOCK_RECORDS, undefined, undefined, recordIds, options)
+}
+
 export function getServerConfig() {
   return get<LocalServerConfig>(API_URL.GetServerConfig)
 }

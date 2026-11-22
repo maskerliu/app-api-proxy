@@ -23,6 +23,7 @@ describe('API_URL 完整路径表', () => {
     assert.equal(API_URL.IMPORT_MOCK_PACK, '/_appmock/importMockPack')
     assert.equal(API_URL.IMPORT_HAR, '/_appmock/importHar')
     assert.equal(API_URL.CANCEL_MOCK_PACK_IMPORT, '/_appmock/cancelMockPackImport')
+    assert.equal(API_URL.ENABLE_MOCK_RECORDS, '/_appmock/enableMockRecords')
     assert.equal(API_URL.Health, '/_appmock/health')
     assert.equal(API_URL.Proxy, '/_proxy')
     assert.equal(API_URL.CorsMediaProxy, '/corsMediaProxy')

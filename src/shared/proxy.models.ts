@@ -111,6 +111,19 @@ export namespace ProxyMock {
     updatedAt: number
   }
 
+  /**
+   * 批量翻转启用位的结果。三种去向各占一个数：「本来就开着」与「打不开」混成一个数的话，
+   * 结果页那句「已启用 N 条」就说不清这次点击到底动了多少条。
+   */
+  export interface MockRecordEnableResult {
+    /** 这一次从停用改成启用的记录 id */
+    enabled: string[]
+    /** 库里本来就处于启用态、一个字节都没写的条数 */
+    alreadyEnabled: number
+    /** 打不开的条数：读不到、不是记录文档、没有匹配条件（压根没有启用位），或落库被顶回 */
+    unavailable: number
+  }
+
   export interface ProxyStatRecord extends ProxyRequestRecord {
     statistics: {
       bps: StatisticRecord[]

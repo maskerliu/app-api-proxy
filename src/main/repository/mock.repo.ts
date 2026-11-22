@@ -5,7 +5,7 @@ import PouchDB from 'pouchdb-node'
 import { ProxyMock } from '@shared/proxy.models'
 import { MockError } from '@shared/mock.errors'
 import { recordLimitState } from '@shared/mock.models'
-import { MOCK_PACK_WRITE_BATCH, packTimestampOf } from '@shared/mock.pack'
+import { MOCK_PACK_MAX_RECORDS, MOCK_PACK_WRITE_BATCH, packTimestampOf } from '@shared/mock.pack'
 import { USER_DATA_DIR } from '../constants'
 import type {
   DocMeta, MockMetaDoc, MockRecordDoc, MockRecordFields, MockRecordStamps, MockRecordSummary, MockRuleDoc,
@@ -620,6 +620,72 @@ export class MockRepo extends BaseRepo<ProxyMock.MockRule> {
         aborted
       }
     })
+  }
+
+  /**
+   * 定向翻转一批记录的启用位——结果页那颗「启用这 N 条」的唯一入口。
+   * 与 `saveRecord`/`importRecords` 的六步不同，这里只改 `match.enabled` 一个字段，两处刻意的省略：
+   * - **不刷新 `updatedAt`**：它是匹配排序的兜底键（Q3 同源），一次点击把几百条顶到最新，等于让整批在列表里跳到最前面；
+   * - **不重算指纹**：`canonicalMatch` 不含 `enabled`（也不含 `level`），翻完的 doc 与库里那条指纹等价，再扫一遍查重只是白付一次成本。
+   * 所以写回的是「原 doc 改一个字段」，`_rev` 之外的 `createdAt`/`updatedAt`/`matchFingerprint` 全部照抄。
+   * 迁移闸门在落笔前整体预检：一次点击可能跨多个场景，不能出现「前三个场景开了、第四个被闸门顶回」的半截状态。
+   * 读不到 / 不是记录文档 / 没有 `match`（压根没有启用位）都计进 `unavailable` 而不是抛错——调用方要的是「开了几条」，
+   * 不是逐条失败原因；`_rev` 被并发保存顶回的同样归这一档，用户再点一次即可。
+   */
+  public async enableRecords(recordIds: string[]): Promise<ProxyMock.MockRecordEnableResult> {
+    const ids = Array.from(new Set((recordIds ?? []).filter(it => typeof it === 'string' && it !== '')))
+    // 复用包级上限而不是新写一把尺：一次点击最多也就来自刚导入的那批，超过 5,000 条本身就说明传错了
+    if (ids.length > MOCK_PACK_MAX_RECORDS) throw new MockError('recordTooMany', `enable=${ids.length}`)
+
+    const result: ProxyMock.MockRecordEnableResult = { enabled: [], alreadyEnabled: 0, unavailable: 0 }
+    if (ids.length === 0) return result
+
+    const docs: MockRecordDoc[] = []
+    for (let start = 0; start < ids.length; start += MOCK_PACK_WRITE_BATCH) {
+      const page = await this.pouchdb.allDocs({
+        keys: ids.slice(start, start + MOCK_PACK_WRITE_BATCH),
+        include_docs: true
+      } as any) as any
+      for (const row of page.rows) {
+        const doc = row.doc as MockRecordDoc | undefined
+        if (doc?.type !== RECORD_TYPE || doc.match == null) {
+          result.unavailable++
+          continue
+        }
+        // 只写「确实关着」的那条：`enabled` 缺省即参与匹配，补一个 true 是白白顶高一次 `_rev`
+        if (doc.match.enabled !== false) {
+          result.alreadyEnabled++
+          continue
+        }
+        docs.push(doc)
+      }
+    }
+
+    const ruleIds = Array.from(new Set(docs.map(it => it.ruleId)))
+    for (const ruleId of ruleIds) {
+      if (this.isRuleBlocked(ruleId)) throw new MockError('migrationFailed', 'enable records while migration in progress')
+    }
+
+    // 按场景各自排进 `enqueueSave`：序列化与作废通知的作用域本来就是场景，跨场景并行不影响正确性
+    for (const ruleId of ruleIds) {
+      const chunk = docs.filter(it => it.ruleId === ruleId)
+      await this.enqueueSave(ruleId, async () => {
+        for (let start = 0; start < chunk.length; start += MOCK_PACK_WRITE_BATCH) {
+          const batch = chunk.slice(start, start + MOCK_PACK_WRITE_BATCH)
+          batch.forEach(it => { it.match!.enabled = true })
+          const results = await this.pouchdb.bulkDocs(batch as any) as any[]
+          results.forEach((res, i) => {
+            if (res?.error === true) {
+              result.unavailable++
+              return
+            }
+            result.enabled.push(batch[i]._id)
+          })
+        }
+        this.notifyRecordChanged({ type: 'invalidate', ruleId })
+      })
+    }
+    return result
   }
 
   public async removeRecord(recordId: string): Promise<boolean> {

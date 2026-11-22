@@ -270,6 +270,15 @@ export class MockService {
     return this.mockRepo.removeRecord(recordId)
   }
 
+  /**
+   * 批量把记录的启用位打开（结果页「启用这 N 条」）。
+   * 与 `saveMockRecord` 不同，这里刻意不吃校验与派生那一套：动的是库里已经落过的 doc 的一个布尔字段，
+   * 重新校验只会把「当年写得下、如今规则变了写不下」的记录变成点击的失败原因。
+   */
+  async enableMockRecords(recordIds: string[]) {
+    return this.mockRepo.enableRecords(recordIds)
+  }
+
   // ---- R1 匹配引擎 API（R1C-19） ----
 
   /** 测试匹配与录制去重共用入口；未命中返回 miss，不抛业务异常 */

@@ -499,5 +499,14 @@ export class AppMockRouter extends BaseRouter {
       handler: () => this.mockPackService.cancelImport()
     })
 
+    this.addApiInfo({
+      method: BizNetwork.Method_Post,
+      path: API_URL.ENABLE_MOCK_RECORDS,
+      params: [{ key: 'recordIds', type: ParamType.FormBody }],
+      // 导入的结果页只带 id 列表：场景归属、启用位在哪、时间戳该不该动，全部由仓库层按 id 读 doc 决定，
+      // 这里不吃 uid——启用是数据动作，跟「哪个 viewer 在看」无关
+      handler: (recordIds) => this.mockService.enableMockRecords(recordIds)
+    })
+
   }
 }
