@@ -120,6 +120,12 @@ export interface MockPackImportOptions extends MockPackPreviewOptions {
   conflict?: MockPackConflictStrategy
   /** HAR 专用：默认跳过 js/css/图片 */
   includeStatic?: boolean
+  /**
+   * HAR 专用：一个文件一个场景，场景名取文件名（PRD 4.4.5）。
+   * 只能由选文件的那一侧给——`FormFileText` 通道传回来的是文本，
+   * multipart 里没带 Content-Type 的文件部分被 formidable 当普通字段处理，原始文件名在那一步就丢了。
+   */
+  sceneName?: string | null
 }
 
 /** 条目级失败明细：复用 `err.issues` 通道回传，只补定位用的下标 */
@@ -222,6 +228,12 @@ export interface MockPackSkipped {
   /** 包内坐标：一个包可以有多个场景，只给 `recordIndex` 指不回是哪条 */
   ruleIndex?: number
   recordIndex?: number
+  /**
+   * HAR 专用：文件里的 entry 下标（与 `mock.har.ts` 的 `HarSkipped.entryIndex` 同一个坐标）。
+   * 包内坐标指不回原始文件——HAR 跳过的那些条目压根没进包，`ruleIndex`/`recordIndex` 对它们无意义，
+   * 而 AC-R4-06 要的是「展示原因」，用户得能回到文件里数出第几条。
+   */
+  entryIndex?: number
   reason: MockErrorCode | string
   detail?: string
 }

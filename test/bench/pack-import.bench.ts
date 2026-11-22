@@ -18,7 +18,8 @@ import { makeMatch } from '../unit/fixtures'
 // 三档对着契约里的三个上限：
 //   pack50mb —— 响应体把包顶到 50MB 档，问「读路留下多少活堆、写进去要多久」
 //   pack5k   —— 5,000 条小响应体，问「条数本身值多少毫秒、批与批之间堆涨不涨」
-//   har1k    —— 1,000 条 HAR entry，只量解析与映射层（`importHar` 端点仍是桩，接线在 R4C-35）
+//   har1k    —— 1,000 条 HAR entry，只量解析与映射层：接线之后写库走的就是 pack5k 那条既有包链路，
+//               再量一遍只是把同一笔开销数两遍
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SELF = path.resolve(ROOT, 'test/bench/pack-import.bench.ts')

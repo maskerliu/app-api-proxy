@@ -490,10 +490,13 @@ describe('两阶段校验的端点接线：拒绝即零写入', () => {
     }
   })
 
-  it('IMPORT_HAR 不吃规则包的包级闸门：一份合法包文本走 HAR 端点仍回桩结果', async () => {
+  it('IMPORT_HAR 不吃规则包的包级闸门：一份合法包文本走 HAR 端点被信封拒掉', async () => {
     const { body } = await uploadPack(API_URL.IMPORT_HAR, packText([ruleWith(1)]))
-    assert.equal(body.code, BizCode.SUCCESS)
-    assert.deepEqual(body.data.suggestions, [])
-    assert.deepEqual(takeCalls(), [], 'HAR 端点走自己的判定，不该读规则包那套库原语')
+    assert.equal(body.code, BizCode.ERROR)
+    assert.equal(body.errorCode, 'packFormatUnknown')
+    // 接线之前这一条断的是 `data.suggestions` 为空数组——那是桩的回执形状；现在拒就是拒，不再有「成功但零条」
+    assert.equal(body.data, undefined, '合法规则包不该被 HAR 端点当成「导入成功但没内容」')
+    assert.match(String(body.detail), /rule pack/, 'detail 直接说破对方形状，用户不必猜该走哪个端点')
+    assert.deepEqual(takeCalls(), [], 'HAR 走自己的判定，规则包那套库原语一把都不该被读到')
   })
 })

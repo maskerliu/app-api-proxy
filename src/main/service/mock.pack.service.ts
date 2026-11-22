@@ -16,6 +16,7 @@ import {
 import { fingerprintOf } from '../repository/mock.docs'
 import type { MockRecordSummary } from '../repository/mock.docs'
 import type { MockRecordImportOptions, MockRecordImportResult } from '../repository/mock.repo'
+import { mapHarEntries, parseHarEntries, readHarText } from './mock.har'
 import { IOC_TYPES } from '../constants'
 
 /**
@@ -585,6 +586,85 @@ export async function importMockPack(source: MockPackWriteSource, text: string |
   return result
 }
 
+/** HAR 专用入口参数（R4C-35）：`analyzedAt` 不在 `MockPackImportOptions` 里——那是端点能收的 query，而派生时间戳由服务层注入（同 `runtime` 不进 query 的理由） */
+export interface MockPackHarImportOptions extends MockPackImportOptions {
+  analyzedAt?: number
+}
+
+export interface MockPackHarBuild {
+  /** 交给既有包链路的包文本：一个 HAR 文件就是一个单场景包 */
+  packText: string
+  /** 映射进包的条数，= `MockPackV1.rules[0].records.length`：调用方据此判「一条都没映射出来」，不必解析自己拼的包 */
+  recordCount: number
+  /** HAR 侧丢掉的条目（解析层与映射层两道跳过的合计），按文件 entry 下标升序 */
+  skipped: MockPackSkipped[]
+}
+
+/**
+ * 场景名缺失时的回落（PRD 4.4.5「场景名取文件名」只有选文件那一侧知道文件名）。
+ * 用中性串而不是中文「未命名场景」：主进程里没有 i18n，写死一个中文名等于把渲染层的文案标准搬进不该有文案的地方。
+ * 也比留空好——空名场景在列表里读成一格空白，用户分不清「没名字」和「名字被自己改没了」。
+ */
+const HAR_FALLBACK_SCENE_NAME = 'HAR'
+
+/**
+ * HAR → 规则包文本（R4C-35）：映射层交出的已经是 `MockPackRecord`，这里只做「装成一个场景」，
+ * 之后的条目校验（R4C-11）、归一化（R4C-12）、时间戳（R4C-16）、写库（R4C-18）、上限复核（R4C-20）
+ * 全部沿用 `importMockPack` 那条链路，一件不重写。
+ *
+ * 代价是多序列化一次包文本（50MB 级 HAR 多一份副本）。选择序列化而不是绕过阶段一：
+ * 两种文件形态共用同一道包级闸门，比给 HAR 单写一套校验便宜，也让「HAR 走的是包链路」这句话可测。
+ * `appVersion` / `exportedAt` 不填——那份文本从没经过导出，填了就是给它编一个来源版本。
+ */
+export function buildMockPackFromHar(text: string | undefined,
+  options?: { sceneName?: string | null, includeStatic?: boolean, analyzedAt?: number }): MockPackHarBuild {
+  const doc = readHarText(text, Buffer.byteLength(text ?? '', 'utf8'))
+  const parsed = parseHarEntries(doc.entries)
+  const mapped = mapHarEntries(parsed.entries, {
+    includeStatic: options?.includeStatic === true,
+    analyzedAt: options?.analyzedAt,
+  })
+  const name = String(options?.sceneName ?? '').trim() || HAR_FALLBACK_SCENE_NAME
+  const pack: MockPackV1 = {
+    format: MOCK_PACK_FORMAT,
+    version: MOCK_PACK_VERSION,
+    rules: [{ name, records: mapped.records.map(it => it.record) }],
+  }
+  return {
+    packText: JSON.stringify(pack),
+    recordCount: mapped.records.length,
+    // 两层跳过各数各的（R4C-24），合并后仍按下标升序：解析层跳的是「这条不是有效响应」，映射层跳的是「这条不要」，
+    // 但用户在文件里找的是同一把尺——文件下标
+    skipped: [...parsed.skipped, ...mapped.skipped]
+      .sort((a, b) => a.entryIndex - b.entryIndex)
+      .map(it => ({ entryIndex: it.entryIndex, reason: it.reason, detail: it.detail })),
+  }
+}
+
+/**
+ * HAR 导入（R4C-35）：先过 `readHarText` 的信封与分派（选错端点时 detail 直接说破对方形状），
+ * 再把映射结果送进既有包链路。
+ *
+ * 一条都没映射出来时不回 `packEmpty`：那个码说的是「这个文件里没有条目」，而这里的文件有条目、只是全被跳过了，
+ * 原因和条数都在 `skipped` 里。所以这一步在碰到任何库原语之前直接回空结果 + 跳过明细，
+ * 结果页拿到的是「导入 0 条、跳过 N 条（每条为什么）」。
+ */
+export async function importHarPack(source: MockPackWriteSource, text: string | undefined,
+  options: MockPackHarImportOptions, runtime?: MockPackImportRuntime): Promise<MockPackImportResult> {
+  const build = buildMockPackFromHar(text, {
+    sceneName: options.sceneName,
+    includeStatic: options.includeStatic,
+    analyzedAt: options.analyzedAt ?? Date.now(),
+  })
+  if (build.recordCount === 0) {
+    return { ...emptyMockPackImportResult(options.mode), skipped: build.skipped }
+  }
+  const result = await importMockPack(source, build.packText, options, runtime)
+  // HAR 层的跳过排在前面：它们比包内坐标更早发生（那些条目压根没进包），两组用的也不是同一把尺
+  result.skipped = [...build.skipped, ...result.skipped]
+  return result
+}
+
 @injectable()
 export class MockPackService {
 
@@ -627,18 +707,31 @@ export class MockPackService {
   /**
    * 导入（R4C-18）：真正写库。冲突三策略的落点在 `importMockPack`，上限复核沿用仓库那一句 `recordTooMany`。
    * 「库内已有 + 待写入」的**提示**要提前到预览给，那是 R4C-20；这里只保证写得下才写。
-   *
-   * 单例闸门（R4C-19）：同时只让一个导入在跑。并发导入比谁快是次要的，难查的是两个任务各自
-   * 复核一遍「库内已有 + 待写入」都合法、合起来把场景推过 10,000 拒绝档，而库里留下两半互相看不见的写入。
+   */
+  async import(text: string | undefined, options: MockPackImportOptions) {
+    return this.withImportTask(runtime => importMockPack(this.mockRepo, text, options, runtime))
+  }
+
+  /**
+   * HAR 导入（R4C-35）：映射结果装成单场景包之后走 `import` 同一条链路。
+   * 与规则包共用那个任务槽是刻意的——两条入口并发跑会各自复核一遍「库内已有 + 待写入」都合法、
+   * 合起来把场景推过拒绝档，而取消与进度只能有一个「当前任务」。
+   */
+  async importHar(text: string | undefined, options: MockPackHarImportOptions) {
+    return this.withImportTask(runtime => importHarPack(this.mockRepo, text, options, runtime))
+  }
+
+  /**
+   * 单例闸门（R4C-19）：同时只让一个导入在跑，规则包与 HAR 两个入口都从这里过。
    * 形态抄 `update.runner.ts:25-39` 的模块级 `AbortController`，但重复请求不学它静默忽略：
    * 更新那条没人盯着，导入这条是用户按下按钮等结果的，挂住不返回比报错难交代。
    */
-  async import(text: string | undefined, options: MockPackImportOptions) {
+  private async withImportTask(run: (runtime: MockPackImportRuntime) => Promise<MockPackImportResult>) {
     if (this.importTask != null) throw new MockError('packImportInProgress')
     const task: MockPackImportTask = { controller: new AbortController(), written: 0, total: 0 }
     this.importTask = task
     try {
-      return await importMockPack(this.mockRepo, text, options, {
+      return await run({
         signal: task.controller.signal,
         onBatch: (written, total) => {
           task.written = written

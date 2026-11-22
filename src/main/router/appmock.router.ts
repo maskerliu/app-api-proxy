@@ -3,7 +3,6 @@ import { inject, injectable } from 'inversify'
 import { API_URL } from '@shared/api.const'
 import { emptyToNull, MOCK_UID_HEADER, pickHeader } from '@shared/http-header'
 import {
-  MockPackIssue, emptyMockPackImportResult,
   toMockPackConflictStrategy, toMockPackFlag, toMockPackImportMode,
 } from '@shared/mock.pack'
 import { ProxyMock } from '@shared/proxy.models'
@@ -400,9 +399,9 @@ export class AppMockRouter extends BaseRouter {
       handler: (ruleId) => this.mockService.getMockMatchWarnings(ruleId)
     })
 
-    // R4 规则导入/导出的桩端点（R4C-03）：先把参数表与响应形状钉死，渲染层得以并行开发；
-    // 导出组装已在 R4C-06 落地，写入与生效在 N3 逐张卡替换实现。
-    // 包级校验已在 R4C-10 接线：这两个桩不再假装「什么文件都收得下」，坏包拿到的是错误码而不是一个成功的空结果。
+    // R4 规则导入/导出四个端点：R4C-03 那一批先把它注册成桩、把参数表与响应形状钉死，让渲染层并行开发；
+    // 到这里导出组装（R4C-06）、包级/条目级校验与归一化（R4C-10~12）、预览统计（R4C-13/20）、写入与生效（R4C-15~20）、
+    // HAR 接线（R4C-35）都已换成真实现，四条里再没有假装「什么文件都收得下」的那一条。
     // 上传通道本身由 test/unit/form-file.test.ts 守住。
     // 导出组装（R4C-06）：回的是包文本，不是包对象。桌面端拿它直接写盘、Web 端包成 Blob，
     // 若在这里回对象，主进程流式拼好的字符串还要再解析 + 序列化一遍，省下的内存等于还回去了。
@@ -470,17 +469,24 @@ export class AppMockRouter extends BaseRouter {
       params: [
         { key: 'pack', type: ParamType.FormFileText },
         { key: 'mode', type: ParamType.Query },
-        { key: 'targetRuleId', type: ParamType.Query }
+        { key: 'targetRuleId', type: ParamType.Query },
+        { key: 'conflict', type: ParamType.Query },
+        { key: 'includeStatic', type: ParamType.Query },
+        { key: 'sceneName', type: ParamType.Query }
       ],
-      // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门。
-      // 「按内容分派两种包」的判据已经落在 `mock.har.ts` 的 `readHarText`（R4C-21：选错 kind 时 detail 直接说破对方形状），
-      // 字段映射与响应体也已在同一个文件就位（R4C-22 `mapHarEntries`：match 只由派生层产出；R4C-23 `bodyOf`：base64 分四档），
-      // 但这个 handler 还没接过去——仍是空结果桩。entry 上限与静态资源开关已在映射层就位
-      // （R4C-24：候选数超过 MOCK_HAR_MAX_ENTRIES 抛 harEntryLimit，js/css/图片默认逐条跳过）；
-      // 接线时 `includeStatic` 必须补进上面的 params：`proxy.api.ts` 的 `importHar` 已经在发这个字段，端点不接就等于开关永远无效。
-      handler: (_pack, mode) => ({
-        ...emptyMockPackImportResult(toMockPackImportMode(mode)),
-        suggestions: [] as MockPackIssue[]
+      // HAR 走的是另一种包（顶层没有 format），因此不吃规则包的包级闸门：它吃的是 `mock.har.ts` 的 `readHarText`
+      // （R4C-21：选错 kind 时 detail 直接说破对方形状）。映射（R4C-22 字段、R4C-23 正文、R4C-24 上限与静态资源）
+      // 之后交出的就是 `MockPackRecord`，从这里开始与规则包同一条链路（R4C-35）：
+      // 条目校验、归一化、时间戳、写库、上限复核一件不重写，所以这里也没有 HAR 专属的写入分支。
+      // `includeStatic` 默认关（js/css/图片逐条跳过），`sceneName` 是「一文件一场景、名称取文件名」的落点：
+      // 文件名只有选文件那一侧知道，`FormFileText` 通道传回来的只是文本。
+      // 没有预览那一步：HAR 的统计要在映射之后才有意义，而映射是写库的一半成本，属未裁决（见技术设计 §11）。
+      handler: (pack, mode, targetRuleId, conflict, includeStatic, sceneName) => this.mockPackService.importHar(pack, {
+        mode: toMockPackImportMode(mode),
+        targetRuleId: emptyToNull(targetRuleId),
+        conflict: toMockPackConflictStrategy(conflict),
+        includeStatic: toMockPackFlag(includeStatic, false),
+        sceneName: emptyToNull(sceneName),
       })
     })
 

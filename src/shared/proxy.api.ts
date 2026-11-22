@@ -147,7 +147,10 @@ export function importHar(file: File | Blob, options: MockPackImportOptions,
   return formPost<MockPackImportResult>(API_URL.IMPORT_HAR, undefined, {
     mode: options.mode,
     targetRuleId: options.targetRuleId ?? undefined,
+    // 与 `importMockPack` 同一组键：合并模式的冲突策略对 HAR 派生的记录一样成立（同 path 不同域名的两条会撞指纹）
+    conflict: options.conflict,
     includeStatic: options.includeStatic,
+    sceneName: options.sceneName ?? undefined,
   }, packForm(file), packUploadOptions(requestOptions))
 }
 

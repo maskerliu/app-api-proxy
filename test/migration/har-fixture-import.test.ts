@@ -12,9 +12,10 @@ import { describe, it } from 'node:test'
 // 只有真 PouchDB + 真缓存断得出来（同 R4C-17 与 fixture 导入那两批的理由）。
 // 只在临时库里跑，绝不指向用户数据目录。
 //
-// 这里没有 `importHar` 那条端点可用（`/_appmock/importHar` 仍是空结果桩，接线属 R4C-35），
-// 所以「HAR → 映射 → 规则包 → 既有导入链路」这一段编排由本文件手工拼出来，拼法就是 R4C-35 要在服务层做的那件事。
-// 换句话说，这几条用例证明的是「HAR 派生的记录走得通既有导入管线」，不证明端点已经接上，也不证明界面能看到。
+// 编排那一段现在用的是生产侧的 `buildMockPackFromHar` / `importHarPack`，本文件不再手工拼一遍规则包：
+// 手工拼的那份只证明「我拼得出来的东西能进库」，不证明端点真拼出同一个形状。
+// 端点侧（multipart、query 参数、任务槽与取消）由 test/unit/har-import.test.ts 用替身仓库钉，
+// 这里补的是它证不了的那一半：真 PouchDB 的批语义与真缓存命中。界面能不能看到这几条仍不在本文件的断言范围里。
 
 const DATA_DIR = mkdtempSync(path.join(os.tmpdir(), 'mock-har-fixture-'))
 mkdirSync(path.join(DATA_DIR, 'biz_storage'), { recursive: true })
@@ -34,10 +35,11 @@ registerHooks({
 
 const { MockRepo } = await import('@main/repository/mock.repo')
 const { MockCache } = await import('@main/service/mock.cache')
-const { importMockPack, previewMockPack } = await import('@main/service/mock.pack.service')
+const {
+  buildMockPackFromHar, importHarPack, importMockPack, previewMockPack,
+} = await import('@main/service/mock.pack.service')
 const { readHarText, parseHarEntries, mapHarEntries } = await import('@main/service/mock.har')
 const { detectMatchWarnings } = await import('@main/service/mock.conflict')
-const { MOCK_PACK_FORMAT, MOCK_PACK_VERSION } = await import('@shared/mock.pack')
 const { makeMatch, makeRecord } = await import('../unit/fixtures')
 
 const HAR_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures/har')
@@ -51,20 +53,20 @@ interface HarPack {
   packText: string
 }
 
-/** 一份 HAR 信封（对象形态）→ 映射结果 → 可直接喂给既有导入链路的规则包文本 */
+/**
+ * 一份 HAR 信封（对象形态）→ 生产侧「映射 + 拼规则包」那一步，外加逐层原料。
+ * 包文本不再由本文件手工组装：手工拼的那份只证明「我拼得出来的东西进得了库」，不证明端点拼的是同一个形状。
+ * 原料仍留着，因为解析层与映射层各自数各自的那两个跳过口径要在真库里对得上；
+ * 而对完原料再钉一句「生产侧的条数与映射层一致」，两套视图就不可能悄悄分叉。
+ */
 function packFromHar(doc: unknown, options?: { includeStatic?: boolean, sceneName?: string }): HarPack {
   const text = JSON.stringify(doc)
   const parsedHar = readHarText(text, Buffer.byteLength(text))
   const parsed = parseHarEntries(parsedHar.entries)
   const mapped = mapHarEntries(parsed.entries, { analyzedAt: EXPORTED_AT, ...options })
-  const pack = {
-    format: MOCK_PACK_FORMAT,
-    version: MOCK_PACK_VERSION,
-    appVersion: '1.0.6',
-    exportedAt: EXPORTED_AT,
-    rules: [{ name: options?.sceneName ?? 'HAR 演示', records: mapped.records.map((it: any) => it.record) }],
-  }
-  return { doc: parsedHar, parsed, mapped, packText: JSON.stringify(pack) }
+  const build = buildMockPackFromHar(text, { analyzedAt: EXPORTED_AT, ...options })
+  assert.equal(build.recordCount, mapped.records.length, '包里的条数就是映射层数出来的那一份')
+  return { doc: parsedHar, parsed, mapped, packText: build.packText }
 }
 
 function harToPack(name: string, options?: { includeStatic?: boolean, sceneName?: string }): HarPack {
@@ -312,7 +314,8 @@ describe('HAR 不区分域名与遮蔽可见（AC-R4-13 / Q2 的代价）', () =
     const result = await importMockPack(repo, packText, { mode: 'merge', targetRuleId: ruleId, conflict: 'skip' } as any)
     assert.deepEqual([result.created.length, result.skipped.length], [1, 1], '合并进已有场景：包内自撞那条照旧写不进来')
     assert.equal(result.shadowedCount, undefined,
-      '契约里那格「与既有规则构成遮蔽的条数」还没有人填（接线属 R4C-35），今天只有下面这条扫描给得出数')
+      '端点接线之后这一格还是没有生产者，而且是刻意的：导入的记录一律停用，写入那一刻谈不上遮蔽；'
+      + '那个 N 由界面在导入后另读一次既有 `getMockMatchWarnings` 得出，就是下面这条扫描给的数')
 
     const disabled = await recordsOf(ruleId)
     assert.deepEqual(detectMatchWarnings(disabled), [],
@@ -326,5 +329,70 @@ describe('HAR 不区分域名与遮蔽可见（AC-R4-13 / Q2 的代价）', () =
       enabled.find((it: any) => it.match.derivation?.source === 'import').id], '被盖住的必须是 HAR 那条')
     assert.equal(warnings[0].coveredBy, enabled.find((it: any) => it.name === '整段前缀兜底').id,
       '要点名被谁盖住，用户才知道该禁用哪一条')
+  })
+})
+
+// 端点接线（R4C-35）之后，`/_appmock/importHar` 那一条链路只做一件事：把 multipart 里的文本与 query
+// 参数交给 `importHarPack`。所以这几条断言要证的是替身仓库给不出的那三样——真库里的规则文档、真指纹、真空壳。
+// 端点自己吃不吃那些参数（multipart、query、任务槽与取消）由 test/unit/har-import.test.ts 钉，两边不重复。
+describe('R4C-35 importHarPack：一份 .har 文本一步落到真库（AC-R4-06/07/08 的端到端段落）', () => {
+  it('一次调用的读数：跳过明细按「先文件、后库」拼接，场景名真进了规则文档', async () => {
+    const text = readFileSync(path.join(HAR_DIR, 'chrome-shop.har'), 'utf8')
+    const result = await importHarPack(repo, text, {
+      mode: 'new', sceneName: 'HAR 端到端', includeStatic: true, analyzedAt: EXPORTED_AT,
+    })
+
+    assert.equal(result.ruleIds.length, 1)
+    assert.equal((await repo.getRule(result.ruleIds[0])).name, 'HAR 端到端',
+      '「一文件一场景、名称取文件名」的落点是库里的规则文档，替身仓库里那句断言只证到传参')
+    assert.deepEqual([result.created.length, result.updated.length, result.failed.length], [8, 0, 0])
+    assert.equal(result.enabled, false, '风险表 RK6：一步到位的链路同样不许劫持真实请求')
+    assert.deepEqual(result.skipped.map(it => [it.entryIndex, it.recordIndex, it.reason]), [
+      [8, undefined, 'harBodyUnreadable'],
+      [10, undefined, 'harNoResponse'],
+      [undefined, 3, 'matchDuplicate'],
+    ], '两组坐标用的是不同的尺：前两条讲的是文件里第几条、后一条讲的是包内第几条，顺序恒为「HAR 层在前、写入层在后」')
+    assert.equal(result.invalid.length, 0, 'js 那条是被映射层拒的，不是被条目级校验拒的：两种「少一条」要在不同格子里')
+  })
+
+  it('一条都没映射出来时真库里不留痕迹：不建空壳场景', async () => {
+    const before = (await repo.listRules()).map(it => it._id)
+    const text = JSON.stringify({
+      log: { version: '1.2', entries: [{
+        request: { method: 'GET', url: 'https://api.demo.com/v1/notifications/stream' },
+        response: { status: 0, statusText: '', headers: [], content: { size: 0, mimeType: 'text/event-stream' } },
+      }] },
+    })
+
+    const result = await importHarPack(repo, text, { mode: 'new', sceneName: '全被跳过' })
+    assert.deepEqual([result.ruleIds.length, result.created.length], [0, 0])
+    assert.deepEqual(result.skipped.map(it => [it.entryIndex, it.reason]), [[0, 'harNoResponse']],
+      '文件有条目、只是全被跳过：这一格的原因与条数就是结果页要展示的全部内容')
+    assert.deepEqual((await repo.listRules()).map(it => it._id), before,
+      '空壳场景一旦被建出来，用户下次打开场景列表就看到一个 0 条的档，而它压根没有对应档案')
+  })
+
+  it('同一份 HAR 往同一个场景导两次：第二次的 2 条全靠真库里的指纹挡下', async () => {
+    const text = readFileSync(path.join(HAR_DIR, 'three-entries.har'), 'utf8')
+    const first = await importHarPack(repo, text, { mode: 'new', sceneName: '导两次', analyzedAt: EXPORTED_AT })
+    assert.equal(first.created.length, 2)
+
+    // 第二次走合并而不是新建：要证的正是「HAR 派生的条件算出来的指纹，库里读得回来」。
+    // 替身仓库里那条用例的索引是手工塞进去的（用同一个 `fingerprintOf` 现算），这里吃的是真查重。
+    const again = await importHarPack(repo, text, {
+      mode: 'merge', targetRuleId: first.ruleIds[0], conflict: 'skip', analyzedAt: EXPORTED_AT,
+    })
+    assert.deepEqual([again.created.length, again.updated.length], [0, 0])
+    assert.deepEqual(again.skipped.map(it => it.reason), ['harNoResponse', 'matchDuplicate', 'matchDuplicate'],
+      '两条各报一次重复，解析层那条照旧——重复不是「导入失败」，它不进 failed')
+
+    const overwritten = await importHarPack(repo, text, {
+      mode: 'merge', targetRuleId: first.ruleIds[0], conflict: 'overwrite', analyzedAt: EXPORTED_AT,
+    })
+    assert.deepEqual([overwritten.created.length, overwritten.updated.length], [0, 2],
+      '换 overwrite 就落在那两条已有记录上：场景里恒为 2 条，重放不涨条数')
+    const all = await recordsOf(first.ruleIds[0])
+    assert.equal(all.length, 2)
+    assert.ok(all.every((it: any) => it.match.enabled === false), '覆盖之后仍是停用档')
   })
 })
