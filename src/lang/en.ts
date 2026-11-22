@@ -294,8 +294,8 @@ export default {
     // Import dialog (preview → write → result). The three failure classes are worded apart on purpose:
     // pack level = a problem with the file, entry level = a problem with the data, conflict = library state
     import: {
-      menuTitle: 'Import rule pack',
-      previewTitle: 'Import rule pack',
+      menuTitle: 'Import rule',
+      previewTitle: 'Import rule',
       resultTitle: 'Import result',
       fileLabel: 'File',
       noFile: 'No file selected',
@@ -353,7 +353,7 @@ export default {
       conflictEnabled: 'currently enabled'
     },
     export: {
-      dialogTitle: 'Export rule pack',
+      dialogTitle: 'Export rule',
       scopeLabel: 'Scope',
       scopeCurrent: 'This scenario',
       scopeAll: 'All scenarios',
