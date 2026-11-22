@@ -397,6 +397,9 @@ export default {
       }
     },
     match: {
+      // 记录级启用，与场景头部那枚开关不是一回事：说明要把两级分开说，否则用户打开场景会以为记录也开了
+      enabled: '启用此记录',
+      enabledHint: '关掉后这条不参与匹配；场景开关只决定哪个场景在生效',
       levelLabel: '匹配档位',
       level: {
         loose: '宽松',

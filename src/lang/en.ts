@@ -400,6 +400,9 @@ export default {
       }
     },
     match: {
+      // Record-level enable, not the scene switch in the rule header: the hint has to keep the two levels apart
+      enabled: 'Enable this record',
+      enabledHint: 'While off, this record never matches. The scene switch only picks the active scene.',
       levelLabel: 'Match Level',
       level: {
         loose: 'Loose',

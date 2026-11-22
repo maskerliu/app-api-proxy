@@ -1,5 +1,15 @@
 <template>
   <div class="match-tab">
+    <!-- 记录级启用在档位之前：导入的记录一律带着停用标记落库，这一枚是把它打开的唯一入口，
+         放在档位后面会让人以为档位才是这条记录开不开的关键 -->
+    <div class="section-card">
+      <van-row class="switch-row" align="center" :wrap="false">
+        <span class="row-label">{{ $t('mock.match.enabled') }}</span>
+        <van-switch :model-value="match.enabled !== false" size="18px" @update:model-value="toggleEnabled" />
+        <span class="switch-hint hint">{{ $t('mock.match.enabledHint') }}</span>
+      </van-row>
+    </div>
+
     <van-row class="level-bar" align="center">
       <span class="bar-label">{{ $t('mock.match.levelLabel') }}</span>
       <van-radio-group :model-value="currentLevel" direction="horizontal" class="level-chips"
@@ -330,6 +340,15 @@ function pathFromUrl(url: string): string {
 function touch() {
   if (match.value != null && match.value.level !== 'custom') match.value.level = 'custom'
   pending.value = null
+}
+
+/**
+ * 启用这一动作刻意不走 `touch()`：`canonicalMatch` 不含 enabled（也不含 level），
+ * 把它当成手动编辑会把档位无故改成「自定义」，还会让指纹看起来要重算。
+ */
+function toggleEnabled(value: boolean) {
+  if (match.value == null) return
+  match.value.enabled = value === true
 }
 
 // Vant RadioGroup 在 modelValue 被程序替换时也会触发 change，
