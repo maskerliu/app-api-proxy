@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  MOCK_CONFLICT_CODES, MOCK_ERROR_CODES, MOCK_PACK_CODES, MOCK_SERVER_CODES, MOCK_VALIDATION_CODES,
+  MOCK_CONFLICT_CODES, MOCK_ERROR_CODES, MOCK_PACK_CODES, MOCK_SERVER_CODES, MOCK_SHARE_CODES, MOCK_VALIDATION_CODES,
 } from '@shared/mock.errors'
 import en from '../../src/lang/en'
 import zhCN from '../../src/lang/zh-CN'
@@ -20,7 +20,9 @@ describe('R4 导入/导出码表与 i18n', () => {
   })
 
   it('第四组并入全表', () => {
-    const all = [...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES, ...MOCK_CONFLICT_CODES, ...MOCK_PACK_CODES]
+    const all = [
+      ...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES, ...MOCK_CONFLICT_CODES, ...MOCK_PACK_CODES, ...MOCK_SHARE_CODES,
+    ]
     assert.deepEqual([...MOCK_ERROR_CODES].sort(), all.sort())
   })
 

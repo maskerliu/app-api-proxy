@@ -289,6 +289,22 @@ export default {
       packImportInProgress: 'An import is already running; wait for it to finish or cancel it first',
       packWriteAborted: 'Import canceled'
     },
+    // Keys must equal MOCK_SHARE_CODES (test/unit/share-errors.test.ts).
+    // "local data untouched" on the refusal codes is not decoration: restoring never deletes locally (PRD 11.3),
+    // so the first thing a remote error has to answer is whether this machine was touched.
+    share: {
+      remotePathMissing: 'Remote folder is missing or removed; select it again in Settings',
+      remoteUnreachable: 'Remote location is unreachable (offline folder or timeout); local data untouched',
+      remoteNotFound: 'No backup in this folder yet (index.json not found)',
+      remoteForbidden: 'No permission to read or write the remote location',
+      remoteCorrupted: 'Remote files do not match the manifest; refused to read, local data untouched',
+      remoteVersionTooNew: 'The remote backup was made by a newer version; upgrade this app before restoring',
+      remoteShapeUnknown: 'The address returned neither a rule pack nor this app\'s response format',
+      remoteWriteFailed: 'Failed to write the remote (disk full, path too long, or read-only mount)',
+      sceneTooLargeForCloud: 'This scene exceeds the 32MB shard limit; export it as a local file instead',
+      shareSceneLimit: 'The remote already holds 300 scenarios; split them into a new folder',
+      shareInProgress: 'A backup is already running; wait for it or cancel it first'
+    },
     // 菜单条目名与这句说明成对出现（弹层里没有悬浮提示可用）；预览与结果页文案仍随导入功能落地时补
     // Import dialog (preview → write → result). The three failure classes are worded apart on purpose:
     // pack level = a problem with the file, entry level = a problem with the data, conflict = library state

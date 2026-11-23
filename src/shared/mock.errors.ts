@@ -67,13 +67,34 @@ export const MOCK_PACK_CODES = [
   'packWriteAborted',
 ] as const
 
+/**
+ * 云共享（v1.3 Phase A）：远端失败的归因空间比本地大一个量级（配置 / 网络 / 权限 / 内容 / 写 / 上限 / 并发），
+ * 不许统一成「同步失败」，因此文案独立落在 mock.share.* 一块（PRD 6.3）。
+ * `shareSceneLimit` 不在 PRD 那张十码表里：上限三问第 3 行要求「场景数超限拒绝新备份并提示拆分」，
+ * 这句话由不得借用 `sceneTooLargeForCloud`（那说的是单场景体积），也不该塞进 `remoteWriteFailed` 的 detail 里当副文案。
+ */
+export const MOCK_SHARE_CODES = [
+  'remotePathMissing',
+  'remoteUnreachable',
+  'remoteNotFound',
+  'remoteForbidden',
+  'remoteCorrupted',
+  'remoteVersionTooNew',
+  'remoteShapeUnknown',
+  'remoteWriteFailed',
+  'sceneTooLargeForCloud',
+  'shareSceneLimit',
+  'shareInProgress',
+] as const
+
 export const MOCK_ERROR_CODES = [
-  ...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES, ...MOCK_CONFLICT_CODES, ...MOCK_PACK_CODES,
+  ...MOCK_VALIDATION_CODES, ...MOCK_SERVER_CODES, ...MOCK_CONFLICT_CODES, ...MOCK_PACK_CODES, ...MOCK_SHARE_CODES,
 ] as const
 
 export type MockErrorCode = typeof MOCK_ERROR_CODES[number]
 export type MockValidationCode = typeof MOCK_VALIDATION_CODES[number]
 export type MockPackCode = typeof MOCK_PACK_CODES[number]
+export type MockShareCode = typeof MOCK_SHARE_CODES[number]
 
 export interface MockErrorPayload {
   code: MockErrorCode | string

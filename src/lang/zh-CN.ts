@@ -288,6 +288,22 @@ export default {
       packImportInProgress: '已有一个导入正在进行，请等它结束或先取消',
       packWriteAborted: '导入已取消'
     },
+    // 键集与 src/shared/mock.errors.ts 的 MOCK_SHARE_CODES 严格相等（test/unit/share-errors.test.ts 断言）。
+    // 拒读类那句「本地库未受影响」不是修饰：恢复永不删本地（PRD 11.3）是这条通道唯一的安全承诺，
+    // 用户看到远端报错时第一件要知道的就是本机有没有被动过。
+    share: {
+      remotePathMissing: '远端目录不存在或已被移除，请到设置页重新选择',
+      remoteUnreachable: '远端连不上（网络盘离线或超时），本地库未受影响',
+      remoteNotFound: '这个目录里还没有备份（未找到index.json）',
+      remoteForbidden: '没有权限读写远端位置，请检查该目录的权限',
+      remoteCorrupted: '远端文件与备份清单不一致，已拒绝读取，本地库未受影响',
+      remoteVersionTooNew: '远端备份来自更高的版本，请升级本程序后再恢复',
+      remoteShapeUnknown: '地址返回的不是规则包，也不是本产品的响应格式',
+      remoteWriteFailed: '写入远端失败（磁盘已满、路径过长或只读挂载）',
+      sceneTooLargeForCloud: '该场景超过32MB分片上限，请改用本地文件导出',
+      shareSceneLimit: '远端场景数已达300上限，请拆分到新目录后再备份',
+      shareInProgress: '已有一个备份正在进行，请等它结束或先取消'
+    },
     // 导入弹窗（预览 → 写库 → 结果）。三类失败分开措辞：包级=文件问题、条目级=数据问题、冲突=库内状态问题
     import: {
       menuTitle: '导入规则',
