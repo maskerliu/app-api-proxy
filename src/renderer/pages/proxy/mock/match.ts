@@ -277,8 +277,8 @@ function ensureQuery(match: MockMatchRule): MockQueryMatch {
   return match.query
 }
 
-/** 「+」加一行空条件：只插行、不动档位。空键名本来就不参与匹配，档位是忽略时新行置灰才对得上；
- *  面板头现在只有这一枚「+」，Query 与 Header 都从它出发，加 Header 行更不该被顺带改掉 Query 档位 */
+/** 「+」加一行空条件：只插行、不动开关。空键名本来就不参与匹配，Query 参数关掉时新行跟着整块置灰才对得上；
+ *  面板头现在只有这一枚「+」，Query 与 Header 都从它出发，加 Header 行更不该被顺带拨动 Query 的开关 */
 export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
   const query = ensureQuery(match)
   const condition: MockQueryCondition = { key: '', op: 'equals', value: '', source: 'manual' }
@@ -287,7 +287,7 @@ export function addQueryCondition(match: MockMatchRule): MockQueryCondition {
   return condition
 }
 
-/** 点录制里的键值对补条件：这是明确要按它匹配，档位随之切到匹配 */
+/** 点录制里的键值对补条件：这是明确要按它匹配，「Query 参数参与匹配」随之拨到开 */
 export function applyQuerySuggestion(match: MockMatchRule, item: QuerySuggestion): MockQueryCondition {
   const condition = addQueryCondition(match)
   condition.key = item.key
@@ -345,7 +345,7 @@ export type ConditionLocation = 'query' | 'header'
 export interface ConditionRow {
   location: ConditionLocation
   condition: MockQueryCondition | MockHeaderCondition
-  /** 两种「不参与」都要置灰：档位设为忽略时 testQuery 整段放行；档位是匹配时命中忽略名单的那一行被逐条跳过 */
+  /** 两种「不参与」都要置灰：Query 参数不参与匹配时 testQuery 整段放行；参与时命中忽略名单的那一行被逐条跳过 */
   inert: boolean
 }
 

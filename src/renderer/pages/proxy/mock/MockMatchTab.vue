@@ -64,27 +64,32 @@
     </div>
 
     <div ref="querySection" class="section-card">
+      <!-- 两个 radio 换成一枚开关：引擎在 ignore 档是整段放行 Query（testQuery 第一句就 return true），
+           「忽略 / 匹配」那对词只报了档位名，没说清「匹配」这一档其实还要看下面的条件与忽略名单；
+           开关的「参与 / 不参与」直接对上代码里的行为，标题随之换成开关的宾语。 -->
       <van-row class="section-title" align="center" justify="space-between" :wrap="false">
         <span>{{ $t('mock.match.queryMode') }}</span>
-        <van-radio-group :model-value="match.query.mode" direction="horizontal" class="inline-radio"
-          @update:model-value="onQueryModeChange">
-          <van-radio name="ignore">{{ $t('mock.match.queryIgnore') }}</van-radio>
-          <van-radio name="match">{{ $t('mock.match.queryMatch') }}</van-radio>
-        </van-radio-group>
+        <van-switch :model-value="queryParticipate" size="var(--app-switch-size)" @update:model-value="toggleQueryMode" />
       </van-row>
+      <!-- 说明常驻且两态各一句：关着的这一句要让忽略名单和条件自己承认不生效，否则界面看着还像在工作 -->
+      <p class="query-hint hint">{{ queryModeHint }}</p>
 
-      <div class="sub-block">
+      <!-- 关闭态整块置灰而不是抽走：名单里的手动键是规则的一部分，藏起来会让人以为数据丢了；
+           置灰只收视觉，编辑路径全断（输入框 disabled、「+」走不可用态、「✕」不渲染），
+           因此也不会顺带 touch() 把档位无故改成自定义。 -->
+      <div class="sub-block" :class="{ 'is-inert': !queryParticipate }">
         <van-row class="sub-head" align="center" :wrap="false">
           <span class="sub-title">{{ $t('mock.match.queryIgnoreKeys') }}</span>
           <van-tag round>{{ match.query.ignoreKeys.length }}</van-tag>
-          <van-field v-model="newIgnoreKey" class="control-field add-input" :placeholder="$t('mock.match.addKeyPlaceholder')"
-            @keyup.enter="addIgnoreKey" />
-          <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
-            :disabled="newIgnoreKey.trim() === ''" @click="addIgnoreKey" />
+          <van-field v-model="newIgnoreKey" class="control-field add-input" :disabled="!queryParticipate"
+            :placeholder="$t('mock.match.addKeyPlaceholder')" @keyup.enter="addIgnoreKey" />
+          <van-icon name="plus" class="icon-action action-glyph"
+            :class="queryParticipate && newIgnoreKey.trim() !== '' ? 'action-glyph--primary' : 'action-glyph--disabled'"
+            @click="addIgnoreKey" />
         </van-row>
         <!-- 居中不是排版偏好：.tag-list 的 min-height 是空列表占位，换行 row 默认会把标签拉到那个高度 -->
         <van-row class="tag-list" align="center">
-          <van-tag v-for="key in match.query.ignoreKeys" :key="key" closeable
+          <van-tag v-for="key in match.query.ignoreKeys" :key="key" :closeable="queryParticipate"
             :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" plain
             v-tip="$t(`mock.match.ignoreSource.${ignoreSource(key)}`)" @close="removeIgnoreKey(key)">
             {{ key }}
@@ -95,7 +100,7 @@
         </van-row>
       </div>
 
-      <div v-if="match.query.mode === 'match'" class="sub-block">
+      <div v-if="queryParticipate" class="sub-block">
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryAllowExtra') }}</span>
           <van-switch v-model="match.query.allowExtra" size="18px" @change="touch" />
@@ -289,10 +294,15 @@ const locationOptions = computed(() => CONDITION_LOCATIONS.map(value => ({
 const conditionRows = computed(() => conditionRowsOf(match.value))
 const needsValue = (row: ConditionRow) => operatorNeedsValue(row.condition.op)
 const inertCount = computed(() => conditionRows.value.filter(row => row.inert).length)
-// 忽略档下 testQuery 整段放行，置灰的是全部 Query 行，说「N 条」会被读成「其中几条」，两种成因各用一句
-const inertHintText = computed(() => t(match.value?.query?.mode === 'ignore'
-  ? 'mock.match.conditionsInertAllHint'
-  : 'mock.match.conditionsInertHint', { count: inertCount.value }))
+// Query 参数到底参不参与匹配，界面只认这一处：标题行的开关、子块置灰、说明选句、折叠标题的置灰提示全读它
+const queryParticipate = computed(() => match.value?.query?.mode === 'match')
+const queryModeHint = computed(() => t(queryParticipate.value
+  ? 'mock.match.queryModeOn'
+  : 'mock.match.queryModeOff'))
+// 开关关掉时 testQuery 整段放行，置灰的是全部 Query 行，说「N 条」会被读成「其中几条」，两种成因各用一句
+const inertHintText = computed(() => t(queryParticipate.value
+  ? 'mock.match.conditionsInertHint'
+  : 'mock.match.conditionsInertAllHint', { count: inertCount.value }))
 const querySuggestions = computed(() => querySuggestionsOf(props.record, match.value))
 
 // 首次渲染就要有可编辑对象，否则模板读取 match.method 会报空
@@ -351,11 +361,11 @@ function toggleEnabled(value: boolean) {
   match.value.enabled = value === true
 }
 
-// Vant RadioGroup 在 modelValue 被程序替换时也会触发 change，
-// 分档应用会因此被误判为手动编辑；这里只处理用户交互产生的 update
-function onQueryModeChange(value: 'ignore' | 'match') {
+// Vant RadioGroup 在 modelValue 被程序替换时也会触发 change，分档应用会因此被误判为手动编辑；
+// 换成开关后同样只接用户交互那一路——开关只在 @update:model-value 上写值，档位套用不会走到这里。
+function toggleQueryMode(value: boolean) {
   if (match.value == null) return
-  match.value.query.mode = value
+  match.value.query.mode = value === true ? 'match' : 'ignore'
   touch()
 }
 
@@ -396,6 +406,9 @@ function restorePath() {
 }
 
 function addIgnoreKey() {
+  // 裸图标没有 disabled 属性，灰掉的那一枚照样点得进来：守卫必须和「+」上挂的不可用态同一个条件，
+  // 否则关闭态下会往一份根本不参与匹配的名单里塞键，还顺手把档位改成自定义
+  if (!queryParticipate.value) return
   const key = newIgnoreKey.value.trim()
   if (key === '' || match.value == null) return
   if (match.value.query.ignoreKeys.indexOf(key) === -1) match.value.query.ignoreKeys.push(key)
@@ -432,7 +445,7 @@ function addQuerySuggestion(item: QuerySuggestion) {
   touch()
 }
 
-// 切位置只换归属：条件本身跟着走，不顺手改动 Query 档位——用户刚设成忽略就该停在忽略
+// 切位置只换归属：条件本身跟着走，不顺手拨动 Query 的开关——用户刚把它关掉就该停在关掉
 function onLocationChange(row: ConditionRow, value: string) {
   if (match.value == null) return
   relocateCondition(match.value, row, value as ConditionLocation)
@@ -646,6 +659,12 @@ defineExpose({ focusField })
   margin-bottom: var(--app-sp-md);
 }
 
+/* 与 `.level-hint` 同款：负 margin 把标题行那 sp-md 吃掉一档，说明才贴得住自己的开关；
+   相邻外边距是正档取大 + 负档取小，净间隙 = sp-md − sp-xs = md×0.3，各字号档同比缩放。 */
+.query-hint {
+  margin: calc(var(--app-sp-xs) * -1) 0 0;
+}
+
 .field-row {
   gap: var(--app-sp-lg);
   padding: var(--app-sp-xs) 0;
@@ -819,7 +838,8 @@ defineExpose({ focusField })
 }
 
 .is-inert {
-  /* 忽略档下的 Query 行仍留在表里，只是不参与匹配：压暗而不是抽走，配套下面那行说明 */
+  /* 两处「写着但不生效」共用这一档压暗：开关关掉时的整个忽略参数子块，与条件表里不参与匹配的那几行。
+     留在原位才看得懂数据没丢，压暗才读得出它现在不比。 */
   opacity: 0.55;
 }
 

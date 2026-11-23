@@ -47,11 +47,19 @@
         <van-tag plain type="primary">{{ ignoredKeys.length }}</van-tag>
       </van-row>
       <div v-if="ignoredKeys.length === 0" class="panel-empty hint">{{ $t('mock.stability.noAutoIgnored') }}</div>
-      <!-- 已忽略态用和「Query 匹配 › 忽略参数」同款的可关闭标签：同一份状态的同一副面孔，✕ 即撤销 -->
+      <!-- 这一块只读数，不再当第二个编辑面：原先的 ✕ 与「Query 参数参与匹配 › 忽略参数」写的是同一份数组，
+           两处的撤销语义却不一样——这里的撤销还要抹掉 derivation.autoIgnoredKeys，否则下一轮分析把这枚键原样捞回来，
+           而那半件事在忽略参数那一行没有。撤销因此只挂在撤销得动的来源上（自动 / 建议），
+           手动键的删除入口唯一，去处写在它的 tooltip 上。 -->
       <van-row v-else class="tag-list" align="center">
-        <van-tag v-for="key in ignoredKeys" :key="key" closeable plain
-          :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" v-tip="ignoreTitle(key)"
-          @close="undoIgnore(key)">{{ key }}</van-tag>
+        <span v-for="key in ignoredKeys" :key="key" class="ignored-item">
+          <van-tag plain :type="ignoreSource(key) === 'suggestion' ? 'warning' : 'primary'" v-tip="ignoreTitle(key)">
+            {{ key }}
+          </van-tag>
+          <span v-if="ignoreSource(key) !== 'manual'" class="link-action" @click="undoIgnore(key)">
+            {{ $t('mock.stability.undo') }}
+          </span>
+        </span>
       </van-row>
     </div>
 
@@ -119,8 +127,10 @@ const lastAnalyzed = computed(() => {
 const ignoreSource = (key: string) => ignoreSourceOf(match.value, key)
 
 function ignoreTitle(key: string): string {
-  // 自动忽略的键把依据带在标签上；手动与建议来源沿用忽略参数列表的说法
   const source = ignoreSource(key)
+  // 手动键在这块没有动作，去处直接带在 tooltip 上，不为它单起一行说明；
+  // 自动忽略的键把依据带在标签上，建议来源沿用忽略参数列表的说法
+  if (source === 'manual') return t('mock.stability.manualKeyTip')
   return source === 'auto' ? evidenceText(key) : t(`mock.match.ignoreSource.${source}`)
 }
 
@@ -356,6 +366,20 @@ async function showConfirm(message: string) {
   flex: 1 1 0;
   min-width: 0;
   line-height: calc(var(--van-font-size-sm) * 1.5);
+}
+
+/* 键名与它的撤销动作绑成一格：.tag-list 是换行容器，两个 flex 项会让标签留在行末、动作掉到下一行。
+   内档取 sp-xs（外档 sp-md 的一半），成组才读得出来。 */
+.ignored-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-sp-xs);
+}
+
+/* 动作贴着标签走，就得跟标签同一档字号：.link-action 本身是行内文字的 md 档，
+   配在 9px 的 tag 边上会把注意力从键名上抢走（tag 字号单源是 store 的 tagFontSize = 设置值）。 */
+.ignored-item .link-action {
+  font-size: var(--van-font-size-xs);
 }
 
 .path-row {
