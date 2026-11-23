@@ -12,6 +12,9 @@ import {
   shareSceneKeyOf, shareShardFileOf, shareShardBytesOf, shareSkipsUnchanged,
 } from '@shared/mock.share'
 import type { MockShareManifest, MockShareSceneEntry, MockShareSceneInput, MockShareShard, MockShareStage } from '@shared/mock.share'
+import { mergeShareScenePacks } from '@shared/mock.share'
+import { MOCK_PACK_MAX_FILE_BYTES } from '@shared/mock.pack'
+import type { MockPackV1 } from '@shared/mock.pack'
 import type { ProxyMock } from '@shared/proxy.models'
 import { readMockPackSceneParts } from './mock.pack.service'
 import type { MockPackSceneParts, MockPackSource } from './mock.pack.service'
@@ -594,5 +597,161 @@ export async function runShareBackup(source: MockPackSource, channel: MockShareD
     })
   } finally {
     backupSlot = null
+  }
+}
+
+/**
+ * 恢复链路（PRD C3 / S-A4）：这一段只负责把远端正文取成**一份合法的包文本**，
+ * 落库一概是 R4 既有的预览/导入。
+ *
+ * 入参里只有 `MockShareReadChannel`，没有 `MockPackSource`——C3-4「恢复永不删本地」不是靠这里写得小心，
+ * 而是靠这一层压根拿不到写库的手；能删本地的代码在这一层的调用方那边，那条链有它自己的用例。
+ */
+
+/** C3-1 清单上的一格：不下载正文就能报出来的那几个字段 */
+export interface MockShareSceneSummary {
+  key: string
+  name: string
+  records: number
+  bytes: number
+  /** 恢复这一个场景要按序读几个文件 */
+  shards: number
+}
+
+export interface MockShareRemoteOverview {
+  scenes: MockShareSceneSummary[]
+  /**
+   * 清单上列了名字却没有正文的场景（上次备份被拒的那几个）。
+   * 下面的 `records`/`bytes` 只统计可恢复的场景：被拒那一项记的条数是「本来想备份多少条」，
+   * 把它算进「远端有 N 条可恢复」是虚报。
+   */
+  unavailable: { key: string; name: string; reason: string }[]
+  records: number
+  bytes: number
+  /** 上次备份时间与来源设备代号（6.2：这两个值只在清单里，正文里没有第二个口径） */
+  createdAt?: number
+  device?: string
+}
+
+/**
+ * 「读取并预览」的第一步：只读清单，不碰正文（C3-1）。
+ * 清单缺失在这里是错误而不是空列表：备份侧把「没有上一版」当成正常起步，
+ * 恢复侧同一个 `null` 要说的是「这个目录里还没有备份」，两种读法不能共用一个返回值。
+ */
+export async function readShareRemoteOverview(channel: MockShareReadChannel, signal?: AbortSignal):
+  Promise<MockShareRemoteOverview> {
+  const manifest = await readShareManifest(channel, signal)
+  if (manifest == null) throw new MockError('remoteNotFound', shareErrorDetailOf('list', MOCK_SHARE_MANIFEST_FILE))
+  const scenes: MockShareSceneSummary[] = []
+  const unavailable: MockShareRemoteOverview['unavailable'] = []
+  let records = 0
+  let bytes = 0
+  for (const entry of manifest.scenes) {
+    if (entry.shards.length === 0) {
+      unavailable.push({ key: entry.key, name: entry.name, reason: entry.skipped?.reason ?? 'no shards' })
+      continue
+    }
+    scenes.push({
+      key: entry.key, name: entry.name, records: entry.records, bytes: entry.bytes, shards: entry.shards.length
+    })
+    records += entry.records
+    bytes += entry.bytes
+  }
+  const overview: MockShareRemoteOverview = { scenes, unavailable, records, bytes }
+  if (manifest.createdAt != null) overview.createdAt = manifest.createdAt
+  if (manifest.device != null) overview.device = manifest.device
+  return overview
+}
+
+/** 一次恢复的产出：形状与用户自己「导出全部场景」的那个文件一致，导入侧分辨不出来源 */
+export interface MockShareRestorePayload {
+  text: string
+  bytes: number
+  scenes: number
+}
+
+/**
+ * 取回选中的场景并拼成一个包（C3-6：分片场景在读侧合并成一个包，一次落库、一个结果，不逐片导入）。
+ *
+ * 顺序按清单而不是按点选顺序：预览页的明细行、重放同一次恢复得到的文本都得是同一个样子。
+ * 体积闸门放在读之前——单场景 32MB、场景数 300，真让人「全选」时按清单声称的体积就已经可能超出
+ * R4 那个 50MB 单包上限；那种情况宁可不下载也别把几个 GB 拼进内存，报的码沿用 R4 那句「请按场景拆分」。
+ */
+export async function restoreShareScenes(channel: MockShareReadChannel, keys: string[],
+  signal?: AbortSignal): Promise<MockShareRestorePayload> {
+  const manifest = await readShareManifest(channel, signal)
+  if (manifest == null) throw new MockError('remoteNotFound', shareErrorDetailOf('list', MOCK_SHARE_MANIFEST_FILE))
+  if (keys.length === 0) throw new MockError('packEmpty', shareErrorDetailOf('list', 'scenes=0'))
+  const byKey = new Map(manifest.scenes.map(entry => [entry.key, entry]))
+  for (const key of keys) {
+    const entry = byKey.get(key)
+    // 清单上没有这个名字：多半是列表停留在上一次备份、远端这中间又被重写过。不静默少导几个场景。
+    if (entry == null) throw new MockError('remoteNotFound', shareErrorDetailOf('list', `key=${key}`))
+    if (entry.shards.length === 0) {
+      throw new MockError('remoteNotFound',
+        shareErrorDetailOf('list', `key=${key} ${entry.skipped?.reason ?? 'no shards'}`))
+    }
+    if (entry.bytes > MOCK_SHARE_MAX_SCENE_BYTES) {
+      throw new MockError('remoteCorrupted',
+        shareErrorDetailOf('list', `bytes=${entry.bytes} limit=${MOCK_SHARE_MAX_SCENE_BYTES}`))
+    }
+  }
+  const selected = new Set(keys)
+  let planned = 0
+  for (const entry of manifest.scenes) {
+    if (selected.has(entry.key)) planned += entry.bytes
+  }
+  if (planned > MOCK_PACK_MAX_FILE_BYTES) {
+    throw new MockError('packTooLarge', shareErrorDetailOf('list', `bytes=${planned} limit=${MOCK_PACK_MAX_FILE_BYTES}`))
+  }
+
+  const packs: MockPackV1[] = []
+  for (const entry of manifest.scenes) {
+    if (!selected.has(entry.key)) continue
+    abortIfRequested(signal)
+    const parts: MockPackV1[] = []
+    for (const shard of entry.shards) {
+      // 逐片按清单上的 sha1 验过才拼：拼起来的那个包的摘要没有任何东西能背书，只有每片各自对得上，
+      // 合并结果才还是备份时写出去的那些字节（AC-C-04 的「拒读、不改本地库」就在这一步之前）
+      const text = await readShareVerified(channel, `${MOCK_SHARE_SCENE_DIR}/${shard.file}`, shard.sha1, signal)
+      parts.push(parseShareShard(text, entry.key))
+    }
+    packs.push(mergeShareScenePacks(parts))
+  }
+  const text = JSON.stringify(combineShareScenePacks(packs))
+  return { text, bytes: bytesOf(text), scenes: packs.length }
+}
+
+/**
+ * 片正文只解析到「能拼回去」的程度：版本闸门、条数上限、字段归一化仍是 `readMockPackText` 的活。
+ * 在这里重跑一遍会把「请升级应用」那种明确的说法降级成含义不明的远端错误（同 `unwrapShareRemoteText`）。
+ */
+function parseShareShard(text: string, key: string): MockPackV1 {
+  let value: unknown
+  try {
+    value = JSON.parse(text)
+  } catch {
+    throw new MockError('remoteCorrupted', shareErrorDetailOf('read', `key=${key} is not json`))
+  }
+  if (typeof value !== 'object' || value === null || !Array.isArray((value as MockPackV1).rules)) {
+    throw new MockError('remoteCorrupted', shareErrorDetailOf('read', `key=${key} has no rules`))
+  }
+  return value as MockPackV1
+}
+
+/**
+ * 多个单场景包并成一个多场景包。信封取第一份，`appVersion` 允许各场景不同——
+ * 那正是「两台机器分别备份过」的正常形状，把它当成冲突拒读等于把能用的备份判死。
+ * 不带 `exportedAt`：备份侧本来就不写它（否则内容寻址的「未变即跳过」永远不成立），
+ * 恢复侧凭空补一个时刻等于改动正文。
+ */
+function combineShareScenePacks(packs: MockPackV1[]): MockPackV1 {
+  const first = packs[0]
+  if (first == null) throw new MockError('packEmpty', shareErrorDetailOf('list', 'scenes=0'))
+  return {
+    format: first.format,
+    version: first.version,
+    appVersion: first.appVersion,
+    rules: packs.flatMap(pack => pack.rules),
   }
 }
