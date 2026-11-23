@@ -3,13 +3,15 @@ import { access, mkdir, open, readFile, rename, rm, stat } from 'node:fs/promise
 import { createHash } from 'node:crypto'
 import { hostname } from 'node:os'
 import path from 'path'
+import axios from 'axios'
 import { MockError } from '@shared/mock.errors'
 import type { MockShareCode } from '@shared/mock.errors'
 import {
-  MOCK_SHARE_KEY_HEX, MOCK_SHARE_MANIFEST_FILE, MOCK_SHARE_MAX_FILE_BYTES, MOCK_SHARE_MAX_SCENE_BYTES,
-  MOCK_SHARE_MAX_SCENES, MOCK_SHARE_MAX_SHARDS, MOCK_SHARE_SCENE_DIR,
+  MOCK_SHARE_GET_RETRIES, MOCK_SHARE_KEY_HEX, MOCK_SHARE_MANIFEST_FILE,
+  MOCK_SHARE_MAX_FILE_BYTES, MOCK_SHARE_MAX_REDIRECTS, MOCK_SHARE_MAX_SCENE_BYTES,
+  MOCK_SHARE_MAX_SCENES, MOCK_SHARE_MAX_SHARDS, MOCK_SHARE_READ_TIMEOUT, MOCK_SHARE_SCENE_DIR,
   assertShareManifest, buildShareManifest, planShareShards, shareErrorDetailOf, shareSceneDigestOf,
-  shareSceneKeyOf, shareShardFileOf, shareShardBytesOf, shareSkipsUnchanged,
+  shareSceneKeyOf, shareShardFileOf, shareShardBytesOf, shareSkipsUnchanged, unwrapShareRemoteText,
 } from '@shared/mock.share'
 import type { MockShareManifest, MockShareSceneEntry, MockShareSceneInput, MockShareShard, MockShareStage } from '@shared/mock.share'
 import { mergeShareScenePacks } from '@shared/mock.share'
@@ -83,12 +85,14 @@ const WRITE_FAILED = ['EDQUOT', 'EEXIST', 'EFBIG', 'EINVAL', 'ENAMETOOLONG', 'EN
 const LONG_PATH_THRESHOLD = 260
 
 /** 取消不是失败归因：原样抛 AbortError，让上层把它变成「已取消」这个状态，而不是一个错误码 */
+function shareAbortError(): Error {
+  const err = new Error('share aborted')
+  err.name = 'AbortError'
+  return err
+}
+
 function abortIfRequested(signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    const err = new Error('share aborted')
-    err.name = 'AbortError'
-    throw err
-  }
+  if (signal?.aborted) throw shareAbortError()
 }
 
 /**
@@ -663,11 +667,10 @@ export async function readShareRemoteOverview(channel: MockShareReadChannel, sig
   return overview
 }
 
-/** 一次恢复的产出：形状与用户自己「导出全部场景」的那个文件一致，导入侧分辨不出来源 */
+/** 交给导入管线的一份正文：形状与用户自己「导出全部场景」的那个文件一致，导入侧分辨不出来源 */
 export interface MockShareRestorePayload {
   text: string
   bytes: number
-  scenes: number
 }
 
 /**
@@ -719,7 +722,7 @@ export async function restoreShareScenes(channel: MockShareReadChannel, keys: st
     packs.push(mergeShareScenePacks(parts))
   }
   const text = JSON.stringify(combineShareScenePacks(packs))
-  return { text, bytes: bytesOf(text), scenes: packs.length }
+  return { text, bytes: bytesOf(text) }
 }
 
 /**
@@ -753,5 +756,176 @@ function combineShareScenePacks(packs: MockPackV1[]): MockPackV1 {
     version: first.version,
     appVersion: first.appVersion,
     rules: packs.flatMap(pack => pack.rules),
+  }
+}
+
+/**
+ * 订阅只读 URL（PRD C4 / S-A5）。这一段不实现 `MockShareReadChannel`：那个接口按「清单 + 分片文件名」寻址，
+ * 而订阅过来的只有一个正文（C4-1）；把它硬塞成清单会凭空多出一次根本不存在的选择场景的步骤。
+ *
+ * 没有清单就没有校验和，所以这一侧的可靠性全押在「读回来的字节必须过 R4 那道包闸门」上——
+ * 那是下一段（预览/导入）的事，这里只保证交出去的确实是包正文，而不是登录墙 HTML。
+ */
+
+/** 一次 GET 的返回：`status` 留着归因，`bytes` 由拿到 Buffer 的一侧算，共享层不算第二遍 */
+export interface MockShareUrlResponse {
+  status: number
+  bytes: number
+  text: string
+}
+
+/**
+ * 一次 GET 的最小面。用例替身它，才能把状态码、重试次数、正文喂成确定值而不必真起一台服务器；
+ * `maxBytes` 一并交出去是刻意的——超限要在链路上就断掉，不是先进内存再判。
+ */
+export type MockShareUrlGet = (url: string, options: { signal?: AbortSignal; maxBytes: number }) =>
+  Promise<MockShareUrlResponse>
+
+export interface MockShareUrlRuntime {
+  signal?: AbortSignal
+  get?: MockShareUrlGet
+  /** 退避等待：默认 `setTimeout`，用例注入替身，免得为了数重试次数真等几秒 */
+  wait?: (ms: number, signal?: AbortSignal) => Promise<void>
+}
+
+/** 退避基数：第 n 次重试等 250ms × 2ⁿ，最多 3 次（C4-4 的「指数退避 ≤3 次」） */
+const MOCK_SHARE_RETRY_BASE_MS = 250
+
+const defaultShareUrlGet: MockShareUrlGet = async (url, { signal, maxBytes }) => {
+  try {
+    const resp = await axios({
+      url,
+      method: 'GET',
+      responseType: 'arraybuffer',
+      // axios 的 `timeout` 覆盖「发出请求到响应体到手」这一段，拆不出连接与读两把尺：
+      // 这里取 60s 那把，10s 的 `MOCK_SHARE_CONNECT_TIMEOUT` 在本期这条链上没有对应的旋钮（已登记）
+      timeout: MOCK_SHARE_READ_TIMEOUT,
+      maxRedirects: MOCK_SHARE_MAX_REDIRECTS,
+      maxContentLength: maxBytes,
+      maxBodyLength: maxBytes,
+      signal,
+      // 状态码先一概收下：404、403、429 是三种不同的话，交给 axios 默认的「非 2xx 即错误」就只剩一句了
+      validateStatus: () => true,
+    })
+    const buffer = Buffer.from(resp.data as ArrayBuffer)
+    return { status: resp.status as number, bytes: buffer.length, text: buffer.toString('utf8') }
+  } catch (err) {
+    throw toShareUrlError(err, signal)
+  }
+}
+
+function waitShareRetry(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(shareAbortError())
+      return
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    function onAbort() {
+      clearTimeout(timer)
+      reject(shareAbortError())
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+/**
+ * URL 侧的失败仍然走 `toShareError` 那一张 errno 表（「连不上」的归因空间两边是同一套），
+ * 这里只补 axios 自己造的三个码：
+ * 取消（`ERR_CANCELED`）必须原样变回 AbortError，否则界面会显示一句让用户去查网络的话；
+ * 超限断流要说成体积上限；跟随上限要说成连不上。
+ */
+export function toShareUrlError(err: unknown, signal?: AbortSignal): MockError {
+  if (err instanceof MockError) return err
+  abortIfRequested(signal)
+  const code = String((err as NodeJS.ErrnoException)?.code ?? '')
+  if (code === 'ERR_CANCELED') throw shareAbortError()
+  if (code === 'ERR_BAD_RESPONSE' && String((err as Error)?.message ?? '').includes('maxContentLength')) {
+    return new MockError('sceneTooLargeForCloud', shareErrorDetailOf('read', `limit=${MOCK_SHARE_MAX_SCENE_BYTES}`))
+  }
+  if (code === 'ERR_FR_TOO_MANY_REDIRECTS') {
+    return new MockError('remoteUnreachable', shareErrorDetailOf('read', `redirects=${MOCK_SHARE_MAX_REDIRECTS}`))
+  }
+  return toShareError(err, { stage: 'read' })
+}
+
+/**
+ * 状态码 → 码。矩阵要求「URL 404」与「URL 不可达」分开报，所以这里不能一把归成 unreachable。
+ * 3xx 只剩「跟到上限还没落地」这一种，那是链路问题不是答案问题，归 unreachable 并因此重试一次也算合理：
+ * CDN 那一跳偶尔配不上对，代价是一句「稍后再试」而不是三秒。
+ */
+function judgeShareUrlStatus(status: number): MockError | null {
+  const evidence = (code: MockShareCode) => new MockError(code, shareErrorDetailOf('read', `status=${status}`))
+  if (status >= 200 && status < 300) return null
+  if (status === 404 || status === 410) return evidence('remoteNotFound')
+  if (status === 401 || status === 403) return evidence('remoteForbidden')
+  if (status >= 300 && status < 400) return evidence('remoteUnreachable')
+  if (status === 429 || status >= 500) return evidence('remoteUnreachable')
+  // 其余 4xx：对方答了，但答的不是这个客户端要的东西——和「返回的是一段 HTML」是同一格
+  return evidence('remoteShapeUnknown')
+}
+
+/**
+ * 形态判定（C4-2 的固定顺序）仍在 `unwrapShareRemoteText` 里，这一处只补 C5 要的那个本地阶段。
+ * 不带 `status=`：能走到这里的必然是 2xx，状态码已经没有信息量，而 detail 整条只受 `describeValue`
+ * 那 32 字符的尺管——两个都塞就会把更有用的那个 `head=` 挤掉。
+ */
+function unwrapShareUrlBody(text: string): string {
+  try {
+    return unwrapShareRemoteText(text)
+  } catch (err) {
+    const shareErr = toShareError(err, { stage: 'read' })
+    throw new MockError(shareErr.code, shareErrorDetailOf('read', shareErr.detail))
+  }
+}
+
+/**
+ * 取回订阅地址指向的那一个包（C4-1：只有读，本产品不提供任何写 URL 的能力）。
+ *
+ * URL 原样交给 `get`，一次都不重新编码：`new URL()` 只用来认协议，规范化它会吃掉 `%20` 与 `+` 的差别，
+ * 而那种差别正是这类功能最常见的 404 原因（9.2）。
+ * 重试只认 `remoteUnreachable` 这一类码：404、403、体积超限、形态不认识都不会因为再问一遍就变好。
+ */
+export async function readShareUrlPack(url: string, runtime: MockShareUrlRuntime = {}):
+  Promise<MockShareRestorePayload> {
+  let protocol = ''
+  try {
+    protocol = new URL(url).protocol
+  } catch {
+    throw new MockError('remotePathMissing', shareErrorDetailOf('list', 'url unparseable'))
+  }
+  if (protocol !== 'https:' && protocol !== 'http:') {
+    // 只带协议出来：地址里可能藏着口令，detail 会进响应体也会被界面原样摊出来
+    throw new MockError('remotePathMissing', shareErrorDetailOf('list', `scheme=${protocol}`))
+  }
+  const get = runtime.get ?? defaultShareUrlGet
+  const wait = runtime.wait ?? waitShareRetry
+  let attempt = 0
+  for (;;) {
+    abortIfRequested(runtime.signal)
+    let res: MockShareUrlResponse = null
+    let failure: MockError = null
+    try {
+      res = await get(url, { signal: runtime.signal, maxBytes: MOCK_SHARE_MAX_SCENE_BYTES })
+      failure = judgeShareUrlStatus(res.status)
+    } catch (err) {
+      failure = toShareUrlError(err, runtime.signal)
+    }
+    if (failure != null) {
+      if (failure.code !== 'remoteUnreachable' || attempt >= MOCK_SHARE_GET_RETRIES) throw failure
+      await wait(MOCK_SHARE_RETRY_BASE_MS * 2 ** attempt, runtime.signal)
+      attempt += 1
+      continue
+    }
+    // 替身报的字节数兜底：真跑时 `maxContentLength` 已在链路上断掉，走不到这一句
+    if (res.bytes > MOCK_SHARE_MAX_SCENE_BYTES) {
+      throw new MockError('sceneTooLargeForCloud',
+        shareErrorDetailOf('read', `bytes=${res.bytes} limit=${MOCK_SHARE_MAX_SCENE_BYTES}`))
+    }
+    const text = unwrapShareUrlBody(res.text)
+    return { text, bytes: bytesOf(text) }
   }
 }
