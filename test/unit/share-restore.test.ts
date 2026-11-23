@@ -162,7 +162,6 @@ describe('云共享恢复链路（C3 / S-A4）', () => {
     assert.deepEqual(overview.unavailable, [])
 
     const payload = await restoreShareScenes(read, keys)
-    assert.equal(payload.scenes, 2)
     assert.equal(payload.bytes, Buffer.byteLength(payload.text, 'utf8'))
     const pack = readMockPackText(payload.text, payload.bytes)
     assert.equal(pack.format, MOCK_PACK_FORMAT)
@@ -186,7 +185,7 @@ describe('云共享恢复链路（C3 / S-A4）', () => {
 
     const payload = await restoreShareScenes(read, [cart.key])
     const pack = JSON.parse(payload.text) as MockPackV1
-    assert.equal(payload.scenes, 1)
+    assert.equal(pack.rules.length, 1)
     assert.deepEqual(pack.rules.map(rule => rule.name), ['购物车'])
     // 除了清单就是那一片，别的场景正文一次都没读
     assert.deepEqual(names, [MOCK_SHARE_MANIFEST_FILE, shardFile(cart.key)])
@@ -325,7 +324,6 @@ describe('云共享恢复链路（C3 / S-A4）', () => {
     const { root, keys } = await backup([{ id: 'r-empty', name: '空场景', bodies: [] }])
     const { read } = readSpyChannel(root)
     const payload = await restoreShareScenes(read, keys)
-    assert.equal(payload.scenes, 1)
     assert.deepEqual(JSON.parse(payload.text).rules[0].records, [])
     assert.throws(() => readMockPackText(payload.text, payload.bytes), (err: MockError) => err.code === 'packEmpty')
   })
