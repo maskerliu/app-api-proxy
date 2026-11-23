@@ -21,12 +21,16 @@
              所以 cell 自带的那份下留白归沟道管。配额那句留在整行宽度上而不是缩进进值列：值列比内容区窄 93px，
              它在两种语言里都会多绕一行。 -->
         <div class="import-block" :class="fileNote ? 'has-note' : ''">
-          <van-cell class="import-file-cell" :title="$t('mock.import.fileLabel')" :border="false" center>
+          <van-cell class="import-file-cell" :title="remote == null ? $t('mock.import.fileLabel') : $t('mock.import.remoteLabel')"
+            :border="false" center>
             <template #value>
               <div class="import-control-main">
-                <span class="import-file truncate" :class="{ 'is-empty': file == null }"
-                  v-tip="file?.name ?? $t('mock.import.noFile')">{{ file?.name ?? $t('mock.import.noFile') }}</span>
-                <van-button class="import-pick" size="small" plain :disabled="busy || writing" @click="onPickFile">
+                <span class="import-file truncate" :class="{ 'is-empty': sourceLabel === '' }"
+                  v-tip="sourceLabel || $t('mock.import.noFile')">{{ sourceLabel || $t('mock.import.noFile') }}</span>
+                <!-- 输入源在别处已经定下来的时候不再给「选择文件」：那一格换成远端的名字，
+                     按钮留着等于给用户第二条路径去改他已经勾好的远端内容 -->
+                <van-button v-if="remote == null" class="import-pick" size="small" plain
+                  :disabled="busy || writing" @click="onPickFile">
                   {{ $t('mock.import.pickFile') }}
                 </van-button>
               </div>
@@ -35,7 +39,7 @@
           <!-- 包级失败与条数上限都只由「这个文件」决定，两者也互斥：读不出文件就没有预览数字。
                包级失败留在原地而不是弹 toast：用户要对着同一行改成什么才能再试一次 -->
           <div v-if="fileNote === 'error'" class="import-help is-error">
-            <span class="import-help-title">{{ $t('mock.import.fileProblem') }}</span>
+            <span class="import-help-title">{{ remote == null ? $t('mock.import.fileProblem') : $t('mock.import.remoteProblem') }}</span>
             <span>{{ packError }}</span>
           </div>
           <div v-else-if="fileNote === 'quota'" class="import-help" :class="{ 'is-reject': quotaReject }">{{ quotaText }}</div>
@@ -135,16 +139,18 @@
 </template>
 
 <script lang="ts" setup>
-import { cancelMockPackImport, enableMockRecords, importMockPack, previewMockPack } from '@shared'
+import { cancelMockPackImport, enableMockRecords } from '@shared'
 import type {
   MockPackConflict, MockPackImportMode, MockPackImportResult, MockPackImportOptions,
   MockPackIssue, MockPackPreviewResult, MockPackConflictStrategy,
 } from '@shared/mock.pack'
-import { MOCK_PACK_CODES } from '@shared/mock.errors'
+import { MOCK_PACK_CODES, MOCK_SHARE_CODES } from '@shared/mock.errors'
 import { showConfirmDialog, showNotify } from 'vant'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pickPackFile } from '../../../common/pack-file'
+import type { MockImportSource } from './import-source'
+import { fileImportSource } from './import-source'
 import { normalizeErrorText } from './save-error'
 
 const show = defineModel<boolean>('show', { required: true })
@@ -154,7 +160,12 @@ const props = withDefaults(defineProps<{
   ruleName?: string
   /** 「查看场景」要有宿主接得住（切到规则管理器并选中那条场景）；接不住的宿主把它关掉 */
   canGoto?: boolean
-}>(), { ruleId: null, ruleName: '', canGoto: true })
+  /**
+   * 给了这一项就等于「输入源已经在别处选好」：文件名那一行不再给「选择文件」的按钮，
+   * 剩下的两态、冲突三档、写库与取消全走同一条链。云共享的恢复就是这一格的第一个使用方。
+   */
+  remote?: MockImportSource | null
+}>(), { ruleId: null, ruleName: '', canGoto: true, remote: null })
 const emit = defineEmits<{
   (e: 'goto', ruleId: string): void
   (e: 'imported', ruleIds: string[]): void
@@ -192,7 +203,14 @@ const willImportText = computed(() => preview.value == null
   ? t('mock.import.confirmPlain')
   : t('mock.import.confirm', { count: willImportCount.value }))
 
-const canImport = computed(() => file.value != null && preview.value != null && preview.value.quota?.reject !== true)
+/**
+ * 输入源只这一个读法：给了远端就用远端，否则用刚选中的文件。
+ * 后面的预览与写库都从这里取，不在两处各写一遍「是文件还是远端」的判断。
+ */
+const activeSource = computed(() => props.remote ?? (file.value == null ? null : fileImportSource(file.value)))
+const sourceLabel = computed(() => activeSource.value?.label ?? '')
+
+const canImport = computed(() => activeSource.value != null && preview.value != null && preview.value.quota?.reject !== true)
 
 const quotaText = computed(() => {
   const q = preview.value?.quota
@@ -274,10 +292,11 @@ const enableSummary = computed(() => {
 interface DetailRow { where: string, text: string, tip: string }
 interface DetailGroup { key: string, title: string, total: number, rows: DetailRow[], more: number }
 
-/** 码表里的码走 mock.pack 那块文案，其余（例如服务端给的原始消息）照原文显示 */
+/** 码表里的码走文案块（包内的走 mock.pack，远端取回那批走 mock.share），其余（例如服务端给的原始消息）照原文显示 */
 function codeText(code?: string, detail?: string): string {
-  const known = code != null && (MOCK_PACK_CODES as readonly string[]).includes(code)
-  const text = known ? t(`mock.pack.${code}`) : (code ?? '')
+  const pack = code != null && (MOCK_PACK_CODES as readonly string[]).includes(code)
+  const share = code != null && (MOCK_SHARE_CODES as readonly string[]).includes(code)
+  const text = pack ? t(`mock.pack.${code}`) : share ? t(`mock.share.${code}`) : (code ?? '')
   return detail == null || detail === '' ? text : `${text}（${detail}）`
 }
 
@@ -355,12 +374,14 @@ watch(show, (open) => {
   result.value = null
   packError.value = ''
   cancelSent.value = false
+  // 远端内容在别处已经勾好，没有「选文件」那一步来触发预览：弹窗一开就地算一次
+  if (props.remote != null) void runPreview()
 })
 
 // 预览的口径跟着模式与目标场景变（quota、冲突数、建议名都是），换了就重算一次；
 // 冲突策略不改预览数字，所以它不在这里的依赖里
 watch([mode, () => props.ruleId], () => {
-  if (show.value && file.value != null) runPreview()
+  if (show.value && activeSource.value != null) runPreview()
 })
 
 async function onPickFile() {
@@ -386,11 +407,13 @@ function options(): MockPackImportOptions {
  * 这里不假装「切个模式只是改个显示」。silentError：失败由 packError 就地说明，不弹 toast。
  */
 async function runPreview() {
+  const source = activeSource.value
+  if (source == null) return
   busy.value = true
   preview.value = null
   packError.value = ''
   try {
-    preview.value = await previewMockPack(file.value, options(), { silentError: true })
+    preview.value = await source.preview(options())
   } catch (err) {
     packError.value = failureText(err)
   } finally {
@@ -399,10 +422,12 @@ async function runPreview() {
 }
 
 async function onImport() {
+  const source = activeSource.value
+  if (source == null) return
   writing.value = true
   cancelSent.value = false
   try {
-    const imported = await importMockPack(file.value, options(), { silentError: true })
+    const imported = await source.import(options())
     result.value = imported
     emit('imported', imported.ruleIds)
   } catch (err) {

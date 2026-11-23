@@ -16,6 +16,7 @@
         </van-field>
       </van-cell-group>
       <data-backup />
+      <mock-cloud-share v-if="!isWeb" />
       <version-theme />
       <client-mgr />
     </div>
@@ -28,6 +29,7 @@ import { useRouter } from 'vue-router'
 import { scrollOptions } from '../../common/scroll'
 import ClientMgr from './ClientMgr.vue'
 import DataBackup from './DataBackup.vue'
+import MockCloudShare from './MockCloudShare.vue'
 import SysInfo from './SysInfo.vue'
 import VersionTheme from './VersionTheme.vue'
 
