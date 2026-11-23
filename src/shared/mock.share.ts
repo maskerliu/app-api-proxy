@@ -173,7 +173,9 @@ export function shareSceneDigestOf(shards: MockShareShard[], digestOf: (source: 
 
 /**
  * 未变即跳过的判定单源在此：只比场景级 sha1，因为它已经把每片的字节数与顺序都吃进去了。
- * 比较的对象是上一版 manifest 里同 key 那一项——改名不换 sha1（名字不在正文里），换机不换 sha1。
+ * 比较的对象是上一版 manifest 里同 key 那一项。
+ * 改名会重传那一个场景：规则名在单场景包的正文里（`rules[0].name`），换了名字字节就换了；
+ * 换 key 的仍然只有 `_id`，所以「网盘里旧场景文件变成孤儿副本」那一格依旧由构造消掉。换机不换 sha1。
  */
 export function shareSkipsUnchanged(prev: MockShareSceneEntry | undefined, sha1: string): boolean {
   return MOCK_SHARE_SKIP_UNCHANGED && prev != null && prev.sha1 === sha1

@@ -97,6 +97,16 @@ export interface MockPackText extends MockPackMeta {
   content: string
 }
 
+/** 单场景包拆成的三段：拼回去必须逐字节等于 `assembleMockPack` 的产物，见 `readMockPackSceneParts` */
+export interface MockPackSceneParts {
+  /** 信封 + 规则头，到 `"records":[` 为止 */
+  before: string
+  /** 两条右括号：关掉 records 数组与整篇文档 */
+  after: string
+  /** 逐条记录的 JSON 文本，顺序即包内顺序 */
+  records: string[]
+}
+
 function toPackRecord(record: ProxyMock.MockRecord, options: MockPackExportOptions): MockPackRecord {
   const packed: MockPackRecord = {
     id: record.id ?? null,
@@ -132,15 +142,18 @@ async function resolveRules(source: MockPackSource, options: MockPackExportOptio
  */
 async function writeMockPack(source: MockPackSource, options: MockPackExportOptions,
   sink: MockPackSink, appVersion?: string,
-  onProgress?: (p: MockPackExportProgress) => void): Promise<MockPackMeta> {
+  onProgress?: (p: MockPackExportProgress) => void, stamp = true): Promise<MockPackMeta> {
   const rules = await resolveRules(source, options)
   // 总数在场景解析完才知道，先报一次 0/N：界面据此决定这轮进度是「N 分之一」还是只有「正在导出」
   onProgress?.({ rulesDone: 0, ruleTotal: rules.length, recordCount: 0 })
   const header: Record<string, unknown> = {
     format: MOCK_PACK_FORMAT,
     version: MOCK_PACK_VERSION,
-    exportedAt: Date.now(),
   }
+  // `stamp` 关掉的是「这份包是哪一刻打的」这一行。本地导出留着它，云备份去掉它：
+  // 远端的字节数必须是内容的纯函数，否则每次时间戳都变，「内容未变即跳过」永远不成立。
+  // 备份时刻由 manifest 的 `createdAt` 回答（PRD 6.2），不在正文里再放一份会漂移的读数。
+  if (stamp) header.exportedAt = Date.now()
   if (appVersion != null) header.appVersion = appVersion
 
   // 切掉 stringify 的右括号，接着往同一个对象里补数组字段
@@ -183,6 +196,24 @@ export async function assembleMockPack(source: MockPackSource, options: MockPack
     write: async (text) => { chunks.push(text) }
   }, appVersion)
   return { content: chunks.join(''), ...meta }
+}
+
+/**
+ * 单场景包的部件级出口（S-A3）：`before` + 各条记录 JSON 用逗号相连 + `after` 就是合法包文本，
+ * 云通道据此把超限场景切成「每片自己都是一个合法单场景包」（PRD 6.1），而不是按字节把 JSON 劈成两段。
+ * 走的是 `writeMockPack` 同一段循环，脱敏、变体、录制来源那些口径因此不可能与本地导出走偏。
+ * 只有单场景包能这么切：多场景包的 `after` 里带着「下一个场景」的信封，切不动。
+ */
+export async function readMockPackSceneParts(source: MockPackSource,
+  options: MockPackExportOptions): Promise<MockPackSceneParts> {
+  const fragments: string[] = []
+  const meta = await writeMockPack(source, { ...options, scope: 'rule' }, {
+    write: async (text) => { fragments.push(text) }
+  }, undefined, undefined, false)
+  if (meta.ruleCount !== 1) throw new MockError('packModeUnsupported', `scenes=${meta.ruleCount}`)
+  // 片段顺序由 `writeMockPack` 决定：信封、规则头，然后「逗号 + 记录」交替，最后两个右括号
+  const records = fragments.slice(2, -2).filter(text => text !== ',')
+  return { before: fragments[0] + fragments[1], after: fragments.slice(-2).join(''), records }
 }
 
 /**

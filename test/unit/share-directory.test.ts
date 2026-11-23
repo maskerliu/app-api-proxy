@@ -2,12 +2,28 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'path'
+import { registerHooks } from 'node:module'
 import { after, describe, it } from 'node:test'
 import { MockError } from '@shared/mock.errors'
 import {
   MOCK_SHARE_MANIFEST_FILE, MOCK_SHARE_SCENE_DIR, shareSceneKeyOf, shareShardFileOf,
 } from '@shared/mock.share'
-import { createDirectoryShareChannel, readShareVerified, toShareError } from '@main/service/mock.share'
+
+// 目录通道与备份执行器同住 `mock.share.ts`，而这个文件现在会 import 包组装链（`mock.pack.service`），
+// 那条链经 constants 引用 electron。通道本身不碰 electron，单测环境给一个最小替身即可。
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === 'electron') {
+      return {
+        url: 'data:text/javascript,export const app={getPath:()=>"",getVersion:()=>"0.0.0-test"}',
+        shortCircuit: true,
+      }
+    }
+    return nextResolve(specifier, context)
+  },
+})
+
+const { createDirectoryShareChannel, readShareVerified, toShareError } = await import('@main/service/mock.share')
 
 /**
  * 这一批走真实文件系统（`os.tmpdir()` 下的临时目录，绝不碰用户数据目录），要证的正是

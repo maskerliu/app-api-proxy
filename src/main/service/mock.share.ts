@@ -1,11 +1,20 @@
 import { constants } from 'node:fs'
 import { access, mkdir, open, readFile, rename, rm, stat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
+import { hostname } from 'node:os'
 import path from 'path'
 import { MockError } from '@shared/mock.errors'
 import type { MockShareCode } from '@shared/mock.errors'
-import { MOCK_SHARE_SCENE_DIR, shareErrorDetailOf } from '@shared/mock.share'
-import type { MockShareStage } from '@shared/mock.share'
+import {
+  MOCK_SHARE_KEY_HEX, MOCK_SHARE_MANIFEST_FILE, MOCK_SHARE_MAX_FILE_BYTES, MOCK_SHARE_MAX_SCENE_BYTES,
+  MOCK_SHARE_MAX_SCENES, MOCK_SHARE_MAX_SHARDS, MOCK_SHARE_SCENE_DIR,
+  assertShareManifest, buildShareManifest, planShareShards, shareErrorDetailOf, shareSceneDigestOf,
+  shareSceneKeyOf, shareShardFileOf, shareShardBytesOf, shareSkipsUnchanged,
+} from '@shared/mock.share'
+import type { MockShareManifest, MockShareSceneEntry, MockShareSceneInput, MockShareShard, MockShareStage } from '@shared/mock.share'
+import type { ProxyMock } from '@shared/proxy.models'
+import { readMockPackSceneParts } from './mock.pack.service'
+import type { MockPackSceneParts, MockPackSource } from './mock.pack.service'
 
 /**
  * 远端通道（PRD C1 / S-A1）：本期只有目录通道，但接口按「读侧 / 写侧」分开——
@@ -255,4 +264,335 @@ export async function readShareVerified(read: MockShareReadChannel, name: string
       shareErrorDetailOf('verify', `sha1=${result.sha1.slice(0, 8)} want=${sha1.slice(0, 8)}`))
   }
   return result.text
+}
+
+/**
+ * 备份执行器（PRD C2 / S-A3）。三件事在这段里定死：范围恒为全部场景（C2-1，不给调用方留 ruleId 的口子）、
+ * 脱敏恒开（C2-2，界面没有关闭项，这里也就不放一个能关掉的入参）、manifest 是唯一的提交点
+ * （C2-3：场景文件先落、清单最后换）。
+ */
+
+/** 上一版清单留一份：上限三问第 1 行的「远端只留最新提交 + 一份 .bak」 */
+const MOCK_SHARE_MANIFEST_BAK = `${MOCK_SHARE_MANIFEST_FILE}.bak`
+
+function bytesOf(text: string): number {
+  return Buffer.byteLength(text, 'utf8')
+}
+
+/** 计划里的一片：正文只在计划阶段持有，写完即释放——一片的大小上限就是那个 8MB 目标 */
+export interface MockShareShardDraft extends MockShareShard {
+  text: string
+}
+
+/** 一个场景在本次备份里的计划：`sha1` 与上一版清单同 key 那一项比对，就是「未变即跳过」的判定 */
+export interface MockShareScenePlan {
+  key: string
+  name: string
+  records: number
+  /** 被拒（超上限）时是空数组 */
+  shards: MockShareShardDraft[]
+  sha1: string
+  /** 没备份成的原因。只有超上限这一种走这条路，其余失败要抛出去打断整次备份（C2-5） */
+  rejected?: { code: MockShareCode; detail: string }
+}
+
+export interface MockShareBackupProgress {
+  scenesDone: number
+  sceneTotal: number
+  records: number
+  /** 本次真正写出去的字节：跳过的场景不计，那才是「月度上传流量 1GB」那一问要看的数 */
+  writtenBytes: number
+  skipped: number
+  failed: number
+}
+
+/** 本次没备份成的场景，供结果页那一行「N 个场景未备份」（C2-5 / C2-8） */
+export interface MockShareBackupFailure {
+  key: string
+  name: string
+  records: number
+  code: MockShareCode
+  detail: string
+}
+
+export interface MockShareBackupResult {
+  /** 远端此刻真正存得住内容的场景数：超限失败且上次也没备份成的不计 */
+  scenes: number
+  records: number
+  bytes: number
+  writtenBytes: number
+  /** 内容未变而跳过的场景数（C2-4） */
+  skipped: number
+  failed: MockShareBackupFailure[]
+  createdAt: number
+  device: string
+}
+
+export interface MockShareBackupRuntime {
+  signal?: AbortSignal
+  onProgress?: (p: MockShareBackupProgress) => void
+  /** 备份时刻：注入只给用例断言 manifest 里那个读数用 */
+  now?: number
+}
+
+export interface MockShareBackupEstimate {
+  /** 本地场景总数（受 300 上限约束的就是这个数） */
+  scenes: number
+  records: number
+  /** 全部能备份的场景的正文合计，与远端在管体积同一把尺 */
+  bytes: number
+  /** 其中真正会写出去的那部分：未变的场景已经跳过 */
+  writtenBytes: number
+  skipped: number
+  /** 超上限、这次不会备份出去的场景名 */
+  oversize: string[]
+}
+
+/**
+ * 按记录边界切片：一片的字节数 = 信封 + 各条记录 + 记录之间的逗号，即 `shareShardBytesOf` 那把尺。
+ * 单条记录本身超过 8MB 时它独占一片，那一片就比目标大——一条记录没法从中间劈开，
+ * 而 32MB 的场景硬上限仍在前面兜住。
+ */
+function planShareSceneShards(parts: MockPackSceneParts, key: string):
+  { shards: MockShareShardDraft[]; rejected?: { code: MockShareCode; detail: string } } {
+  const envelopeBytes = bytesOf(parts.before) + bytesOf(parts.after)
+  const recordBytes = parts.records.map(bytesOf)
+  const total = shareShardBytesOf(envelopeBytes, recordBytes)
+  if (planShareShards(total).rejected) {
+    return { shards: [], rejected: { code: 'sceneTooLargeForCloud', detail: `bytes=${total} limit=${MOCK_SHARE_MAX_SCENE_BYTES}` } }
+  }
+  const groups: number[][] = []
+  for (let start = 0; start < recordBytes.length;) {
+    let end = start
+    let used = envelopeBytes + recordBytes[start]
+    while (end + 1 < recordBytes.length && used + 1 + recordBytes[end + 1] <= MOCK_SHARE_MAX_FILE_BYTES) {
+      end++
+      used += 1 + recordBytes[end]
+    }
+    groups.push([start, end + 1])
+    start = end + 1
+  }
+  if (groups.length > MOCK_SHARE_MAX_SHARDS) {
+    // 这里拦的是按记录边界切出来的**实际**片数：条数不多但每条都很大时，`planShareShards` 按总体积
+    // 换算出的 4 片装不下。宁可拒这一个场景，也不让某一片悄悄超过 8MB——那正是分片要绕开的东西。
+    return { shards: [], rejected: { code: 'sceneTooLargeForCloud', detail: `shards=${groups.length} limit=${MOCK_SHARE_MAX_SHARDS}` } }
+  }
+  // 空场景也要留一片：`records:[]` 是唯一能区分「这个场景是空的」和「这个场景没备份」的形状
+  const texts = groups.length === 0
+    ? [`${parts.before}${parts.after}`]
+    : groups.map(([from, to]) => `${parts.before}${parts.records.slice(from, to).join(',')}${parts.after}`)
+  return {
+    shards: texts.map((text, index) => ({ file: shareShardFileOf(key, index), sha1: digestOf(text), bytes: bytesOf(text), text }))
+  }
+}
+
+/** 单场景的计划：走 `readMockPackSceneParts`，与本地导出同一段循环，脱敏与变体口径不可能在这里走偏 */
+export async function planMockShareScene(source: MockPackSource, rule: ProxyMock.MockRule): Promise<MockShareScenePlan> {
+  const parts = await readMockPackSceneParts(source, { scope: 'rule', ruleId: rule._id, redact: true })
+  const key = shareSceneKeyOf(digestOf(rule._id))
+  const { shards, rejected } = planShareSceneShards(parts, key)
+  return {
+    key,
+    name: rule.name ?? '',
+    records: parts.records.length,
+    shards,
+    sha1: shareSceneDigestOf(shards, digestOf),
+    rejected,
+  }
+}
+
+/** 清单正文：`null` 只表示「目录读得动但没有清单」（`remoteNotFound`），目录连不上照常抛 */
+async function readManifestText(channel: MockShareReadChannel, signal?: AbortSignal): Promise<string | null> {
+  try {
+    return (await channel.read(MOCK_SHARE_MANIFEST_FILE, { signal })).text
+  } catch (err) {
+    const shareErr = toShareError(err, { stage: 'read', missing: 'remoteNotFound' })
+    if (shareErr.code === 'remoteNotFound') return null
+    throw shareErr
+  }
+}
+
+function parseShareManifest(text: string): MockShareManifest {
+  let value: unknown
+  try {
+    value = JSON.parse(text)
+  } catch {
+    throw new MockError('remoteCorrupted', shareErrorDetailOf('read', 'manifest is not json'))
+  }
+  return assertShareManifest(value)
+}
+
+/** 严格读清单（恢复链路用）：坏清单就是坏清单，不许退化成「这个目录里还没有备份」 */
+export async function readShareManifest(channel: MockShareReadChannel, signal?: AbortSignal): Promise<MockShareManifest | null> {
+  const text = await readManifestText(channel, signal)
+  return text == null ? null : parseShareManifest(text)
+}
+
+/**
+ * 备份侧读上一版清单：坏清单按「没有可比对的版本」处理，但正文照旧留着当 `.bak`——
+ * 用户手工改坏的那份文件是我们即将覆盖掉的唯一副本。
+ * `remoteVersionTooNew` 不在放宽之列：拿旧格式的清单去覆盖新格式，等于把别人机器上的备份降级。
+ */
+async function readPrevManifestForBackup(channel: MockShareReadChannel, signal?: AbortSignal):
+  Promise<{ text: string | null; scenes: Map<string, MockShareSceneEntry> }> {
+  const text = await readManifestText(channel, signal)
+  if (text == null) return { text: null, scenes: new Map() }
+  try {
+    return { text, scenes: new Map(parseShareManifest(text).scenes.map(entry => [entry.key, entry])) }
+  } catch (err) {
+    const shareErr = toShareError(err, { stage: 'read' })
+    if (shareErr.code === 'remoteVersionTooNew') throw shareErr
+    return { text, scenes: new Map() }
+  }
+}
+
+export async function backupMockScenesToShare(source: MockPackSource, channel: MockShareDirectoryChannel,
+  runtime: MockShareBackupRuntime = {}): Promise<MockShareBackupResult> {
+  abortIfRequested(runtime.signal)
+  await channel.assertWritable('write')
+  const { text: prevText, scenes: prev } = await readPrevManifestForBackup(channel, runtime.signal)
+  const rules = await source.listRules()
+  if (rules.length > MOCK_SHARE_MAX_SCENES) {
+    throw new MockError('shareSceneLimit', `scenes=${rules.length} limit=${MOCK_SHARE_MAX_SCENES}`)
+  }
+  const failed: MockShareBackupFailure[] = []
+  const inputs: MockShareSceneInput[] = []
+  let writtenBytes = 0
+  let skipped = 0
+  let progress: MockShareBackupProgress = {
+    scenesDone: 0, sceneTotal: rules.length, records: 0, writtenBytes: 0, skipped: 0, failed: 0
+  }
+  runtime.onProgress?.(progress)
+
+  for (const rule of rules) {
+    // 取消点放在场景之间：一个场景内部不留断点，否则多片的场景被拦腰取消，
+    // 上一版清单里的 sha1 就对不上新写出去的那几片，读侧只能整场拒读
+    abortIfRequested(runtime.signal)
+    const plan = await planMockShareScene(source, rule)
+    const prevEntry = prev.get(plan.key)
+    if (plan.rejected != null) {
+      failed.push({
+        key: plan.key, name: plan.name, records: plan.records, code: plan.rejected.code, detail: plan.rejected.detail
+      })
+      // 上次备份成功过的话，那份正文仍在远端：清单继续记它，条数记远端那份的，不记本地的新条数
+      inputs.push({
+        key: plan.key, name: plan.name, records: prevEntry?.records ?? 0,
+        shards: prevEntry?.shards ?? [], skipped: { reason: plan.rejected.code, detail: plan.rejected.detail }
+      })
+    } else if (shareSkipsUnchanged(prevEntry, plan.sha1)) {
+      skipped += 1
+      // 连文件名与 sha1 一起沿用上一版：内容没变，一个字节都不必再写（C2-4）
+      inputs.push({ key: plan.key, name: plan.name, records: plan.records, shards: prevEntry?.shards ?? [] })
+    } else {
+      const shards: MockShareShard[] = []
+      for (const draft of plan.shards) {
+        const written = await channel.write(`${MOCK_SHARE_SCENE_DIR}/${draft.file}`, draft.text, runtime.signal)
+        shards.push({ file: draft.file, sha1: written.sha1, bytes: written.bytes })
+        writtenBytes += written.bytes
+      }
+      inputs.push({ key: plan.key, name: plan.name, records: plan.records, shards })
+    }
+    progress = {
+      scenesDone: progress.scenesDone + 1,
+      sceneTotal: rules.length,
+      records: progress.records + plan.records,
+      writtenBytes,
+      skipped,
+      failed: failed.length,
+    }
+    runtime.onProgress?.(progress)
+  }
+
+  const now = runtime.now ?? Date.now()
+  // 机器名哈希：清单要回答「哪台机器备份的」，但真实机器名常带用户名，出本机就得换成一串 hex
+  const device = digestOf(hostname()).slice(0, MOCK_SHARE_KEY_HEX)
+  const manifest = buildShareManifest(inputs, { now, device, digestOf })
+  // 提交点。这两步之间崩溃留下的场景文件比清单新，读侧按 sha1 拒读、重跑一次备份即恢复（C2-3）
+  if (prevText != null) await channel.write(MOCK_SHARE_MANIFEST_BAK, prevText, runtime.signal)
+  await channel.write(MOCK_SHARE_MANIFEST_FILE, JSON.stringify(manifest), runtime.signal)
+
+  let scenes = 0
+  let records = 0
+  let bytes = 0
+  for (const entry of manifest.scenes) {
+    if (entry.shards.length === 0) continue
+    scenes += 1
+    records += entry.records
+    bytes += entry.bytes
+  }
+  return { scenes, records, bytes, writtenBytes, skipped, failed, createdAt: now, device }
+}
+
+/**
+ * 备份前的「预计写入体积」（上限三问第 6 行）。算的是准数，代价是把库序列化一遍：
+ * 不这么算只能报上次备份的体积，而「这次会写多少」正是未变即跳过之后唯一用户想知道的数。
+ * 内存峰值与备份相同——一次只持有一个场景的正文。
+ */
+export async function estimateShareBackup(source: MockPackSource, channel: MockShareReadChannel):
+  Promise<MockShareBackupEstimate> {
+  const { scenes: prev } = await readPrevManifestForBackup(channel)
+  const rules = await source.listRules()
+  let records = 0
+  let bytes = 0
+  let writtenBytes = 0
+  let skipped = 0
+  const oversize: string[] = []
+  for (const rule of rules) {
+    const plan = await planMockShareScene(source, rule)
+    records += plan.records
+    if (plan.rejected != null) {
+      oversize.push(plan.name)
+      continue
+    }
+    const sceneBytes = plan.shards.reduce((sum, shard) => sum + shard.bytes, 0)
+    bytes += sceneBytes
+    if (shareSkipsUnchanged(prev.get(plan.key), plan.sha1)) {
+      skipped += 1
+      continue
+    }
+    writtenBytes += sceneBytes
+  }
+  return { scenes: rules.length, records, bytes, writtenBytes, skipped, oversize }
+}
+
+/** 正在进行的那一个备份任务：取消与「查看进度」都从这一份状态出（11.1） */
+interface MockShareBackupSlot {
+  controller: AbortController
+  progress: MockShareBackupProgress
+}
+
+let backupSlot: MockShareBackupSlot | null = null
+
+export function shareBackupProgress(): MockShareBackupProgress | null {
+  return backupSlot == null ? null : { ...backupSlot.progress }
+}
+
+export function cancelShareBackup(): boolean {
+  if (backupSlot == null) return false
+  backupSlot.controller.abort()
+  return true
+}
+
+/** 单任务槽：形态同 `MockPackService.importTask`——第二次触发直接拒，不排队 */
+export async function runShareBackup(source: MockPackSource, channel: MockShareDirectoryChannel):
+  Promise<MockShareBackupResult> {
+  if (backupSlot != null) {
+    const running = backupSlot.progress
+    throw new MockError('shareInProgress', `scenes=${running.scenesDone}/${running.sceneTotal}`)
+  }
+  const controller = new AbortController()
+  backupSlot = {
+    controller,
+    progress: { scenesDone: 0, sceneTotal: 0, records: 0, writtenBytes: 0, skipped: 0, failed: 0 }
+  }
+  try {
+    return await backupMockScenesToShare(source, channel, {
+      signal: controller.signal,
+      onProgress: (p) => {
+        if (backupSlot != null) backupSlot.progress = p
+      }
+    })
+  } finally {
+    backupSlot = null
+  }
 }
