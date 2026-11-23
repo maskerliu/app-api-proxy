@@ -1,3 +1,5 @@
+import type { MockShareConfig } from './mock.share'
+
 export enum BizCode {
   SUCCESS = 8000,
   FAIL = 9000,
@@ -111,6 +113,7 @@ export interface LocalServerConfig {
   theme: string
   locales: string
   onboarded?: boolean // 是否已完成接入向导
+  mockShare?: MockShareConfig // Mock 数据云共享：默认关闭，配置残缺时按关处理
 }
 
 export interface Version {

@@ -49,6 +49,127 @@ export const MOCK_SHARE_MAX_SCENE_BYTES = MOCK_SHARE_MAX_FILE_BYTES * MOCK_SHARE
 /** 场景级摘要的材料前缀：换前缀等于换算法，老 manifest 的 sha1 会整体失效而不是悄悄改成另一种算法 */
 export const MOCK_SHARE_DIGEST_TAG = 'appapi-mock-share-scene-v1'
 
+/**
+ * 用户在设置页选的那一种远端（PRD 10 节第 1 项）。`off` 是默认值，也是「除版本检查外零对外请求」
+ * 那条承诺的落点（C6/AC-C-11）：拦在配置这一层，而不是只把界面按钮藏起来。
+ */
+export const MOCK_SHARE_CHANNELS = ['off', 'dir', 'url'] as const
+export type MockShareChannel = typeof MOCK_SHARE_CHANNELS[number]
+
+export interface MockShareConfig {
+  channel: MockShareChannel
+  /** `channel='dir'` 时的远端目录；不自动创建（C1-2） */
+  dir?: string
+  /** `channel='url'` 时订阅的地址，只读 */
+  url?: string
+}
+
+/**
+ * 配置文件里的这一段是用户能手工编辑的，所以归一化不信任读到的值：认不出的通道一律回 `off`。
+ * 宁可让用户多点一次「选择目录」，也不要拿着一个残缺配置去发请求或写盘——
+ * 缺目录时的 `remotePathMissing` 与「没开」是两种交代，这里就先分开。
+ */
+export function normalizeMockShareConfig(raw: unknown): MockShareConfig {
+  const value = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+  const channel = MOCK_SHARE_CHANNELS.includes(value.channel as MockShareChannel)
+    ? value.channel as MockShareChannel : 'off'
+  const config: MockShareConfig = { channel }
+  if (typeof value.dir === 'string' && value.dir.trim() !== '') config.dir = value.dir.trim()
+  if (typeof value.url === 'string' && value.url.trim() !== '') config.url = value.url.trim()
+  return config
+}
+
+/**
+ * 下面几块是主进程交给渲染层的读数（IPC 的载荷，因此与 `MockPackPreviewResult` 同层）。
+ * 放在共享层不是为了复用逻辑，而是因为 `IMainAPI` 的返回类型要能指到它们——
+ * 在 `ipc.api.ts` 里另抄一份同形状的接口，就等于允许两边说法不一致。
+ */
+
+export interface MockShareBackupProgress {
+  scenesDone: number
+  sceneTotal: number
+  records: number
+  /** 本次真正写出去的字节：跳过的场景不计，那才是「月度上传流量 1GB」那一问要看的数 */
+  writtenBytes: number
+  skipped: number
+  failed: number
+}
+
+/** 本次没备份成的场景，供结果页那一行「N 个场景未备份」（C2-5 / C2-8） */
+export interface MockShareBackupFailure {
+  key: string
+  name: string
+  records: number
+  code: MockShareCode
+  detail: string
+}
+
+export interface MockShareBackupResult {
+  /** 远端此刻真正存得住内容的场景数：超限失败且上次也没备份成的不计 */
+  scenes: number
+  records: number
+  bytes: number
+  writtenBytes: number
+  /** 内容未变而跳过的场景数（C2-4） */
+  skipped: number
+  failed: MockShareBackupFailure[]
+  createdAt: number
+  device: string
+}
+
+export interface MockShareBackupEstimate {
+  /** 本地场景总数（受 300 上限约束的就是这个数） */
+  scenes: number
+  records: number
+  /** 全部能备份的场景的正文合计，与远端在管体积同一把尺 */
+  bytes: number
+  /** 其中真正会写出去的那部分：未变的场景已经跳过 */
+  writtenBytes: number
+  skipped: number
+  /** 超上限、这次不会备份出去的场景名 */
+  oversize: string[]
+}
+
+/** C3-1 清单上的一格：不下载正文就能报出来的那几个字段 */
+export interface MockShareSceneSummary {
+  key: string
+  name: string
+  records: number
+  bytes: number
+  /** 恢复这一个场景要按序读几个文件 */
+  shards: number
+}
+
+/** 恢复前的远端概览（C3-1）：只列读得到的，读不到的另说一格 */
+export interface MockShareRemoteOverview {
+  scenes: MockShareSceneSummary[]
+  /**
+   * 清单上列了名字却没有正文的场景（上次备份被拒的那几个）。
+   * 下面的 `records`/`bytes` 只统计可恢复的场景：被拒那一项记的条数是「本来想备份多少条」，
+   * 把它算进「远端有 N 条可恢复」是虚报。
+   */
+  unavailable: { key: string; name: string; reason: string }[]
+  records: number
+  bytes: number
+  /** 上次备份时间与来源设备代号（6.2：这两个值只在清单里，正文里没有第二个口径） */
+  createdAt?: number
+  device?: string
+}
+
+/**
+ * 「测试连接」的回执。两种通道的信息量不同：目录那边有清单，能报场景数与上次备份信息；
+ * URL 那边只有一个正文，没有清单可数，所以那几项是 `undefined` 而不是 0——
+ * 「没数过」与「远端是空的」在这一格上必须区分得开。
+ */
+export interface MockShareCheckResult {
+  channel: MockShareChannel
+  bytes: number
+  scenes?: number
+  records?: number
+  createdAt?: number
+  device?: string
+}
+
 export interface MockShareShard {
   /** `scenes/` 下的文件名（不带目录前缀），由 `shareShardFileOf` 生成 */
   file: string

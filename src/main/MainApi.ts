@@ -1,13 +1,20 @@
 import { ipcRenderer } from 'electron'
 import type { LocalServerConfig } from '@shared/base.models'
-import type { MockPackExportOptions } from '@shared/mock.pack'
+import type {
+  MockPackExportOptions, MockPackExportProgress, MockPackImportOptions, MockPackImportResult,
+  MockPackPreviewOptions, MockPackPreviewResult,
+} from '@shared/mock.pack'
+import type {
+  MockShareBackupEstimate, MockShareBackupProgress, MockShareBackupResult, MockShareCheckResult,
+  MockShareRemoteOverview,
+} from '@shared/mock.share'
 import {
-  IMainAPI, MAIN_API_CMD, SaveFileResult, SaveMockPackResult, SelectSavePathResult,
+  IMainAPI, MAIN_API_CMD, MainCallResult, SaveFileResult, SaveMockPackResult, SelectSavePathResult,
 } from '@shared/ipc.api'
-import type { MockPackExportProgress } from '@shared/mock.pack'
 
 let downloadUpdateListener: ((event: any, ...args: any[]) => void) | null = null
 let exportPackProgressListener: ((event: any, ...args: any[]) => void) | null = null
+let shareProgressListener: ((event: any, ...args: any[]) => void) | null = null
 
 const mainApi: IMainAPI = {
   relaunch() {
@@ -34,6 +41,27 @@ const mainApi: IMainAPI = {
   },
   async exportMockPack(filePath: string, options: MockPackExportOptions): Promise<SaveMockPackResult> {
     return ipcRenderer.invoke(MAIN_API_CMD.ExportMockPack, filePath, options)
+  },
+  async mockShareCheck(): Promise<MainCallResult<MockShareCheckResult>> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockShareCheck)
+  },
+  async mockShareEstimate(): Promise<MainCallResult<MockShareBackupEstimate>> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockShareEstimate)
+  },
+  async mockShareBackup(): Promise<MainCallResult<MockShareBackupResult>> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockShareBackup)
+  },
+  async mockShareCancel(): Promise<boolean> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockShareCancel)
+  },
+  async mockShareOverview(): Promise<MainCallResult<MockShareRemoteOverview>> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockShareOverview)
+  },
+  async mockSharePreview(keys: string[], options: MockPackPreviewOptions): Promise<MainCallResult<MockPackPreviewResult>> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockSharePreview, keys, options)
+  },
+  async mockShareImport(keys: string[], options: MockPackImportOptions): Promise<MainCallResult<MockPackImportResult>> {
+    return ipcRenderer.invoke(MAIN_API_CMD.MockShareImport, keys, options)
   },
   openDevTools(...args: any) {
     ipcRenderer.invoke(MAIN_API_CMD.OpenDevTools, args)
@@ -99,6 +127,19 @@ const mainApi: IMainAPI = {
     if (exportPackProgressListener != null) {
       ipcRenderer.removeListener(MAIN_API_CMD.ExportPackProgress, exportPackProgressListener)
       exportPackProgressListener = null
+    }
+  },
+
+  onMockShareProgress(callback: (progress?: MockShareBackupProgress) => void) {
+    if (shareProgressListener != null) ipcRenderer.removeListener(MAIN_API_CMD.MockShareProgress, shareProgressListener)
+    shareProgressListener = (_, progress: MockShareBackupProgress) => callback(progress)
+    ipcRenderer.on(MAIN_API_CMD.MockShareProgress, shareProgressListener)
+  },
+
+  offMockShareProgress() {
+    if (shareProgressListener != null) {
+      ipcRenderer.removeListener(MAIN_API_CMD.MockShareProgress, shareProgressListener)
+      shareProgressListener = null
     }
   },
 }

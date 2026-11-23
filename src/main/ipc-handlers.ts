@@ -4,11 +4,15 @@ import fse from 'fs-extra'
 import os from 'os'
 import path from 'path'
 import type { Version } from '@shared/base.models'
-import type { MockPackExportOptions } from '@shared/mock.pack'
-import { MAIN_API_CMD, SaveFileResult, SaveMockPackResult, SelectSavePathResult } from '@shared/ipc.api'
+import type {
+  MockPackExportOptions, MockPackImportOptions, MockPackPreviewOptions,
+} from '@shared/mock.pack'
+import { MockError } from '@shared/mock.errors'
+import { MAIN_API_CMD, MainCallResult, SaveFileResult, SaveMockPackResult, SelectSavePathResult } from '@shared/ipc.api'
 import { bizContainer } from './IocContainer'
 import { IOC_TYPES, USER_DATA_DIR } from './constants'
 import type { MockPackService } from './service/mock.pack.service'
+import type { MockShareService } from './service/mock.share.service'
 import { cancelUpdate, runUpdate } from './update.runner'
 import { getAppWindow } from './misc/utils'
 import { saveDialogOptions, toSaveFileName } from './misc/save-path'
@@ -17,6 +21,24 @@ import { saveDialogOptions, toSaveFileName } from './misc/save-path'
 async function showSaveDialog(options: ReturnType<typeof saveDialogOptions>) {
   const win = BrowserWindow.getFocusedWindow()
   return win ? dialog.showSaveDialog(win, options) : dialog.showSaveDialog(options)
+}
+
+/**
+ * 异常跨 IPC 只剩 `message`，而界面文案是按 `MockError.code` 取的（C5「不许统一成一句」）——
+ * 所以这一层负责把码与 detail 摊平成载荷，而不是让它作为一个 reject 出去。
+ * 取消单独占一档：它是用户按的，混进 failed 就会在取消之后弹一句错误（同 `SaveFileResult` 的理由）。
+ * 认不出码的那些不替它编一个远端码——那句确实是没预料到的错。
+ */
+async function shareCall<T>(run: () => Promise<T>): Promise<MainCallResult<T>> {
+  try {
+    return { status: 'ok', data: await run() }
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return { status: 'canceled' }
+    if (err instanceof MockError) {
+      return err.detail == null ? { status: 'failed', code: err.code } : { status: 'failed', code: err.code, detail: err.detail }
+    }
+    return { status: 'failed', detail: err instanceof Error ? err.message : String(err) }
+  }
 }
 
 ipcMain.handle(MAIN_API_CMD.Relaunch, (_) => {
@@ -148,6 +170,31 @@ ipcMain.handle(MAIN_API_CMD.ExportMockPack, async (_, filePath: string, options:
     return { status: 'failed', error: e instanceof Error ? e.message : String(e) }
   }
 })
+
+// 云共享（v1.3 Phase A）走主进程直调，不进 8884 那两个 multipart 端点：那边收的是文件，
+// 而这里要回的是一句「远端此刻答了什么」——错误码与阶段是内容本身，不是日志。
+ipcMain.handle(MAIN_API_CMD.MockShareCheck, () =>
+  shareCall(() => bizContainer.get<MockShareService>(IOC_TYPES.MockShareService).check()))
+
+ipcMain.handle(MAIN_API_CMD.MockShareEstimate, () =>
+  shareCall(() => bizContainer.get<MockShareService>(IOC_TYPES.MockShareService).estimate()))
+
+ipcMain.handle(MAIN_API_CMD.MockShareBackup, () => shareCall(() =>
+  // 进度按场景推，与导出同一形态：一个场景一次，最多几十条消息，不值得再合并节流
+  bizContainer.get<MockShareService>(IOC_TYPES.MockShareService)
+    .backup((progress) => getAppWindow()?.webContents.send(MAIN_API_CMD.MockShareProgress, progress))))
+
+ipcMain.handle(MAIN_API_CMD.MockShareCancel, () =>
+  bizContainer.get<MockShareService>(IOC_TYPES.MockShareService).cancel())
+
+ipcMain.handle(MAIN_API_CMD.MockShareOverview, () =>
+  shareCall(() => bizContainer.get<MockShareService>(IOC_TYPES.MockShareService).overview()))
+
+ipcMain.handle(MAIN_API_CMD.MockSharePreview, (_, keys: string[], options: MockPackPreviewOptions) =>
+  shareCall(() => bizContainer.get<MockShareService>(IOC_TYPES.MockShareService).preview(keys, options)))
+
+ipcMain.handle(MAIN_API_CMD.MockShareImport, (_, keys: string[], options: MockPackImportOptions) =>
+  shareCall(() => bizContainer.get<MockShareService>(IOC_TYPES.MockShareService).import(keys, options)))
 
 ipcMain.handle(MAIN_API_CMD.OpenDevTools, (_, args?: any) => {
   getAppWindow()?.webContents.openDevTools({ mode: 'detach', activate: false })

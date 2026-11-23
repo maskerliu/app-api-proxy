@@ -1,5 +1,6 @@
 import type { LocalServerConfig } from '@shared/base.models'
 import type { Diagnostic } from '@shared/diagnostic.models'
+import { normalizeMockShareConfig } from '@shared/mock.share'
 import { app, nativeTheme } from 'electron'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { inject, injectable } from 'inversify'
@@ -59,6 +60,7 @@ export class CommonService {
       domain: config.domain,
       ips,
       onboarded: config.onboarded === true,
+      mockShare: normalizeMockShareConfig(config.mockShare),
     }
   }
 
@@ -127,6 +129,7 @@ export class CommonService {
     this.serverConfig.ip = config.ip ?? this.serverConfig.ip
     this.serverConfig.protocol = config.protocol ?? this.serverConfig.protocol
     this.serverConfig.onboarded = config.onboarded ?? this.serverConfig.onboarded
+    this.serverConfig.mockShare = normalizeMockShareConfig(config.mockShare)
     try {
       writeFileSync(filePath, JSON.stringify(this.serverConfig), 'utf-8')
     } catch (err) {

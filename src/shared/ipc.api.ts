@@ -1,5 +1,12 @@
 import type { LocalServerConfig } from "./base.models"
-import type { MockPackExportOptions, MockPackExportProgress } from './mock.pack'
+import type {
+  MockPackExportOptions, MockPackExportProgress, MockPackImportOptions, MockPackImportResult,
+  MockPackPreviewOptions, MockPackPreviewResult,
+} from './mock.pack'
+import type {
+  MockShareBackupEstimate, MockShareBackupProgress, MockShareBackupResult, MockShareCheckResult,
+  MockShareRemoteOverview,
+} from './mock.share'
 
 export const MAIN_API_CMD = {
   Relaunch: 'relaunch',
@@ -10,6 +17,14 @@ export const MAIN_API_CMD = {
   SelectSavePath: 'selectSavePath',
   ExportMockPack: 'exportMockPack',
   ExportPackProgress: 'exportPackProgress',
+  MockShareCheck: 'mockShareCheck',
+  MockShareEstimate: 'mockShareEstimate',
+  MockShareBackup: 'mockShareBackup',
+  MockShareCancel: 'mockShareCancel',
+  MockShareProgress: 'mockShareProgress',
+  MockShareOverview: 'mockShareOverview',
+  MockSharePreview: 'mockSharePreview',
+  MockShareImport: 'mockShareImport',
   OpenDevTools: 'openDevTools',
   OpenMockRuleMgr: 'openMockRuleMgr',
   OpenSettings: 'openSettings',
@@ -20,6 +35,19 @@ export const MAIN_API_CMD = {
   DownloadUpdate: 'downloadUpdate',
   CancelUpdate: 'cancelUpdate',
   WriteClipboard: 'writeClipboard'
+}
+
+/**
+ * @public
+ * 主进程直调的回执。错误码必须自己带上：structured clone 只搬 `Error` 的 name/message/stack，
+ * `MockError.code` 上了 IPC 就没了，而界面文案（`mock.share.*`）正是按码取的——
+ * 只回一句 message 等于把 C5「不许统一成『同步失败』」在传输那一层抹平。
+ */
+export interface MainCallResult<T> {
+  status: 'ok' | 'canceled' | 'failed'
+  data?: T
+  code?: string
+  detail?: string
 }
 
 /**
@@ -60,6 +88,32 @@ export interface IMainAPI {
   selectFile(callback?: (result?: string) => void): Promise<string | undefined>
 
   selectFolder(callback?: (result?: string) => void): Promise<string | undefined>
+
+  /**
+   * Mock 云共享（v1.3 Phase A）的桌面端入口。全部走主进程直调，不进 8884 那两个 multipart 端点：
+   * 那两个端点收的是文件，而这里的失败归因空间（配置 / 网络 / 权限 / 内容 / 写 / 上限）比本地导入大一整截。
+   * 备份正文与恢复正文都不经渲染进程——和导出同一个理由，几十 MB 经 IPC 会被克隆两遍。
+   *
+   * 「读取并预览」与「导入」各读一次远端：中间隔着用户点确认，快照留在这儿就等于把
+   * 「远端此刻有什么」这句话改成「刚才那一刻有什么」。
+   */
+  mockShareCheck(): Promise<MainCallResult<MockShareCheckResult>>
+
+  mockShareEstimate(): Promise<MainCallResult<MockShareBackupEstimate>>
+
+  mockShareBackup(): Promise<MainCallResult<MockShareBackupResult>>
+
+  mockShareCancel(): Promise<boolean>
+
+  mockShareOverview(): Promise<MainCallResult<MockShareRemoteOverview>>
+
+  mockSharePreview(keys: string[], options: MockPackPreviewOptions): Promise<MainCallResult<MockPackPreviewResult>>
+
+  mockShareImport(keys: string[], options: MockPackImportOptions): Promise<MainCallResult<MockPackImportResult>>
+
+  onMockShareProgress(callback: (progress?: MockShareBackupProgress) => void): void
+
+  offMockShareProgress(): void
 
   openFolder(path: string): void
 

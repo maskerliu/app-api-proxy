@@ -13,7 +13,11 @@ import {
   assertShareManifest, buildShareManifest, planShareShards, shareErrorDetailOf, shareSceneDigestOf,
   shareSceneKeyOf, shareShardFileOf, shareShardBytesOf, shareSkipsUnchanged, unwrapShareRemoteText,
 } from '@shared/mock.share'
-import type { MockShareManifest, MockShareSceneEntry, MockShareSceneInput, MockShareShard, MockShareStage } from '@shared/mock.share'
+import type {
+  MockShareBackupEstimate, MockShareBackupFailure, MockShareBackupProgress, MockShareBackupResult,
+  MockShareConfig, MockShareManifest, MockShareRemoteOverview, MockShareSceneEntry,
+  MockShareSceneInput, MockShareSceneSummary, MockShareShard, MockShareStage,
+} from '@shared/mock.share'
 import { mergeShareScenePacks } from '@shared/mock.share'
 import { MOCK_PACK_MAX_FILE_BYTES } from '@shared/mock.pack'
 import type { MockPackV1 } from '@shared/mock.pack'
@@ -303,56 +307,11 @@ export interface MockShareScenePlan {
   rejected?: { code: MockShareCode; detail: string }
 }
 
-export interface MockShareBackupProgress {
-  scenesDone: number
-  sceneTotal: number
-  records: number
-  /** 本次真正写出去的字节：跳过的场景不计，那才是「月度上传流量 1GB」那一问要看的数 */
-  writtenBytes: number
-  skipped: number
-  failed: number
-}
-
-/** 本次没备份成的场景，供结果页那一行「N 个场景未备份」（C2-5 / C2-8） */
-export interface MockShareBackupFailure {
-  key: string
-  name: string
-  records: number
-  code: MockShareCode
-  detail: string
-}
-
-export interface MockShareBackupResult {
-  /** 远端此刻真正存得住内容的场景数：超限失败且上次也没备份成的不计 */
-  scenes: number
-  records: number
-  bytes: number
-  writtenBytes: number
-  /** 内容未变而跳过的场景数（C2-4） */
-  skipped: number
-  failed: MockShareBackupFailure[]
-  createdAt: number
-  device: string
-}
-
 export interface MockShareBackupRuntime {
   signal?: AbortSignal
   onProgress?: (p: MockShareBackupProgress) => void
   /** 备份时刻：注入只给用例断言 manifest 里那个读数用 */
   now?: number
-}
-
-export interface MockShareBackupEstimate {
-  /** 本地场景总数（受 300 上限约束的就是这个数） */
-  scenes: number
-  records: number
-  /** 全部能备份的场景的正文合计，与远端在管体积同一把尺 */
-  bytes: number
-  /** 其中真正会写出去的那部分：未变的场景已经跳过 */
-  writtenBytes: number
-  skipped: number
-  /** 超上限、这次不会备份出去的场景名 */
-  oversize: string[]
 }
 
 /**
@@ -581,8 +540,8 @@ export function cancelShareBackup(): boolean {
 }
 
 /** 单任务槽：形态同 `MockPackService.importTask`——第二次触发直接拒，不排队 */
-export async function runShareBackup(source: MockPackSource, channel: MockShareDirectoryChannel):
-  Promise<MockShareBackupResult> {
+export async function runShareBackup(source: MockPackSource, channel: MockShareDirectoryChannel,
+  onProgress?: (progress: MockShareBackupProgress) => void): Promise<MockShareBackupResult> {
   if (backupSlot != null) {
     const running = backupSlot.progress
     throw new MockError('shareInProgress', `scenes=${running.scenesDone}/${running.sceneTotal}`)
@@ -597,6 +556,8 @@ export async function runShareBackup(source: MockPackSource, channel: MockShareD
       signal: controller.signal,
       onProgress: (p) => {
         if (backupSlot != null) backupSlot.progress = p
+        // 推送与槽内读数同源：渲染层订阅的是同一个对象，重挂时读 `shareBackupProgress` 也接得上
+        onProgress?.({ ...p })
       }
     })
   } finally {
@@ -611,31 +572,6 @@ export async function runShareBackup(source: MockPackSource, channel: MockShareD
  * 入参里只有 `MockShareReadChannel`，没有 `MockPackSource`——C3-4「恢复永不删本地」不是靠这里写得小心，
  * 而是靠这一层压根拿不到写库的手；能删本地的代码在这一层的调用方那边，那条链有它自己的用例。
  */
-
-/** C3-1 清单上的一格：不下载正文就能报出来的那几个字段 */
-export interface MockShareSceneSummary {
-  key: string
-  name: string
-  records: number
-  bytes: number
-  /** 恢复这一个场景要按序读几个文件 */
-  shards: number
-}
-
-export interface MockShareRemoteOverview {
-  scenes: MockShareSceneSummary[]
-  /**
-   * 清单上列了名字却没有正文的场景（上次备份被拒的那几个）。
-   * 下面的 `records`/`bytes` 只统计可恢复的场景：被拒那一项记的条数是「本来想备份多少条」，
-   * 把它算进「远端有 N 条可恢复」是虚报。
-   */
-  unavailable: { key: string; name: string; reason: string }[]
-  records: number
-  bytes: number
-  /** 上次备份时间与来源设备代号（6.2：这两个值只在清单里，正文里没有第二个口径） */
-  createdAt?: number
-  device?: string
-}
 
 /**
  * 「读取并预览」的第一步：只读清单，不碰正文（C3-1）。
@@ -928,4 +864,35 @@ export async function readShareUrlPack(url: string, runtime: MockShareUrlRuntime
     const text = unwrapShareUrlBody(res.text)
     return { text, bytes: bytesOf(text) }
   }
+}
+
+/**
+ * 「关掉云共享之后零对外请求」（C6 / AC-C-11）的落点：通道只能从这两个函数里拿。
+ * 关闭、没填地址、拿只读通道去备份，都在这里抛码，调用方连 fs 与 axios 的手都碰不到——
+ * 这条保证因此是结构而不是界面自觉，界面把按钮藏起来只是它的第二道。
+ *
+ * detail 只说通道不说地址与路径：订阅 URL 那一串里可能藏着口令（C6「地址不带凭证」），
+ * 而目录路径重抄一遍对排查没有增量，设置页上就写着。
+ */
+export function requireShareDirectoryChannel(config?: MockShareConfig): MockShareDirectoryChannel {
+  if (config == null || config.channel === 'off') {
+    throw new MockError('remotePathMissing', shareErrorDetailOf('list', 'channel=off'))
+  }
+  if (config.channel === 'url') {
+    throw new MockError('remotePathMissing', shareErrorDetailOf('list', 'channel=url-readonly'))
+  }
+  if (!config.dir) {
+    throw new MockError('remotePathMissing', shareErrorDetailOf('list', 'channel=dir no-dir'))
+  }
+  return createDirectoryShareChannel(config.dir)
+}
+
+/** 订阅地址：URL 通道只读，本期也不支持「拿备份目录当订阅」，所以不是这条通道就抛码而不回落 */
+export function requireShareUrl(config?: MockShareConfig): string {
+  if (config?.channel !== 'url') {
+    throw new MockError('remotePathMissing',
+      shareErrorDetailOf('list', config?.channel === 'dir' ? 'channel=dir-no-url' : 'channel=off'))
+  }
+  if (!config.url) throw new MockError('remotePathMissing', shareErrorDetailOf('list', 'channel=url no-url'))
+  return config.url
 }
