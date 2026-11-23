@@ -10,13 +10,16 @@
           placement="bottom-start" :show-arrow="false" :offset="[0, 2]">
           <template #reference>
             <div ref="searchBox" style="width: 100%;" @click="onSearchBoxClick">
-              <van-search class="rule-search" show-action :clearable="false" v-model="keyword"
+              <van-field v-model="keyword" class="control-field rule-search-field"
                 :placeholder="$t('common.searchPlaceholder')">
-                <template #action>
-                  <van-button class="btn-icon-only" plain type="primary" size="small" icon="plus"
+                <template #left-icon>
+                  <van-icon name="search" size="var(--van-font-size-md)" />
+                </template>
+                <template #right-icon>
+                  <van-icon name="plus" class="icon-action action-glyph action-glyph--primary"
                     @click.stop="onRuleEdit(null)" />
                 </template>
-              </van-search>
+              </van-field>
             </div>
           </template>
 
@@ -104,11 +107,11 @@
           </template>
           <template #right-icon>
             <van-row class="rule-mock-switch" v-tip="mockStateTip" align="center" :wrap="false">
-              <!-- Vant 的开关盒子高是 1em+4px，所以把 1em 定成同排裸图标的字形档（--app-glyph-size）减去那 4px 壳，
-                   于是盒高与铅笔、垃圾桶的字形同高（md13 15.6px、md14 16.8px）。
+              <!-- 盒高与铅笔、垃圾桶的字形同高（md13 15.6px、md14 16.8px）：算式收在 global.css 的
+                   --app-switch-size 里（Vant 把 size 落到 font-size，盒高还要加那 4px 壳），全站同排开关都读它。
                    原先对的是 hover 方格那一档（--app-action-square，26 / 28px）——方格平时看不见，
                    开关按它做出来就比同排图标大一截。 -->
-              <van-switch v-model="curRule.isMock" size="calc(var(--app-glyph-size) - 4px)"
+              <van-switch v-model="curRule.isMock" size="var(--app-switch-size)"
                 @change="onMockSwitchChanged(curRule)"
                 :disabled="curRule._id == null || (curRule.limitState?.reject === true && !curRule.isMock)" />
             </van-row>
@@ -120,8 +123,9 @@
       <van-col class="record-pane">
         <van-row class="record-pane-head" align="center" justify="space-between" :wrap="false">
           <span class="record-pane-title">{{ $t('mock.records') }}</span>
-          <van-button class="btn-icon-only" plain type="primary" size="mini" icon="plus" :disabled="curRule._id == null"
-            @click="addRecord"></van-button>
+          <van-icon name="plus" class="icon-action action-glyph"
+            :class="curRule._id == null ? 'action-glyph--disabled' : 'action-glyph--primary'"
+            @click="curRule._id != null && addRecord()" />
         </van-row>
         <van-row class="record-filter" align="center" :wrap="false">
           <van-field v-model="recordKeyword" class="control-field record-field" clearable
@@ -371,13 +375,17 @@ const mockStateTip = computed(() => {
   return curRule.value.isMock ? t('mock.rule.enabledTip') : t('mock.rule.disabledTip')
 })
 
-// 顶部搜索框与左侧记录列表同宽：列表宽度受窗口宽度影响，测量后回写给搜索列。
-// 必须用 min() 封顶：主体在 @container mgr (max-width: 63em) 以下改成上下堆叠，列表变成满宽，
+// 顶部搜索框与左侧记录列表同宽：列表宽度受窗口宽度影响，测量后回写给搜索列，再让出搜索列那条注释里算的
+// 那点 inset，两颗「+」才对得齐。
+// 必须用 min() 封顶：主体在 @container mgr (max-width: 60em) 以下改成上下堆叠，列表变成满宽，
 // 测量值照抄过来会把规则信息列压成 0，右侧操作按钮整组溢出被 .mgr-content 裁掉。
 // 封顶就用 --app-record-pane-width 这把现成的尺子，堆叠时搜索列维持并排档的宽度，不再另立第二个上限。
+// 上限取的是「列表卡片宽」而不是原先随手减的 sp-xl：那两条在 md 13 起就互相错开 0.4~1.2px，
+// 谁生效取决于字号，收 inset 时这点差会原样留在其中一条上（量得末两档各差 0.41 / 1.21px），
+// 同一把尺子重写后四个字号都归零。
 const searchColStyle = computed(() => recordListWidth.value > 0
   ? {
-    width: `min(${recordListWidth.value}px, calc(var(--app-record-pane-width) - var(--app-sp-xl)))`
+    width: `min(calc(${recordListWidth.value}px - var(--rule-search-plus-inset)), calc(var(--app-record-pane-width) - var(--app-card-gutter) * 2 - var(--rule-search-plus-inset)))`
   }
   : null)
 
@@ -973,12 +981,23 @@ watch(showHeadMenu, async (open) => {
 }
 
 .rule-search-col {
-  /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表宽度减去左右外边距 */
+  /* 两颗「+」要落在同一条竖线上。记录标题行那枚的字形离 pane 右缘「标题行 padding(1.5md) + 热区(sp-tight)」，
+     输入框里这枚离列右缘「输入框 padding(sp-lg) + 热区(sp-tight)」，而列左缘又比 pane 左缘先让出 1 个沟道；
+     两头相等解出的差就是下面这条 inset（离线量得 md11 收 4.91px、md14 收 7.61px，随字号缩放，所以不是常数）。
+     热区那半对两边都是 sp-tight，自己抵掉了，留在算式里的只有 padding 与沟道。 */
+  --rule-search-plus-inset: calc(var(--van-font-size-md) * 1.5 - var(--app-sp-lg) - var(--app-card-gutter));
   flex: none;
-  width: calc(var(--app-record-pane-width) - var(--app-sp-xl));
+  /* 宽度由记录列表实测值内联覆盖，这里只作首帧兜底：列表卡片宽（pane 宽减左右外边距）再让出上面那点 inset */
+  width: calc(var(--app-record-pane-width) - var(--app-card-gutter) * 2 - var(--rule-search-plus-inset));
   /* 与右侧两行高度的规则信息居中对齐 */
   display: flex;
   align-items: center;
+}
+
+/* Vant 把 .van-cell 的行高钉成 24px，落进这只定高控件会把行末裸图标的 hover 方格撑到 35px、
+   溢出下划线；方格本来只该是字形加上下各 sp-tight，所以行高交还给图标自己。 */
+.rule-search-field :deep(.van-field__right-icon) {
+  line-height: 1;
 }
 
 .rule-head-col {
@@ -1034,7 +1053,9 @@ watch(showHeadMenu, async (open) => {
   margin: 0;
 }
 
-.record-field :deep(.van-field__left-icon) {
+/* 两只搜索框的左图标同源：间距照本行自己的紧凑档，Vant 默认那条钉死 4px。 */
+.record-field :deep(.van-field__left-icon),
+.rule-search-field :deep(.van-field__left-icon) {
   margin-right: var(--app-sp-tight);
   color: var(--van-text-color-3);
 }
@@ -1305,31 +1326,8 @@ watch(showHeadMenu, async (open) => {
   white-space: nowrap;
 }
 
-/* 裸图标（不带 .btn-icon-only 外壳）的字形尺寸与配色：内边距、圆角、hover 底色都读 global.css 的 .icon-action。
-   字形档与 .btn-icon-only .van-icon 同源（--app-glyph-size）——iconfont 基础类把 font-size 写死 16px，
-   不显式给就不跟随字号。 */
-.action-glyph {
-  font-size: var(--app-glyph-size);
-}
-
-.action-glyph--primary {
-  color: var(--van-primary-color);
-}
-
-.action-glyph--danger {
-  color: var(--van-danger-color);
-}
-
-/* 未选中规则时的编辑/删除：与同格的取消图标同一套置灰（--van-gray-5 + not-allowed），
-   并压掉 .icon-action 的 hover 底色——灰图标亮出底来会被读成可以点 */
-.action-glyph--disabled {
-  color: var(--van-gray-5);
-  cursor: not-allowed;
-}
-
-.action-glyph--disabled:hover {
-  background: none;
-}
+/* 裸图标的字形档与配色（.action-glyph 一族）在 global.css，与同排之外的行内动作同源；
+   内边距、圆角、hover 底色读同文件的 .icon-action。 */
 
 .rule-head-actions {
   display: inline-flex;
@@ -1351,26 +1349,6 @@ watch(showHeadMenu, async (open) => {
 :global(.rule-search-popover.van-popover-zoom-enter-from),
 :global(.rule-search-popover.van-popover-zoom-leave-active) {
   transform: none;
-}
-
-.rule-search {
-  --van-search-padding: calc(var(--van-font-size-md) * 0.3) calc(var(--van-font-size-md) * 0.6);
-  --van-search-input-height: calc(var(--van-font-size-md) * 2.3);
-  --van-cell-vertical-padding: 0;
-}
-
-/* 收窄 search action 的可点击区域，避免 + 按钮被撑成长条：容器仍占满搜索行高，按钮只居中 */
-.rule-search :deep(.van-search__action) {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  height: var(--van-search-input-height);
-  padding: 0 var(--app-sp-sm);
-  cursor: default;
-}
-
-.rule-search :deep(.van-search__action:active) {
-  background-color: transparent;
 }
 
 .search-result {
@@ -1415,19 +1393,26 @@ watch(showHeadMenu, async (open) => {
 /* 阈值由右侧编辑区最宽的那一行反推，不是拍的。今天这一行是响应表单的响应体头部：
    「响应体」+ JSON/XML/TEXT/BINARY 四枚单选 + 体积数字 + 两枚工具按钮，两头都不许折行
    （见 MockResponseForm 的 .section-head 与 .body-type），所以它排不开时只能靠分栏来救。
-   整行固有宽（字号 7~10 = md 11~14）：中文 335.7 / 365.4 / 395.2 / 425.0px，英文 380.3 / 414.2 / 448.0 / 481.9px；
-   这一版把行内密度收了（单选右边距 sp-xl→sp-md、头部 gap sp-lg→sp-md）并去掉「体积：」前缀，数字只剩 '1.2 KB' 那一量级。
-   再扣编辑器列自身的 3.2md + 2px（editor-col 2×0.4md、tab 面板 2×0.3md、response-form 2×0.3md、卡片 2×0.6md 加描边）、
-   并排记录列 min(max(300px, 23md), 38%)（两个分支都算取较严的），另留 12px 建模余量，换算成容器宽：
-     整行完整——中文最坏 56.4em，英文最坏 63.0em（数字宽到 '123.5 KB' 则 64.4em）；
-     只保标题+单选+按钮、数字让位——最坏 59.0em。
-   取 63em：中文无论字号与数字宽窄都整行完整；英文数字在 3sm 那一量级时全字号完整，宽一档则字号 7~8 会把数字省略号掉约 8px，
-   单选组最多让出末枚那 0.5md 的尾边距（是空白不是字形，看不出来）——先缩数字而不是先裁单选，靠的是 .body-size 的 shrink 20。
-   窗口门槛：字号 9 时并排保到约 1024px，上一版 68em 是约 1105px；再低到 59em 才轮到单选自己挨裁。
-   方法账也要记一笔：上一版那组 411.5~539.1 出自一个复刻页没带上 scoped 属性（:deep 规则整条没生效、单选标签按 md 而非 sm 排）的测量，
-   整行高估约 20px、阈值跟着抬了 5em。这次是 dist 里抽出的真 scoped CSS + Vant 组件 SSR 出来的真 markup，在 Chromium 里直接量。
-   原先的 50em 只保证变体行（29.3md + 8px）排得开。Onboarding 的 720px 不跟着改：那量的是窗口，不是这个 80vw 抽屉的自身宽度。 */
-@container mgr (max-width: 63em) {
+   整行固有宽（字号 7~10 = md 11~14，常规数字 '1.2 KB'）：中文 331.7 / 361.5 / 391.2 / 421.0px，
+   英文 376.3 / 410.2 / 444.0 / 477.9px；数字宽到 '123.5 KB' 各加 13.3px（md14）。
+   这组比上一版小 4.00px 且各档相同——那 4px 就是两枚工具按钮换成裸图标后省下的 1px 描边×2×2，
+   所以换算成容器宽时沿用上一版的同一把尺子（425.0px=56.4em、481.9px=63.0em 两点定出的 0.116em/px）：
+     整行完整——中文任何数字 57.5em 封顶，英文常规数字 62.5em，英文宽数字 64.1em；
+     只保标题+单选+按钮、数字让位——58.5em（上一版 59.0em 同比例下移）。
+   取 60em 的两个边界：上沿是「最大字号（md14）不许在默认窗口翻档」——默认窗口实测容器
+   879.195~881.59px = 62.80~62.97em，60em 留 2.8em（容器 39px / 窗口 49px）余量；下沿是 58.5em 那档，
+   再低就要裁到单选字形。60~62.5em 之间英文常规数字让掉几个像素的省略号，这是 .body-size 的 shrink 20
+   本来就管着的事，不再为它把整页改版——上一版取 65em 正是为了兜住 '123.5 KB' 那种极端读数，
+   代价是默认窗口整档落进堆叠，横向空间白扔一片。取 63em 那版则是卡在 63.0em 线上，翻不翻档
+   取决于两三个像素的取整；现在这条约束交给省略号吸收，翻档点离现场有 2.8em，怎么取整都翻不动。
+   窗口门槛（容器宽 = 80vw，故门槛窗口宽 = 阈值 × md ÷ 0.8）：字号 10 要到窗口宽 ≤1050px 才堆叠，
+   字号 9 是 975px、字号 8 是 900px、字号 7 是 825px。翻档点已离线量过：四档字号在容器 = 60×md 那一格
+   各自堆叠、宽 2px 即并排，同一切片把旧 65em 也跑了一遍——只有字号 10 在默认窗口落进堆叠，正是要修的那条。
+   历史：50em（只保变体行）→ 68em → 63em → 65em → 60em。
+   方法账：本轮用同一 harness（真 scoped CSS 由 @vue/compiler-sfc 现编 + 真 Vant 组件）复算了上一版的
+   published 值，老按钮壳在 md14 英文量得 481.86px 对 481.9px，差 0.04px，两版数字同一把尺子可比。
+   Onboarding 的 720px 不跟着改：那量的是窗口，不是这个 80vw 抽屉的自身宽度。 */
+@container mgr (max-width: 60em) {
   .mgr-body {
     flex-direction: column;
   }

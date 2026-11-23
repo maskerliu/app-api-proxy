@@ -8,7 +8,8 @@
         }) }}</span>
         <span v-else>{{ $t('mock.miss.noCandidate') }}</span>
       </van-row>
-      <van-button class="btn-icon-only" size="mini" plain icon="description" v-tip="$t('mock.miss.copy')" @click="copyDiagnosis" />
+      <van-icon name="description" class="icon-action action-glyph" v-tip="$t('mock.miss.copy')"
+        @click="copyDiagnosis" />
     </van-row>
 
     <div v-if="degraded" class="miss-degraded">{{ $t('mock.miss.degraded') }}</div>

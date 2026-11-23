@@ -258,7 +258,7 @@ function goBack() {
   margin-top: var(--app-sp-2xl);
   padding: var(--app-sp-xl) var(--app-sp-2xl);
   border-radius: var(--van-radius-md);
-  background-color: var(--van-gray-2);
+  background-color: var(--app-panel-tint);
 }
 
 .result-head {
@@ -280,7 +280,8 @@ function goBack() {
 }
 
 .step-ms {
-  color: var(--van-text-color-3);
+  /* 洼地面上的读数与页头说明同档：暗色实测 2.93；用 --van-text-color-3 会掉到 1.7 档，且暗色禁用 -3 是全站已裁决的口径 */
+  color: var(--van-text-color-2);
   min-width: calc(var(--van-font-size-sm) * 4.7);
 }
 

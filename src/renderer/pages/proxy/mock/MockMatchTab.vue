@@ -5,7 +5,7 @@
     <div class="section-card">
       <van-row class="switch-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.enabled') }}</span>
-        <van-switch :model-value="match.enabled !== false" size="18px" @update:model-value="toggleEnabled" />
+        <van-switch :model-value="match.enabled !== false" size="var(--app-switch-size)" @update:model-value="toggleEnabled" />
         <span class="switch-hint hint">{{ $t('mock.match.enabledHint') }}</span>
       </van-row>
     </div>
@@ -61,6 +61,22 @@
           {{ $t('mock.match.restorePath') }}
         </van-button>
       </van-row>
+      <!-- 优先级原先独占一张卡，合进来后与 Method / Path 共用首列那 4.8md 标签列（标签随之从「手动优先级」
+           收成「优先级」——列宽装不下五个汉字，而开关本身就分手动/自动，不必在标签里说满）。
+           开关单独套一层与上方下拉同宽的列：开关盒只有 1.8em + 4px，直接排在标签后会把数字框整体往左推，
+           右邻的输入框就对不上 Host / Path 的左缘。
+           输入框一并换到全局 .control-field：同组里不能出现两种下划线，Vant 单元格默认那条是 scaleY(.5)
+           的半像素线、还按 --van-cell-horizontal-padding 缩进，比相邻两行的 1px 实线短一截。
+           说明文字常驻一整句（开关侧不再有 v-else 换控件）：开着说方向，关着说这条规则按什么排。 -->
+      <van-row class="field-row identity-row switch-row" align="center" :wrap="false">
+        <span class="row-label">{{ $t('mock.match.priority') }}</span>
+        <div class="switch-col">
+          <van-switch :model-value="match.priority != null" size="var(--app-switch-size)" @update:model-value="togglePriority" />
+        </div>
+        <van-field v-if="match.priority != null" ref="priorityField" v-model="priorityText" type="digit"
+          class="control-field priority-input" />
+        <span class="switch-hint hint truncate" v-tip="priorityTip">{{ priorityTip }}</span>
+      </van-row>
     </div>
 
     <div ref="querySection" class="section-card">
@@ -103,7 +119,7 @@
       <div v-if="queryParticipate" class="sub-block">
         <van-row class="switch-row" align="center" :wrap="false">
           <span class="row-label">{{ $t('mock.match.queryAllowExtra') }}</span>
-          <van-switch v-model="match.query.allowExtra" size="18px" @change="touch" />
+          <van-switch v-model="match.query.allowExtra" size="var(--app-switch-size)" @change="touch" />
           <span class="switch-hint hint">{{ $t('mock.match.queryAllowExtraHint') }}</span>
         </van-row>
         <van-row class="switch-row" align="center" :wrap="false">
@@ -129,7 +145,7 @@
             </van-row>
           </template>
           <template #right-icon>
-            <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus"
+            <van-icon name="plus" class="icon-action action-glyph action-glyph--primary"
               v-tip="$t('mock.match.addCondition')" @click.stop="onAddCondition" />
           </template>
           <div v-if="conditionRows.length === 0" class="empty-tip hint">{{ $t('mock.match.conditionEmpty') }}</div>
@@ -161,16 +177,6 @@
 
     <div class="section-card">
       <van-row class="switch-row" align="center" :wrap="false">
-        <span class="row-label">{{ $t('mock.match.priority') }}</span>
-        <van-switch :model-value="match.priority != null" size="18px" @update:model-value="togglePriority" />
-        <van-field v-if="match.priority != null" ref="priorityField" v-model="priorityText" type="digit"
-          class="priority-input" :placeholder="$t('mock.match.priorityHint')" />
-        <span v-else class="priority-hint hint truncate">{{ $t('mock.match.priorityAuto') }}</span>
-      </van-row>
-    </div>
-
-    <div class="section-card">
-      <van-row class="switch-row" align="center" :wrap="false">
         <span class="row-label">{{ $t('mock.match.bodyLabel') }}</span>
         <span class="hint">{{ $t('mock.match.bodyHint') }}</span>
       </van-row>
@@ -189,7 +195,7 @@
         <van-button size="mini" type="primary" :loading="testing" @click="runTest">
           {{ $t('mock.match.testRun') }}
         </van-button>
-        <van-button class="btn-icon-only" size="mini" plain icon="replay" v-tip="$t('mock.match.testSeed')"
+        <van-icon name="replay" class="icon-action action-glyph" v-tip="$t('mock.match.testSeed')"
           @click="seedTest" />
       </van-row>
       <div v-if="testError" class="test-error">{{ testError }}</div>
@@ -470,6 +476,12 @@ function togglePriority(enabled: boolean) {
   touch()
 }
 
+// 优先级那一行的说明只有这一处出处：开着说方向（原先这串字挂在 placeholder 上，而开关一开就预填 0，
+// 等于从来没露过面），关着说这条规则改按什么排，与使用说明「排序」那条同序。
+const priorityTip = computed(() => match.value?.priority == null
+  ? t('mock.match.priorityAuto')
+  : t('mock.match.priorityHint'))
+
 watch(priorityText, (value) => {
   if (match.value == null || match.value.priority == null) return
   const num = Number.parseInt(value)
@@ -581,6 +593,9 @@ defineExpose({ focusField })
      只留本 tab 自己的密排内边距档 */
   --match-control-padding-y: calc(var(--van-font-size-md) * 0.3);
   --mini-select-bar-height: var(--app-control-height);
+  /* 控件列单源：Method / Path 两枚下拉与优先级行的开关列同宽，三行的第二列同中线、
+     第三列（Host / Path / 优先级数字框）才同左缘起笔 */
+  --match-select-width: calc(var(--van-font-size-md) * 6.8);
   display: flex;
   flex-direction: column;
   gap: var(--app-sp-lg);
@@ -720,7 +735,7 @@ defineExpose({ focusField })
    它要装最长的 OPTIONS，往下收到 Path 原先的 6.3 档会让两个使用点（这里 + 试匹配行）一起变窄。 */
 .method-select,
 .path-type-select {
-  width: calc(var(--van-font-size-md) * 6.8);
+  width: var(--match-select-width);
 }
 
 .path-input {
@@ -859,38 +874,42 @@ defineExpose({ focusField })
   min-height: var(--app-control-height);
 }
 
-/* 独立成卡的标签行（手动优先级 / Body）不自己加上下沟道：卡片本身已有 .section-card 的 lg 内边距，
+/* 独立成卡的标签行（Body）不自己加上下沟道：卡片本身已有 .section-card 的 lg 内边距，
    去掉后行高回到控件那一档，正好与折叠面板的标题行等高。区块内相邻的两行（允许多余参数 / 多值语义）
-   仍走上面的间距，否则两行会贴在一起。 */
-.section-card > .switch-row {
+   仍走上面的间距，否则两行会贴在一起。
+   优先级那行合进请求标识卡后带上了 .field-row，排除它才不会与同卡另两行的间距错开——那一档 padding
+   是它和 Method / Path 行同高的依据。 */
+.section-card > .switch-row:not(.field-row) {
   padding: 0;
 }
 
 /* 说明与开关同行排，空间不够时折的是说明自己，不能把开关挤扁 */
+/* 三枚开关的盒高档位写在模板的 size 上，读 global.css 的 --app-switch-size（与 MockRuleMgr 头部开关、
+   同排裸图标的字形同高，且随字号缩放）；原先这里写死 18px，既不跟字号也与图标不同档。这里只留不收缩。 */
 .switch-row .van-switch {
   flex: none;
+}
+
+/* 优先级行的开关列：开关盒只有 1.8em + 4px，直接跟在标签后面会把数字框推到 Host / Path 输入框左缘之左。
+   这一层取上方下拉那一档宽度（--match-select-width）并把开关居中，第二列因此三行同中线、第三列同左缘。
+   纵向仍由所在 van-row 的 align=center 负责，这里只管列宽与列内水平位置。 */
+.switch-col {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--match-select-width);
 }
 
 .switch-hint {
   min-width: 0;
 }
 
+/* 外框尺寸、内边距与下划线读 global.css 的 .control-field（与同卡 Method / Host / Path 那三格同源），
+   这里只留「这一格占多宽」：数字框不该撑满整行，窄到装不下时让位的是右侧说明（.switch-hint 的 min-width:0）。 */
 .priority-input {
+  flex: none;
   width: calc(var(--van-font-size-md) * 7.4);
-  padding: 0 var(--app-sp-lg);
-  border-radius: var(--van-radius-md);
-}
-
-.priority-input :deep(.van-field__value) {
-  padding: 0;
-}
-
-.priority-input :deep(.van-field__control) {
-  height: var(--app-control-height);
-}
-
-.priority-hint {
-  line-height: var(--app-control-height);
 }
 
 .suggest-row {

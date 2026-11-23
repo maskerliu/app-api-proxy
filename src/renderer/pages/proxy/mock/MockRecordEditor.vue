@@ -9,9 +9,11 @@
       </div>
       <van-row class="head-actions" align="center" :wrap="false">
         <van-tag v-if="dirty" type="warning" plain>{{ $t('mock.editor.unsaved') }}</van-tag>
-        <van-button class="btn-icon-only" plain size="mini" type="primary" icon="success" :loading="saving"
-          :disabled="!canSave" @click="emit('save')">
-        </van-button>
+        <!-- 裸图标没有按钮的 loading 属性，保存中换成同档的转圈：字形与 spinner 都取 --app-glyph-size，
+             替换时这一格不跳。不可用态靠置灰 + 点击守卫成对表达（同 MockRuleMgr 头部那排）。 -->
+        <van-loading v-if="saving" type="spinner" size="var(--app-glyph-size)" color="var(--van-primary-color)" />
+        <van-icon v-else name="success" class="icon-action action-glyph"
+          :class="canSave ? 'action-glyph--primary' : 'action-glyph--disabled'" @click="canSave && emit('save')" />
       </van-row>
     </van-row>
 
@@ -48,9 +50,8 @@
               {{ record.variants.length }}/{{ MOCK_MAX_VARIANTS }}
             </van-tag>
             <!-- 放在滚动区外，变体再多也始终可见 -->
-            <van-button class="btn-icon-only" size="mini" plain type="primary" icon="plus" :disabled="atVariantLimit"
-              @click="addVariant">
-            </van-button>
+            <van-icon name="plus" class="icon-action action-glyph"
+              :class="atVariantLimit ? 'action-glyph--disabled' : 'action-glyph--primary'" @click="addVariant" />
           </van-row>
 
           <van-empty v-if="record.variants.length === 0" class="variant-empty" image="search" image-size="64"
@@ -70,22 +71,17 @@
                 </template>
               </van-field>
               <van-row class="variant-active" align="center" :wrap="false">
+                <!-- 与同排复制/删除的字形同高，档位读 global.css 的 --app-switch-size（同 MockRuleMgr 头部开关） -->
                 <van-switch :model-value="record.activeVariantId === selectedVariant.id"
+                  size="var(--app-switch-size)"
                   v-tip="record.activeVariantId === selectedVariant.id ? $t('mock.editor.servesVariant') : $t('mock.editor.setServing')"
                   @update:model-value="toggleActive(selectedVariant)" />
               </van-row>
-              <van-button class="btn-icon-only" size="mini" plain type="success" :disabled="atVariantLimit"
-                v-tip="$t('mock.editor.duplicateVariant')" @click="duplicateVariant">
-                <template #icon>
-                  <van-icon class="iconfont icon-copy" style="padding: 0;" />
-                </template>
-              </van-button>
-              <van-button class="btn-icon-only" size="mini" plain type="danger" v-tip="$t('mock.editor.deleteVariant')"
-                @click="removeVariant(selectedVariant)">
-                <template #icon>
-                  <van-icon class="iconfont icon-delete" />
-                </template>
-              </van-button>
+              <van-icon class="iconfont icon-copy icon-action action-glyph"
+                :class="atVariantLimit ? 'action-glyph--disabled' : 'action-glyph--success'"
+                v-tip="$t('mock.editor.duplicateVariant')" @click="duplicateVariant" />
+              <van-icon class="iconfont icon-delete icon-action action-glyph action-glyph--danger"
+                v-tip="$t('mock.editor.deleteVariant')" @click="removeVariant(selectedVariant)" />
             </van-row>
             <mock-response-form v-if="selectedVariant != null" ref="variantForm" v-model="selectedVariantModel"
               fill-body :show-meta="false" />
@@ -449,7 +445,8 @@ function applyRaw() {
 }
 
 /* 变体胶囊直接用 van-button（mini + round），选中态由 primary 实心样式提供；
-   高度与同行右侧的「+」（.btn-icon-only）同源，胶囊不再自己占一档 */
+   高度走全站控件档 --app-control-height，胶囊不再自己占一档。同行右侧那枚「+」已是裸图标
+   （盒高 = --app-action-square 的热区，比胶囊矮），靠 align=center 居中，不再与它对齐 */
 .variant-chip {
   flex: none;
   max-width: calc(var(--van-font-size-md) * 13.8);
@@ -522,7 +519,7 @@ function applyRaw() {
 /* 名称编辑与变体级操作合并到一行，替代原来单独的”编辑变体：xxx”标题。
    这一行的地板（各子项 min-width 之和 27.9md + Vant 相邻 mini 按钮写死的 4px margin）曾是右侧编辑列里最宽的一行，
    MockRuleMgr 的 @container mgr 阈值当时就从它反推（取 50em）。现在更宽的是响应表单的响应体头部行
-   （整行固有宽 335.7~481.9px，随语言与字号变），阈值已按它重算到 63em，这一行自然仍在覆盖范围内：
+   （整行固有宽 331.7~477.9px，随语言与字号变），阈值已按它重算到 60em，这一行自然仍在覆盖范围内：
    动这里的 min-width / gap / 按钮个数，还是要回 MockRuleMgr 那段注释核对阈值要不要再抬，
    否则窄窗口又会回到「断点还没到、行已经放不下」的那段。 */
 .variant-editor-bar {
@@ -575,12 +572,8 @@ function applyRaw() {
   font-size: var(--van-font-size-sm);
 }
 
-/* 生效开关组只剩开关本身，不收缩 */
+/* 生效开关组只剩开关本身，不收缩；同排的复制/删除是裸图标，flex: none 已在 global.css 的 .icon-action 里 */
 .variant-active {
-  flex: none;
-}
-
-.variant-editor-bar :deep(.van-button) {
   flex: none;
 }
 

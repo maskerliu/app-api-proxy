@@ -46,9 +46,15 @@
 
   /* 裸图标的字形档单源：iconfont 基类把 font-size 写死 16px，不显式给就不跟随字号，因此 .btn-icon-only 的
      按钮图标与 .icon-action 那一族裸图标都读这一条（原先两处各抄一遍 md*1.2）。
-     与开关同排时它也充当开关的盒高：Vant 把 size 落到 font-size，盒高是 calc(1em + 4px)，所以开关写
-     calc(var(--app-glyph-size) - 4px)，那 4px 是壳、不是能对齐的内容。两条 token 的分工见下一条注释。 */
+     要与它「视觉同高」的开关读 --app-switch-size，hover 方格读 --app-action-square，三条的分工见下面两条。 */
   --app-glyph-size: calc(var(--van-font-size-md) * 1.2);
+
+  /* 开关档单源：Vant 把 size 落到 font-size，盒高是 calc(1em + 4px)，那 4px 是壳、不是能对齐的内容，
+     所以要让盒高等于同排裸图标看得见的字形，size 就得写成 --app-glyph-size 减掉那 4px。
+     2026-11-22 前这条算式只写在 MockRuleMgr 头部的内联 size 上，而变体生效开关走 store 的 switchSize
+     （md*1.5，盒高 23.5/25.0px）、匹配 tab 三枚写死 18px（既不跟字号也不与图标同高）——三档并一档，
+     算式全站只留这一处。 */
+  --app-switch-size: calc(var(--app-glyph-size) - 4px);
 
   /* 裸图标（.icon-action + 字形 --app-glyph-size）hover 方格的实际边长：md*1.2 + 上下各 sp-tight(md*0.4) = md*2.0，
      实测 md13 档 26px、md14 档 28px。要按「整枚热区」对齐的读这一条（「更多」菜单的箭头落点就读它），
@@ -58,12 +64,26 @@
   /* 弹层宽度档位 */
   --app-popup-w-lg: min(80vw, 1200px);
   --app-popup-w-md: min(70vw, 960px);
+  /* 表单档：几行配置 + 一块明细区的居中弹窗（导入规则包）。600 是照着 960 那版的分段读数反推的——md13
+     最长的「导入方式」一行（6.2em 标签 + 两枚 radio + 右端的场景名 hint）连沟道要 519px，md14 按同乘数
+     推是 559px，再窄就要把 radio 挤到第二行；而 md 档的 960 会让 hint 与它指认的 radio 之间空出一大段，
+     读起来不像同一行的注释。窄窗口仍留 60px 给遮罩（与 sm 同一兜法）。 */
+  --app-popup-w-form: min(600px, calc(100vw - 60px));
   /* 内容型居中弹窗（客户端详情 / 更新进度）共用：450 是内容上限，窄窗口时留 60px 给遮罩 */
   --app-popup-w-sm: min(450px, calc(100vw - 60px));
 
   /* 浮层投影单源：居中弹窗（对话框 / 二维码 / 客户端详情 / 更新进度）与 MiniSelect 下拉共用同一档。
      取值沿用 MiniSelect 那一份——它是这个应用里唯一被反复目测调过的浮层投影，弹窗只是并进来。 */
   --app-shadow-float: 0 6px 16px rgba(0, 0, 0, 0.16);
+
+  /* 卡片面上「比卡片略亮一档」的洼地面单源（接入向导的代理地址 / 注册 URL / 代码片段 / 最近请求，诊断页的诊断结果）。
+     原先四处声明各写 `background-color: var(--van-gray-2)`：浅色下 #f2f3f5 正常，暗色下灰阶反转成 #646566 中灰，
+     而压在它上面的次级文字 --van-text-color-2 是 #707070——同档灰，实测对比 1.18 读不出；代码片段里 Ace 暗主题的
+     语法色照它自带的 #282c34 设计，压在中灰上只剩 1.9~2.3。tint 相对文字色取、不吃灰阶反转：
+     暗色实测压在卡片上得 rgb(41,41,43)（Ace 标识符回到 10.9，关键字与字符串 4.8~5.7），
+     浅色实测 rgb(243,243,243)（与原先 #f2f3f5 同观感）。
+     与 .section-card.is-* / .list-row.is-selected 同一族机制，只是这一族不带语义色，档位取在它们之下。 */
+  --app-panel-tint: color-mix(in srgb, var(--van-text-color) 6%, transparent);
 
   /* key 列宽口径：只读键值网格与响应头编辑行的 key 输入框共用同一个右缘；
      随字号缩放，约容 21 个等宽字符，最窄也留给值列一半 */
@@ -127,6 +147,10 @@ body {
   overflow: hidden;
   padding: 18px 22px 14px;
   border-radius: var(--van-radius-lg);
+  /* 明暗适配的唯一落点：这两页自排的标题、步骤名、返回箭头与面板里的 URL/代码块原先都不上色，
+     一路继承 UA 的 rgb(0,0,0)——暗色卡片底 #1c1c1e 上实测对比 1.23，标题「诊断中心」直接看不见。
+     Vant 自己的 cell / field / button 都带显式 color，不受这条影响。 */
+  color: var(--van-text-color);
   background-color: var(--van-background-2);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
@@ -284,6 +308,44 @@ body {
 
 .icon-action:hover {
   background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+/* ---- 裸图标的字形档与配色语义：与 .icon-action 成对使用 ---- */
+
+/* 2026-11-22 从 MockRuleMgr 头部的 scoped 同名规则上提：那套口径今天还要盖 Mock 子页面剩下的所有按钮壳
+   （编辑器保存与变体三枚、匹配 tab 两枚「+」与 replay、响应表单的「+」与格式化/压缩、未命中面板的拷贝诊断），
+   跨五个文件去继承他页的 scoped 类不可能，所以算式搬到这里，站点那份同属性声明随之删掉。
+   选择器一律带 .icon-action 前缀拿 (0,2,0)：压过 iconfont 基类写死的 16px、.van-icon 的 font-size: inherit
+   与各上下文里的 .van-icon 覆盖（机制同 .btn-icon-only .van-icon），因此与样式表注入顺序无关。 */
+.icon-action.action-glyph {
+  font-size: var(--app-glyph-size);
+}
+
+.icon-action.action-glyph--primary {
+  color: var(--van-primary-color);
+}
+
+.icon-action.action-glyph--success {
+  color: var(--van-success-color);
+}
+
+.icon-action.action-glyph--danger {
+  color: var(--van-danger-color);
+}
+
+/* 不可用态：按钮壳有 disabled 属性兜着，裸图标没有，所以置灰与拦截必须成对写——站点同时挂这个类并在 handler
+   里守住同一个条件，别只改一边。not-allowed 是给「看着灰但确实点不动」的解释，hover 底色必须压掉，
+   否则灰图标一亮底就被读成可以点。 */
+.icon-action.action-glyph--disabled {
+  /* 置灰不能用灰阶 token：store 在暗色把 gray-* 整体反转，gray-5 变成 #dcdee0 近白，
+     不可用态反而比可用态抢眼（暗色实测 12.61，同排的 --primary 4.86 / --danger 3.81）。
+     文字档位不会反转，-2 在明暗两档都排在所有可用态之下（浅色 2.92 < 3.50/4.46，暗色 3.44 < 3.81/4.86）。 */
+  color: var(--van-text-color-2);
+  cursor: not-allowed;
+}
+
+.icon-action.action-glyph--disabled:hover {
+  background: none;
 }
 
 /* ---- HTTP 方法色块：记录列表里那枚首字母方块 ---- */
@@ -693,9 +755,11 @@ body {
   margin-left: var(--app-sp-3xl);
 }
 
-/* 字形档与全站裸图标同源（--app-glyph-size）：不显式给就吃 iconfont 基类写死的 16px，字号档位切换时不动。
-   带 .van-cell__left-icon 前缀拿 (0,2,0)，同时压过基类那条与 Vant 给容器写的 --van-cell-icon-size: 16px，
-   与样式表注入顺序无关（机制同 .icon-action.action-glyph）。 */
-.van-cell__left-icon .setting-cell-icon {
+/* 字形档与全站裸图标同源（--app-glyph-size）：不显式给就吃 Vant 的 .van-field__left-icon .van-icon{font-size:var(--van-field-icon-size)}，
+   那一档默认恒 18px、不跟字号，所以档位切换时纹丝不动。
+   容器类名必须写 .van-field__left-icon：van-field 的命名空间是 field，行首槽并不带 .van-cell__left-icon
+   （行尾箭头不同，它确实是 .van-cell__right-icon，所以走 store 的 cellIconSize）。
+   选择器要压过 Vant 那条 (0,2,0)，所以在槽里再点一层 .van-icon 拿 (0,3,0)，与样式表注入顺序无关（机制同 .icon-action.action-glyph）。 */
+.van-field__left-icon .van-icon.setting-cell-icon {
   font-size: var(--app-glyph-size);
 }

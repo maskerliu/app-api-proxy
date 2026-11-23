@@ -1,7 +1,7 @@
 <template>
   <!-- 写库进行中遮罩不给关：那一段时间里唯一的有效动作是「取消导入」，而结果页（部分写入、场景名撞过号）
        只在弹窗里说明，关掉就等于把这些交代丢在后台 -->
-  <van-dialog v-model:show="show" width="var(--app-popup-w-md)" :show-confirm-button="false"
+  <van-dialog v-model:show="show" width="var(--app-popup-w-form)" :show-confirm-button="false"
     :close-on-click-overlay="!writing">
     <!-- 统计长在标题行：这一页要放的行本来就多，五个数各占一行会把明细区挤到看不全。
        常规计数排成一句弱色文本，只有需要用户处理的异常计数（非 0）才单独出一枚 tag——五枚 tag 里三枚恒亮等于没表达 -->
@@ -515,7 +515,10 @@ function onRestart() {
      说明归到所属行之后配置块又收回约 10px（72 档实测明细区中位 92.3 → 104.8、地板 48.9 → 54.5），
      但把这一档退回 20/45 仍会在字号 14 的窄窗把明细区压到 0，所以留着。
      目标场景名并进 radio 那一行、明细行降到次级字号后再测：960 宽弹窗的明细区 99 / 109 / 119px
-     （字号 12 / 13 / 14），地板宽 448 那档 102px（radio 换行把配置块顶高 6.5px），这一档不用再动。 */
+     （字号 12 / 13 / 14），地板宽 448 那档 102px（radio 换行把配置块顶高 6.5px），这一档不用再动。
+     2026-11-22 弹窗宽度从 md 档（960）改到表单档（--app-popup-w-form，600）后这一档没重测：宽度是按
+     分段读数推的（见 global.css 那条），600 那版配置块仍单行的话明细区只会比 960 少 0（横向不占高度），
+     真嫌挤再动这一档。 */
   height: min(calc(var(--van-font-size-md) * 24), 55vh);
   padding: var(--van-padding-xs) var(--app-dialog-gutter) var(--van-padding-md);
 }
@@ -734,7 +737,12 @@ function onRestart() {
   min-width: 0;
 }
 
-.import-actions {
+/* 按钮行始终贴在 body 底边：没选文件那一档既没有明细区也没有空态占位（两者各自 flex:1），
+   body 里没人吃剩余高度，按钮就浮在配置块下面。margin-top:auto 把这一档的剩余空间全给它；
+   有 flex:1 兄弟时剩余空间已被吃掉，这条自动失效，两种状态同源。
+   选择器带上 .import-body> 是为了压过上面那条 .import-body>*+* 的 sp-md（同特异度要靠文件顺序，别赌）。 */
+.import-body>.import-actions {
   flex: none;
+  margin-top: auto;
 }
 </style>

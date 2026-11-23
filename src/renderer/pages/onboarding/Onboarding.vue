@@ -85,7 +85,9 @@
             </div>
           </van-row>
 
-          <van-notice-bar wrapable :scrollable="false" :text="$t('onboarding.client.note')">
+          <van-notice-bar wrapable :scrollable="false" color="var(--van-warning-color)"
+            background="color-mix(in srgb, var(--van-warning-color) 10%, transparent)"
+            :text="$t('onboarding.client.note')">
             <template #left-icon>
               <i class="iconfont icon-info notice-icon" />
             </template>
@@ -413,12 +415,18 @@ async function finish() {
   margin-top: var(--app-sp-2xl);
 }
 
+/* 步骤 3「等待请求…」：全局 .hint 读 --van-text-color-3，暗色实测 #4d4d4d 压在 #1c1c1e 上只剩 2.01。
+   照 R4C-09 导出说明的先例只在本站点降到 -2；.hint 全站十几处要不要整体提一档仍是未裁决项，不动 global。 */
+.hint {
+  color: var(--van-text-color-2);
+}
+
 .proxy-address,
 .register-url {
   margin-top: var(--app-sp-lg);
   padding: var(--app-sp-lg) var(--app-sp-xl);
   border-radius: var(--app-radius-md);
-  background-color: var(--van-gray-2);
+  background-color: var(--app-panel-tint);
   font-size: var(--van-font-size-sm);
   word-break: break-all;
   cursor: pointer;
@@ -500,7 +508,9 @@ async function finish() {
   padding: var(--app-sp-md) 0 var(--app-sp-md) var(--app-sp-md);
   overflow: hidden;
   border-radius: var(--app-radius-md);
-  background-color: var(--van-gray-2);
+  /* Ace 那侧刻意保持透明、底色由本容器给（见 SnippetAce），所以这一档必须与 Ace 暗主题自带的 #282c34 同调：
+     原先的 gray-2 在暗色是 #646566 中灰，语法色实测只剩 1.9~2.3；tint 后标识符 10.9、关键字与字符串 4.8~5.7。 */
+  background-color: var(--app-panel-tint);
 }
 
 /* 步骤 4 的 curl 片段：下面的 @media 覆盖只命中 .client-step（步骤 1），这里的 pre 会退回固定 160px
@@ -540,7 +550,7 @@ pre.snippet {
   margin: var(--app-sp-xl) 0;
   padding: var(--app-sp-xl) var(--app-sp-2xl);
   border-radius: var(--van-radius-md);
-  background-color: var(--van-gray-2);
+  background-color: var(--app-panel-tint);
 }
 
 .latest-line {

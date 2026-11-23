@@ -14,8 +14,8 @@
     <van-collapse v-model="expandedSections" :border="false" class="header-collapse" @transitionend="syncBodyFill">
       <van-collapse-item name="headers" :title="$t('mock.editor.headers')">
         <template #right-icon>
-          <van-button class="header-add btn-icon-only" size="mini" plain type="primary" icon="plus" @click.stop="addHeader">
-          </van-button>
+          <van-icon name="plus" class="icon-action action-glyph action-glyph--primary"
+            @click.stop="addHeader" />
         </template>
         <div ref="headerList" class="field-list">
           <van-row v-for="(row, idx) in headerRows" :key="idx" class="field-row" align="center" :wrap="false">
@@ -43,16 +43,8 @@
         <van-row class="body-tools" align="center" :wrap="false">
           <span class="body-size hint" v-tip="bodySizeText">{{ bodySizeText }}</span>
           <van-row class="body-actions" :class="{ 'is-inactive': bodyTypeValue !== 'json' }" :wrap="false">
-            <van-button size="mini" plain class="btn-icon-only tool-btn" @click="formatBody">
-              <template #icon>
-                <van-icon class="iconfont icon-format" />
-              </template>
-            </van-button>
-            <van-button size="mini" plain class="btn-icon-only tool-btn" @click="compactBody">
-              <template #icon>
-                <van-icon class="iconfont icon-compress" />
-              </template>
-            </van-button>
+            <van-icon class="iconfont icon-format icon-action action-glyph tool-btn" @click="formatBody" />
+            <van-icon class="iconfont icon-compress icon-action action-glyph tool-btn" @click="compactBody" />
           </van-row>
         </van-row>
       </van-row>
@@ -391,10 +383,6 @@ defineExpose({ focusField })
   padding-bottom: var(--app-sp-lg);
 }
 
-.header-add {
-  flex: none;
-}
-
 .section-head {
   gap: var(--app-sp-md);
   margin-bottom: var(--app-sp-md);
@@ -490,14 +478,17 @@ defineExpose({ focusField })
   text-overflow: ellipsis;
 }
 
-/* 盒型与字形尺寸仍交给 global.css 的 .btn-icon-only（含 flex: none，按钮不会被挤成竖椭圆），
-   这里只把方格边长从行内控件档降到这一行自己的文字行高：
-   Vant 里单选与单元格都按 --van-cell-line-height（md*1.9）排行，按钮留在 --app-control-height（md*2.2）
-   那一档，定这一行高度的就是按钮而不是文字。字号 9 时 24.7px、字号 10 时 26.6px、字号 7 时 20.9px。
-   站点 scoped 选择器是 (0,2,0)，压过全局那条 (0,1,0)，机制同 MockMatchTab 的 .row-delete。 */
+/* 字形档与热区分别走 global.css 的 .action-glyph（--app-glyph-size）与 .icon-action，这里只把热区方格
+   从 .icon-action 默认的 md*2.0 降到这一行自己的文字行高：Vant 里单选与单元格都按 --van-cell-line-height
+   （md*1.9）排行，图标留在 md*2.0 就把定高让给了自己（字号 13 时行高多 1.3px）。
+   压掉公共内边距靠站点 scoped 选择器的 (0,3,0)（类 + data-v）盖过 global.css 的 .icon-action (0,1,0)，
+   机制同 MockMatchTab 的 .row-delete；盒型仍不会被挤扁——flex: none 也在 .icon-action 里。 */
 .tool-btn {
+  padding: 0;
   width: var(--van-cell-line-height);
   height: var(--van-cell-line-height);
+  line-height: var(--van-cell-line-height);
+  text-align: center;
 }
 
 .body-editor {
